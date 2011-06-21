@@ -23,6 +23,7 @@ cplusplus {{
 
 class noncobject IPvXAddress;
 
+
 //
 // \TCP command codes, sent by the application to TCP. These constants
 // should be set as message kind on a message sent to the TCP entity.
@@ -89,6 +90,8 @@ class TCPCommand
 {
     int connId = -1;   // identifies the socket within the application
     int userId = -1;   // id than can be freely used by the app
+    
+    bool isMptcpSubflow = false; // PRIVATE MPTCP
 }
 
 
@@ -137,6 +140,9 @@ class TCPOpenCommand extends TCPCommand
     string sendQueueClass;    // may be left empty
     string receiveQueueClass; // may be left empty
     string tcpAlgorithmClass; // may be left empty
+	int subFlowNumber = 0;
+
+    
 }
 
 

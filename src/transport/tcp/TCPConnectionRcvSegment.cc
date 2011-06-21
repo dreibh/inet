@@ -27,6 +27,11 @@
 #include "TCPReceiveQueue.h"
 #include "TCPAlgorithm.h"
 
+#ifdef PRIVATE
+#include "TCPMultipath.h"
+#endif
+
+
 bool TCPConnection::tryFastRoute(TCPSegment *tcpseg)
 {
     // fast route processing not yet implemented
@@ -338,6 +343,19 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
         bool ok = processAckInEstabEtc(tcpseg);
         if (!ok)
             return TCP_E_IGNORE;  // if acks something not yet sent, drop it
+#ifdef PRIVATE
+        if(tcpMain->multipath){
+    		if(mPCB == NULL) // We should check if we are stateless
+				mPCB = new MPTCP_PCB();
+			int ret = mPCB->processSegment(connId, this, tcpseg);
+        	if(!ret){
+        		// OK remote system do not use multipath
+        		delete mPCB;
+				mPCB = NULL;
+        	}
+        }
+#endif
+
     }
 
     if ((fsm.getState()==TCP_S_FIN_WAIT_1 && state->fin_ack_rcvd))
@@ -743,6 +761,8 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
         return TCP_E_IGNORE;
     }
 
+
+
     //"
     // second check for an ACK
     //    Any acknowledgment is bad if it arrives on a connection still in
@@ -820,11 +840,26 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
         if (tcpseg->getHeaderLength() > TCP_HEADER_OCTETS) // Header options present? TCP_HEADER_OCTETS = 20
             readHeaderOptions(tcpseg);
 
+
         state->ack_now = true;
         sendSynAck();
         startSynRexmitTimer();
         if (!connEstabTimer->isScheduled())
             scheduleTimeout(connEstabTimer, TCP_TIMEOUT_CONN_ESTAB);
+
+#ifdef PRIVATE
+        if(tcpMain->multipath){
+
+    		if(mPCB == NULL); // We should check if we are stateless
+				mPCB = new MPTCP_PCB();
+			int ret = mPCB->processSegment(connId, this, tcpseg);
+        	if(!ret){
+        		// OK remote system do not use multipath
+        		delete mPCB;
+				mPCB = NULL;
+        	}
+        }
+#endif
 
         //"
         // Note that any other incoming control or data (combined with SYN)
@@ -931,9 +966,24 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
     //   If the SYN bit is on and the security/compartment and precedence
     //   are acceptable then,
     //"
+
+
     if (tcpseg->getSynBit())
     {
-        //
+#ifdef PRIVATE
+       		if(mPCB == NULL){
+       			assert(false); //Should not happen in Test of a multipath connection
+       			mPCB = new MPTCP_PCB();
+       		}
+			int ret = mPCB->processSegment(connId, this, tcpseg);
+			if(!ret){
+				// OK remote system do not use multipath
+				delete mPCB;
+				mPCB = NULL;
+			}
+#endif
+
+    	//
         //   RCV.NXT is set to SEG.SEQ+1, IRS is set to
         //   SEG.SEQ.  SND.UNA should be advanced to equal SEG.ACK (if there
         //   is an ACK), and any segments on the retransmission queue which
@@ -1010,7 +1060,16 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
             // notify tcpAlgorithm (it has to send ACK of SYN) and app layer
             state->ack_now = true;
             tcpAlgorithm->established(true);
+
+#ifdef PRIVATE
+        if(!isSubflow)	// subflows should not be notfied to the app
+#endif
             sendEstabIndicationToApp();
+#ifdef PRIVATE
+        else
+        	 tcpEV << "SUBFLOW is established by getting SYN+ACK\n"; // TBD
+#endif
+
 
             // This will trigger transition to ESTABLISHED. Timers and notifying
             // app will be taken care of in stateEntered().

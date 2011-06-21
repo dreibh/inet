@@ -32,7 +32,7 @@ class TCPSendQueue;
 class TCPSACKRexmitQueue;
 class TCPReceiveQueue;
 class TCPAlgorithm;
-
+class MPTCP_PCB;
 
 //
 // TCP FSM states
@@ -316,6 +316,11 @@ class INET_API TCPConnection
     IPvXAddress remoteAddr;
     int localPort;
     int remotePort;
+
+#ifdef PRIVATE
+    MPTCP_PCB *mPCB;
+    bool isSubflow;
+#endif
 
   protected:
     TCP *tcpMain; // TCP module

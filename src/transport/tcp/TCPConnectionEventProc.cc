@@ -74,6 +74,9 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 
     delete openCmd;
     delete msg;
+#ifdef PRIVATE
+    msg = NULL;
+#endif
 }
 
 void TCPConnection::process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)

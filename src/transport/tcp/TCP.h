@@ -27,6 +27,7 @@
 class TCPConnection;
 class TCPSegment;
 
+
 // macro for normal ev<< logging (Note: deliberately no parens in macro def)
 #define tcpEV (ev.disable_tracing||TCP::testing)?ev:ev
 
@@ -156,6 +157,10 @@ class INET_API TCP : public cSimpleModule
     static bool logverbose; // if !testing, turns on more verbose logging
 
     bool recordStatistics;  // output vectors on/off
+
+#ifdef PRIVATE
+    bool multipath;
+#endif
 
   public:
     TCP() {}

@@ -9,9 +9,11 @@ cleanall: checkmakefiles
 	cd src && $(MAKE) MODE=debug clean
 	rm -f src/Makefile
 
-makefiles:
+makefiles_old:
 	cd src && opp_makemake -f --deep --make-so -o inet -O out $$NSC_VERSION_DEF
-
+makefiles:
+	cd src && opp_makemake -f --deep -lpcap -lssl -lcrypto -DPRIVATE -DPRIVATE_DEBUG -DHAVE_PCAP -DUSE_TF  -o inet 
+	
 checkmakefiles:
 	@if [ ! -f src/Makefile ]; then \
 	echo; \

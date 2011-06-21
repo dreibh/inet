@@ -25,6 +25,10 @@
 #include "ICMPMessage_m.h"
 #include "ICMPv6Message_m.h"
 
+#ifdef PRIVATE
+#include "TCPMultipath.h"
+#endif
+
 Define_Module(TCP);
 
 
@@ -57,6 +61,12 @@ static std::ostream& operator<<(std::ostream& os, const TCPConnection& conn)
 
 void TCP::initialize()
 {
+#ifdef PRIVATE
+	multipath =  par("multipath");
+	if(multipath){
+		tcpEV << "Multipath TCP enabled\n";
+	}
+#endif
     lastEphemeralPort = EPHEMERAL_PORTRANGE_START;
     WATCH(lastEphemeralPort);
 
@@ -85,6 +95,66 @@ void TCP::handleMessage(cMessage *msg)
     if (msg->isSelfMessage())
     {
         TCPConnection *conn = (TCPConnection *) msg->getContextPointer();
+
+#ifdef PRIVATE
+        // Selfmessage could only be a timer, or a initiation if a new sublink
+        if(multipath &&(msg->getControlInfo() != NULL)){
+
+        	TCPOpenCommand *controlInfo = check_and_cast<TCPOpenCommand *>(msg->getControlInfo());
+        	bool skip = false;
+
+        	// if we are multipath, we should check if we are up
+			assert(conn->mPCB!=NULL);
+
+        	if((controlInfo!=NULL) && (controlInfo->getIsMptcpSubflow())){
+        		assert(conn != NULL);
+
+        		tcpEV << "TCP connection is a subflow " << msg << "\n";
+
+        		// make sure connection is unique
+        		SockPair key;
+        		key.localAddr  = controlInfo->getLocalAddr();
+        		key.remoteAddr = controlInfo->getRemoteAddr();
+        		key.localPort  = controlInfo->getLocalPort();
+        		key.remotePort = controlInfo->getRemotePort();
+        		TcpConnMap::iterator it = tcpConnMap.find(key);
+        		if (it!=tcpConnMap.end())
+				{
+					skip = true;
+				}
+
+        		// Create connection
+        		TCPConnection *subflow = NULL;
+        		if(!skip)
+        			subflow = createConnection(conn->appGateIndex, conn->connId);
+
+        		// Lets do our job -> establish this subflow
+        		if(subflow!=NULL){
+
+					subflow->isSubflow = true;
+					subflow->mPCB = conn->mPCB;
+					if (!(subflow->processAppCommand(msg)))
+						removeConnection(subflow);
+					else{
+						assert(conn->mPCB->getFlow()!=NULL);
+						if(subflow->isSubflow)
+							conn->mPCB->getFlow()->addFlow(0,subflow);
+						else{
+							removeConnection(subflow); // something goes wrong, do not handle this subflow
+						}
+					}
+
+        		}
+        		else{
+        			delete msg;
+				//	delete controlInfo;
+        		}
+				if (ev.isGUI())
+				        updateDisplayString();
+				return;
+        	}
+        }
+#endif
         bool ret = conn->processTimer(msg);
         if (!ret)
             removeConnection(conn);
@@ -143,7 +213,6 @@ void TCP::handleMessage(cMessage *msg)
         int connId = controlInfo->getConnId();
 
         TCPConnection *conn = findConnForApp(appGateIndex, connId);
-
         if (!conn)
         {
             conn = createConnection(appGateIndex, connId);
@@ -157,6 +226,28 @@ void TCP::handleMessage(cMessage *msg)
 
             tcpEV << "TCP connection created for " << msg << "\n";
         }
+
+#ifdef PRIVATE
+        // Multipath from application view
+        if(multipath){
+        	 // First Subflow, or no Multipath connection
+			TCPConnection* tmp = conn;
+			if(conn->mPCB == NULL){
+				conn->mPCB = new MPTCP_PCB();	// MPTCP from APPLICATION, should be allays known or a new MPTCP connection in case of multipath tag
+			}
+			// implicit scheduler
+			conn = conn->mPCB->lookupMPTCPConnection(connId,conn);
+
+			if(conn == NULL){
+				// Multipath error, we should not proceed
+				removeConnection(tmp);
+				if (ev.isGUI())
+						updateDisplayString();
+				return;
+			}
+        }
+#endif
+
         bool ret = conn->processAppCommand(msg);
         if (!ret)
             removeConnection(conn);
@@ -316,12 +407,14 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
     if (it!=tcpConnMap.end())
     {
         // throw "address already in use" error
-        if (remoteAddr.isUnspecified() && remotePort==-1)
+        if (remoteAddr.isUnspecified() && remotePort==-1){
             error("Address already in use: there is already a connection listening on %s:%d",
                   localAddr.str().c_str(), localPort);
-        else
+
+        }else{
             error("Address already in use: there is already a connection %s:%d to %s:%d",
                   localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
+        }
     }
 
     // then insert it into tcpConnMap

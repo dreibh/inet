@@ -27,7 +27,9 @@
 #include "TCPReceiveQueue.h"
 #include "TCPAlgorithm.h"
 #include "TCPSACKRexmitQueue.h"
-
+#ifdef PRIVATE
+#include "TCPMultipath.h"
+#endif
 
 TCPStateVariables::TCPStateVariables()
 {
@@ -163,6 +165,10 @@ std::string TCPStateVariables::detailedInfo() const
 
 TCPConnection::TCPConnection()
 {
+#ifdef PRIVATE
+	isSubflow = false;
+	mPCB = NULL;
+#endif
     // Note: this ctor is NOT used to create live connections, only
     // temporary ones to invoke segmentArrivalWhileClosed() on
     sendQueue = NULL;
@@ -182,6 +188,10 @@ TCPConnection::TCPConnection()
 
 TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 {
+#ifdef PRIVATE
+	isSubflow = false;
+	mPCB = NULL;
+#endif
     tcpMain = _mod;
     appGateIndex = _appGateIndex;
     connId = _connId;
@@ -281,6 +291,14 @@ TCPConnection::~TCPConnection()
     delete tcpRcvQueueDropsVector;
     delete pipeVector;
     delete sackedBytesVector;
+#ifdef PRIVATE
+	// Clean Only if we are not the subflow
+	if((!isSubflow) && (mPCB!=NULL)){
+		mPCB->clearAll();
+		delete mPCB;
+		mPCB = NULL;
+	}
+#endif
 }
 
 bool TCPConnection::processTimer(cMessage *msg)

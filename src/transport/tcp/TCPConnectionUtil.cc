@@ -33,6 +33,10 @@
 //
 // helper functions
 //
+#ifdef PRIVATE
+#include <assert.h>
+#include "TCPMultipath.h"
+#endif
 
 const char *TCPConnection::stateName(int state)
 {
@@ -338,6 +342,7 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
     if (!tcpAlgorithmClass || !tcpAlgorithmClass[0])
         tcpAlgorithmClass = tcpMain->par("tcpAlgorithmClass");
     tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
+
     tcpAlgorithm->setConnection(this);
 
     // create state block
@@ -503,6 +508,9 @@ void TCPConnection::sendRstAck(uint32 seq, uint32 ack, IPvXAddress src, IPvXAddr
     sendToIP(tcpseg, src, dest);
 
     // notify
+#ifdef PRIVATE
+    if(tcpAlgorithm!=NULL)	// This is a major Problem, how tho send a ACK without connection
+#endif
     tcpAlgorithm->ackSent();
 }
 
@@ -1302,6 +1310,31 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 
         // TODO delegate to TCPAlgorithm as well -- it may want to append additional options
     }
+
+#ifdef PRIVATE
+	if(tcpMain->multipath){
+		/**
+		 * OK, we need signaling for MPTCP, in the draft it is done by options
+		 *
+		 */
+
+		// During IDLE and PRE_ESTABLISHED there exists no persistent MPTCP PCB
+		// so first check
+
+		if(NULL==mPCB){
+			// generate a stateless mptcp flow, e.g. for handshake mp_capable
+			// other mptcp option will be generated
+			tcpEV << "Connection without MPTCP PCB" << "\n";
+			MPTCP_Flow mpflow(-1);
+			mpflow.writeMPTCPHeaderOptions(t,state,tcpseg,this);
+		}
+		else{
+			// OK it exists a PCB for multipath
+			tcpEV << "It is a Multipath Flow" << "\n";
+			mPCB->getFlow()->writeMPTCPHeaderOptions(t,state,tcpseg,this);
+		}
+    }
+#endif
 
     if (tcpseg->getOptionsArraySize() != 0)
     {
