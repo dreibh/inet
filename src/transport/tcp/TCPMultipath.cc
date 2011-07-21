@@ -20,7 +20,7 @@
 #include "TCPMultipath.h"
 #include "TCPConnection.h"
 #include "TCPSegment.h"
-
+#include <assert.h>
 #include <openssl/sha.h>
 #include <inttypes.h>
 
