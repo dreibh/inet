@@ -45,6 +45,8 @@ class TCPConnection;
 class TCPSegment;
 class TCPStateVariables;
 
+using std::vector;
+
 typedef struct _addr_tuple{
 	IPvXAddress addr;
 	int 		port;
@@ -55,15 +57,15 @@ typedef struct _addr_combi{
 	AddrTupple_t* remote;
 } AddrCombi_t;
 
-
 typedef struct _subflow{
   TCPConnection* flow;
   bool active;
 } TCP_SUBFLOW_T;
 
-typedef std::vector<AddrTupple_t*> TCP_AddressVector_t;
-typedef std::vector<AddrCombi_t*> TCP_JoinVector_t;
-typedef std::vector<TCP_SUBFLOW_T*> TCP_SubFlowVector_t;
+typedef std::vector <AddrTupple_t*> TCP_AddressVector_t;
+typedef vector <AddrCombi_t*> TCP_JoinVector_t;
+typedef vector<TCP_SUBFLOW_T*> TCP_SubFlowVector_t;
+
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
 enum MPTCP_SUBTYPES {MP_CAPABLE=0x0, MP_JOIN=0x1, MP_DSS=0x2, MP_ADD_ADDR=0x3, MP_REMOVE_ADDR=0x4, MP_PRIO=0x5, MP_FAIL=0x6};
 
