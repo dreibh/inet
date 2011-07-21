@@ -20,7 +20,7 @@
 #include "TCPMultipath.h"
 #include "TCPConnection.h"
 #include "TCPSegment.h"
-#include <assert.h>
+#include <ASSERT.h>
 #include <openssl/sha.h>
 #include <inttypes.h>
 
@@ -28,7 +28,7 @@
 /* defines for debuging */
 #define WHERESTR  "\n[MPTCP][file %s, line %d]: "
 #define WHEREARG  __FILE__, __LINE__
-#define DEBUGPRINT2(...)       fprintf(stderr, __VA_ARGS__)
+#define DEBUGPRINT2(...)  fprintf(stderr, __VA_ARGS__,...)
 //#define DEBUGPRINT(_fmt, ...)  DEBUGPRINT2(WHERESTR _fmt, WHEREARG, __VA_ARGS__)
 
 #ifndef PRIVATE_DEBUG
@@ -104,7 +104,7 @@ void MPTCP_Flow::initFlow() {
 	                }
 	            }
 	            else{
-	            	assert(false);
+	            	ASSERT(false);
 	            }
 	        	list_laddrtuple.push_back(addr);
 	        }
@@ -130,7 +130,7 @@ int MPTCP_Flow::addFlow(int id, TCPConnection* subflow) {
 				&& (entry->flow->remotePort == subflow->remotePort)
 				&& (entry->flow->localAddr == subflow->localAddr)
 				&& (entry->flow->localPort == subflow->localPort))
-			assert(false);
+			ASSERT(false);
 	}
 
 	t->active = true;
@@ -211,7 +211,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 		options_len = options_len + tcpseg->getOptions(i).getLength();
 
 	// Check on not increasing the TCP OPTION
-	assert(options_len <= 40);
+	ASSERT(options_len <= 40);
 	// TODO, here we have to generate a extra message e.g. an duplicate ACK (see draft section 2)
 
 	// Here we only work on MPTCP Options!! (Note: If this is a design problem to do it here, we could move this...)
@@ -247,7 +247,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 	case IDLE: { // whether a SYN or ACK for a SYN ACK is send -> new MPTCP Flow
 		if (!tcpseg->getSynBit()) {
 			DEBUGPRINT("[OUT] ERROR MPTCP Connection state: %d", getState());
-			assert(false);
+			ASSERT(false);
 			return t;
 		}
 		DEBUGPRINT("[OUT] Enter IDLE for connection Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
@@ -269,12 +269,12 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 			option.setValuesArraySize(2);
 			option.setValues(0, first_bits);
 			receiver_key = generateKey(); // Could be generated every time -> important is key of ACK
-			assert(receiver_key != 0);
+			ASSERT(receiver_key != 0);
 			option.setValues(1, receiver_key);
 
 			state = PRE_ESTABLISHED;
 		} else
-			assert(false); // Just for Testing
+			ASSERT(false); // Just for Testing
 
 		tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
 		tcpseg->setOptions(t, option);
@@ -323,7 +323,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 	default:
 		DEBUGPRINT("[OUT] Enter default for connection Src-Port %u -  Dest-Port %u - BUT THIS IS NOT WANTED",tcpseg->getSrcPort(),tcpseg->getDestPort());
 		tcpEV<<"ERROR: Options length exceeded! Segment will be sent without options" << "\n";
-		assert(false);
+		ASSERT(false);
 		// TODO CHECK FLOW FLAGS, eg. report or delete address
 	}
 	DEBUGPRINT("[OUT] Leave function with %d header Src-Port %u -  Dest-Port %u",t, tcpseg->getSrcPort(),tcpseg->getDestPort());
@@ -334,13 +334,12 @@ bool MPTCP_Flow::joinConnection() {
 
 	while (join_queue.size() > 0) {
 		// OK, there is a possible new subflow, so there should a connection exist with all required info
-		assert(subflow_list.size() != 0);
+		ASSERT(subflow_list.size() != 0);
 		bool skip = false;;
 		TCP_SUBFLOW_T* subflow = (TCP_SUBFLOW_T *) (*(subflow_list.begin()));
 		TCPConnection* tmp = subflow->flow;
-		assert(tmp->getTcpMain()!=NULL);
-		assert(tmp->mPCB!=NULL);
-		assert(tmp->mPCB->getFlow()!=NULL);
+		ASSERT(tmp->getTcpMain()!=NULL);
+
 
 		AddrCombi_t* c = (AddrCombi_t*) *(join_queue.begin());
 		tcpEV<< "New subflow join: " << c->local->addr << "<->" << c->remote->addr << "\n";
@@ -437,8 +436,8 @@ int MPTCP_Flow::generateTokenAndSQN(uint64 s, uint64 r) {
 	sender_key = s;
 	receiver_key = r;
 	// sender_key and receiver_key are not allowed to be 0
-	assert(sender_key != 0);
-	assert(receiver_key != 0);
+	ASSERT(sender_key != 0);
+	ASSERT(receiver_key != 0);
 	//	sprintf((char*)s1,"%ju",sender_key);
 	//	sprintf((char*)s2,"%ju",receiver_key);
 	//	SHA1_Init(&ctx);
@@ -481,7 +480,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 
 	// We are here; so it must be Multipath TCP Stack
 	if (!subflow->getTcpMain()->multipath) {
-		assert(true); // TODO Only for testing
+		ASSERT(true); // TODO Only for testing
 		return 0;
 	}
 
@@ -507,7 +506,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 		// In every case we expect a MP_CAPABEL Option
 		// TODO check Option, if not exist return
 		if (tcpseg->getHeaderLength() <= TCP_HEADER_OCTETS) {
-			assert(true);
+			ASSERT(true);
 			return 0; // No MPTCP Options
 		}
 		for (uint i = 0; i < tcpseg->getOptionsArraySize(); i++) {
@@ -518,7 +517,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 			if (kind == TCPOPTION_MPTCP) {
 				tcpEV<< "MPTCP Option" << "\n";
 				if(option.getLength() < 4) {
-					assert(true); //should never be happen
+					ASSERT(true); //should never be happen
 					return 0;
 				}
 
@@ -527,7 +526,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 					subtype = MP_CAPABLE;
 
 					if (option.getValuesArraySize() < 2) {
-						assert(true);
+						ASSERT(true);
 						return 0; //should never be happen
 					}
 					// In every case we expect a sender key
@@ -549,7 +548,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 					else if(tcpseg->getAckBit()) {
 						// ACK: We aspect the sender key in the MP_CAPABLE Option
 						if (option.getValuesArraySize() < 3) {
-							assert(false);
+							ASSERT(false);
 							return 0; //should never be happen
 						}
 						uint64 sender_key = option.getValues(1);
@@ -569,7 +568,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 							if(tcpseg->getAckBit())
 							flow = new MPTCP_Flow(connId);
 						}
-						assert(flow!=NULL);
+						ASSERT(flow!=NULL);
 
 						// OK new stateful MPTCP flow, calculate the token and Start-SQN
 						flow->generateTokenAndSQN(sender_key, receiver_key);
@@ -612,14 +611,14 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 			{
 				tcpEV << "MPTCP Option" << "\n";
 				if(option.getLength() < 4) {
-					assert(true); //should never be happen
+					ASSERT(true); //should never be happen
 					return 0;
 				}
 
 				uint16 first = option.getValues(0);
 				if(((first & (uint16)MP_CAPABLE << MP_SUBTYPE_POS) >> MP_SUBTYPE_POS) == MP_CAPABLE) {
 					tcpEV << "MPTCP Option MP_CAPABLE" << "\n";
-					// assert(false);
+					// ASSERT(false);
 				} // Connection etablished
 
 			}
@@ -638,7 +637,7 @@ TCPConnection* MPTCP_PCB::lookupMPTCPConnection(int connId,
 		return subflow;
 	}
 
-	// OK, now we have to choose by the scheduler which flow we should use next....
+	//TODO OK, now we have to choose by the scheduler which flow we should use next....
 
 	TCPConnection* conn = subflow;
 	return subflow;

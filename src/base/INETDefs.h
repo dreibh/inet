@@ -25,6 +25,10 @@
 
 #include <omnetpp.h>
 
+#ifndef PRIVATE
+#define PRIVATE	// Martin Becke Testvariable
+#endif
+
 #if OMNETPP_VERSION < 0x0400
 #  error At least OMNeT++/OMNEST version 4.0 required
 #endif
