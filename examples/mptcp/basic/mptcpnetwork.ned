@@ -4,6 +4,7 @@ import inet.networklayer.autorouting.FlatNetworkConfigurator;
 import inet.nodes.inet.StandardHost;
 import ned.DatarateChannel;
 
+import inet.nodes.inet.Router;
 
 network mptcpnetwork
 {
@@ -29,17 +30,33 @@ network mptcpnetwork
         }
         server: StandardHost {
             parameters:
-                @display("p=181,67;i=device/pc2");
+                @display("p=200,67;i=device/pc2");
                 routingFile = "server1.mrt";
             gates:
                 pppg[2];    
+        }
+        router1: Router {
+            parameters:
+                routingFile = "router1.mrt";
+                @display("p=p=130,37;i=abstract/router");
+            gates:
+                pppg[2];
+        }
+        router2: Router {
+            parameters:
+                routingFile = "router2.mrt";
+                @display("p=130,97;i=abstract/router");
+            gates:
+                pppg[2];
         }
 //        configurator: FlatNetworkConfigurator {
 //            parameters:
 //                @display("p=109,142");
 //        }
     connections:
-        client1.pppg++ <--> C1 <--> server.pppg++;
-        client1.pppg++ <--> C2 <--> server.pppg++;
+        client1.pppg++ <--> C1 <--> router1.pppg++;
+        router1.pppg++ <--> C1 <--> server.pppg++;
+        client1.pppg++ <--> C2 <--> router2.pppg++;
+        router2.pppg++ <--> C2 <--> server.pppg++;
 }
 
