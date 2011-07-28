@@ -92,29 +92,47 @@ class INET_API MPTCP_Flow
 
 	 uint32 flow_token;						// generate after getting keys
 	 uint64 seq;							// start seq-no generated after getting keys
+	 uint64 sender_key;						// setup during handshake
+	 uint64 receiver_key;					// setup during handshake
+
+	 bool checksum;
 
 	 InterfaceTableAccess interfaceTableAccess;
   public:
 
 	MPTCP_Flow(int ID, int aAppGateIndex);
 	~MPTCP_Flow();
-	uint64 getSenderKey();
-    int appID;								// The application ID of this Flow
-    int appGateIndex;
-    uint64 sender_key;						// setup during handshake
-   	uint64 receiver_key;					// setup during handshake
-	MPTCP_State getState();
-	int setState(MPTCP_State s);
-	int addSubflow(int id, TCPConnection* );
-	bool isSubflowOf(TCPConnection* subflow);
 
+	// getter /setter
+	uint64 getSenderKey();
+	uint64 getReceiverKey();
+	MPTCP_State getState();
+	uint32 getFlow_token();
+	int setState(MPTCP_State s);
+	void setReceiverKey(uint64 key);
+	void setSenderKey(uint64 key);
+
+	// use cases
 	int sendByteStream(TCPConnection* subflow);
 	int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, TCPConnection* subflow);
 
+	// crypto stuff
 	static uint64 generateKey();
-	int generateTokenAndSQN(uint64 s, uint64 r);
-	bool joinConnection();
+	int generateTokenAndSQN(uint64 ks, uint64 kr);
+	// see rfc 2104
+	unsigned char* generateSYNACK_HMAC(uint64 ka, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
+	unsigned char* generateACK_HMAC(uint64 kb, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
+	void hmac_md5(unsigned char*  text, int text_len,unsigned char*  key, int key_len, unsigned char* digest);
 
+
+	// manage subflows
+	bool joinConnection();
+	int addSubflow(int id, TCPConnection* );
+	bool isSubflowOf(TCPConnection* subflow);
+
+	// common identifier
+	int appID;								// The application ID of this Flow
+    int appGateIndex;
 };
 
 
@@ -122,27 +140,49 @@ class INET_API MPTCP_PCB
 {
 	public:
 		MPTCP_PCB(int connId,int appGateIndex, TCPConnection* subflow); // public constructor
+
+		// Static helper elements for organization
 		static int count ;				// starts by default with zero
 		static MPTCP_PCB* first;
+
+		// Lookup for Multipath Control Block management
 		static MPTCP_PCB* lookupMPTCP_PCB(int connid, int aAppGateIndex);
 		static MPTCP_PCB* lookupMPTCP_PCB(TCPSegment *tcpseg);
 		static MPTCP_PCB* lookupMPTCP_PCB(TCPSegment *tcpseg,  TCPConnection* subflow);
 		static MPTCP_PCB* lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow);
-		static int processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
 		TCPConnection*    lookupMPTCPConnection(int connId, TCPConnection* subflow,TCPSegment *tcpseg);
+
+		// Use Case
+		static int processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
+
+		// Getter/ Setter
 		MPTCP_Flow* getFlow();
 
+		// common identifier
 		int id;
-	protected:
-		MPTCP_PCB();
+
 	private:
-		MPTCP_Flow* flow;
-		MPTCP_PCB* next;
+		MPTCP_PCB();
 		~MPTCP_PCB();
 
+		// helper for process Segments
 		int processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
 
+		// cleanup
 		int clearAll();
+
+		// Sending side
+		uint64 snd_una;
+		uint64 snd_nxt;
+		uint32 snd_wnd;
+
+		// Receiver Side
+		uint64 rcv_nxt;
+		uint64 rcv_wnd;
+
+		// Members for self-organization
+		MPTCP_Flow* flow;
+		MPTCP_PCB* next;
 };
 
 
