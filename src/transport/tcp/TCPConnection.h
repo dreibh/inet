@@ -319,6 +319,10 @@ class INET_API TCPConnection
 
 #ifdef PRIVATE
     bool isSubflow;
+    uint32 randomA;				// used to store randam of MPTCP MP_JOIN
+    uint32 randomB; 			// used to store randam of MPTCP MP_JOIN
+    unsigned char MAC64[64];	// Container for truncated MAC
+    unsigned char MAC160[160];	// Container for 160 bits MAC
 #endif
 
   protected:

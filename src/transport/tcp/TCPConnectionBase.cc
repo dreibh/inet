@@ -167,6 +167,8 @@ TCPConnection::TCPConnection()
 {
 #ifdef PRIVATE
 	isSubflow = false;
+	randomA = 0;
+	randomB = 0;
 #endif
     // Note: this ctor is NOT used to create live connections, only
     // temporary ones to invoke segmentArrivalWhileClosed() on
@@ -189,6 +191,8 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 {
 #ifdef PRIVATE
 	isSubflow = false;
+	randomA = 0;
+	randomB = 0;
 #endif
     tcpMain = _mod;
     appGateIndex = _appGateIndex;

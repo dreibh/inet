@@ -148,6 +148,10 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
 
 	// Create a subflow entry in the list, a entry is stateful
 	TCP_SUBFLOW_T *t = new TCP_SUBFLOW_T();
+	subflow->isSubflow = true;
+
+// TODO perhaps it is a good IDEA to add the PCB to the subflow !!!!
+	// subflow-multi_pcb = pcb
 
 	// If we know this subflow allread something goes wrong
 	for (TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i
@@ -414,7 +418,12 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 
 			option.setValues(0, first_bits);
 			option.setValues(1, getFlow_token()); 		// Receivers Token
-			option.setValues(2, (uint32)generateKey()); // TODO Sender's random number (Generator perhaps otherone??)
+			subflow->randomA = (uint32)generateKey();
+			option.setValues(2, subflow->randomA); // TODO Sender's random number (Generator perhaps other one??)
+
+			// However, we need knowledge of the subflow random number to re-calculate HMAC
+			// TODO Check if multipath PCB is the correct one
+			addSubflow(subflow->connId,subflow);	// connection becomes stateful on SYN
 
 			tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
 			tcpseg->setOptions(t, option);
@@ -1099,21 +1108,57 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 					if((tcpseg->getSynBit()) && (!tcpseg->getAckBit()) ) {
 						DEBUGPRINT("[IN] Got SYN Src-Port %d -  Dest-Port %d: > MPTCP MP_JOIN",tcpseg->getSrcPort(),tcpseg->getDestPort());
 						// First the main flow should be find in the list of flows
-						// TODO
 
-						// the first flow is known
-						// the first flow ist unknown
+						// OK if we are here there exist
+						// - a valid Multipath TCP Control Block
+						// - next step is to send SYN/ACK
+						// ==> add subflow to connection/ multipath flow (For first -> TODO, handle TCP RST)
+
+						flow->addSubflow(connId,subflow);
+
+						// process the security part
+
+						// get important information of the segment
+						subflow->randomA = option.getValues(2);
+						// It is also a got time to generate Random of B
+						subflow->randomB = (uint32) flow->generateKey();
+
+						// Generate truncated
+						flow->generateSYNACK_HMAC(flow->getSenderKey(), flow->getReceiverKey(), subflow->randomA, subflow->randomB, subflow->MAC64);
+						flow->generateACK_HMAC(flow->getSenderKey(), flow->getReceiverKey(), subflow->randomA, subflow->randomB, subflow->MAC160);
+
 					}
 					// process SYN/ACK
 					else if((tcpseg->getSynBit()) && (tcpseg->getAckBit()) ) {
 						DEBUGPRINT("[IN] Got SYN/ACK Src-Port %d -  Dest-Port %d: > MPTCP MP_JOIN",tcpseg->getSrcPort(),tcpseg->getDestPort());
+						// TODO - Check if this is the correct subflow - we added the flow still on the MPTCP SYN - I'm not sure if this is OK
 
-						// TODO if everything OK, add subflow to flow of pcb
+						// Read the truncated MAC
+						option.getValues(1);
+						option.getValues(2);
+
+						// However, we need the Host-B random number
+						subflow->randomA = option.getValues(3);
+
+						// Here we should check the HMAC
+						// TODO int err isValidTruncatedHMAC();
+						// if(err)
+							// TCP RST
+
 					}
 					// process ACK
 					else if((!tcpseg->getSynBit()) && (tcpseg->getAckBit()) ) {
 						DEBUGPRINT("[IN] Got ACK Src-Port %d -  Dest-Port %d: > MPTCP MP_JOIN",tcpseg->getSrcPort(),tcpseg->getDestPort());
-						// TODO if everything OK, add subflow to flow of pcb
+						unsigned char mac160[160];
+						int offset = 0;
+						for(int i = 1; i <= 5; i++){ // 20 Octets/ 160 Bits
+							//memcpy(&mac160[offset], &(option.getValues(i)),sizeof(uint32));
+							offset = 2 << i;
+						}
+						// Here we should check the HMAC
+						// TODO int err isValidHMAC();
+						// if(err)
+							// TCP RST
 					}
 				}
 			}
