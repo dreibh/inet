@@ -345,14 +345,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
             return TCP_E_IGNORE;  // if acks something not yet sent, drop it
 #ifdef PRIVATE
         if(tcpMain->multipath){
-    		if(mPCB == NULL) // We should check if we are stateless
-				mPCB = new MPTCP_PCB();
-			int ret = mPCB->processSegment(connId, this, tcpseg);
-        	if(!ret){
-        		// OK remote system do not use multipath
-        		delete mPCB;
-				mPCB = NULL;
-        	}
+        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
         }
 #endif
 
@@ -841,25 +834,17 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
             readHeaderOptions(tcpseg);
 
 
+#ifdef PRIVATE
+        if(tcpMain->multipath){
+        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
+        }
+#endif
         state->ack_now = true;
         sendSynAck();
         startSynRexmitTimer();
         if (!connEstabTimer->isScheduled())
             scheduleTimeout(connEstabTimer, TCP_TIMEOUT_CONN_ESTAB);
 
-#ifdef PRIVATE
-        if(tcpMain->multipath){
-
-    		if(mPCB == NULL); // We should check if we are stateless
-				mPCB = new MPTCP_PCB();
-			int ret = mPCB->processSegment(connId, this, tcpseg);
-        	if(!ret){
-        		// OK remote system do not use multipath
-        		delete mPCB;
-				mPCB = NULL;
-        	}
-        }
-#endif
 
         //"
         // Note that any other incoming control or data (combined with SYN)
@@ -971,16 +956,9 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
     if (tcpseg->getSynBit())
     {
 #ifdef PRIVATE
-       		if(mPCB == NULL){
-       			assert(false); //Should not happen in Test of a multipath connection
-       			mPCB = new MPTCP_PCB();
-       		}
-			int ret = mPCB->processSegment(connId, this, tcpseg);
-			if(!ret){
-				// OK remote system do not use multipath
-				delete mPCB;
-				mPCB = NULL;
-			}
+        if(tcpMain->multipath){
+        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
+        }
 #endif
 
     	//

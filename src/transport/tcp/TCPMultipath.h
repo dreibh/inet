@@ -89,24 +89,25 @@ class INET_API MPTCP_Flow
 	 void initFlow();
 
   protected:
-	 uint64 sender_key;						// setup during handshake
-	 uint64 receiver_key;					// setup during handshake
+
 	 uint32 flow_token;						// generate after getting keys
 	 uint64 seq;							// start seq-no generated after getting keys
 
 	 InterfaceTableAccess interfaceTableAccess;
-
-	 int appID;								// The application ID of this Flow
   public:
-	MPTCP_Flow(){};
 
-	MPTCP_Flow(int ID);
+	MPTCP_Flow(int ID, int aAppGateIndex);
 	~MPTCP_Flow();
 	uint64 getSenderKey();
-
+    int appID;								// The application ID of this Flow
+    int appGateIndex;
+    uint64 sender_key;						// setup during handshake
+   	uint64 receiver_key;					// setup during handshake
 	MPTCP_State getState();
 	int setState(MPTCP_State s);
-	int addFlow(int id, TCPConnection* );
+	int addSubflow(int id, TCPConnection* );
+	bool isSubflowOf(TCPConnection* subflow);
+
 	int sendByteStream(TCPConnection* subflow);
 	int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, TCPConnection* subflow);
 
@@ -119,18 +120,28 @@ class INET_API MPTCP_Flow
 
 class INET_API MPTCP_PCB
 {
+	public:
+		MPTCP_PCB(int connId,int appGateIndex, TCPConnection* subflow); // public constructor
+		static int count ;				// starts by default with zero
+		static MPTCP_PCB* first;
+		static MPTCP_PCB* lookupMPTCP_PCB(int connid, int aAppGateIndex);
+		static MPTCP_PCB* lookupMPTCP_PCB(TCPSegment *tcpseg);
+		static MPTCP_PCB* lookupMPTCP_PCB(TCPSegment *tcpseg,  TCPConnection* subflow);
+		static MPTCP_PCB* lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow);
+		static int processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
+		TCPConnection*    lookupMPTCPConnection(int connId, TCPConnection* subflow,TCPSegment *tcpseg);
+		MPTCP_Flow* getFlow();
+
+		int id;
+	protected:
+		MPTCP_PCB();
 	private:
 		MPTCP_Flow* flow;
-	protected:
-		static int ID_COUNTER ;				// starts by default with zero
-		static int CONNECTION_COUNTER;		// starts by default with zero
-	public:
-		MPTCP_PCB();
+		MPTCP_PCB* next;
 		~MPTCP_PCB();
-		TCPConnection* lookupMPTCPConnection(int connId, TCPConnection* subflow);
+
 		int processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
-		MPTCP_Flow* lookupMPTCPFlow(TCPConnection* subflow);
-		MPTCP_Flow* getFlow();
+
 		int clearAll();
 };
 

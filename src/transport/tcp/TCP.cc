@@ -103,8 +103,6 @@ void TCP::handleMessage(cMessage *msg)
         	TCPOpenCommand *controlInfo = check_and_cast<TCPOpenCommand *>(msg->getControlInfo());
         	bool skip = false;
 
-        	// if we are multipath, we should check if we are up
-			assert(conn->mPCB!=NULL);
 
         	if((controlInfo!=NULL) && (controlInfo->getIsMptcpSubflow())){
         		assert(conn != NULL);
@@ -132,18 +130,9 @@ void TCP::handleMessage(cMessage *msg)
         		if(subflow!=NULL){
 
 					subflow->isSubflow = true;
-					subflow->mPCB = conn->mPCB;
 					if (!(subflow->processAppCommand(msg)))
 						removeConnection(subflow);
-					else{
-						assert(conn->mPCB->getFlow()!=NULL);
-						if(subflow->isSubflow)
-							conn->mPCB->getFlow()->addFlow(0,subflow);
-						else{
-							removeConnection(subflow); // something goes wrong, do not handle this subflow
-						}
-					}
-
+					// TODO Should I add a subflow after a MP_JOIN SYN
         		}
         		else{
         			delete msg;
@@ -170,6 +159,12 @@ void TCP::handleMessage(cMessage *msg)
         {
             // must be a TCPSegment
             TCPSegment *tcpseg = check_and_cast<TCPSegment *>(msg);
+
+            // TODO TESTING
+			if (tcpseg->getSynBit() && (!tcpseg->getAckBit()))
+				tcpEV << "A SYN ARRIVES\n";
+            if (tcpseg->getSynBit() && (tcpseg->getAckBit()))
+            	tcpEV << "A SYN ACK ARRIVES\n";
 
             // get src/dest addresses
             IPvXAddress srcAddr, destAddr;
@@ -202,6 +197,13 @@ void TCP::handleMessage(cMessage *msg)
             }
             else
             {
+#ifdef PRIVATE
+            	// OK, perhapse we have to join a Multipath Connection
+            	if(multipath){
+            		// Only run this on starting a new subflow
+            		// TODO INCOMING MULTIPATH TCP
+            	}
+#endif
                 segmentArrivalWhileClosed(tcpseg, srcAddr, destAddr);
             }
         }
@@ -229,21 +231,21 @@ void TCP::handleMessage(cMessage *msg)
 
 #ifdef PRIVATE
         // Multipath from application view
+        // - check for flow and scheduler
         if(multipath){
         	 // First Subflow, or no Multipath connection
-			TCPConnection* tmp = conn;
-			if(conn->mPCB == NULL){
-				conn->mPCB = new MPTCP_PCB();	// MPTCP from APPLICATION, should be allays known or a new MPTCP connection in case of multipath tag
-			}
-			// implicit scheduler
-			conn = conn->mPCB->lookupMPTCPConnection(connId,conn);
 
+			MPTCP_PCB* pcb = MPTCP_PCB::lookupMPTCP_PCB(connId, appGateIndex);
+			if(pcb==NULL) {
+				pcb= new MPTCP_PCB(connId,appGateIndex, conn);
+			}
 			if(conn == NULL){
 				// Multipath error, we should not proceed
-				removeConnection(tmp);
+				removeConnection(conn);
 				if (ev.isGUI())
 						updateDisplayString();
 				return;
+
 			}
         }
 #endif

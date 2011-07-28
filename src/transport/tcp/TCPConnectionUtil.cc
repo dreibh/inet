@@ -1320,20 +1320,24 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 
 		// During IDLE and PRE_ESTABLISHED there exists no persistent MPTCP PCB
 		// so first check
-
-		if(NULL==mPCB){
+		MPTCP_PCB* tmp = MPTCP_PCB::lookupMPTCP_PCB(this->connId, this->appGateIndex);
+		if(NULL == tmp){
 			// generate a stateless mptcp flow, e.g. for handshake mp_capable
 			// other mptcp option will be generated
 			tcpEV << "Connection without MPTCP PCB" << "\n";
-			MPTCP_Flow mpflow(-1);
-			mpflow.writeMPTCPHeaderOptions(t,state,tcpseg,this);
+			// Unknown Flow, but however we have to send the message
+			tmp = new MPTCP_PCB(this->connId, this->appGateIndex,  this);
 		}
 		else{
 			// OK it exists a PCB for multipath
 			tcpEV << "It is a Multipath Flow" << "\n";
-			mPCB->getFlow()->writeMPTCPHeaderOptions(t,state,tcpseg,this);
 		}
-    }
+		MPTCP_Flow* mpflow = tmp->getFlow();
+		mpflow->writeMPTCPHeaderOptions(t,state,tcpseg,this);
+	}
+	else{
+		tcpEV << "Connection with disabled MPTCP" << "\n";
+	}
 #endif
 
     if (tcpseg->getOptionsArraySize() != 0)

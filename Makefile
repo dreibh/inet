@@ -12,7 +12,7 @@ cleanall: checkmakefiles
 makefiles_old:
 	cd src && opp_makemake -f --deep --make-so -o inet -O out $$NSC_VERSION_DEF
 makefiles:
-	cd src && opp_makemake -f --deep -lpcap -lssl -lcrypto -DPRIVATE -DPRIVATE_DEBUG -DHAVE_PCAP -DUSE_TF  -o inet 
+	cd src && opp_makemake -f --deep -lpcap -lssl -lcrypto -DPRIVATE -DPRIVATE_DEBUG -DHAVE_PCAP -DUSE_TF -O0  -o inet 
 	
 checkmakefiles:
 	@if [ ! -f src/Makefile ]; then \

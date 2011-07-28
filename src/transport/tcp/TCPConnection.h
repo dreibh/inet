@@ -318,7 +318,6 @@ class INET_API TCPConnection
     int remotePort;
 
 #ifdef PRIVATE
-    MPTCP_PCB *mPCB;
     bool isSubflow;
 #endif
 
