@@ -443,8 +443,12 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 				option.setValuesArraySize(3);
 
 				option.setValues(0, first_bits);
-				option.setValues(1, 0); // TODO Receivers Token
-				option.setValues(2, 0); // TODO Senders Token
+				// generate the tuncated MAC (64) and the random Number of the Receiver (Sender of the Packet)
+				// TODO For second Parameter
+				option.setValues(1, 0); // TODO truncated MAC 64
+
+				option.setValues(2, 0); // TODO Random Number
+
 				tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
 				tcpseg->setOptions(t, option);
 				t++;
@@ -452,6 +456,8 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 		}else if ((!tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
 // MPTCP OUT MP_JOIN ACK
 				// TODO - Im not sure how to detect the kind of acks who have to transport the MP_JOIN
+
+				// TODO compute the HMAC 160 add in a Option Block
 		}
 		else{
 			DEBUGPRINT("[OUT] In state ESTABLISHED, Check for a new join - Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
@@ -1037,7 +1043,6 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 
 					} else {
 						// SYN
-
 						// read 64 bit keys
 						uint64 key = option.getValues(2);
 						key =  (key << 32) | option.getValues(1);
@@ -1143,7 +1148,8 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 						// Here we should check the HMAC
 						// TODO int err isValidTruncatedHMAC();
 						// if(err)
-							// TCP RST
+							// TCP RST TODO
+
 
 					}
 					// process ACK
@@ -1152,13 +1158,16 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 						unsigned char mac160[160];
 						int offset = 0;
 						for(int i = 1; i <= 5; i++){ // 20 Octets/ 160 Bits
-							//memcpy(&mac160[offset], &(option.getValues(i)),sizeof(uint32));
+							uint32 value = option.getValues(i);
+							memcpy(&mac160[offset],&value,sizeof(uint32));
 							offset = 2 << i;
 						}
 						// Here we should check the HMAC
+						// Idea, compute the input bevor sending the packet
 						// TODO int err isValidHMAC();
 						// if(err)
-							// TCP RST
+							// TCP RST TODO
+
 					}
 				}
 			}

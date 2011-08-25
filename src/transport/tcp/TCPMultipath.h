@@ -116,7 +116,7 @@ class INET_API MPTCP_Flow
 	int sendByteStream(TCPConnection* subflow);
 	int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, TCPConnection* subflow);
 
-	// crypto stuff
+	// crypto stuff TODO -> all crypto should be moved to a helper class as static functions
 	static uint64 generateKey();
 	int generateTokenAndSQN(uint64 ks, uint64 kr);
 	// see rfc 2104
