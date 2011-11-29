@@ -304,6 +304,9 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 			break;
 		}
 		default: {
+			if ((tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
+				DEBUGPRINT("[OUT] ESTABLISHED here we go %i",state);
+			}
 			if ((subflow->isSubflow) && (state == IDLE)) { //check if it belongs to a established flow
 				t = joinHandshake(t, subflow_state, tcpseg, subflow, &option);
 
@@ -511,9 +514,9 @@ int MPTCP_Flow::joinHandshake(uint t, TCPStateVariables* subflow_state,
 	} else if ((!tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
 		// MPTCP OUT MP_JOIN ACK
 		tcpEV << "Multipath FSM: ACK with MP_JOIN <Not filled>\n";
+
+		ASSERT(false);
 		// OK have ti send a ACK in IDLE, it must be the MP_JOIN ACK
-
-
 		this->state = ESTABLISHED;
 	}
 	else {
@@ -1087,7 +1090,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 
 						// Add (First) Subflow of the connection
 						flow->addSubflow(connId,subflow);
-						flow->setState(ESTABLISHED);
+
 
 					} else {
 						// SYN
