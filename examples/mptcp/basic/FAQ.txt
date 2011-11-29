@@ -5,3 +5,13 @@ Open the TCP.ned file. Here you can paramize multipath.
 If you interested to set multipath on by default
 
  bool multipath = default(true); // endable and disable multipath
+ 
+ 
+I debug with gdb and the debugger do not stop on breakpoints
+==============================================================
+
+The reason is not clear, but there is a workaround. By default the internal process starter of eclipse is used.
+But this do not work with the breakpoints very well. So change in the "Debug configuration" the process launcher 
+to the gdb process launcher. 
+
+ 
