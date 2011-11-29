@@ -16,7 +16,6 @@
 //
 //
 
-// Test MAC
 
 #include "TCP.h"
 #include "TCPMultipath.h"
