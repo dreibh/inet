@@ -1040,12 +1040,12 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
             tcpAlgorithm->established(true);
 
 #ifdef PRIVATE
-        if(!isSubflow)	// subflows should not be notfied to the app
+//        if(!isSubflow)	// TODO subflows should not be notfied to the app
 #endif
             sendEstabIndicationToApp();
 #ifdef PRIVATE
-        else
-        	 tcpEV << "SUBFLOW is established by getting SYN+ACK\n"; // TBD
+//        else
+//        	 tcpEV << "SUBFLOW is established by getting SYN+ACK\n"; // TBD
 #endif
 
 

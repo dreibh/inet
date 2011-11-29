@@ -18,12 +18,11 @@
 #include "TCP.h"
 #include "TCPMultipath.h"
 #include "TCPConnection.h"
-#include "TCPSegment.h"
+
 //#include <ASSERT.h>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 #include <inttypes.h>
-
 
 // For defines for debugging (Could be removed)
 #define WHERESTR  "\n[MPTCP][file %s, line %d]: "
@@ -36,7 +35,6 @@
 #define	DEBUGPRINT(_fmt, ...) ;
 #endif
 
-
 // some defines
 #define COMMON_MPTCP_OPTION_HEADER_SIZE 16
 #define SENDER_KEY_SIZE 				64
@@ -46,7 +44,6 @@
 #define MP_CAPABLE_SIZE_SYN    ((COMMON_MPTCP_OPTION_HEADER_SIZE + MP_SIGNAL_FIRST_VALUE_TYPE + SENDER_KEY_SIZE) >> 3)
 #define MP_CAPABLE_SIZE_SYNACK ((COMMON_MPTCP_OPTION_HEADER_SIZE + MP_SIGNAL_FIRST_VALUE_TYPE + RECEIVER_KEY_SIZE) >> 3)
 #define MP_CAPABLE_SIZE_ACK    ((COMMON_MPTCP_OPTION_HEADER_SIZE + MP_SIGNAL_FIRST_VALUE_TYPE + SENDER_KEY_SIZE + RECEIVER_KEY_SIZE) >> 3)
-
 
 // Some defines for MP_JOIN
 #define MP_JOIN_SIZE_SYN 				12
@@ -59,17 +56,22 @@
 // Some constants for help
 const unsigned int MP_SIGNAL_FIRST_VALUE_TYPE = 16;
 const unsigned int MP_SUBTYPE_POS = MP_SIGNAL_FIRST_VALUE_TYPE - 4;
-const unsigned int MP_VERSION_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - 4;
-const unsigned int MP_C_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_VERSION_POS - 1;
-const unsigned int MP_RESERVED_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_VERSION_POS - MP_C_POS - 4;
-const unsigned int MP_S_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_VERSION_POS - MP_C_POS - MP_RESERVED_POS - 1;
+const unsigned int MP_VERSION_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS
+		- 4;
+const unsigned int MP_C_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS
+		- MP_VERSION_POS - 1;
+const unsigned int MP_RESERVED_POS = MP_SIGNAL_FIRST_VALUE_TYPE
+		- MP_SUBTYPE_POS - MP_VERSION_POS - MP_C_POS - 4;
+const unsigned int MP_S_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS
+		- MP_VERSION_POS - MP_C_POS - MP_RESERVED_POS - 1;
 
 /**
  * Constructor
  * @param ID ID for each Flow
  */
 MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex) :
-	cnt_subflows(0), state(IDLE), initiator(false), sender_key(0), receiver_key(0) {
+	cnt_subflows(0), state(IDLE), initiator(false), sender_key(0),
+			receiver_key(0) {
 
 	// Start state of the Multipath FLOW is IDLE
 	state = IDLE;
@@ -101,14 +103,11 @@ void MPTCP_Flow::initFlow() {
 	IInterfaceTable *ift = interfaceTableAccess.get();
 
 	// Setup a list of available addresses
-	if (!list_laddrtuple.size())
-	{
-		for (int32 i=0; i<ift->getNumInterfaces(); ++i)
-		{
+	if (!list_laddrtuple.size()) {
+		for (int32 i = 0; i < ift->getNumInterfaces(); ++i) {
 			AddrTupple_t* addr = new AddrTupple_t();
 
-			if (ift->getInterface(i)->ipv4Data()!=NULL)
-			{
+			if (ift->getInterface(i)->ipv4Data() != NULL) {
 				tcpEV<<"[MPTCP FLOW] add IPv4: " << ift->getInterface(i)->ipv4Data()->getIPAddress() << "\n";
 				addr->addr = ift->getInterface(i)->ipv4Data()->getIPAddress();
 			}
@@ -117,10 +116,10 @@ void MPTCP_Flow::initFlow() {
 				for (int32 j=0; j<ift->getInterface(i)->ipv6Data()->getNumAddresses(); j++)
 				{
 					tcpEV<<"[MPTCP FLOW] add IPv6: " << ift->getInterface(i)->ipv6Data()->getAddress(j) << "\n";
-					addr->addr =  ift->getInterface(i)->ipv6Data()->getAddress(j);
+					addr->addr = ift->getInterface(i)->ipv6Data()->getAddress(j);
 				}
 			}
-			else{
+			else {
 				ASSERT(false);
 			}
 
@@ -149,7 +148,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
 	TCP_SUBFLOW_T *t = new TCP_SUBFLOW_T();
 	subflow->isSubflow = true;
 
-// TODO perhaps it is a good IDEA to add the PCB to the subflow !!!!
+	// TODO perhaps it is a good IDEA to add the PCB to the subflow !!!!
 	// subflow-multi_pcb = pcb
 
 	// If we know this subflow allread something goes wrong
@@ -179,7 +178,8 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
 	TCP_AddressVector_t::const_iterator it_r;
 	for (it_r = list_raddrtuple.begin(); it_r != list_raddrtuple.end(); it_r++) {
 		AddrTupple_t* tmp_r = (AddrTupple_t*) *it_r;
-		if ((tmp_r->addr.equals(subflow->remoteAddr)) && (tmp_r->port == subflow->remotePort)) {
+		if ((tmp_r->addr.equals(subflow->remoteAddr)) && (tmp_r->port
+				== subflow->remotePort)) {
 			found = true;
 		}
 	}
@@ -196,7 +196,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
 
 
 	// sender side; we have to check if there are more possibles
-	if (initiator) {	// draft 03 -> It is permitted for either host in a connection, but it is expected only the initiator
+	if (initiator) { // draft 03 -> It is permitted for either host in a connection, but it is expected only the initiator
 		for (it_r = list_raddrtuple.begin(); it_r != list_raddrtuple.end(); it_r++) {
 			AddrTupple_t* tmp_r = (AddrTupple_t*) *it_r;
 
@@ -205,11 +205,11 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
 				AddrTupple_t* tmp_l = (AddrTupple_t*) *it_l;
 
 				// collect data for possible new connections
-				if (!tmp_l->addr.equals(subflow->localAddr)){
+				if (!tmp_l->addr.equals(subflow->localAddr)) {
 					AddrCombi_t* to_join = new AddrCombi_t();
 					to_join->local = tmp_l;
 					to_join->remote = tmp_r;
-					tcpEV<< "ADD Possible new Subflow " << tmp_l->addr << "<-->" <<tmp_r->addr <<"\n";
+					tcpEV<< "ADD Possible new Subflow " << tmp_l->addr << "<-->"<<tmp_r->addr <<"\n";
 					// add to join queue () - joinConnection() will work for this queue
 					join_queue.push_back(to_join);
 				}
@@ -225,18 +225,17 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
  */
 bool MPTCP_Flow::isSubflowOf(TCPConnection* subflow) {
 	for (TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i
-				!= subflow_list.end(); ++i) {
+			!= subflow_list.end(); ++i) {
 		TCP_SUBFLOW_T* entry = (*i);
 		if ((entry->flow->remoteAddr == subflow->remoteAddr)
 				&& (entry->flow->remotePort == subflow->remotePort)
 				&& (entry->flow->localAddr == subflow->localAddr)
 				&& (entry->flow->localPort == subflow->localPort))
-			return true;	// Yes this subflow belongs to this flow
+			return true; // Yes this subflow belongs to this flow
 	}
 	// Sorry, this subflow is handled on this flow
 	return false;
 }
-
 
 /**
  * TODO ???
@@ -262,8 +261,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 	// Other TODO see on different states
 
 	// Initiate some helper
-	uint options_len  = 0;
-	uint16 first_bits = 0x00;
+	uint options_len = 0;
 	TCPOption option;
 
 	// First check if is it allowed to add further options
@@ -299,189 +297,239 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 	 *  Main/common traffic is during the ESTABLISHED state
 	 */
 
-	DEBUGPRINT("[OUT] Check Substate for a MPTCP Kind: %d",TCPOPTION_MPTCP);
-	// Work on MTCP State
 	switch (state) {
-	// Connection initiation SYN; SYN/ACK; ACK of the whole flow it must contain the MP_CAPABLE Option
-// MPTCP IDLE
-	case IDLE: { // whether a SYN or ACK for a SYN ACK is send -> new MPTCP Flow
-		if (!tcpseg->getSynBit()) {
-			DEBUGPRINT("[OUT] ERROR MPTCP Connection state: %d", getState());
-			ASSERT(false);
-			return t;
+		case ESTABLISHED: {
+			DEBUGPRINT("[OUT] ESTABLISHED here we go %i",state);
+
+			break;
 		}
-		DEBUGPRINT("[OUT] Enter IDLE for connection Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
-		first_bits = first_bits | ((uint16) MP_CAPABLE << MP_SUBTYPE_POS);
-		first_bits = first_bits | ((uint16) VERSION << MP_VERSION_POS);
+		default: {
+			if ((subflow->isSubflow) && (state == IDLE)) { //check if it belongs to a established flow
+				t = joinHandshake(t, subflow_state, tcpseg, subflow, &option);
 
-		// Check if it is whether a SYN or SYN/ACK
-		if (tcpseg->getSynBit() && (!tcpseg->getAckBit())) { // SYN
-			initiator = true;
-			option.setLength(MP_CAPABLE_SIZE_SYN);
-			option.setValuesArraySize(3);
-			option.setValues(0, first_bits);
-			setSenderKey(generateKey());			// generate sender_key
-			DEBUGPRINT("[OUT] Generate Sender Key: %llu",getSenderKey());
-			// set 64 bit value
-			uint32 value = (uint32) getSenderKey();
-			option.setValues(1, value);
-			value = getSenderKey() >> 32;
-			option.setValues(2, value);
-
-			state = PRE_ESTABLISHED;
-
-		} else if (tcpseg->getSynBit() && tcpseg->getAckBit()) { // SYN/ACK
-			option.setLength(MP_CAPABLE_SIZE_SYNACK);
-			option.setValuesArraySize(3);
-			option.setValues(0, first_bits);
-			setReceiverKey(generateKey()); 		// generate receiver_key -> important is key of ACK
-			DEBUGPRINT("[OUT] Generate Receiver Key: %llu",getReceiverKey());
-			ASSERT(receiver_key != 0);
-
-			// set 64 bit value
-			uint32 value = (uint32) getReceiverKey();
-			option.setValues(1, value);
-			value = getReceiverKey() >> 32;
-			option.setValues(2, value);
-
-			state = PRE_ESTABLISHED;
-		} else
-			ASSERT(false); // TODO Just for Testing
-
-		tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-		tcpseg->setOptions(t, option);
-		t++;
-		DEBUGPRINT("[OUT] Leave IDLE for connection Src-Port %u -  Dest-Port %u PRE-ESTABLISHED",tcpseg->getSrcPort(),tcpseg->getDestPort());
-		break;
+			} else{
+				// End for the Handhake of an exisiting Flow
+				t = initialHandshake(t, subflow_state, tcpseg, subflow,  &option);
+			}
+		}
 	}
-// MPTCP PRE_ESTABLISHED
-	case PRE_ESTABLISHED: { // whether ACK for a SYN ACK is send -> new MPTCP Flow
-		DEBUGPRINT("[OUT] Enter PRE_ESTABLISHED for connection Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
+	joinConnection(); // TODO -> Perhaps there is a better place, but in first try we check if there are new data received
 
-		first_bits = first_bits | ((uint16) MP_CAPABLE << MP_SUBTYPE_POS);
-		first_bits = first_bits | ((uint16) VERSION << MP_VERSION_POS);
+	return t;
+}
+/*
+ * do the MP_CAPABLE Handshake
+ */
+int MPTCP_Flow::initialHandshake(uint t, TCPStateVariables* subflow_state,
+	TCPSegment *tcpseg, TCPConnection* subflow, TCPOption* option) {
 
-		// OK we are stateful, however the handshake is not complete
-		if (tcpseg->getAckBit()) { // ACK
-			option.setLength(MP_CAPABLE_SIZE_ACK);
-			option.setValuesArraySize(5);
 
-			// ACK include both keys
-			option.setValues(0, first_bits);
+	// Initiate some helper
+	uint16 first_bits = 0x00;
 
-			// set 64 bit value
-			uint32 value = (uint32) getSenderKey();
-			option.setValues(1, value);
-			value = getSenderKey() >> 32;
-			option.setValues(2, value);
 
-			// set 64 bit value
-			value = (uint32) getReceiverKey();
-			option.setValues(3, value);
-			value = getReceiverKey() >> 32;
-			option.setValues(4, value);
+	tcpEV<<"Multipath FSM: Enter Initial Handshake " << "\n";
+	switch (state) {
+		// Connection initiation SYN; SYN/ACK; ACK of the whole flow it must contain the MP_CAPABLE Option
+		// MPTCP IDLE
+		case IDLE: { // whether a SYN or ACK for a SYN ACK is send -> new MPTCP Flow
 
+			if (!tcpseg->getSynBit()) {
+				DEBUGPRINT("[OUT] ERROR MPTCP Connection state: %d", getState());
+				ASSERT(false);
+				return t;
+			}
+
+			DEBUGPRINT("[OUT] Enter IDLE for connection Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
+			first_bits = first_bits | ((uint16) MP_CAPABLE << MP_SUBTYPE_POS);
+			first_bits = first_bits | ((uint16) VERSION << MP_VERSION_POS);
+
+			// Check if it is whether a SYN or SYN/ACK
+			if (tcpseg->getSynBit() && (!tcpseg->getAckBit())) { // SYN
+				tcpEV<< "Multipath FSM: IDLE working for a SYN\n";
+				initiator = true;
+				option->setLength(MP_CAPABLE_SIZE_SYN);
+				option->setValuesArraySize(3);
+				option->setValues(0, first_bits);
+				setSenderKey(generateKey()); // generate sender_key
+
+				// set 64 bit value
+				uint32 value = (uint32) getSenderKey();
+				option->setValues(1, value);
+				value = getSenderKey() >> 32;
+				option->setValues(2, value);
+				DEBUGPRINT("[OUT] Generate Sender Key in IDLE for SYN: %lu",getSenderKey());
+				state = PRE_ESTABLISHED;
+
+			} else if (tcpseg->getSynBit() && tcpseg->getAckBit()) { // SYN/ACK
+				tcpEV << "Multipath FSM: IDLE working for a SYN-ACK \n";
+				option->setLength(MP_CAPABLE_SIZE_SYNACK);
+				option->setValuesArraySize(3);
+				option->setValues(0, first_bits);
+				setReceiverKey(generateKey()); // generate receiver_key -> important is key of ACK
+
+				ASSERT(receiver_key != 0);
+
+				// set 64 bit value
+				uint32 value = (uint32) getReceiverKey();
+				option->setValues(1, value);
+				value = getReceiverKey() >> 32;
+				option->setValues(2, value);
+				DEBUGPRINT("[OUT] Generate Receiver Key in IDLE for SYN-ACK: %lu",getReceiverKey());
+				state = PRE_ESTABLISHED;
+			} else
+				ASSERT(false); // TODO Just for Testing
 
 			tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-			tcpseg->setOptions(t, option);
+			tcpseg->setOptions(t, *option);
 			t++;
-			this->state = ESTABLISHED;
-		} else {
-			DEBUGPRINT("[OUT] Enter PRE_ESTABLISHED for connection Src-Port %u -  Dest-Port %u - BUT THIS IS NOT WANTED",tcpseg->getSrcPort(),tcpseg->getDestPort());
+			DEBUGPRINT("[OUT] Leave IDLE for connection Src-Port %u -  Dest-Port %u PRE-ESTABLISHED",tcpseg->getSrcPort(),tcpseg->getDestPort());
+			break;
 		}
+		// MPTCP PRE_ESTABLISHED
+		case PRE_ESTABLISHED: { // whether ACK for a SYN ACK is send -> new MPTCP Flow
+			DEBUGPRINT("[OUT] Enter PRE_ESTABLISHED for connection Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
 
-		DEBUGPRINT("[OUT] Leave PRE_ESTABLISHED for connection Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
-		break;
-	}
-// MPTCP ESTABLISHED
-	case ESTABLISHED: { // whether a SYN or ACK for a SYN ACK is send -> new MPTCP Flow
-		// 1) Handle new adresses and/or connections MP_JOIN
-		// TODO ADD_ADDR/ REMOVE ADDR
-		// TODO DSS
+			first_bits = first_bits | ((uint16) MP_CAPABLE << MP_SUBTYPE_POS);
+			first_bits = first_bits | ((uint16) VERSION << MP_VERSION_POS);
 
-// MPTCP OUT MP_JOIN SYN
-		// Add MP_JOIN on a SYN of a etablished MULTIPATH Connection
-		if (tcpseg->getSynBit() && (!tcpseg->getAckBit())) {
-			// OK, we are still etablished so, this must be a JOIN or ADD.
-			// ADD is not handled here (TODO ADD), so it must be a MP_JOIN
-			// this is triggert by a self message, called by joinConnection()
-			DEBUGPRINT("[OUT] In state ESTABLISHED, starting SYN with MP_JOIN Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
-			first_bits = first_bits | ((uint16) MP_JOIN << MP_SUBTYPE_POS);
 
-			// TODO B -> use it purely as backup?
-			// TODO Adress ID (!)
+			// OK we are stateful, however the handshake is not complete
+			if (tcpseg->getAckBit()) { // ACK
+				tcpEV << "Multipath FSM: PRE_ESTABLISHED working for a ACK\n";
+				option->setLength(MP_CAPABLE_SIZE_ACK);
+				option->setValuesArraySize(5);
 
-			assert(MP_JOIN_SIZE_SYN==12); // In the draft it is defined as 12
-			option.setLength(MP_JOIN_SIZE_SYN);
-			option.setValuesArraySize(3);
+				// ACK include both keys
+				option->setValues(0, first_bits);
 
-			option.setValues(0, first_bits);
-			option.setValues(1, getFlow_token()); 		// Receivers Token
-			subflow->randomA = (uint32)generateKey();
-			option.setValues(2, subflow->randomA); // TODO Sender's random number (Generator perhaps other one??)
+				// set 64 bit value
+				uint32 value = (uint32) getSenderKey();
+				option->setValues(1, value);
+				value = getSenderKey() >> 32;
+				option->setValues(2, value);
 
-			// However, we need knowledge of the subflow random number to re-calculate HMAC
-			// TODO Check if multipath PCB is the correct one
-			addSubflow(subflow->connId,subflow);	// connection becomes stateful on SYN
-
-			tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-			tcpseg->setOptions(t, option);
-			t++;
-		}
-// MPTCP OUT MP_JOIN SYN ACK
-		// Add MP_JOIN on a SYN/ACK of a etablished MULTIPATH Connection
-		else if (tcpseg->getSynBit() && (tcpseg->getAckBit())) {
-				DEBUGPRINT("[OUT] In state ESTABLISHED, starting SYN with MP_JOIN Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
-
-				first_bits = first_bits | ((uint16) MP_JOIN << MP_SUBTYPE_POS);
-				// TODO B
-				// TODO Adress ID
-
-				assert(MP_JOIN_SIZE_SYNACK==16); // In the draft it is defined as 12
-				option.setLength(MP_JOIN_SIZE_SYNACK);
-				option.setValuesArraySize(3);
-
-				option.setValues(0, first_bits);
-				// generate the tuncated MAC (64) and the random Number of the Receiver (Sender of the Packet)
-				// TODO For second Parameter
-				option.setValues(1, 0); // TODO truncated MAC 64
-
-				option.setValues(2, 0); // TODO Random Number
+				// set 64 bit value
+				value = (uint32) getReceiverKey();
+				option->setValues(3, value);
+				value = getReceiverKey() >> 32;
+				option->setValues(4, value);
 
 				tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-				tcpseg->setOptions(t, option);
+				tcpseg->setOptions(t, *option);
 				t++;
-				// TODO for the last ACK we should etablish a connection
-		}else if ((!tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
-// MPTCP OUT MP_JOIN ACK
-				// TODO - Im not sure how to detect the kind of acks who have to transport the MP_JOIN
+				this->state = ESTABLISHED;
+				tcpEV << "Multipath FSM: ESTABLISHED after an ACK\n";
 
-				// TODO compute the HMAC 160 add in a Option Block
+			} else {
+				DEBUGPRINT("[OUT] Enter PRE_ESTABLISHED for connection Src-Port %u -  Dest-Port %u - BUT THIS IS NOT WANTED",tcpseg->getSrcPort(),tcpseg->getDestPort());
+			}
+			break;
 		}
-		else{
-			DEBUGPRINT("[OUT] In state ESTABLISHED, Check for a new join - Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
-		}
+		// MPTCP ESTABLISHED
 
-		joinConnection();	// TODO -> Perhaps there is a better place, but in first try we check if there are new data received
-
-		DEBUGPRINT("[OUT] Leave ESTABLISHED for connection Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
-		break;
-	}
-	default:
+		default:
 		DEBUGPRINT("[OUT] Enter default for connection Src-Port %u -  Dest-Port %u - BUT THIS IS NOT WANTED",tcpseg->getSrcPort(),tcpseg->getDestPort());
 		tcpEV<<"ERROR: Options length exceeded! Segment will be sent without options" << "\n";
 		ASSERT(false); // TODO Just for Testing
 		break;
-
 	}
-	DEBUGPRINT("[OUT] Leave function with %d header Src-Port %u -  Dest-Port %u",t, tcpseg->getSrcPort(),tcpseg->getDestPort());
 	return t;
 }
 
-
 /**
- * Initiation of a new subflow of a multipath TCP connection
+ * Do the MP_JOIN Handshake
  */
+int MPTCP_Flow::joinHandshake(uint t, TCPStateVariables* subflow_state,
+		TCPSegment *tcpseg, TCPConnection* subflow, TCPOption* option) {
+
+	// Initiate some helper
+	uint16 first_bits = 0x00;
+
+
+	// the State is still established for another subflow, but here we need to initiate the handshake
+	// whether a SYN or ACK for a SYN ACK is send -> new MPTCP Flow
+
+	// 1) Handle new adresses and/or connections MP_JOIN
+	// TODO ADD_ADDR/ REMOVE ADDR
+	// TODO DSS
+
+	tcpEV<< "Multipath FSM: ESTABLISHED should use MP_JOIN \n";
+	// MPTCP OUT MP_JOIN SYN
+	// Add MP_JOIN on a SYN of a established MULTIPATH Connection
+	if (tcpseg->getSynBit() && (!tcpseg->getAckBit())) {
+		// OK, we are still established so, this must be a JOIN or ADD.
+		// ADD is not handled here (TODO ADD), so it must be a MP_JOIN
+		// this is triggert by a self message, called by joinConnection()
+		tcpEV << "Multipath FSM: SYN with MP_JOIN \n";
+		DEBUGPRINT("[OUT] In state ESTABLISHED, starting SYN with MP_JOIN Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
+		first_bits = first_bits | ((uint16) MP_JOIN << MP_SUBTYPE_POS);
+
+		// TODO B -> use it purely as backup?
+		// TODO Adress ID (!)
+
+		assert(MP_JOIN_SIZE_SYN==12); // In the draft it is defined as 12
+		option->setLength(MP_JOIN_SIZE_SYN);
+		option->setValuesArraySize(3);
+
+		option->setValues(0, first_bits);
+		option->setValues(1, getFlow_token()); // Receivers Token
+		subflow->randomA = (uint32)generateKey();
+		option->setValues(2, subflow->randomA); // TODO Sender's random number (Generator perhaps other one??)
+
+		// However, we need knowledge of the subflow random number to re-calculate HMAC
+		// TODO Check if multipath PCB is the correct one
+		addSubflow(subflow->connId,subflow); // connection becomes stateful on SYN
+
+		tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
+		tcpseg->setOptions(t, *option);
+		t++;
+	}
+	// MPTCP OUT MP_JOIN SYN ACK
+	// Add MP_JOIN on a SYN/ACK of a etablished MULTIPATH Connection
+	else if (tcpseg->getSynBit() && (tcpseg->getAckBit())) {
+		DEBUGPRINT("[OUT] In state ESTABLISHED, starting SYN-ACK with MP_JOIN Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
+
+		first_bits = first_bits | ((uint16) MP_JOIN << MP_SUBTYPE_POS);
+		// TODO B
+		// TODO Adress ID
+		assert(MP_JOIN_SIZE_SYNACK==16); // In the draft it is defined as 12
+		option->setLength(MP_JOIN_SIZE_SYNACK);
+		option->setValuesArraySize(3);
+
+		option->setValues(0, first_bits);
+		// generate the tuncated MAC (64) and the random Number of the Receiver (Sender of the Packet)
+		// TODO For second Parameter
+		option->setValues(1, 0); // TODO truncated MAC 64
+		option->setValues(2, 0); // TODO Random Number
+
+		tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
+		tcpseg->setOptions(t, *option);
+		t++;
+		this->state = ESTABLISHED;
+		// TODO for the last ACK we should etablish a connection
+	} else if ((!tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
+		// MPTCP OUT MP_JOIN ACK
+		tcpEV << "Multipath FSM: ACK with MP_JOIN <Not filled>\n";
+		// OK have ti send a ACK in IDLE, it must be the MP_JOIN ACK
+
+
+		this->state = ESTABLISHED;
+	}
+	else {
+		DEBUGPRINT("[OUT] In state ESTABLISHED, Check for a new join - Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
+	}
+
+
+
+	DEBUGPRINT("[OUT] Leave ESTABLISHED for connection Src-Port %u -  Dest-Port %u",tcpseg->getSrcPort(),tcpseg->getDestPort());
+
+	return t;
+}
+
+	/**
+	 * Initiation of a new subflow of a multipath TCP connection
+	 */
 bool MPTCP_Flow::joinConnection() {
 	// 1) Check for valid adresses and combinations
 	// 2) Setup selfmessages
@@ -490,7 +538,8 @@ bool MPTCP_Flow::joinConnection() {
 	// In case we know new address pairs...
 	while (join_queue.size() > 0) {
 		ASSERT(subflow_list.size() != 0);
-		bool skip = false;;
+		bool skip = false;
+
 		TCP_SUBFLOW_T* subflow = (TCP_SUBFLOW_T *) (*(subflow_list.begin()));
 		TCPConnection* tmp = subflow->flow;
 		ASSERT(tmp->getTcpMain()!=NULL);
@@ -502,9 +551,9 @@ bool MPTCP_Flow::joinConnection() {
 
 		// ignore local addresses
 		if(IPvXAddress("127.0.0.1").equals(c->local->addr))
-			skip = true;
+		skip = true;
 		if(IPvXAddress("0.0.0.0").equals(c->local->addr))
-			skip = true;
+		skip = true;
 
 		// ignore still etablished subflows
 		TCP_JoinVector_t::const_iterator it_tj;
@@ -523,7 +572,7 @@ bool MPTCP_Flow::joinConnection() {
 		// Create selfmessage for new subflow initiation
 
 		// Is this a possible new subflow?
-		if(!skip){
+		if(!skip) {
 			// create a internal message for another active open connection
 			cMessage *msg = new cMessage("ActiveOPEN", TCP_C_OPEN_ACTIVE);
 
@@ -570,9 +619,6 @@ int MPTCP_Flow::setState(MPTCP_State s) {
 	return state;
 }
 
-
-
-
 /**
  * generate
  * - Start SQN
@@ -582,35 +628,35 @@ int MPTCP_Flow::generateTokenAndSQN(uint64 s, uint64 r) {
 
 	// TODO: irgendwas ist faul
 
-	SHA_CTX       ctx;
-	unsigned char dm[SHA_DIGEST_LENGTH];	// SHA_DIGEST_LENGTH = 20 Bytes
+	SHA_CTX ctx;
+	unsigned char dm[SHA_DIGEST_LENGTH]; // SHA_DIGEST_LENGTH = 20 Bytes
 
 	char s1[64];
 	char s2[64];
-	uint32 *out32 = {0};
-	uint64 *out64 = {0};
+	uint32 *out32 = { 0 };
+	uint64 *out64 = { 0 };
 
 	sender_key = s;
 	receiver_key = r;
 	// sender_key and receiver_key are not allowed to be 0
 	ASSERT(sender_key != 0);
 	ASSERT(receiver_key != 0);
-	sprintf(s1,"%20llu",sender_key);	// I'm not sure if this is correct, for external interface
-	sprintf(s2,"%20llu",receiver_key);// I'm not sure if this is correct, for external interface
+	sprintf(s1, "%20llu", sender_key); // I'm not sure if this is correct, for external interface
+	sprintf(s2, "%20llu", receiver_key);// I'm not sure if this is correct, for external interface
 
-	DEBUGPRINT("[OUT] Generate token: with sender key %llu and receiver key %llu:  ",sender_key, receiver_key);
+	DEBUGPRINT("[OUT] Generate token: with sender key %llu and receiver key %lu:  ",sender_key, receiver_key);
 
 	SHA1_Init(&ctx);
 	// generate SHA-1 for token
-	SHA1_Update(&ctx,s1,strlen(s1));
-	SHA1_Update(&ctx,s2,strlen(s2));
+	SHA1_Update(&ctx, s1, strlen(s1));
+	SHA1_Update(&ctx, s2, strlen(s2));
 
 	SHA1_Final((unsigned char*) dm, &ctx);
 
-	out64 = (uint64*) dm; 	// TODO Not sure, I think should be fixed
-	out32 = (uint32*) dm;		// TODO Not sure, I think should be fixed
+	out64 = (uint64*) dm; // TODO Not sure, I think should be fixed
+	out32 = (uint32*) dm; // TODO Not sure, I think should be fixed
 	DEBUGPRINT("[OUT] Generate token: %u:  ",*out32);
-	DEBUGPRINT("[OUT] Generate seq: %llu:  ",*out64);
+	DEBUGPRINT("[OUT] Generate seq: %lu:  ",*out64);
 	flow_token = *out32;
 	seq = *out64;
 	return 0;
@@ -619,106 +665,111 @@ int MPTCP_Flow::generateTokenAndSQN(uint64 s, uint64 r) {
 /**
  * generate body of SYN/ACK HMAC
  */
-unsigned char* MPTCP_Flow::generateSYNACK_HMAC(uint64 ka, uint64 kb, uint32 ra, uint32 rb, unsigned char* digist) {
+unsigned char* MPTCP_Flow::generateSYNACK_HMAC(uint64 ka, uint64 kb, uint32 ra,
+		uint32 rb, unsigned char* digist) {
 	// On Host B - Not Initiator
 	char key[38];
 	char msg[20];
 
 	// Need MAC-B
 	// MAC(KEY=(Key-B + Key-A)), Msg=(R-B + R-A))
-	sprintf(key,"%19llu%19llu",kb,ka);
-	sprintf(msg,"%10u%10u",rb,ra);
-	hmac_md5((unsigned char*) msg,strlen(msg),(unsigned char*) key,strlen(key),digist);
+	sprintf(key, "%19lu%19lu", kb, ka);
+	sprintf(msg, "%10u%10u", rb, ra);
+	hmac_md5((unsigned char*) msg, strlen(msg), (unsigned char*) key, strlen(
+			key), digist);
 	return digist;
 }
 /**
  * generate body of ACK HMAC
  */
-unsigned char* MPTCP_Flow::generateACK_HMAC(uint64 ka, uint64 kb, uint32 ra, uint32 rb, unsigned char* digist) {
+unsigned char* MPTCP_Flow::generateACK_HMAC(uint64 ka, uint64 kb, uint32 ra,
+		uint32 rb, unsigned char* digist) {
 	// On Host A - The Initiator
 	char key[38];
 	char msg[20];
 
 	// Need MAC-A
 	// MAC(KEY=(Key-A + Key-B)), Msg=(R-A + R-B))
-	sprintf(key,"%19llu%19llu",ka,kb);
-	sprintf(msg,"%10u%10u",ra,rb);
-	hmac_md5((unsigned char*) msg,strlen(msg),(unsigned char*) key,strlen(key),digist);
+	sprintf(key, "%19lu%19lu", ka, kb);
+	sprintf(msg, "%10u%10u", ra, rb);
+	hmac_md5((unsigned char*) msg, strlen(msg), (unsigned char*) key, strlen(
+			key), digist);
 	return digist;
 }
 
 /*
-** Function: hmac_md5 by RFC 2104
-* @param text;          pointer to data stream
-* @param text_len;      length of data stream
-* @param key;           pointer to authentication key
-* @param key_len;       length of authentication key
-* @param digest;        caller digest to be filled in
-*/
-void MPTCP_Flow::hmac_md5(unsigned char*  text, int text_len,unsigned char*  key, int key_len, unsigned char* digest)
+ ** Function: hmac_md5 by RFC 2104
+ * @param text;          pointer to data stream
+ * @param text_len;      length of data stream
+ * @param key;           pointer to authentication key
+ * @param key_len;       length of authentication key
+ * @param digest;        caller digest to be filled in
+ */
+void MPTCP_Flow::hmac_md5(unsigned char* text, int text_len,
+		unsigned char* key, int key_len, unsigned char* digest)
 
 {
-        MD5_CTX context;
-        unsigned char k_ipad[65];    /* inner padding -
-                                      * key XORd with ipad
-                                      */
-        unsigned char k_opad[65];    /* outer padding -
-                                      * key XORd with opad
-                                      */
-        unsigned char tk[16];
-        int i;
-        /* if key is longer than 64 bytes reset it to key=MD5(key) */
-        if (key_len > 64) {
+	MD5_CTX context;
+	unsigned char k_ipad[65]; /* inner padding -
+	 * key XORd with ipad
+	 */
+	unsigned char k_opad[65]; /* outer padding -
+	 * key XORd with opad
+	 */
+	unsigned char tk[16];
+	int i;
+	/* if key is longer than 64 bytes reset it to key=MD5(key) */
+	if (key_len > 64) {
 
-                MD5_CTX      tctx;
+		MD5_CTX tctx;
 
-                MD5_Init(&tctx);
-                MD5_Update(&tctx, key, key_len);
-                MD5_Final(tk, &tctx);
+		MD5_Init(&tctx);
+		MD5_Update(&tctx, key, key_len);
+		MD5_Final(tk, &tctx);
 
-                key = tk;
-                key_len = 16;
-        }
+		key = tk;
+		key_len = 16;
+	}
 
-        /*
-         * the HMAC_MD5 transform looks like:
-         *
-         * MD5(K XOR opad, MD5(K XOR ipad, text))
-         *
-         * where K is an n byte key
-         * ipad is the byte 0x36 repeated 64 times
-         * opad is the byte 0x5c repeated 64 times
-         * and text is the data being protected
-         */
+	/*
+	 * the HMAC_MD5 transform looks like:
+	 *
+	 * MD5(K XOR opad, MD5(K XOR ipad, text))
+	 *
+	 * where K is an n byte key
+	 * ipad is the byte 0x36 repeated 64 times
+	 * opad is the byte 0x5c repeated 64 times
+	 * and text is the data being protected
+	 */
 
-        /* start out by storing key in pads */
-        bzero( k_ipad, sizeof k_ipad);
-        bzero( k_opad, sizeof k_opad);
-        bcopy( key, k_ipad, key_len);
-        bcopy( key, k_opad, key_len);
+	/* start out by storing key in pads */
+	bzero(k_ipad, sizeof k_ipad);
+	bzero(k_opad, sizeof k_opad);
+	bcopy(key, k_ipad, key_len);
+	bcopy(key, k_opad, key_len);
 
-        /* XOR key with ipad and opad values */
-        for (i=0; i<64; i++) {
-                k_ipad[i] ^= 0x36;
-                k_opad[i] ^= 0x5c;
-        }
-        /*
-         * perform inner MD5
-         */
-        MD5_Init(&context);                   /* init context for 1st
-                                              * pass */
-        MD5_Update(&context, k_ipad, 64);      /* start with inner pad */
-        MD5_Update(&context, text, text_len); /* then text of datagram */
-        MD5_Final(digest, &context);          /* finish up 1st pass */
-        /*
-         * perform outer MD5
-         */
-        MD5_Init(&context);                   /* init context for 2nd
-                                              * pass */
-        MD5_Update(&context, k_opad, 64);     /* start with outer pad */
-        MD5_Update(&context, digest, 16);     /* then results of 1st
-                                              * hash */
-        MD5_Final(digest, &context);          /* finish up 2nd pass */
+	/* XOR key with ipad and opad values */
+	for (i = 0; i < 64; i++) {
+		k_ipad[i] ^= 0x36;
+		k_opad[i] ^= 0x5c;
+	}
+	/*
+	 * perform inner MD5
+	 */
+	MD5_Init(&context); /* init context for 1st
+	 * pass */
+	MD5_Update(&context, k_ipad, 64); /* start with inner pad */
+	MD5_Update(&context, text, text_len); /* then text of datagram */
+	MD5_Final(digest, &context); /* finish up 1st pass */
+	/*
+	 * perform outer MD5
+	 */
+	MD5_Init(&context); /* init context for 2nd
+	 * pass */
+	MD5_Update(&context, k_opad, 64); /* start with outer pad */
+	MD5_Update(&context, digest, 16); /* then results of 1st
+	 * hash */
+	MD5_Final(digest, &context); /* finish up 2nd pass */
 }
 // Getter/ Setter
 
@@ -739,7 +790,7 @@ uint64 MPTCP_Flow::getReceiverKey() {
 /**
  * getter function for state flow_token
  */
-uint32 MPTCP_Flow::getFlow_token(){
+uint32 MPTCP_Flow::getFlow_token() {
 	return flow_token;
 }
 
@@ -752,13 +803,13 @@ MPTCP_State MPTCP_Flow::getState() {
 /**
  * setter for sender_key
  */
-void MPTCP_Flow::setReceiverKey(uint64 key){
+void MPTCP_Flow::setReceiverKey(uint64 key) {
 	receiver_key = key;
 }
 /**
  * setter for sender_key
  */
-void MPTCP_Flow::setSenderKey(uint64 key){
+void MPTCP_Flow::setSenderKey(uint64 key) {
 	sender_key = key;
 }
 
@@ -786,39 +837,36 @@ MPTCP_PCB::MPTCP_PCB() :
 	MPTCP_PCB* tmp = first;
 	MPTCP_PCB* last = NULL;
 	this->next = NULL;
-	while(tmp != NULL){
+	while (tmp != NULL) {
 		last = tmp;
 		tmp = tmp->next;
 	}
-	if(last == NULL){
+	if (last == NULL) {
 		first = this;
-	}
-	else{
+	} else {
 		last->next = this;
 	}
 	DEBUGPRINT("[Create] New MPTCP Protocol Control Block: %d  ",count);
 }
 
-
-MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow){
+MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
 	// selforg. by a simple list
 	id = count++;
 	MPTCP_PCB* tmp = first;
 	MPTCP_PCB* last = NULL;
 	this->next = NULL;
-	while(tmp != NULL){
+	while (tmp != NULL) {
 		last = tmp;
 		tmp = tmp->next;
 	}
-	if(last == NULL){
+	if (last == NULL) {
 		first = this;
-	}
-	else{
+	} else {
 		last->next = this;
 	}
 	DEBUGPRINT("[Create] New MPTCP Protocol Control Block: %d  ",count);
 
-	flow = new MPTCP_Flow(connId,appGateIndex);
+	flow = new MPTCP_Flow(connId, appGateIndex);
 }
 /**
  * De-Constructor
@@ -828,12 +876,11 @@ MPTCP_PCB::~MPTCP_PCB() {
 	count--;
 	MPTCP_PCB* tmp = first;
 	MPTCP_PCB* last = NULL;
-	while(tmp != NULL){
-		if(id == tmp->id){
-			if(last!=NULL){
+	while (tmp != NULL) {
+		if (id == tmp->id) {
+			if (last != NULL) {
 				last->next = tmp->next;
-			}
-			else{
+			} else {
 				first = tmp->next;
 			}
 			break;
@@ -850,15 +897,16 @@ MPTCP_PCB::~MPTCP_PCB() {
  * 2) Process Segment
  * 3) If needed become stateful
  */
-int MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg) {
+int MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex,
+		TCPConnection* subflow, TCPSegment *tcpseg) {
 	// First look for a Multipath Protocol Control Block
 	MPTCP_PCB* tmp = MPTCP_PCB::lookupMPTCP_PCB(connId, aAppGateIndex);
 	// In case there is no, we have to check for MP_JOIN or we have to create
 	// check for MP_JOIN
-	if(tmp==NULL)
-		tmp = MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(tcpseg,subflow);
-	if(tmp==NULL)
-		tmp = new MPTCP_PCB(connId,aAppGateIndex,subflow);
+	if (tmp == NULL)
+		tmp = MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(tcpseg, subflow);
+	if (tmp == NULL)
+		tmp = new MPTCP_PCB(connId, aAppGateIndex, subflow);
 	// Proc
 	int ret = tmp->processSegment(connId, subflow, tcpseg);
 	return ret;
@@ -867,7 +915,8 @@ int MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex, TCPConnection*
 /**
  * Internal helper to find the Multipath PCB by the MP_JOIN Potion
  */
-MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow){
+MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg,
+		TCPConnection* subflow) {
 	// We are here; so it must be Multipath TCP Stack
 	if (!subflow->getTcpMain()->multipath) {
 		return NULL;
@@ -898,10 +947,10 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPCon
 					// It is easy to identify the subflow by the receiver token
 					MPTCP_PCB* tmp = first;
 					uint64 receiver_key = option.getValues(1);
-					while(tmp != NULL){
+					while(tmp != NULL) {
 						MPTCP_Flow* flow = tmp->getFlow();
-						if((flow->getFlow_token() == receiver_key)){
-							return tmp;	// OK we know a flow with this Receiver key, let's work with this one
+						if((flow->getFlow_token() == receiver_key)) {
+							return tmp; // OK we know a flow with this Receiver key, let's work with this one
 						}
 						tmp = tmp->next;
 					}
@@ -920,14 +969,13 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPCon
 	}
 	// TODO -> Something goes wrong - we havt to find a communication channel
 	// tcpseg->setRstBit();
-	return NULL;	// No PCB found
+	return NULL; // No PCB found
 }
 
-
-/**
- * Internal helper to process packet for a flow
- * TODO Something goes wrong (TCP RST)
- */
+			/**
+			 * Internal helper to process packet for a flow
+			 * TODO Something goes wrong (TCP RST)
+			 */
 int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 		TCPSegment *tcpseg) {
 
@@ -959,7 +1007,6 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 			return 0; // No MPTCP Options
 		}
 
-
 		for (uint i = 0; i < tcpseg->getOptionsArraySize(); i++) {
 			const TCPOption& option = tcpseg->getOptions(i);
 			short kind = option.getKind();
@@ -975,7 +1022,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 				uint16 first = option.getValues(0);
 				uint16 sub = (first >> MP_SUBTYPE_POS);
 
-// Subtype MP_CAPABLE
+				// Subtype MP_CAPABLE
 				if(sub == MP_CAPABLE) {
 					if (option.getValuesArraySize() < 3) {
 						ASSERT(true);
@@ -987,12 +1034,12 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 
 						// read 64 bit keys
 						uint64 key = option.getValues(2);
-						key =  (key << 32) | option.getValues(1);
+						key = (key << 32) | option.getValues(1);
 						flow->setReceiverKey(key); // Could be generated every time -> important is key of ACK
 
 
-						DEBUGPRINT("[IN] Got SYN/ACK with sender key %llu",flow->getSenderKey());
-						DEBUGPRINT("[IN] Got SYN/ACK with receiver key %llu",flow->getReceiverKey());
+						DEBUGPRINT("[IN] Got SYN/ACK with sender key %lu",flow->getSenderKey());
+						DEBUGPRINT("[IN] Got SYN/ACK with receiver key %lu",flow->getReceiverKey());
 						DEBUGPRINT("[IN] Got SYN/ACK Src-Port %d -  Dest-Port %d: -> MPTCP CONNECTION ESTABLISHED",tcpseg->getSrcPort(),tcpseg->getDestPort());
 
 						// OK new stateful MPTCP flow, calculate the token and Start-SQN
@@ -1012,14 +1059,14 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 
 						// read 64 bit keys
 						uint64 key = option.getValues(2);
-						key =  (key << 32) | option.getValues(1);
+						key = (key << 32) | option.getValues(1);
 						flow->setSenderKey(key);
 						key = option.getValues(4);
-						key =  (key << 32) | option.getValues(3);
+						key = (key << 32) | option.getValues(3);
 
 						flow->setReceiverKey(key);
-						DEBUGPRINT("[IN] Got ACK with Sender Key %llu",flow->getSenderKey());
-						DEBUGPRINT("[IN] Got ACK with Receiver Key %llu",flow->getReceiverKey());
+						DEBUGPRINT("[IN] Got ACK with Sender Key %lu",flow->getSenderKey());
+						DEBUGPRINT("[IN] Got ACK with Receiver Key %lu",flow->getReceiverKey());
 						DEBUGPRINT("[IN] Got ACK Src-Port %d -  Dest-Port %d: -> MPTCP CONNECTION ESTABLISHED",tcpseg->getSrcPort(),tcpseg->getDestPort());
 						// Status: Check MPTCP FLOW
 						// - this is a MULTIPATH Stack: 			OK
@@ -1046,7 +1093,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 						// SYN
 						// read 64 bit keys
 						uint64 key = option.getValues(2);
-						key =  (key << 32) | option.getValues(1);
+						key = (key << 32) | option.getValues(1);
 						flow->setSenderKey(key);
 
 						DEBUGPRINT("[IN] Got SYN with sender key %llu",flow->getSenderKey());
@@ -1087,7 +1134,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 					ASSERT(false);
 				} // Connection etablished ?? TODO ERROR
 
-// Subtype MP_JOIN
+				// Subtype MP_JOIN
 				/**
 				 * Be carfull, the server is in listen mode
 				 * this could be a valid connection, but not a multipath
@@ -1096,7 +1143,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 				 * That means, we have to stop communication and must respond with an TCP RST
 				 * TODO add RST in error state
 				 **/
-// IN MP_JOIN
+				// IN MP_JOIN
 				else if(sub == MP_JOIN) {
 
 					if (option.getValuesArraySize() < 2) {
@@ -1149,7 +1196,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 						// Here we should check the HMAC
 						// TODO int err isValidTruncatedHMAC();
 						// if(err)
-							// TCP RST TODO
+						// TCP RST TODO
 
 
 					}
@@ -1158,7 +1205,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 						DEBUGPRINT("[IN] Got ACK Src-Port %d -  Dest-Port %d: > MPTCP MP_JOIN",tcpseg->getSrcPort(),tcpseg->getDestPort());
 						unsigned char mac160[160];
 						int offset = 0;
-						for(int i = 1; i <= 5; i++){ // 20 Octets/ 160 Bits
+						for(int i = 1; i <= 5; i++) { // 20 Octets/ 160 Bits
 							uint32 value = option.getValues(i);
 							memcpy(&mac160[offset],&value,sizeof(uint32));
 							offset = 2 << i;
@@ -1167,7 +1214,7 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 						// Idea, compute the input bevor sending the packet
 						// TODO int err isValidHMAC();
 						// if(err)
-							// TCP RST TODO
+						// TCP RST TODO
 
 					}
 				}
@@ -1177,9 +1224,9 @@ int MPTCP_PCB::processSegment(int connId, TCPConnection* subflow,
 	return 1;
 }
 
-/**
- * TODO Scheduler
- */
+				/**
+				 * TODO Scheduler
+				 */
 TCPConnection* MPTCP_PCB::lookupMPTCPConnection(int connId,
 		TCPConnection* subflow, TCPSegment *tcpseg) {
 
@@ -1195,10 +1242,9 @@ TCPConnection* MPTCP_PCB::lookupMPTCPConnection(int connId,
 MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connid, int aAppGateIndex) {
 	// TODO check if connection for flow
 	MPTCP_PCB* tmp = first;
-	while(tmp != NULL){
+	while (tmp != NULL) {
 		MPTCP_Flow* flow = tmp->getFlow();
-		if((flow->appID == connid)
-		  && (flow->appGateIndex == aAppGateIndex)){
+		if ((flow->appID == connid) && (flow->appGateIndex == aAppGateIndex)) {
 			return tmp;
 		}
 		tmp = tmp->next;
@@ -1209,14 +1255,15 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connid, int aAppGateIndex) {
 /**
  * PCB lookup by subflow
  */
-MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(TCPSegment *tcpseg, TCPConnection* subflow) {
+MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(TCPSegment *tcpseg,
+		TCPConnection* subflow) {
 	// TODO check if connection for flow
 	MPTCP_PCB* tmp = first;
-	while(tmp != NULL){
+	while (tmp != NULL) {
 		DEBUGPRINT("[IN] MPTCP Flow ID  %d",tmp->id);
 		// the information we are looking for are part of an subflow of the connection (flow)
 		MPTCP_Flow* flow = tmp->getFlow();
-		if(flow->isSubflowOf(subflow)){
+		if (flow->isSubflowOf(subflow)) {
 			// So here we are, this subflow belongs to this flow, this flow is controlled by this PCB
 			return tmp;
 		}
@@ -1228,11 +1275,10 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(TCPSegment *tcpseg, TCPConnection* subflow
 /**
  * PCB lookup by Key
  */
-MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(TCPSegment *tcpseg){
+MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(TCPSegment *tcpseg) {
 
 	return NULL;
 }
-
 
 /**
  * TODO Check Function

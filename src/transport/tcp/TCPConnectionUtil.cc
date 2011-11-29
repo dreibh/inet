@@ -1343,7 +1343,7 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 			tcpEV << "It is a Multipath Flow" << "\n";
 		}
 		MPTCP_Flow* mpflow = tmp->getFlow();
-		mpflow->writeMPTCPHeaderOptions(t,state,tcpseg,this);
+		t = mpflow->writeMPTCPHeaderOptions(t,state,tcpseg,this);
 	}
 	else{
 		tcpEV << "Connection with disabled MPTCP" << "\n";

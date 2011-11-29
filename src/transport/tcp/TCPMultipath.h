@@ -31,6 +31,7 @@
 #include <assert.h>
 
 #include "TCPCommand_m.h"
+#include "TCPSegment.h"
 #include "IPvXAddress.h"
 
 // Lower layer info
@@ -87,7 +88,12 @@ class INET_API MPTCP_Flow
 	 MPTCP_State state;						// Internal State of the multipath protocol control block
 	 bool initiator;
 	 void initFlow();
-
+	 int initialHandshake(uint t,
+	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
+	 		TCPConnection* subflow, TCPOption* option);
+	 int joinHandshake(uint t,
+	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
+	 		TCPConnection* subflow, TCPOption* option);
   protected:
 
 	 uint32 flow_token;						// generate after getting keys

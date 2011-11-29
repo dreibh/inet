@@ -239,7 +239,7 @@ simple TCP like ITCP
         string sendQueueClass = default("TCPVirtualDataSendQueue"); // TCPVirtualDataSendQueue/TCPMsgBasedSendQueue
         string receiveQueueClass = default("TCPVirtualDataRcvQueue"); // TCPVirtualDataRcvQueue/TCPMsgBasedRcvQueue
         bool recordStats = default(true); // recording of seqNum etc. into output vectors enabled/disabled
-        bool multipath = default(true); // recording of seqNum etc. into output vectors enabled/disabled
+        bool multipath = default(true); // endable and disable multipath
         @display("i=block/wheelbarrow");
     gates:
         input appIn[] @labels(TCPCommand/down);

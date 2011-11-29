@@ -14,4 +14,11 @@ The reason is not clear, but there is a workaround. By default the internal proc
 But this do not work with the breakpoints very well. So change in the "Debug configuration" the process launcher 
 to the gdb process launcher. 
 
+
+Bugs:
  
+ 
+Second SYN goes on the same interface out like the first
+==========================================================
+
+When should I call joinConnection(); to setup join handshake.  
