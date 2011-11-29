@@ -859,8 +859,18 @@ void TCPConnection::readHeaderOptions(TCPSegment *tcpseg)
             case TCPOPTION_TIMESTAMP: // TS=8
                 ok = processTSOption(tcpseg, option);
                 break;
+#ifdef PRIVATE
+            case TCPOPTION_MPTCP: //	MPTCP
+            	tcpEV << "Check on Multipath" << "\n";
+                if(tcpMain->multipath){
+                	 tcpEV << "INFO: MPTCP option - Please note we process it later " << "\n";
+                }
+                break;
+#endif //PRIVATE
+
             // TODO add new TCPOptions here once they are implemented
             // TODO delegate to TCPAlgorithm as well -- it may want to recognized additional options
+
             default:
                 tcpEV << "ERROR: Unsupported TCP option kind " << kind << "\n";
                 break;

@@ -64,7 +64,7 @@ void TCP::initialize()
 #ifdef PRIVATE
 	multipath =  par("multipath");
 	if(multipath){
-		tcpEV << "Multipath TCP enabled\n";
+		tcpEV << "Initializing module TCP: Multipath TCP enabled\n";
 	}
 #endif
     lastEphemeralPort = EPHEMERAL_PORTRANGE_START;

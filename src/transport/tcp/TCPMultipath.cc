@@ -19,7 +19,7 @@
 #include "TCPMultipath.h"
 #include "TCPConnection.h"
 #include "TCPSegment.h"
-#include <ASSERT.h>
+//#include <ASSERT.h>
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 #include <inttypes.h>
@@ -583,11 +583,12 @@ int MPTCP_Flow::generateTokenAndSQN(uint64 s, uint64 r) {
 	// TODO: irgendwas ist faul
 
 	SHA_CTX       ctx;
+	unsigned char dm[SHA_DIGEST_LENGTH];	// SHA_DIGEST_LENGTH = 20 Bytes
+
 	char s1[64];
 	char s2[64];
-
-	uint32 out32 = {0};
-	uint64 out64 = {0};
+	uint32 *out32 = {0};
+	uint64 *out64 = {0};
 
 	sender_key = s;
 	receiver_key = r;
@@ -604,13 +605,14 @@ int MPTCP_Flow::generateTokenAndSQN(uint64 s, uint64 r) {
 	SHA1_Update(&ctx,s1,strlen(s1));
 	SHA1_Update(&ctx,s2,strlen(s2));
 
-	SHA1_Final((unsigned char*) &out32, &ctx);
-	SHA1_Final((unsigned char*) &out64, &ctx);
+	SHA1_Final((unsigned char*) dm, &ctx);
 
-	DEBUGPRINT("[OUT] Generate token: %u:  ",out32);
-	DEBUGPRINT("[OUT] Generate seq: %llu:  ",out64);
-	flow_token = out32;
-	seq = out64;
+	out64 = (uint64*) dm; 	// TODO Not sure, I think should be fixed
+	out32 = (uint32*) dm;		// TODO Not sure, I think should be fixed
+	DEBUGPRINT("[OUT] Generate token: %u:  ",*out32);
+	DEBUGPRINT("[OUT] Generate seq: %llu:  ",*out64);
+	flow_token = *out32;
+	seq = *out64;
 	return 0;
 }
 
