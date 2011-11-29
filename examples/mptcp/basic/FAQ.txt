@@ -1,0 +1,7 @@
+How to enable Multipath in Omnet?
+==================================
+
+Open the TCP.ned file. Here you can paramize multipath.
+If you interested to set multipath on by default
+
+ bool multipath = default(true); // endable and disable multipath
