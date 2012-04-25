@@ -20,9 +20,19 @@
 #include "TCPConnection.h"
 
 //#include <ASSERT.h>
+
+#if defined(__APPLE__)
+#define COMMON_DIGEST_FOR_OPENSSL
+#include <CommonCrypto/CommonDigest.h>
+#define SHA1 CC_SHA1
+#else
 #include <openssl/sha.h>
 #include <openssl/md5.h>
 #include <inttypes.h>
+#endif
+
+
+
 
 // For defines for debugging (Could be removed)
 #define WHERESTR  "\n[MPTCP][file %s, line %d]: "
