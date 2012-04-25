@@ -687,7 +687,7 @@ unsigned char* MPTCP_Flow::generateSYNACK_HMAC(uint64 ka, uint64 kb, uint32 ra,
 
 	// Need MAC-B
 	// MAC(KEY=(Key-B + Key-A)), Msg=(R-B + R-A))
-	sprintf(key, "%19lu%19lu", kb, ka);
+	sprintf(key, "%19llu%19llu", kb, ka);
 	sprintf(msg, "%10u%10u", rb, ra);
 	hmac_md5((unsigned char*) msg, strlen(msg), (unsigned char*) key, strlen(
 			key), digist);
@@ -704,7 +704,7 @@ unsigned char* MPTCP_Flow::generateACK_HMAC(uint64 ka, uint64 kb, uint32 ra,
 
 	// Need MAC-A
 	// MAC(KEY=(Key-A + Key-B)), Msg=(R-A + R-B))
-	sprintf(key, "%19lu%19lu", ka, kb);
+	sprintf(key, "%19llu%19llu", ka, kb);
 	sprintf(msg, "%10u%10u", ra, rb);
 	hmac_md5((unsigned char*) msg, strlen(msg), (unsigned char*) key, strlen(
 			key), digist);
