@@ -324,6 +324,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 				// End for the Handhake of an exisiting Flow
 				t = initialHandshake(t, subflow_state, tcpseg, subflow,  &option);
 			}
+			break;
 		}
 	}
 	joinConnection(); // TODO -> Perhaps there is a better place, but in first try we check if there are new data received
