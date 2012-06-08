@@ -23,7 +23,7 @@ network mptcpnetwork
     submodules:
         client1: StandardHost {
             parameters:
-                @display("p=53,67;i=device/pc3");
+                @display("p=50,67;i=device/pc3");
                 routingFile = "client1.mrt";
             gates:
                 pppg[2];
@@ -38,7 +38,7 @@ network mptcpnetwork
         router1: Router {
             parameters:
                 routingFile = "router1.mrt";
-                @display("p=130,32,37;i=abstract/router");
+                @display("p=130,32;i=abstract/router");
             gates:
                 pppg[2];
         }
