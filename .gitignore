@@ -19,6 +19,14 @@ out/
 *.idb
 *.manifest
 .tkenvrc
+*.pcap
+*.vec
+*.vci
+.oppbuildspec 
+.DS_Store
+.gitignore
+/.settings
+/src/INET
 
 # ignore backup and temp files
 *.bak
@@ -27,3 +35,6 @@ backups
 xxx
 /3rdparty
 /tmp/
+/Debug
+/doc
+.csett*
