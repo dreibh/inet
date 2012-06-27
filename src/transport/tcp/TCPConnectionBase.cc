@@ -1,6 +1,8 @@
 //
 // Copyright (C) 2004 Andras Varga
 // Copyright (C) 2009-2010 Thomas Reschka
+// Copyright (C) 2010 Robin Seggelmann
+// Copyright (C) 2010-2011 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -76,7 +78,7 @@ TCPStateVariables::TCPStateVariables()
     snd_ws = false;
     rcv_ws = false;
     rcv_wnd_scale = 0;        // will be set from configureStateVariables()
-    snd_wnd_scale = 0;      
+    snd_wnd_scale = 0;
 
     ts_support = false;       // will be set from configureStateVariables()
     ts_enabled = false;
@@ -110,6 +112,8 @@ TCPStateVariables::TCPStateVariables()
     usedRcvBuffer = 0;
     freeRcvBuffer = 0;
     tcpRcvQueueDrops = 0;
+    sendQueueLimit = 0;
+    queueUpdate = true;
 }
 
 std::string TCPStateVariables::info() const
@@ -360,6 +364,7 @@ bool TCPConnection::processAppCommand(cMessage *msg)
         case TCP_E_CLOSE: process_CLOSE(event, tcpCommand, msg); break;
         case TCP_E_ABORT: process_ABORT(event, tcpCommand, msg); break;
         case TCP_E_STATUS: process_STATUS(event, tcpCommand, msg); break;
+        case TCP_E_QUEUE_BYTES_LIMIT: process_QUEUE_BYTES_LIMIT(event, tcpCommand, msg); break;
         default: opp_error("wrong event code");
     }
 
@@ -372,12 +377,13 @@ TCPEventCode TCPConnection::preanalyseAppCommandEvent(int commandCode)
 {
     switch (commandCode)
     {
-        case TCP_C_OPEN_ACTIVE:  return TCP_E_OPEN_ACTIVE;
-        case TCP_C_OPEN_PASSIVE: return TCP_E_OPEN_PASSIVE;
-        case TCP_C_SEND:         return TCP_E_SEND;
-        case TCP_C_CLOSE:        return TCP_E_CLOSE;
-        case TCP_C_ABORT:        return TCP_E_ABORT;
-        case TCP_C_STATUS:       return TCP_E_STATUS;
+        case TCP_C_OPEN_ACTIVE:       return TCP_E_OPEN_ACTIVE;
+        case TCP_C_OPEN_PASSIVE:      return TCP_E_OPEN_PASSIVE;
+        case TCP_C_SEND:              return TCP_E_SEND;
+        case TCP_C_CLOSE:             return TCP_E_CLOSE;
+        case TCP_C_ABORT:             return TCP_E_ABORT;
+        case TCP_C_STATUS:            return TCP_E_STATUS;
+        case TCP_C_QUEUE_BYTES_LIMIT: return TCP_E_QUEUE_BYTES_LIMIT;
         default: opp_error("Unknown message kind in app command");
                  return (TCPEventCode)0; // to satisfy compiler
     }

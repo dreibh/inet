@@ -1,5 +1,6 @@
 //
 // Copyright (C) 2005 Andras Varga
+// Copyright (C) 2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -21,6 +22,11 @@
 
 #include <omnetpp.h>
 #include "PassiveQueueBase.h"
+
+
+// Uncomment to print info on forwarded/dropped messages
+// #define REDQUEUE_DEBUG
+
 
 /**
  * RED queue. See NED for more info.
@@ -56,7 +62,7 @@ class INET_API REDQueue : public PassiveQueueBase
     /**
      * Redefined from PassiveQueueBase.
      */
-    virtual bool enqueue(cMessage *msg);
+    virtual bool enqueue(cMessage* msg);
 
     /**
      * Redefined from PassiveQueueBase.
@@ -66,10 +72,14 @@ class INET_API REDQueue : public PassiveQueueBase
     /**
      * Redefined from PassiveQueueBase.
      */
-    virtual void sendOut(cMessage *msg);
+    virtual void sendOut(cMessage* msg);
 
+#ifdef REDQUEUE_DEBUG
+    /**
+      * Print message information.
+      */
+    void dumpInfo(const char* info, cMessage* msg);
+#endif
 };
 
 #endif
-
-

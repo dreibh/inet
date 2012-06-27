@@ -28,6 +28,9 @@
 #include "InterfaceTable.h"
 #include "InterfaceTableAccess.h"
 #include "TimeStatsCollector.h"
+#ifdef PRIVATE
+#include "QoSStatsCollector.h"
+#endif
 #include "ChunkMap.h"
 #include "GapList.h"
 #include "SCTPSeqNumbers.h"
@@ -246,6 +249,9 @@ enum SCTPStreamSchedulers
 #define SCTP_COOKIE_LENGTH                             76
 #define HB_INTERVAL                                    30
 #define PATH_MAX_RETRANS                                5
+#ifdef PRIVATE
+#define SCTP_COMPRESSED_NRSACK_CHUNK_LENGTH            16
+#endif
 
 #define SCTP_TIMEOUT_INIT_REXMIT           3   // initially 3 seconds
 #define SCTP_TIMEOUT_INIT_REXMIT_MAX     240   // 4 mins
@@ -306,6 +312,9 @@ class INET_API SCTPPathVariables : public cPolymorphic
     uint32             pmtu;
     // ====== Congestion Control ==========================================
     uint32             cwnd;
+#ifdef PRIVATE
+    uint32             tempCwnd;                       // I.R. 08.04.2010
+#endif
     uint32             ssthresh;
     uint32             partialBytesAcked;
     uint32             queuedBytes;                    // T.D. 19.02.2010
@@ -329,6 +338,48 @@ class INET_API SCTPPathVariables : public cPolymorphic
     cMessage*           BlockingTimer;
     cMessage*           ResetTimer;
     cMessage*           AsconfTimer;
+#ifdef PRIVATE
+    // ====== QoS-SCTP ====================================================
+    QoSStatsCollector  QoS;                            // T.D. 11.08.2010
+    // ====== High-Speed CC ===============================================
+    unsigned int       highSpeedCCThresholdIdx;        // T.D. 22.02.2010
+    // ====== Max Burst ===================================================
+    uint32             packetsInBurst;                 // T.D. 22.02.2010
+    // ====== CMT Split Fast Retransmission ===============================
+    bool               sawNewAck;                      // T.D. 24.03.2009
+    uint32             lowestNewAckInSack;             // T.D. 04.02.2010
+    uint32             highestNewAckInSack;            // T.D. 24.03.2009
+    // ====== CMT Pseudo CumAck (CUCv1) ===================================
+    bool               findPseudoCumAck;               // T.D. 23.03.2009
+    bool               newPseudoCumAck;                // T.D. 23.03.2009
+    uint32             pseudoCumAck;                   // T.D. 23.03.2009
+    // ====== CMT RTX Pseudo CumAck (CUCv2) ===============================
+    bool               findRTXPseudoCumAck;            // T.D. 24.03.2009
+    bool               newRTXPseudoCumAck;             // T.D. 24.03.2009
+    uint32             rtxPseudoCumAck;                // T.D. 24.03.2009
+    uint32             oldestChunkTSN;                 // T.D. 02.03.2010
+    simtime_t          oldestChunkSendTime;            // T.D. 02.03.2010
+    simtime_t          newOldestChunkSendTime;         // T.D. 02.03.2010
+    // ====== CMT Round-Robin among Paths =================================
+    simtime_t          lastTransmission;               // T.D. 24.03.2009
+    unsigned int       sendAllRandomizer;
+    // ====== CMT/RP-SCTP =================================================
+    unsigned int       cmtCCGroup;                     // T.D. 27.01.2011
+    unsigned int       cmtGroupPaths;                  // T.D. 01.02.2011
+    uint32             utilizedCwnd;                   // T.D. 03.02.2011
+    uint32             cmtGroupTotalUtilizedCwnd;      // T.D. 03.02.2011
+    uint32             cmtGroupTotalCwnd;              // T.D. 01.02.2011
+    uint32             cmtGroupTotalSsthresh;          // T.D. 01.02.2011
+    double             cmtGroupTotalCwndBandwidth;     // T.D. 03.02.2011
+    double             cmtGroupTotalUtilizedCwndBandwidth; // T.D. 03.02.2011
+    double             cmtGroupAlpha;                  // T.D. 01.02.2011
+    // ====== CMT Sender Buffer Control ===================================
+    simtime_t          blockingTimeout;                // T.D. 15.02.2010: do not use path until given time
+    // ====== CMT Slow Path RTT Calculation ===============================
+    bool               waitingForRTTCalculaton;        // T.D. 25.02.2010
+    simtime_t          txTimeForRTTCalculation;        // T.D. 25.02.2010
+    uint32             tsnForRTTCalculation;           // T.D. 25.02.2010
+#endif
 
     // ====== Path Status =================================================
     simtime_t           heartbeatTimeout;
@@ -372,6 +423,11 @@ class INET_API SCTPPathVariables : public cPolymorphic
     cOutVector*         vectorPathTSNTimerBased;
     cOutVector*         vectorPathAckedTSNCumAck;
     cOutVector*         vectorPathAckedTSNGapAck;
+#ifdef PRIVATE
+    cOutVector*         vectorPathPseudoCumAck;
+    cOutVector*         vectorPathRTXPseudoCumAck;
+    cOutVector*         vectorPathBlockingTSNsMoved;
+#endif
     cOutVector*         vectorPathSentTSN;
     cOutVector*         vectorPathReceivedTSN;
     cOutVector*         vectorPathHb;
@@ -616,6 +672,87 @@ class INET_API SCTPStateVariables : public cPolymorphic
     uint32                   rtxMethod;
     // ====== Max Burst ===================================================
     uint32                   maxBurst;
+#ifdef PRIVATE
+    enum MBVariant {
+       MBV_UseItOrLoseIt                    = 0,
+       MBV_CongestionWindowLimiting         = 1,
+       MBV_UseItOrLoseItTempCwnd            = 2,
+       MBV_CongestionWindowLimitingTempCwnd = 3,
+       MBV_MaxBurst                         = 4,
+       MBV_AggressiveMaxBurst               = 5,
+       MBV_TotalMaxBurst                    = 6
+    };
+    MBVariant                maxBurstVariant;
+    uint32                   initialWindow;
+    // ====== CMT-SCTP ====================================================
+    bool                     allowCMT;
+    bool                     (*cmtSendAllComparisonFunction)(const SCTPPathVariables* left, const SCTPPathVariables* right);
+    const char*              cmtRetransmissionVariant;
+
+    enum CUCVariant {
+       CUCV_Normal         = 0,
+       CUCV_PseudoCumAck   = 1,
+       CUCV_PseudoCumAckV2 = 2
+    };
+    CUCVariant               cmtCUCVariant;               // Cwnd Update for CMT (CUC)
+
+    enum BufferSplitVariant {
+       CBSV_None         = 0,
+       CBSV_SenderOnly   = 1,
+       CBSV_ReceiverOnly = 2,
+       CBSV_BothSides    = 3
+    };
+    BufferSplitVariant       cmtBufferSplitVariant;       // Buffer Splitting for CMT
+    bool                     cmtBufferSplittingUsesOSB;  // Use outstanding instead of queued bytes for Buffer Splitting
+
+    enum ChunkReschedulingVariant {
+       CCRV_None         = 0,
+       CCRV_SenderOnly   = 1,
+       CCRV_ReceiverOnly = 2,
+       CCRV_BothSides    = 3,
+       CCRV_Test         = 99    // Test only!
+    };
+    ChunkReschedulingVariant cmtChunkReschedulingVariant;   // Chunk Rescheduling
+    double                   cmtChunkReschedulingThreshold; // Blocking Threshold for Chunk Rescheduling
+
+    bool                     cmtSmartT3Reset;            // Smart T3 Reset for CMT
+    bool                     cmtSmartFastRTX;            // Smart Fast RTX for CMT
+    bool                     cmtSmartReneging;           // Smart Reneging for CMT
+    bool                     cmtSlowPathRTTUpdate;       // Slow Path RTT Update for CMT
+    bool                     cmtUseSFR;                  // Split Fast Retransmission (SFR) for CMT
+    bool                     cmtUseDAC;                  // Delayed Ack for CMT (DAC)
+    bool                     cmtUseFRC;                  // Fast Recovery for CMT (FRC)
+    bool                     cmtIntelligentReneging;     // Consider SACK path on reneging
+    bool                     cmtSuspendPathOnBlocking;   // After moving blocking chunk, do not use path for Timer-Based RTX during 1 RTO
+    bool                     cmtMovedChunksReduceCwnd;   // Subtract moved chunk from cwnd of old path
+    double                   movedChunkFastRTXFactor;
+    unsigned int             blockingTSNsMoved;
+    bool                     strictCwndBooking;          // Strict overbooking handling
+    enum CSackPath {
+       CSP_Standard     = 0,
+       CSP_Primary      = 1,
+       CSP_RoundRobin   = 2,
+       CSP_SmallestSRTT = 3
+    };
+    CSackPath                cmtSackPath;                // SACK path selection variant for CMT
+    // ====== High-Speed SCTP =============================================
+    bool                     highSpeedCC;                // HighSpeed CC (RFC 3649)
+
+    // ====== CMT/RP-SCTP =================================================
+    enum CCCVariant {
+       CCCV_Off         = 0,   // Standard SCTP
+       CCCV_CMT         = 1,   // CMT-SCTP
+       CCCV_CMTRPv1     = 2,   // CMT/RP-SCTP with path MTU optimization
+       CCCV_CMTRPv2     = 3,   // CMT/RP-SCTP with path MTU optimization and bandwidth consideration
+       CCCV_Like_MPTCP  = 4,   // RP like MPTCP
+       CCCV_CMTRP_Test1 = 100,
+       CCCV_CMTRP_Test2 = 101
+    };
+    CCCVariant               cmtCCVariant;
+    bool                     rpPathBlocking;          // T.D. 10.08.2011: CMT/RP path blocking
+    bool                     rpScaleBlockingTimeout;  // T.D. 15.08.2011: Scale blocking timeout by number of paths
+    uint32                   rpMinCwnd;               // T.D. 15.08.2011: Minimum cwnd in MTUs
+#endif
 
     // ====== SACK Sequence Number Checker ================================
     bool                     checkSackSeqNumber;         // Ensure handling SACKs in original sequence
@@ -742,6 +879,10 @@ class INET_API SCTPAssociation : public cObject
     cMessage*             FairStartTimer;
     cMessage*             FairStopTimer;
 
+#ifdef PRIVATE
+    // ------ CMT Delayed Ack (DAC) ---------------------
+    uint8_t               dacPacketsRcvd;
+#endif
 
   protected:
     AddressVector         localAddressList;
@@ -994,6 +1135,11 @@ class INET_API SCTPAssociation : public cObject
     void putInDeliveryQ(const uint16 sid);
     bool msgMustBeAbandoned(SCTPDataMsg* msg, int32 stream, bool ordered); //PR-SCTP
     void advancePeerTsn();
+#ifdef PRIVATE
+    inline void cucProcessGapReports(const SCTPDataVariables* chunk,
+                                     SCTPPathVariables*       path,
+                                     const bool               isAcked);   // CMT-SCTP
+#endif
 
     /** Utility: prints local/remote addr/port and app gate index/assocId */
     void printAssocBrief();
@@ -1140,6 +1286,9 @@ class INET_API SCTPAssociation : public cObject
     void timeForSack(bool& sackOnly, bool& sackWithData);
     void sendSACKviaSelectedPath(SCTPMessage* sctpMsg);
     void checkOutstandingBytes();
+#ifdef PRIVATE
+      void updateHighSpeedCCThresholdIdx(SCTPPathVariables* path);
+#endif
     uint32 getInitialCwnd(const SCTPPathVariables* path) const;
     void recordCwndUpdate(SCTPPathVariables* path);
     void generateSendQueueAbatedIndication(const uint64 bytes);
@@ -1194,6 +1343,17 @@ class INET_API SCTPAssociation : public cObject
     void recordTransmission(SCTPMessage* sctpMsg, SCTPPathVariables* path);
     void recordAcknowledgement(SCTPDataVariables* chunk, SCTPPathVariables* path);
     void recordDequeuing(SCTPDataVariables* chunk);
+
+#ifdef PRIVATE
+    void checkPseudoCumAck(const SCTPPathVariables* path);
+    static bool pathMapLargestSSThreshold(const SCTPPathVariables* left, const SCTPPathVariables* right);
+    static bool pathMapLargestSpace(const SCTPPathVariables* left, const SCTPPathVariables* right);
+    static bool pathMapLargestSpaceAndSSThreshold(const SCTPPathVariables* left, const SCTPPathVariables* right);
+    static bool pathMapSmallestLastTransmission(const SCTPPathVariables* left, const SCTPPathVariables* right);
+    static bool pathMapRandomized(const SCTPPathVariables* left, const SCTPPathVariables* right);
+    std::vector<SCTPPathVariables*> getSortedPathMap();
+    void chunkReschedulingControl(SCTPPathVariables* path);
+#endif
 
     void dumpPaths(std::ostream& os = sctpEV3) const;
     void dumpQueue(std::ostream& os = sctpEV3);

@@ -1,4 +1,5 @@
 //
+// Copyright (C) 2009-2012 Thomas Dreibholz
 // Copyright (C) 2004 Andras Varga
 // Copyright (C) 2000 Institut fuer Telematik, Universitaet Karlsruhe
 //
@@ -19,124 +20,140 @@
 
 package inet.nodes.inet;
 
+import inet.applications.netperfmeter.NetPerfMeter;
 import inet.applications.pingapp.PingApp;
-import inet.applications.sctpapp.SCTPApp;
 import inet.applications.tcpapp.TCPApp;
 import inet.applications.udpapp.UDPApp;
+import inet.applications.sctpapp.SCTPApp;   //I.R.
 import inet.base.NotificationBoard;
 import inet.linklayer.ethernet.EthernetInterface;
-import inet.linklayer.ext.ExtInterface;
 import inet.linklayer.ppp.PPPInterface;
+import inet.linklayer.ext.ExtInterface; //I.R.
 import inet.networklayer.common.InterfaceTable;
 import inet.networklayer.ipv4.RoutingTable;
-import inet.transport.sctp.SCTP;
-import inet.transport.tcp.ITCP;
+import inet.transport.tcp.TCP;
 import inet.transport.udp.UDP;
+import inet.transport.sctp.SCTP;    //I.R.
+import inet.util.TCPDump;   //I.R.
 import inet.util.NAMTraceWriter;
-import inet.util.TCPDump;
 
 
 //
-// \IP host with SCTP, TCP, UDP layers and applications.
+// \IP host with TCP, UDP layers and applications.
 //
 module StandardHost
 {
     parameters:
         @node();
-        @labels(node,ethernet-node);
-        @display("i=device/pc2");
+        int numNetPerfMeters = default(0);   // T.D. 17.11.09
         int numTcpApps = default(0);
         int numUdpApps = default(0);
-        int numSctpApps = default(0);
+        int numSctpApps = default(0);   //I.R.
         string tcpAppType = default("n/a");
         string udpAppType = default("n/a");
-        string sctpAppType = default("n/a");
-        string tcpType = default("TCP");  // tcp implementation (e.g. TCP, TCP_old, TCP_NSC)
+        string sctpAppType = default("n/a");    //I.R.
         bool IPForward = default(false);
         int namid = default(-1);
         string routingFile = default("");
-        int numExtInterfaces = default(0);
+        @display("i=device/pc2");
     gates:
-        inout pppg[] @labels(PPPFrame-conn);
-        inout ethg[] @labels(EtherFrame-conn);
+        inout pppg[];
+        inout ethg[];
+        inout extg[];
     submodules:
-        namTrace: NAMTraceWriter {
-            parameters:
-                namid = namid;
-                @display("p=57,294");
-        }
         notificationBoard: NotificationBoard {
             parameters:
-                @display("p=57,54");
+                @display("p=60,60");
         }
         interfaceTable: InterfaceTable {
             parameters:
-                @display("p=57,134");
+                @display("p=60,160");
         }
         routingTable: RoutingTable {
             parameters:
                 IPForward = IPForward;
                 routerId = "";
                 routingFile = routingFile;
-                @display("p=57,214");
+                @display("p=60,260");
+        }
+        namTrace: NAMTraceWriter {
+            parameters:
+                namid = namid;
+                @display("p=60,360");
+        }
+
+        netPerfMeter[numNetPerfMeters]: NetPerfMeter {  // T.D. 17.11.09
+            parameters:
+                @display("p=280,60;i=block/timer");
         }
         tcpApp[numTcpApps]: <tcpAppType> like TCPApp {
             parameters:
-                @display("p=186,54");
-        }
-        tcp: <tcpType> like ITCP {
-            parameters:
-                @display("p=186,141");
+                @display("p=180,60");
         }
         udpApp[numUdpApps]: <udpAppType> like UDPApp {
             parameters:
-                @display("p=336,54");
+                @display("p=280,60");
         }
-        udp: UDP {
+        sctpApp[numSctpApps]: <sctpAppType> like SCTPApp {  //I.R.
             parameters:
-                @display("p=336,141");
-        }
-        sctpApp[numSctpApps]: <sctpAppType> like SCTPApp {
-            parameters:
-                @display("p=501,54");
-        }
-        sctp: SCTP {
-            @display("p=501,141;i=block/wheelbarrow");
+                @display("p=380,60");
         }
         pingApp: PingApp {
             parameters:
-                @display("p=501,230");
+                @display("p=360,230");
         }
+
+        tcp: TCP {
+            parameters:
+                @display("p=180,160");
+        }
+        udp: UDP {
+            parameters:
+                @display("p=280,160");
+        }
+        sctp: SCTP {    //I.R.
+            @display("p=380,160;i=block/wheelbarrow");
+        }
+
         networkLayer: NetworkLayer {
             parameters:
                 proxyARP = false;
-                @display("p=336,230;q=queue");
+                @display("p=280,250;q=queue");
             gates:
-                ifIn[sizeof(pppg)+sizeof(ethg)+numExtInterfaces];
-                ifOut[sizeof(pppg)+sizeof(ethg)+numExtInterfaces];
+                ifIn[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
+                ifOut[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
         }
         ppp[sizeof(pppg)]: PPPInterface {
             parameters:
-                @display("p=186,390,row,90;q=txQueue");
+                @display("p=235,360,row,90;q=txQueue;i=block/ifcard");
         }
         eth[sizeof(ethg)]: EthernetInterface {
             parameters:
-                @display("p=336,390,row,90;q=txQueue");
+                @display("p=335,360,row,90;q=txQueue;i=block/ifcard");
         }
-        ext[numExtInterfaces]: ExtInterface {
+        ext[sizeof(extg)]: ExtInterface {   //I.R.
             parameters:
-                @display("p=501,390,row,90;q=txQueue;i=block/ifcard");
+                @display("p=400,390,row,90;q=txQueue;i=block/ifcard");
         }
-        tcpdump: TCPDump {
+        tcpdump: TCPDump {  //I.R.
             parameters:
-                @display("p=336,302;i=abstract/cache_s");
+                @display("p=280,310;i=abstract/cache_s");
             gates:
-                ifIn[sizeof(pppg)+sizeof(ethg)+numExtInterfaces];
-                in2[sizeof(pppg)+sizeof(ethg)+numExtInterfaces];
-                ifOut[sizeof(pppg)+sizeof(ethg)+numExtInterfaces];
-                out2[sizeof(pppg)+sizeof(ethg)+numExtInterfaces];
+                ifIn[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
+                in2[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
+                ifOut[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
+                out2[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
         }
     connections allowunconnected:
+        for i=0..numNetPerfMeters-1 {
+            netPerfMeter[i].tcpOut --> tcp.appIn++;
+            netPerfMeter[i].tcpIn <-- tcp.appOut++;
+            netPerfMeter[i].sctpOut --> sctp.from_appl++;
+            netPerfMeter[i].sctpIn <-- sctp.to_appl++;
+            netPerfMeter[i].udpOut --> udp.appIn++;
+            netPerfMeter[i].udpIn <-- udp.appOut++;
+        }
+
         for i=0..numTcpApps-1 {
             tcpApp[i].tcpOut --> tcp.appIn++;
             tcpApp[i].tcpIn <-- tcp.appOut++;
@@ -153,10 +170,11 @@ module StandardHost
         udp.ipOut --> networkLayer.udpIn;
         udp.ipIn <-- networkLayer.udpOut;
 
-        for i=0..numSctpApps-1 {
+        for i=0..numSctpApps-1 {    //I.R.
             sctpApp[i].sctpOut --> sctp.from_appl++;
             sctp.to_appl++ --> sctpApp[i].sctpIn;
         }
+
         sctp.to_ip --> networkLayer.sctpIn;
         networkLayer.sctpOut --> sctp.from_ip;
 
@@ -180,7 +198,7 @@ module StandardHost
             tcpdump.in2[sizeof(pppg)+i] <-- networkLayer.ifOut[sizeof(pppg)+i];
         }
 
-        for i=0..numExtInterfaces-1 {
+        for i=0..sizeof(extg)-1 {
             ext[i].netwOut --> tcpdump.ifIn[sizeof(pppg)+sizeof(ethg)+i];
             tcpdump.out2[sizeof(pppg)+sizeof(ethg)+i] --> networkLayer.ifIn[sizeof(pppg)+sizeof(ethg)+i];
             ext[i].netwIn <-- tcpdump.ifOut[sizeof(pppg)+sizeof(ethg)+i];

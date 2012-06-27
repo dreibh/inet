@@ -70,6 +70,7 @@ const char *TCPConnection::eventName(int event)
         CASE(TCP_E_CLOSE);
         CASE(TCP_E_ABORT);
         CASE(TCP_E_STATUS);
+        CASE(TCP_E_QUEUE_BYTES_LIMIT);
         CASE(TCP_E_RCV_DATA);
         CASE(TCP_E_RCV_ACK);
         CASE(TCP_E_RCV_SYN);
@@ -101,6 +102,7 @@ const char *TCPConnection::indicationName(int code)
         CASE(TCP_I_CONNECTION_RESET);
         CASE(TCP_I_TIMED_OUT);
         CASE(TCP_I_STATUS);
+        CASE(TCP_I_SEND_MSG);
     }
     return s;
 #undef CASE
@@ -280,13 +282,14 @@ void TCPConnection::signalConnectionTimeout()
     sendIndicationToApp(TCP_I_TIMED_OUT);
 }
 
-void TCPConnection::sendIndicationToApp(int code)
+void TCPConnection::sendIndicationToApp(int code, const int id)
 {
     tcpEV << "Notifying app: " << indicationName(code) << "\n";
     cMessage *msg = new cMessage(indicationName(code));
     msg->setKind(code);
     TCPCommand *ind = new TCPCommand();
     ind->setConnId(connId);
+    ind->setUserId(id);
     msg->setControlInfo(ind);
     tcpMain->send(msg, "appOut", appGateIndex);
 }
@@ -605,6 +608,16 @@ void TCPConnection::sendSegment(uint32 bytes)
 
     // send it
     sendToIP(tcpseg);
+
+    // let application fill queue again, if there is space
+    const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
+    const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
+    if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
+        (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
+        // Tell upper layer readiness to accept more data
+        sendIndicationToApp(TCP_I_SEND_MSG, abated);
+        state->queueUpdate = true;
+    }
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
@@ -681,7 +694,15 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     {
         while (bytesToSend >= effectiveMaxBytesSend)
         {
+            const ulong b0 = sendQueue->getBytesAvailable(state->snd_nxt);
             sendSegment(state->snd_mss);
+            const ulong b1 = sendQueue->getBytesAvailable(state->snd_nxt);
+
+            if(b0 - state->sentBytes != b1) {
+               // T.D. 17.11.2011: Nothing more to send -> stop here!
+               // FIXME: This happens sometimes when SACKs are enabled. Is this a bug?
+               break;
+            }
             bytesToSend -= state->sentBytes;
         }
     }

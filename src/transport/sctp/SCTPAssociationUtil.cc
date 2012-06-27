@@ -144,7 +144,24 @@ void SCTPAssociation::checkOutstandingBytes()
     assert(state->outstandingBytes == totalOutstandingBytesCounted);
 }
 
+#ifdef PRIVATE
+void SCTPAssociation::checkPseudoCumAck(const SCTPPathVariables* path)
+{
+   uint32 earliestOutstandingTSN    = path->pseudoCumAck;
+   uint32 rtxEarliestOutstandingTSN = path->rtxPseudoCumAck;
 
+   retransmissionQ->findEarliestOutstandingTSNsForPath(
+                       path->remoteAddress,
+                       earliestOutstandingTSN, rtxEarliestOutstandingTSN);
+
+   if( tsnGt(path->pseudoCumAck, earliestOutstandingTSN) ||
+       tsnGt(path->rtxPseudoCumAck, rtxEarliestOutstandingTSN) ) {
+      std::cerr << "WRONG PSEUDO CUM-ACK!" << endl
+                << "pseudoCumAck=" << path->pseudoCumAck << ", earliestOutstandingTSN=" << earliestOutstandingTSN << endl
+                << "rtxPseudoCumAck=" << path->rtxPseudoCumAck << ", rtxEarliestOutstandingTSN=" << rtxEarliestOutstandingTSN << endl;
+   }
+}
+#endif
 
 void SCTPAssociation::printSctpPathMap() const
 {
@@ -1281,8 +1298,122 @@ SCTPForwardTsnChunk* SCTPAssociation::createForwardTsnChunk(const IPvXAddress& p
     return forwChunk;
 }
 
+#ifdef PRIVATE
+inline static bool writeCompressedValue(uint8_t*       outputBuffer,
+                                       const size_t   outputBufferSize,
+                                       size_t&        pos,
+                                       const uint16_t value)
+{
+   if(value < 0x80) {   // 1 byte: 0vvvvvvv
+      if(pos + 1 > outputBufferSize) {
+         return(false);
+      }
+      outputBuffer[pos] = (uint8_t)value;
+      // printf("[%02x] ", outputBuffer[pos]);
+      pos += 1;
+   }
+   else if(value < 0x4000) {   // 2 bytes: 10vvvvvv vvvvvvvv
+      if(pos + 2 > outputBufferSize) {
+         return(false);
+      }
+      outputBuffer[pos+0] = 0x80 | (uint8_t)(value >> 8);
+      outputBuffer[pos+1] = (uint8_t)(value & 0xff);
+      // printf("[%02x %02x] ", outputBuffer[pos+0], outputBuffer[pos+1]);
+      pos += 2;
+   }
+   else {   // 3 bytes: 11xxxxxx vvvvvvvv vvvvvvvv
+      if(pos + 3 > outputBufferSize) {
+         return(false);
+      }
+      outputBuffer[pos+0] = 0xc0;
+      outputBuffer[pos+1] = (uint8_t)(value >> 8);
+      outputBuffer[pos+2] = (uint8_t)(value & 0xff);
+      pos += 3;
+   }
+   return(true);
+}
+
+inline static uint16_t readCompressedValue(const uint8_t* inputBuffer,
+                                           const size_t   inputBufferSize,
+                                           size_t&        pos)
+{
+   uint16_t value;
+
+   assert(pos < inputBufferSize);
+   if(inputBuffer[pos] < 0x80) {   // 1 byte: 0vvvvvvv
+      value = (uint16_t)inputBuffer[pos];
+      pos += 1;
+   }
+   else if((inputBuffer[pos] & 0xc0) == 0x80) {   // 2 bytes: 10vvvvvv vvvvvvvv
+      assert(pos + 1 < inputBufferSize);
+      value = ((uint16_t)inputBuffer[pos+0] << 8) &~ 0x8000;
+      value |= (uint16_t)inputBuffer[pos+1];
+      pos += 2;
+   }
+   else if(inputBuffer[pos] == 0xc0) {   // 3 bytes: 11xxxxxx vvvvvvvv vvvvvvvv
+      assert(pos + 2 < inputBufferSize);
+      value = ((uint16_t)inputBuffer[pos+1] << 8) | (uint16_t)inputBuffer[pos+2];
+      pos += 3;
+   }
+   else { assert(false); }
+
+   return(value);
+}
 
 
+#define VERIFY_COMPRESSED_GAPLISTS
+
+static uint32 compressGaps(const GapList* gapList, const GapList::GapType type, size_t& space)
+{
+   uint8 compressedDataBuffer[1 + 6 * gapList->getNumGaps(type)];   // Worst-case size
+
+   size_t       outputPos      = 0;
+   unsigned int entriesWritten = 0;
+   uint32 last          = gapList->getCumAckTSN();
+   for(unsigned int i = 0; i < gapList->getNumGaps(type); i++) {
+      assert(tsnGt(gapList->getGapStart(type, i), last + 1));
+      assert(tsnGe(gapList->getGapStop(type, i), gapList->getGapStart(type, i)));
+      const uint16 startOffset = gapList->getGapStart(type, i) - last;
+      const uint16 stopOffset  = gapList->getGapStop(type, i) - gapList->getGapStart(type, i);
+      const size_t lastOutputPos = outputPos;
+      if( (writeCompressedValue((uint8*)&compressedDataBuffer, sizeof(compressedDataBuffer), outputPos, startOffset) == false) ||
+          (writeCompressedValue((uint8*)&compressedDataBuffer, sizeof(compressedDataBuffer), outputPos, stopOffset) == false) ||
+          (outputPos + 1 > space) ) {
+         outputPos = lastOutputPos;
+         break;
+      }
+      entriesWritten++;
+      last = gapList->getGapStop(type, i);
+   }
+   assert(writeCompressedValue((uint8*)&compressedDataBuffer, sizeof(compressedDataBuffer), outputPos, 0x00) == true);
+   space = outputPos;
+
+#ifdef VERIFY_COMPRESSED_GAPLISTS
+#warning Verifying compressed gaps lists
+   size_t       inputPos = 0;
+   unsigned int i        = 0;
+   last = gapList->getCumAckTSN();
+   while(true) {
+      const uint16 startOffset = readCompressedValue(compressedDataBuffer, outputPos, inputPos);
+      if(startOffset > 0) {
+         const uint16 stopOffset = readCompressedValue(compressedDataBuffer, outputPos, inputPos);
+         const uint32 startTSN = last + startOffset;
+         const uint32 stopTSN  = startTSN + stopOffset;
+         assert(startTSN == gapList->getGapStart(type, i));
+         assert(stopTSN  == gapList->getGapStop(type, i));
+         last = stopTSN;
+      }
+      else {
+         break;
+      }
+      i++;
+   }
+   assert(i == entriesWritten);
+#endif
+
+   return(entriesWritten);
+}
+#endif
 
 static uint32 copyToRGaps(SCTPSackChunk*         sackChunk,
         const GapList*         gapList,
@@ -1293,6 +1424,11 @@ static uint32 copyToRGaps(SCTPSackChunk*         sackChunk,
     const uint32 count = gapList->getNumGaps(type);
     uint32       last = gapList->getCumAckTSN();
     uint32       keys = min(space / 4, count);   // Each entry occupies 2+2 bytes => at most space/4 entries
+#ifdef PRIVATE
+    if(compression) {
+        keys = count;   // Get all entries first, compress them later
+    }
+#endif
 
     sackChunk->setGapStartArraySize(keys);
     sackChunk->setGapStopArraySize(keys);
@@ -1306,7 +1442,15 @@ static uint32 copyToRGaps(SCTPSackChunk*         sackChunk,
         sackChunk->setGapStop(key, gapList->getGapStop(type, key));
         last = gapList->getGapStop(type, key);
     }
-    space = 4 * keys;
+#ifdef PRIVATE
+    if(compression) {
+        keys = compressGaps(gapList, type, space);
+        sackChunk->setNrGapStartArraySize(keys);
+        sackChunk->setNrGapStopArraySize(keys);
+    }
+   else
+#endif
+       space = 4 * keys;
 
     return (keys);
 }
@@ -1320,6 +1464,11 @@ static uint32 copyToNRGaps(SCTPSackChunk*         sackChunk,
     const uint32 count = gapList->getNumGaps(type);
     uint32       last = gapList->getCumAckTSN();
     uint32       keys = min(space / 4, count);   // Each entry occupies 2+2 bytes => at most space/4 entries
+#ifdef PRIVATE
+    if(compression) {
+        keys = count;   // Get all entries first, compress them later
+    }
+#endif
 
     sackChunk->setNrGapStartArraySize(keys);
     sackChunk->setNrGapStopArraySize(keys);
@@ -1333,7 +1482,15 @@ static uint32 copyToNRGaps(SCTPSackChunk*         sackChunk,
         sackChunk->setNrGapStop(key, gapList->getGapStop(type, key));
         last = gapList->getGapStop(type, key);
     }
-    space = 4 * keys;
+#ifdef PRIVATE
+    if(compression) {
+        keys = compressGaps(gapList, type, space);
+        sackChunk->setNrGapStartArraySize(keys);
+        sackChunk->setNrGapStopArraySize(keys);
+    }
+    else
+#endif
+        space = 4 * keys;
 
     return (keys);
 }
@@ -1445,20 +1602,67 @@ SCTPSackChunk* SCTPAssociation::createSack()
     statisticsNumNonRevokableGapBlocksStored->record(numNonRevokableGaps);
     statisticsNumDuplicatesStored->record(numDups);
 
-    // ------ Regular NR-SACK ---------------------------
-    if (state->nrSack == true) {
-        sackHeaderLength = SCTP_NRSACK_CHUNK_LENGTH;
-        numRevokableGaps = copyToRGaps(sackChunk,  &state->gapList, GapList::GT_Revokable,    compression, revokableGapsSpace);    // Add R-acks only
-        numNonRevokableGaps = copyToNRGaps(sackChunk, &state->gapList, GapList::GT_NonRevokable, compression, nonRevokableGapsSpace); // Add NR-acks only
-    }
-    // ------ Regular SACK ------------------------------
-    else {
-        sackHeaderLength = SCTP_SACK_CHUNK_LENGTH;
-        numRevokableGaps = copyToRGaps(sackChunk, &state->gapList,  GapList::GT_Any, false, revokableGapsSpace);            // Add ALL
-        numNonRevokableGaps = 0;
-        nonRevokableGapsSpace = 0;
-    }
+#ifdef PRIVATE
+   // ====== Optimization ===================================================
+   const int optR   = (int)numRevokableGaps    - (int)totalGaps;
+   const int optNR  = (int)numNonRevokableGaps - (int)totalGaps;
 
+   // static int opt=0;
+   // static int total=0;
+   // total += numRevokableGaps + numNonRevokableGaps;
+   // printf("%d/%d\t%d\t%d\t%d\t%d\n",
+   //        opt,total,totalGaps,numRevokableGaps,numNonRevokableGaps,numRevokableGaps+numNonRevokableGaps);
+
+   if( (state->gapListOptimizationVariant == SCTPStateVariables::GLOV_Shrunken) &&
+       ((numRevokableGaps > 0) || (numNonRevokableGaps > 0)) ) {
+      compression = true;
+   }
+
+   // ------ Optimization 1: R=ANY, NR=non-revokable ------
+   if( (state->nrSack == true) &&
+       (((optR > 0) && (state->gapListOptimizationVariant == SCTPStateVariables::GLOV_Optimized1)) ||
+        ((optR > 0) && (optR >= optNR) && (state->gapListOptimizationVariant >= SCTPStateVariables::GLOV_Optimized2))) ) {
+      assert(totalGaps < numRevokableGaps);
+      sackHeaderLength    = (compression == true) ? SCTP_COMPRESSED_NRSACK_CHUNK_LENGTH : SCTP_NRSACK_CHUNK_LENGTH;
+      numRevokableGaps    = copyToRGaps(sackChunk,  &state->gapList, GapList::GT_Any,          compression, revokableGapsSpace);    // Add ALL
+      numNonRevokableGaps = copyToNRGaps(sackChunk, &state->gapList, GapList::GT_NonRevokable, compression, nonRevokableGapsSpace); // Add NR-acks only
+      assert(numRevokableGaps == totalGaps);
+      // opt += optR;
+   }
+   // ------ Optimization 2: NR=ANY, R=difference ---------
+   else if( (state->nrSack == true) &&
+            (optNR > 0) && (state->gapListOptimizationVariant >= SCTPStateVariables::GLOV_Optimized2) ) {
+      assert(totalGaps < numNonRevokableGaps);
+      sackChunk->setNrSubtractRGaps(true);
+      sackHeaderLength    = (compression == true) ? SCTP_COMPRESSED_NRSACK_CHUNK_LENGTH : SCTP_NRSACK_CHUNK_LENGTH;
+      numRevokableGaps    = copyToRGaps(sackChunk,  &state->gapList, GapList::GT_Revokable, compression, revokableGapsSpace);    // Add R-acks only
+      numNonRevokableGaps = copyToNRGaps(sackChunk, &state->gapList, GapList::GT_Any,       compression, nonRevokableGapsSpace); // Add ALL
+      assert(numNonRevokableGaps == totalGaps);
+      // opt += optNR;
+   }
+   else {
+#endif
+        // ------ Regular NR-SACK ---------------------------
+        if (state->nrSack == true) {
+           sackHeaderLength = SCTP_NRSACK_CHUNK_LENGTH;
+#ifdef PRIVATE
+           if(compression == true) {
+              sackHeaderLength = SCTP_COMPRESSED_NRSACK_CHUNK_LENGTH;
+           }
+#endif
+           numRevokableGaps = copyToRGaps(sackChunk,  &state->gapList, GapList::GT_Revokable,    compression, revokableGapsSpace);    // Add R-acks only
+           numNonRevokableGaps = copyToNRGaps(sackChunk, &state->gapList, GapList::GT_NonRevokable, compression, nonRevokableGapsSpace); // Add NR-acks only
+        }
+        // ------ Regular SACK ------------------------------
+        else {
+           sackHeaderLength = SCTP_SACK_CHUNK_LENGTH;
+           numRevokableGaps = copyToRGaps(sackChunk, &state->gapList,  GapList::GT_Any, false, revokableGapsSpace);            // Add ALL
+           numNonRevokableGaps = 0;
+           nonRevokableGapsSpace = 0;
+        }
+#ifdef PRIVATE
+    }
+#endif
 
     // ====== SACK has to be shorted to fit in MTU ===========================
     uint32 sackLength = sackHeaderLength + revokableGapsSpace + nonRevokableGapsSpace + numDups*4;
@@ -1492,6 +1696,14 @@ SCTPSackChunk* SCTPAssociation::createSack()
             SCTP::AssocStatMap::iterator iter = sctpMain->assocStatMap.find(assocId);
             iter->second.numOverfullSACKs++;
 
+#ifdef PRIVATE
+            // ====== Undo NR optimization ====================================
+            if(sackChunk->getNrSubtractRGaps() == true) {
+                sackChunk->setNrSubtractRGaps(false);   // Unset SubtractRGaps!
+                // This optimization cannot work when lists have to be shortened.
+                // Just use regular NR list.
+            }
+#endif
             revokableGapsSpace = allowedLength - sackHeaderLength;
             if (totalGaps < (state->gapList.getNumGaps(GapList::GT_Revokable))) {
                 numRevokableGaps = copyToRGaps(sackChunk,  &state->gapList, GapList::GT_Any,          compression, revokableGapsSpace);    // Add ALL
@@ -1502,20 +1714,39 @@ SCTPSackChunk* SCTPAssociation::createSack()
             sackLength = sackHeaderLength + revokableGapsSpace + nonRevokableGapsSpace + numDups*4;
 
             // ====== Shorten gap lists ========================================
-            if (sackLength > allowedLength) {
-                const uint32 blocksBeRemoved = (sackLength - allowedLength) / 4;
-                const double revokableFraction = numRevokableGaps / (double)(numRevokableGaps + numNonRevokableGaps);
-
-                const uint32 removeRevokable = (uint32)ceil(blocksBeRemoved * revokableFraction);
-                const uint32 removeNonRevokable = (uint32)ceil(blocksBeRemoved * (1.0 - revokableFraction));
-                numRevokableGaps -= std::min(removeRevokable, numRevokableGaps);
-                numNonRevokableGaps -= std::min(removeNonRevokable, numNonRevokableGaps);
-                revokableGapsSpace = 4 * numRevokableGaps;
-                nonRevokableGapsSpace = 4 * numNonRevokableGaps;
-                numRevokableGaps = copyToRGaps(sackChunk,  &state->gapList, GapList::GT_Revokable,    compression, revokableGapsSpace);    // Add R-acks only
-                numNonRevokableGaps = copyToNRGaps(sackChunk, &state->gapList, GapList::GT_NonRevokable, compression, nonRevokableGapsSpace); // Add NR-acks only
-                sackLength = sackHeaderLength + revokableGapsSpace + nonRevokableGapsSpace + numDups*4;
+#ifdef PRIVATE
+            if(state->smartOverfullSACKHandling) {
+               if(sackHeaderLength + revokableGapsSpace < allowedLength) {
+                  // Fill NR-acks up to allowed size
+                  nonRevokableGapsSpace = allowedLength - sackHeaderLength - revokableGapsSpace;
+                  numNonRevokableGaps = copyToNRGaps(sackChunk, &state->gapList, GapList::GT_NonRevokable, compression, nonRevokableGapsSpace); // Add NR-acks only
+                  sackLength = sackHeaderLength + revokableGapsSpace + nonRevokableGapsSpace + numDups*4;
+               }
+               else {
+                  // Not even space to set R-acks => cut R-acks, no NR-acks!
+                  nonRevokableGapsSpace = allowedLength - sackHeaderLength;
+                  numRevokableGaps = copyToRGaps(sackChunk,  &state->gapList, GapList::GT_Any, compression, revokableGapsSpace);    // Add ALL
+               }
             }
+            else {
+#endif
+                if (sackLength > allowedLength) {
+                   const uint32 blocksBeRemoved = (sackLength - allowedLength) / 4;
+                   const double revokableFraction = numRevokableGaps / (double)(numRevokableGaps + numNonRevokableGaps);
+
+                   const uint32 removeRevokable = (uint32)ceil(blocksBeRemoved * revokableFraction);
+                   const uint32 removeNonRevokable = (uint32)ceil(blocksBeRemoved * (1.0 - revokableFraction));
+                   numRevokableGaps -= std::min(removeRevokable, numRevokableGaps);
+                   numNonRevokableGaps -= std::min(removeNonRevokable, numNonRevokableGaps);
+                   revokableGapsSpace = 4 * numRevokableGaps;
+                   nonRevokableGapsSpace = 4 * numNonRevokableGaps;
+                   numRevokableGaps = copyToRGaps(sackChunk,  &state->gapList, GapList::GT_Revokable,    compression, revokableGapsSpace);    // Add R-acks only
+                   numNonRevokableGaps = copyToNRGaps(sackChunk, &state->gapList, GapList::GT_NonRevokable, compression, nonRevokableGapsSpace); // Add NR-acks only
+                   sackLength = sackHeaderLength + revokableGapsSpace + nonRevokableGapsSpace + numDups*4;
+                }
+#ifdef PRIVATE
+            }
+#endif
             assert(sackLength <= allowedLength);
 
             // Update values in SACK chunk ...
@@ -1526,6 +1757,22 @@ SCTPSackChunk* SCTPAssociation::createSack()
     sackChunk->setNumDupTsns(numDups);
     sackChunk->setBitLength(sackLength * 8);
 
+#ifdef PRIVATE
+    // ====== Apply limit ====================================================
+    if (state->gapReportLimit < 1000000) {
+       if (!compression) {
+          numRevokableGaps    = std::min(numRevokableGaps, state->gapReportLimit);
+          numNonRevokableGaps = std::min(numNonRevokableGaps, state->gapReportLimit);
+          // Update values in SACK chunk ...
+          sackChunk->setNumGaps(numRevokableGaps);
+          sackChunk->setNumNrGaps(numNonRevokableGaps);
+          sackLength = sackHeaderLength + revokableGapsSpace + nonRevokableGapsSpace + numDups*4;
+       }
+       else {
+          assert(false);   // NOTE: IMPLEMENT ME!
+       }
+    }
+#endif
 
     // ====== Add duplicates =================================================
     if (numDups > 0) {
@@ -2353,6 +2600,12 @@ SCTPPathVariables* SCTPAssociation::getNextPath(const SCTPPathVariables* oldPath
                 }
             }
             if ( (newPath->activePath)
+#ifdef PRIVATE
+                 &&
+                 ( (state->allowCMT == false) ||
+                   (newPath->blockingTimeout <= 0.0) ||
+                   (simTime() > newPath->blockingTimeout) )
+#endif
             ) {
                 return newPath;
             }
@@ -2602,12 +2855,75 @@ void SCTPAssociation::putInTransmissionQ(const uint32 tsn, SCTPDataVariables* ch
 
 void SCTPAssociation::recordTransmission(SCTPMessage* sctpMsg, SCTPPathVariables* path)
 {
+#ifdef PRIVATE
+   if(path->QoS.isActive()) {
+      // ====== Record DATA transmission(s) on their stream(s) ==============
+      const uint32 numberOfChunks = sctpMsg->getChunksArraySize();
+      for(unsigned int i = 0; i < numberOfChunks; i++) {
+         const SCTPDataChunk* chunk =
+            dynamic_cast<const SCTPDataChunk*>(sctpMsg->getChunks(i));
+         if(chunk) {
+            unsigned int payloadLength = chunk->getByteLength();
+            assert(payloadLength >= 16);
+            payloadLength -= 16;   // Subtract DATA chunk header size => payload only.
+
+            SCTPSendStreamMap::iterator iterator =
+               sendStreams.find(chunk->getSid());
+            assert(iterator != sendStreams.end());
+            SCTPSendStream* stream = iterator->second;
+            if(chunk->getUBit()) {
+               stream->UnorderedQoS.recordTransmission(
+                  chunk->getTsn(), payloadLength, simTime());
+            }
+            else {
+               stream->OrderedQoS.recordTransmission(
+                  chunk->getTsn(), payloadLength, simTime());
+            }
+
+            // ====== Record transmission on path ===========================
+            path->QoS.recordTransmission(
+               chunk->getTsn(), payloadLength, simTime());
+         }
+      }
+   }
+#endif
 }
 
 void SCTPAssociation::recordAcknowledgement(SCTPDataVariables* chunk, SCTPPathVariables* path)
 {
+#ifdef PRIVATE
+   // ====== Record DATA acknowledgement for its stream =====================
+   SCTPSendStreamMap::iterator iterator = sendStreams.find(chunk->sid);
+   assert(iterator != sendStreams.end());
+   SCTPSendStream* stream = iterator->second;
+   if(!chunk->ordered) {
+      stream->UnorderedQoS.recordAcknowledgement(
+         chunk->tsn, chunk->booksize, chunk->sendTime, simTime());
+   }
+   else {
+      stream->OrderedQoS.recordAcknowledgement(
+         chunk->tsn, chunk->booksize, chunk->sendTime, simTime());
+   }
+
+   // ====== Record acknowledgement on path =================================
+   path->QoS.recordAcknowledgement(
+      chunk->tsn, chunk->booksize, chunk->sendTime, simTime());
+#endif
 }
 
 void SCTPAssociation::recordDequeuing(SCTPDataVariables* chunk)
 {
+#ifdef PRIVATE
+   SCTPSendStreamMap::iterator iterator = sendStreams.find(chunk->sid);
+   assert(iterator != sendStreams.end());
+   SCTPSendStream* stream = iterator->second;
+   if(!chunk->ordered) {
+      stream->UnorderedQoS.recordDequeuing(
+         chunk->booksize, chunk->enqueuingTime, simTime());
+   }
+   else {
+      stream->OrderedQoS.recordDequeuing(
+         chunk->booksize, chunk->enqueuingTime, simTime());
+   }
+#endif
 }

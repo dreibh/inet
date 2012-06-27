@@ -55,6 +55,17 @@ void SCTPAssociation::initStreams(uint32 inStreams, uint32 outStreams)
         {
             SCTPSendStream* sendStream = new SCTPSendStream(i);
             sendStream->setStreamId(i);
+#ifdef PRIVATE
+            char str[128];
+            snprintf(str, sizeof(str), "Ordered Stream %d:%d", assocId, sendStream->getStreamId());
+            sendStream->OrderedQoS.initialize(sctpMain, str);
+            snprintf(str, sizeof(str), "Unordered Stream %d:%d", assocId, sendStream->getStreamId());
+            sendStream->UnorderedQoS.initialize(sctpMain, str);
+            if(getSctpMain()->par("allowQoSTracking")) {
+                sendStream->OrderedQoS.activate(((simtime_t)getSctpMain()->par("qosTrackingInterval")).dbl());
+                sendStream->UnorderedQoS.activate(((simtime_t)getSctpMain()->par("qosTrackingInterval")).dbl());
+            }
+#endif
             sendStreams[i] = sendStream;
         }
     }

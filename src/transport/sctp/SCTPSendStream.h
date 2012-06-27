@@ -24,6 +24,9 @@
 #include <assert.h>
 #include "SCTPQueue.h"
 #include "SCTPAssociation.h"
+#ifdef PRIVATE
+#include "QoSStatsCollector.h"
+#endif
 #include "SCTPMessage_m.h"
 
 class SCTPMessage;
@@ -86,6 +89,13 @@ class INET_API SCTPSendStream : public cPolymorphic
     inline unsigned long long getQueuedBytes() const {
        return (streamQ->getByteLength() + uStreamQ->getByteLength());
     }
+
+#ifdef PRIVATE
+  public:
+    // ====== QoS-SCTP ======================================================
+    QoSStatsCollector  OrderedQoS;                     // T.D. 11.08.2010
+    QoSStatsCollector  UnorderedQoS;                   // T.D. 11.08.2010
+#endif
 };
 
 #endif

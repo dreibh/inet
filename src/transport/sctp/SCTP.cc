@@ -758,6 +758,9 @@ void SCTP::removeAssociation(SCTPAssociation* assoc)
     }
     assoc->statisticsQueuedSentBytes->setUtilizationMaximum(assoc->state->sendQueueLimit);
     assoc->statisticsQueuedReceivedBytes->setUtilizationMaximum((double)par("arwnd"));
+#ifdef PRIVATE
+    recordScalar("Blocking TSNs Moved", assoc->state->blockingTSNsMoved);
+#endif
 
     assoc->removePath();
     assoc->deleteStreams();

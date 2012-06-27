@@ -1,5 +1,7 @@
 //
 // Copyright (C) 2004 Andras Varga
+// Copyright (C) 2010 Robin Seggelmann
+// Copyright (C) 2010-2011 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -154,6 +156,10 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             opp_error("Error processing command SEND: connection closing");
     }
 
+    if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) > state->sendQueueLimit)) {
+       state->queueUpdate = false;
+    }
+
     delete sendCommand; // msg itself has been taken by the sendQueue
 }
 
@@ -285,4 +291,13 @@ void TCPConnection::process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, 
     sendToApp(msg);
 }
 
-
+void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)
+{
+   if(state == NULL) {
+      opp_error("Called process_QUEUE_BYTES_LIMIT on uninitialized TCPConnection!");
+   }
+   state->sendQueueLimit = tcpCommand->getUserId();
+   tcpEV<<"state->sendQueueLimit set to "<<state->sendQueueLimit<<"\n";
+   delete msg;
+   delete tcpCommand;
+}

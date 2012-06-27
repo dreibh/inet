@@ -241,7 +241,17 @@ void SCTPAssociation::process_SEND(SCTPEventCode& event, SCTPCommand* sctpComman
     // ------ Set initial destination address -----------------------------
     if (sendCommand->getPrimary()) {
         if (sendCommand->getRemoteAddr() == IPvXAddress("0.0.0.0")) {
-            datMsg->setInitialDestination(remoteAddr);
+#ifdef PRIVATE
+            if(state->allowCMT == false) {
+#endif
+                datMsg->setInitialDestination(remoteAddr);
+#ifdef PRIVATE
+            }
+            else {
+                // Do not make a path decision for CMT yet!
+                datMsg->setInitialDestination(IPvXAddress());
+            }
+#endif
         }
         else {
             datMsg->setInitialDestination(sendCommand->getRemoteAddr());
@@ -270,12 +280,18 @@ void SCTPAssociation::process_SEND(SCTPEventCode& event, SCTPCommand* sctpComman
     if (sendUnordered == 1) {
         datMsg->setOrdered(false);
         stream->getUnorderedStreamQ()->insert(datMsg);
+#ifdef PRIVATE
+        stream->UnorderedQoS.recordEnqueuing(datMsg->getByteLength(), simTime());
+#endif
     }
     else {
         datMsg->setOrdered(true);
         stream->getStreamQ()->insert(datMsg);
 
         sendQueue->record(stream->getStreamQ()->getLength());
+#ifdef PRIVATE
+        stream->OrderedQoS.recordEnqueuing(datMsg->getByteLength(), simTime());
+#endif
     }
 
     // ------ Send buffer full? -------------------------------------------
