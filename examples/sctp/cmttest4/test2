@@ -1,0 +1,21 @@
+#!/bin/sh
+rm -f core ; (cd ../../.. && make -j2 ) && \
+../../../src/inet  -n ../..:../../../src  -u Cmdenv  -f run1-parameters.ini  $@  >x 2>&1   && \
+(
+   grep "Retrans" run1-scalars.sca | grep client
+   grep "Number of Duplicates" run1-scalars.sca | grep server
+   grep "Utilization Average Queued Received Bytes 2:Total" run1-scalars.sca | grep server
+   grep "Utilization Maximum Queued Received Bytes 2:Total" run1-scalars.sca | grep server
+   grep "Average Congestion Window 2:" run1-scalars.sca
+   grep "\"Average Outstanding Bytes 2:" run1-scalars.sca
+   grep "Total Reception Bit" run1-scalars.sca | grep -v Router | grep -v client
+   grep "Overfull SACKs" run1-scalars.sca | grep -v client
+   grep "Drops Because" run1-scalars.sca | grep -v client
+   grep "Chunks Reneged" run1-scalars.sca | grep -v client
+   grep "Average Length of SACK Sent" run1-scalars.sca
+   grep "StdDev of Length of SACK Sent" run1-scalars.sca
+   grep "Reception Bit Rate Stream" run1-scalars.sca | grep server
+   grep "Average Number of [a-Z\-]* Gap Blocks S" run1-scalars.sca
+   grep "Sum of" run1-scalars.sca | grep client
+   grep "statistic cmttest4.serverBeta....netPerfMeter..." -A2 run1-scalars.sca | grep -v "field count"
+)
