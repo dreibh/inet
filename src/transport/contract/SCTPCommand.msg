@@ -56,7 +56,7 @@ class SCTPCommand extends cPacket
     int numMsgs = 1;
     int ssn = -1;
     unsigned short sendUnordered = false;
-    double lifetime = 0;
+    double prValue = 0;
     IPvXAddress localAddr = IPvXAddress("0.0.0.0");
     IPvXAddress remoteAddr = IPvXAddress("0.0.0.0");
     int gate = -1;
@@ -110,6 +110,8 @@ class SCTPOpenCommand extends SCTPCommand
     string sctpAlgorithmClass;       // may be left empty
     uint32 inboundStreams;
     uint32 outboundStreams;
+    bool streamReset;
+    int prMethod;
     uint32 numRequests;
     uint32 messagesToPush;
 }
@@ -122,9 +124,11 @@ class SCTPOpenCommand extends SCTPCommand
 //
 class SCTPSendCommand extends SCTPCommand
 {
+    unsigned int prMethod;
     bool last;
     unsigned int ppid = 0;
     bool primary = true;
+    bool sackNow = false;
 }
 
 
@@ -156,10 +160,10 @@ class SCTPConnectInfo extends SCTPCommand
 //
 class SCTPStatusInfo extends SCTPCommand
 {
-    int state;
-    string stateName;
+    int         state;
+    string      stateName;
     IPvXAddress pathId;
-    bool active;
+    bool        active;
 }
 
 class SCTPPathInfo extends SCTPCommand
@@ -181,7 +185,15 @@ class SCTPInfo extends SCTPCommand
 
 class SCTPRcvCommand extends SCTPCommand
 {
-    uint32 ppid;
-    uint32 tsn;
-    uint32 cumTsn;
+	uint32 ppid;
+	uint32 tsn;
+	uint32 cumTsn;
+}
+
+class SCTPSendQueueAbated extends SCTPCommand
+{
+   uint64 bytesAvailable;
+   uint64 bytesQueued;
+   uint64 bytesLimit;
+   uint64 queuedForStream[];
 }
