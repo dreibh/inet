@@ -8,7 +8,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
@@ -33,14 +33,17 @@ simple SCTPPeer like SCTPApp
         bool ordered = default(true);
         int outboundStreams = default(1);
         int queueSize = default(0);
+        int prMethod = default(0);  //0=NONE, 1=PR_TTL, 2=PR_RTX, 3=PR_PRIO, 4=PR_STRRST
+        bool streamReset = default(false);
+        double prValue = default(0); //for PR-SCTP
         string connectAddress;  // server address (may be symbolic)
         int connectPort; // port number to connect to
         double startTime @unit(s) = default(1s); // time first session begins
         int numRequestsPerSession = default(1);  // number of requests sent per session
         int numPacketsToReceive = default(0);
-        @display("i=block/app");
+        string streamPriorities = default("");
     gates:
-        input sctpIn @labels(SCTPCommand/up);
-        output sctpOut @labels(SCTPCommand/down);
+        input sctpIn;
+        output sctpOut;
 }
 

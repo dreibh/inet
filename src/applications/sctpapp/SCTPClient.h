@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2008 Irene Ruengeler
-// Copyright (C) 2009 Thomas Dreibholz
+// Copyright (C) 2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -52,6 +52,10 @@ class INET_API SCTPClient : public cSimpleModule, public SCTPSocket::CallbackInt
     int32 queueSize;
     uint32 inStreams;
     uint32 outStreams;
+    int32 chunksAbandoned;
+    std::map<uint32,uint32> streamRequestLengthMap;
+    std::map<uint32,uint32> streamRequestRatioMap;
+    std::map<uint32,uint32> streamRequestRatioSendMap;
     bool ordered;
     bool sendAllowed;
     bool timer;
@@ -64,9 +68,9 @@ class INET_API SCTPClient : public cSimpleModule, public SCTPSocket::CallbackInt
   public:
 
     struct pathStatus {
-         bool active;
-         bool primaryPath;
-         IPvXAddress  pid;
+       bool active;
+       bool primaryPath;
+       IPvXAddress  pid;
     };
     typedef std::map<IPvXAddress,pathStatus> SCTPPathStatus;
     SCTPPathStatus sctpPathStatus;
@@ -94,7 +98,7 @@ class INET_API SCTPClient : public cSimpleModule, public SCTPSocket::CallbackInt
     /** Issues CLOSE command */
     void close();
     /** Sends a GenericAppMsg of the given length */
-    //    virtual void sendPacket(int32 numBytes, bool serverClose=false);
+    //   virtual void sendPacket(int32 numBytes, bool serverClose=false);
     /** When running under GUI, it displays the given string next to the icon */
     void setStatusString(const char *s);
     //@}
@@ -119,6 +123,8 @@ class INET_API SCTPClient : public cSimpleModule, public SCTPSocket::CallbackInt
     /** Redefine to handle incoming SCTPStatusInfo. */
     void socketStatusArrived(int32 connId, void *yourPtr, SCTPStatusInfo *status);
     //@}
+    void msgAbandonedArrived(int32 assocId);
+    void sendStreamResetNotification();
     void setAssociation(SCTPAssociation *_assoc) {assoc = _assoc;};
     void setPrimaryPath(const char* addr);
     void sendRequestArrived();

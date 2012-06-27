@@ -1,0 +1,20 @@
+#!/bin/sh
+./run -u Cmdenv -c queueBlocking >x 2>&1 && \
+grep "Number of Fast Retransmissions 1:" scalars.sca && \
+grep "Number of Timer-Based Retransmissions 1:" scalars.sca && \
+grep "Number of PacketDrop Reports" scalars.sca && \
+grep "Average Congestion Window 1:" scalars.sca && \
+grep "Average Slow Start Threshold 1:" scalars.sca && \
+grep "\"Maximum Queued Sent Bytes 1:" scalars.sca && \
+grep "\"Average Queued Sent Bytes 1:" scalars.sca && \
+grep "\"Maximum Queued Received Bytes 2:" scalars.sca && \
+grep "\"Average Queued Received Bytes 2:" scalars.sca && \
+grep "\"Maximum Outstanding Bytes 1:" scalars.sca && \
+grep "\"Average Outstanding Bytes 1:" scalars.sca && \
+grep "\"Maximum RTT 1:" scalars.sca && \
+grep "\"Average RTT 1:" scalars.sca && \
+grep "Number of Fast Retransmissions 1:" scalars.sca && \
+grep "Number of Timer-Based Retransmissions 1:" scalars.sca && \
+grep "Number of Duplicates 2:" scalars.sca && \
+grep "Blocking TSNs" scalars.sca && \
+grep "Total Reception Bit" scalars.sca

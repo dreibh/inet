@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2008 Irene Ruengeler
-// Copyright (C) 2010 Thomas Dreibholz
+// Copyright (C) 2010-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@ class INET_API SCTPReceiveStream : public cPolymorphic
     SCTPQueue* deliveryQ;
     SCTPQueue* orderedQ;
     SCTPQueue* unorderedQ;
-    uint32 reassemble(SCTPQueue* queue, uint32 tsn);
+    uint32 reassemble(SCTPQueue* queue, const uint32 tsn);
   public:
     uint32 enqueueNewDataChunk(SCTPDataVariables* dchunk);
     /**
@@ -53,3 +53,4 @@ class INET_API SCTPReceiveStream : public cPolymorphic
 };
 
 #endif
+

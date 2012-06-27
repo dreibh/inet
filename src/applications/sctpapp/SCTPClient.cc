@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2008 Irene Ruengeler
-// Copyright (C) 2009 Thomas Dreibholz
+// Copyright (C) 2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -22,10 +22,11 @@
 #include "SCTPClient.h"
 
 #define MSGKIND_CONNECT  0
-#define MSGKIND_SEND         1
+#define MSGKIND_SEND     1
 #define MSGKIND_ABORT    2
 #define MSGKIND_PRIMARY  3
-#define MSGKIND_STOP         5
+#define MSGKIND_RESET    4
+#define MSGKIND_STOP     5
 
 
 Define_Module(SCTPClient);
@@ -37,6 +38,8 @@ void SCTPClient::initialize()
     AddressVector addresses;
     sctpEV3 << "initialize SCTP Client\n";
     numSessions = numBroken = packetsSent = packetsRcvd = bytesSent = echoedBytesSent = bytesRcvd = 0;
+    chunksAbandoned = 0;
+    WATCH(chunksAbandoned);
     WATCH(numSessions);
     WATCH(numBroken);
     WATCH(packetsSent);
@@ -125,7 +128,56 @@ void SCTPClient::connect()
     ev << "issuing OPEN command\n";
     setStatusString("connecting");
     ev << "connect to address " << connectAddress << "\n";
-    socket.connect(IPAddressResolver().resolve(connectAddress, 1), connectPort, (uint32)par("numRequestsPerSession"));
+    bool streamReset = par("streamReset");
+    socket.connect(IPAddressResolver().resolve(connectAddress, 1), connectPort, streamReset, (int32)par("prMethod"), (uint32)par("numRequestsPerSession"));
+
+    if (!streamReset)
+        streamReset = false;
+    else if (streamReset == true)
+    {
+        cMessage* cmsg = new cMessage("StreamReset");
+        cmsg->setKind(MSGKIND_RESET);
+        sctpEV3 << "StreamReset Timer scheduled at " << simulation.getSimTime() << "\n";
+        scheduleAt(simulation.getSimTime()+(double)par("streamRequestTime"), cmsg);
+    }
+
+    for (uint16 i = 0; i < outStreams; i++)
+    {
+        streamRequestLengthMap[i] = par("requestLength");
+        streamRequestRatioMap[i] = 1;
+        streamRequestRatioSendMap[i] = 1;
+    }
+
+    uint32 streamNum = 0;
+    cStringTokenizer requestTokenizer(par("streamRequestLengths").stringValue());
+    while (requestTokenizer.hasMoreTokens())
+    {
+        const char *token = requestTokenizer.nextToken();
+        streamRequestLengthMap[streamNum] = (uint32) atoi(token);
+
+        streamNum++;
+    }
+
+    streamNum = 0;
+    cStringTokenizer ratioTokenizer(par("streamRequestRatio").stringValue());
+    while (ratioTokenizer.hasMoreTokens())
+    {
+        const char *token = ratioTokenizer.nextToken();
+        streamRequestRatioMap[streamNum] = (uint32) atoi(token);
+        streamRequestRatioSendMap[streamNum] = (uint32) atoi(token);
+
+        streamNum++;
+    }
+
+    streamNum = 0;
+    cStringTokenizer prioTokenizer(par("streamPriorities").stringValue());
+    while (prioTokenizer.hasMoreTokens())
+    {
+        const char *token = prioTokenizer.nextToken();
+        socket.setStreamPriority(streamNum, (uint32) atoi(token));
+
+        streamNum++;
+    }
     numSessions++;
 }
 
@@ -275,7 +327,7 @@ void SCTPClient::socketDataArrived(int32, void *, cPacket *msg, bool)
             cmsg->setKind(SCTP_C_SEND_ORDERED);
         packetsSent++;
         delete msg;
-        socket.send(cmsg, 1);
+        socket.send(cmsg, 0, 0, 1);
     }
     if ((long)par("numPacketsToReceive")>0)
     {
@@ -295,6 +347,32 @@ void SCTPClient::sendRequest(bool last)
 
     sendBytes = par("requestLength");
 
+    // find next stream
+    uint16 nextStream = 0;
+    for (uint16 i = 0; i < outStreams; i++)
+    {
+        if (streamRequestRatioSendMap[i] > streamRequestRatioSendMap[nextStream])
+            nextStream = i;
+    }
+
+    // no stream left, reset map
+    if (nextStream == 0 && streamRequestRatioSendMap[nextStream] == 0)
+    {
+        for (uint16 i = 0; i < outStreams; i++)
+        {
+            streamRequestRatioSendMap[i] = streamRequestRatioMap[i];
+            if (streamRequestRatioSendMap[i] > streamRequestRatioSendMap[nextStream])
+                nextStream = i;
+        }
+    }
+
+    if (nextStream == 0 && streamRequestRatioSendMap[nextStream] == 0)
+    {
+        opp_error("Invalid setting of streamRequestRatio: only 0 weightings");
+    }
+
+    sendBytes = streamRequestLengthMap[nextStream];
+    streamRequestRatioSendMap[nextStream]--;
 
     if (sendBytes < 1)
         sendBytes = 1;
@@ -307,6 +385,7 @@ void SCTPClient::sendRequest(bool last)
         msg->setData(i, 'a');
     }
     msg->setDataLen(sendBytes);
+    msg->setEncaps(false);
     msg->setByteLength(sendBytes);
     msg->setCreationTime(simulation.getSimTime());
     cmsg->encapsulate(msg);
@@ -319,7 +398,7 @@ void SCTPClient::sendRequest(bool last)
     bufferSize -= sendBytes;
     if (bufferSize < 0)
         last = true;
-    socket.send(cmsg, last);
+    socket.send(cmsg, (int32)par("prMethod"), (double)par("prValue"), last, nextStream);
     bytesSent += sendBytes;
 }
 
@@ -369,6 +448,10 @@ void SCTPClient::handleTimer(cMessage *msg)
             break;
         case MSGKIND_PRIMARY:
             setPrimaryPath((const char*)par("newPrimary"));
+            break;
+        case MSGKIND_RESET:
+            sctpEV3 << "StreamReset Timer expired at Client at " << simulation.getSimTime() << "...send notification\n";
+            sendStreamResetNotification();
             break;
         case MSGKIND_STOP:
             numRequestsToSend = 0;
@@ -496,6 +579,30 @@ void SCTPClient::setPrimaryPath(const char* str)
 }
 
 
+void SCTPClient::sendStreamResetNotification()
+{
+    uint32 type;
+
+    type = (uint32)par("streamResetType");
+    if (type >= 6 && type <= 9)
+    {
+        cPacket* cmsg = new cPacket("CMSG-SR");
+        SCTPResetInfo *rinfo = new SCTPResetInfo();
+        rinfo->setAssocId(socket.getConnectionId());
+        rinfo->setRemoteAddr(socket.getRemoteAddr());
+        type = (uint32)par("streamResetType");
+        rinfo->setRequestType((uint16)type);
+        cmsg->setKind(SCTP_C_STREAM_RESET);
+        cmsg->setControlInfo(rinfo);
+        socket.sendNotification(cmsg);
+    }
+}
+
+
+void SCTPClient::msgAbandonedArrived(int32 assocId)
+{
+    chunksAbandoned++;
+}
 
 
 void SCTPClient::sendqueueFullArrived(int32 assocId)
@@ -552,6 +659,7 @@ void SCTPClient::finish()
     ev << getFullPath() << ": opened " << numSessions << " sessions\n";
     ev << getFullPath() << ": sent " << bytesSent << " bytes in " << packetsSent << " packets\n";
     ev << getFullPath() << ": received " << bytesRcvd << " bytes in " << packetsRcvd << " packets\n";
+    ev << getFullPath() << ": chunks abandoned " << chunksAbandoned << " \n";
     sctpEV3 << "Client finished\n";
 }
 

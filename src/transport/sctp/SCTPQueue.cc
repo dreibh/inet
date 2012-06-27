@@ -1,6 +1,6 @@
 //
-// Copyright (C) 2005-2009 Irene Ruengeler
-// Copyright (C) 2009-2010 Thomas Dreibholz
+// Copyright (C) 2008 Irene Ruengeler
+// Copyright (C) 2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
-
 
 #include "SCTPQueue.h"
 #include "SCTPAssociation.h"
@@ -59,7 +58,7 @@ SCTPDataVariables* SCTPQueue::extractMessage()
 {
     if (!payloadQueue.empty()) {
         PayloadQueue::iterator iterator = payloadQueue.begin();
-        SCTPDataVariables*    chunk = iterator->second;
+        SCTPDataVariables*     chunk = iterator->second;
         payloadQueue.erase(iterator);
         return chunk;
     }
@@ -70,7 +69,7 @@ SCTPDataVariables* SCTPQueue::getAndExtractChunk(const uint32 tsn)
 {
     if (!payloadQueue.empty()) {
         PayloadQueue::iterator iterator = payloadQueue.find(tsn);
-        SCTPDataVariables*    chunk = iterator->second;
+        SCTPDataVariables*     chunk = iterator->second;
         payloadQueue.erase(iterator);
         return chunk;
     }
@@ -82,7 +81,7 @@ void SCTPQueue::printQueue() const
     sctpEV3 << "Queue contents:\n";
     for (PayloadQueue::const_iterator iterator = payloadQueue.begin();
             iterator != payloadQueue.end(); ++iterator) {
-        const uint32                 key = iterator->first;
+        const uint32             key = iterator->first;
         const SCTPDataVariables* chunk = iterator->second;
         sctpEV3 << key << ":\t"
                 << "lastDestination=" << chunk->getLastDestination()
@@ -130,7 +129,7 @@ SCTPDataVariables* SCTPQueue::getChunkFast(const uint32 tsn, bool& firstTime)
             SCTPDataVariables* chunk = GetChunkFastIterator->second;
             if (chunk->tsn == tsn) {
                 GetChunkFastIterator++;
-                return (chunk);    // Found the right TSN!
+                return (chunk);   // Found the right TSN!
             }
         }
         // TSN not found -> needs regular TSN lookup.
@@ -194,3 +193,43 @@ SCTPDataVariables* SCTPQueue::dequeueChunkBySSN(const uint16 ssn)
 }
 
 
+void SCTPQueue::findEarliestOutstandingTSNsForPath(const IPvXAddress& remoteAddress,
+        uint32&            earliestOutstandingTSN,
+        uint32&            rtxEarliestOutstandingTSN) const
+{
+    bool findEarliestOutstandingTSN = true;
+    bool findRTXEarliestOutstandingTSN = true;
+
+    for (PayloadQueue::const_iterator iterator = payloadQueue.begin();
+            iterator != payloadQueue.end(); ++iterator) {
+        const SCTPDataVariables* chunk = iterator->second;
+        if (chunk->getLastDestination() == remoteAddress) {
+            // ====== Find earliest outstanding TSNs ===========================
+            if (chunk->hasBeenAcked == false) {
+                if ( (findEarliestOutstandingTSN) &&
+                        (chunk->numberOfRetransmissions == 0) ) {
+                    earliestOutstandingTSN = chunk->tsn;
+                }
+                findEarliestOutstandingTSN = false;
+                if ( (findRTXEarliestOutstandingTSN) &&
+                        (chunk->numberOfRetransmissions > 0) ) {
+                    rtxEarliestOutstandingTSN = chunk->tsn;
+                }
+                findRTXEarliestOutstandingTSN = false;
+            }
+        }
+    }
+}
+
+
+uint32 SCTPQueue::getSizeOfFirstChunk(const IPvXAddress& remoteAddress)
+{
+    for (PayloadQueue::const_iterator iterator = payloadQueue.begin();
+            iterator != payloadQueue.end(); ++iterator) {
+        const SCTPDataVariables* chunk = iterator->second;
+        if (chunk->getNextDestination() == remoteAddress) {
+            return chunk->booksize;
+        }
+    }
+    return (0);
+}

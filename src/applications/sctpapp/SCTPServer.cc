@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2008 Irene Ruengeler
-// Copyright (C) 2009 Thomas Dreibholz
+// Copyright (C) 2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -26,8 +26,8 @@
 #include "SCTPAssociation.h"
 
 #define MSGKIND_CONNECT  0
-#define MSGKIND_SEND         1
-#define MSGKIND_      2
+#define MSGKIND_SEND     1
+#define MSGKIND_    2
 
 Define_Module(SCTPServer);
 
@@ -85,10 +85,19 @@ void SCTPServer::initialize()
     {
         socket->bindx(addresses, port);
     }
-    socket->listen(true, par("numPacketsToSendPerClient"), messagesToPush);
+    socket->listen(true, (bool)par("streamReset"), par("numPacketsToSendPerClient"), messagesToPush);
     sctpEV3 << "SCTPServer::initialized listen port=" << port << "\n";
     schedule = false;
     shutdownReceived = false;
+    uint32 streamNum = 0;
+    cStringTokenizer tokenizer(par("streamPriorities").stringValue());
+    while (tokenizer.hasMoreTokens())
+    {
+        const char *token = tokenizer.nextToken();
+        socket->setStreamPriority(streamNum, (uint32) atoi(token));
+
+        streamNum++;
+    }
 }
 
 void SCTPServer::sendOrSchedule(cPacket *msg)
@@ -116,6 +125,7 @@ void SCTPServer::generateAndSend()
         msg->setData(i, 's');
     }
     msg->setDataLen(numBytes);
+    msg->setEncaps(false);
     msg->setBitLength(numBytes * 8);
     cmsg->encapsulate(msg);
     SCTPSendCommand *cmd = new SCTPSendCommand("Send1");
@@ -126,6 +136,8 @@ void SCTPServer::generateAndSend()
         cmd->setSendUnordered(COMPLETE_MESG_UNORDERED);
     lastStream = (lastStream+1)%outboundStreams;
     cmd->setSid(lastStream);
+    cmd->setPrValue(par("prValue"));
+    cmd->setPrMethod((int32)par("prMethod"));
     if (queueSize>0 && numRequestsToSend > 0 && count < queueSize*2)
         cmd->setLast(false);
     else
@@ -220,7 +232,7 @@ void SCTPServer::handleMessage(cMessage *msg)
                     cancelEvent(delayTimer);
                 if (delayFirstReadTimer->isScheduled())
                     cancelEvent(delayFirstReadTimer);
-                delete command;
+                // delete command;
                 delete msg;
                 break;
             }
@@ -409,6 +421,7 @@ void SCTPServer::handleMessage(cMessage *msg)
                     bytesSent += smsg->getBitLength()/8;
                     cmd->setSendUnordered(cmd->getSendUnordered());
                     lastStream = (lastStream+1)%outboundStreams;
+                    cmd->setPrValue(0);
                     cmd->setSid(lastStream);
                     cmd->setLast(true);
                     cmsg->encapsulate(smsg);
@@ -443,6 +456,13 @@ void SCTPServer::handleMessage(cMessage *msg)
                 delete msg;
                 break;
             }
+            case SCTP_I_SEND_STREAMS_RESETTED:
+            case SCTP_I_RCV_STREAMS_RESETTED:
+            {
+                ev << "Streams have been resetted\n";
+                delete msg;
+                break;
+            }
             case SCTP_I_CLOSED:
                 if (delayTimer->isScheduled())
                     cancelEvent(delayTimer);
@@ -465,7 +485,7 @@ void SCTPServer::handleTimer(cMessage *msg)
 
     if (msg==delayTimer)
     {
-        ServerAssocStatMap::iterator i = serverAssocStatMap.find(assocId);
+        // ServerAssocStatMap::iterator i=serverAssocStatMap.find(assocId);
         sctpEV3 << simulation.getSimTime() << " delayTimer expired\n";
         sendOrSchedule(makeDefaultReceive());
         scheduleAt(simulation.getSimTime()+(double)par("readingInterval"), delayTimer);

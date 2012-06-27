@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2008 Irene Ruengeler
-// Copyright (C) 2010 Thomas Dreibholz
+// Copyright (C) 2010-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -58,7 +58,16 @@ void SCTPAlg::processTimer(cMessage* timer, SCTPEventCode& event)
 
 void SCTPAlg::sendCommandInvoked(SCTPPathVariables* path)
 {
-    assoc->sendOnPath(path);
+#ifdef PRIVATE
+    if(state->allowCMT) {
+       assoc->sendOnAllPaths(path);
+    }
+    else {
+#endif
+        assoc->sendOnPath(path);
+#ifdef PRIVATE
+    }
+#endif
 }
 
 void SCTPAlg::receivedDataAck(uint32)

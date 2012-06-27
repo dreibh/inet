@@ -1,3 +1,12 @@
+OSTYPE = $(shell uname)
+ifeq ($(OSTYPE),Darwin)
+HRTIMEFLAGS = -DHAVE_MACH_ABSOLUTE_TIME
+endif
+ifeq ($(OSTYPE),Linux)
+HRTIMEFLAGS = -lrt -DHAVE_CLOCK_GETTIME
+endif
+
+
 all: checkmakefiles
 	cd src && $(MAKE)
 
@@ -10,7 +19,8 @@ cleanall: checkmakefiles
 	rm -f src/Makefile
 
 makefiles:
-	cd src && opp_makemake -f --deep --make-so -o inet -O out $$NSC_VERSION_DEF
+	# cd src && opp_makemake -f --deep -lpcap -lssl -lcrypto -DHAVE_PCAP -DUSE_TF -o inet -O out $$NSC_VERSION_DEF
+	cd src && opp_makemake -f --deep -lpcap -lssl -lcrypto -DPRIVATE -DHAVE_PCAP -DUSE_TF -o inet -O out $$NSC_VERSION_DEF
 
 checkmakefiles:
 	@if [ ! -f src/Makefile ]; then \

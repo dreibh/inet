@@ -1,6 +1,6 @@
 //
-// Copyright (C) 2005-2009 Irene Ruengeler
-// Copyright (C) 2009-2010 Thomas Dreibholz
+// Copyright (C) 2008 Irene Ruengeler
+// Copyright (C) 2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -54,13 +54,13 @@ class INET_API SCTPQueue : public cPolymorphic
      */
     SCTPQueue();
 
-     /**
-      * Virtual destructor.
-      */
+    /**
+     * Virtual destructor.
+     */
     ~SCTPQueue();
 
-    bool checkAndInsertChunk(const uint32 key, SCTPDataVariables* chunk);
     /* returns true if new data is inserted and false if data was present */
+    bool checkAndInsertChunk(const uint32 key, SCTPDataVariables* chunk);
 
     SCTPDataVariables* getAndExtractChunk(const uint32 tsn);
     SCTPDataVariables* extractMessage();
@@ -85,17 +85,23 @@ class INET_API SCTPQueue : public cPolymorphic
 
     SCTPDataVariables* dequeueChunkBySSN(const uint16 ssn);
 
+    uint32 getSizeOfFirstChunk(const IPvXAddress& remoteAddress);
+
+    void findEarliestOutstandingTSNsForPath(const IPvXAddress& remoteAddress,
+                                            uint32&            earliestOutstandingTSN,
+                                            uint32&            rtxEarliestOutstandingTSN) const;
 
   public:
     typedef std::map<uint32, SCTPDataVariables*> PayloadQueue;
     PayloadQueue payloadQueue;
 
   protected:
-    SCTPAssociation* assoc;    // SCTP connection object
+    SCTPAssociation* assoc;   // SCTP connection object
 
   private:
     PayloadQueue::iterator GetChunkFastIterator;
 };
 
 #endif
+
 
