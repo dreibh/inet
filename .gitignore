@@ -38,3 +38,7 @@ xxx
 /Debug
 /doc
 .csett*
+
+
+./.cproject
+./.project
