@@ -42,6 +42,10 @@
 #include "IPv4InterfaceData.h"
 #include "IPv6InterfaceData.h"
 
+// TCP dependencies
+#include "TCPConnection.h"
+#include "TCP.h"
+
 class TCPConnection;
 class TCPSegment;
 class TCPStateVariables;
@@ -68,7 +72,7 @@ typedef vector <AddrCombi_t*> TCP_JoinVector_t;
 typedef vector<TCP_SUBFLOW_T*> TCP_SubFlowVector_t;
 
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
-enum MPTCP_SUBTYPES {MP_CAPABLE=0x0, MP_JOIN=0x1, MP_DSS=0x2, MP_ADD_ADDR=0x3, MP_REMOVE_ADDR=0x4, MP_PRIO=0x5, MP_FAIL=0x6};
+enum MPTCP_SUBTYPES {MP_CAPABLE=0x0000, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
 
 
 class INET_API MPTCP_Flow
@@ -86,6 +90,7 @@ class INET_API MPTCP_Flow
 	 TCP_JoinVector_t join_queue;				// a queue with all join possibilities
 	 TCP_JoinVector_t tried_join;
 	 MPTCP_State state;						// Internal State of the multipath protocol control block
+
 	 bool initiator;
 	 void initFlow();
 	 int initialHandshake(uint t,
@@ -94,6 +99,7 @@ class INET_API MPTCP_Flow
 	 int joinHandshake(uint t,
 	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
 	 		TCPConnection* subflow, TCPOption* option);
+
   protected:
 
 	 uint32 flow_token;						// generate after getting keys
@@ -139,6 +145,9 @@ class INET_API MPTCP_Flow
 	// common identifier
 	int appID;								// The application ID of this Flow
     int appGateIndex;
+
+
+    bool joinToACK ;							// TODO Nicht optimal, es können mehr joins in system grad bearbeitet werden
 };
 
 
@@ -173,6 +182,9 @@ class INET_API MPTCP_PCB
 
 		// helper for process Segments
 		int processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
+		int processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option);
+		int processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg, const TCPOption* option);
+		int processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
 
 		// cleanup
 		int clearAll();
