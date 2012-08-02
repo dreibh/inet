@@ -233,12 +233,22 @@ void TCP::handleMessage(cMessage *msg)
         // Multipath from application view
         // - check for flow and scheduler
         if(multipath){
-        	 // First Subflow, or no Multipath connection
 
-			MPTCP_PCB* pcb = MPTCP_PCB::lookupMPTCP_PCB(connId, appGateIndex);
-			if(pcb==NULL) {
-				pcb= new MPTCP_PCB(connId,appGateIndex, conn);
-			}
+        	 // First Subflow, or no Multipath connection
+        	if (dynamic_cast<TCPSegment *>(msg)){
+
+        		MPTCP_PCB* pcb = MPTCP_PCB::lookupMPTCP_PCB(connId, appGateIndex);
+				if ((pcb == NULL)){
+
+					TCPSegment *tcpseg = check_and_cast<TCPSegment *>(msg);
+					pcb = MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(tcpseg, conn);
+				 }
+
+				if(pcb==NULL) {
+					pcb = new MPTCP_PCB(connId,appGateIndex, conn);
+	//				delete(pcb);
+				}
+        	}
 			if(conn == NULL){
 				// Multipath error, we should not proceed
 				removeConnection(conn);

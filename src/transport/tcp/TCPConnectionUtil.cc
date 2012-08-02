@@ -1331,7 +1331,11 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 		// During IDLE and PRE_ESTABLISHED there exists no persistent MPTCP PCB
 		// so first check
 		MPTCP_PCB* tmp = MPTCP_PCB::lookupMPTCP_PCB(this->connId, this->appGateIndex);
-		if(NULL == tmp){
+		if (tmp == NULL){
+				tcpEV<< "[MPTCP][PROCESS][INCOMING] Simple Flow Lookup was not successfull, try by Join Option" << "\n";
+				tmp = MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(tcpseg, this);
+		}
+		if (tmp == NULL){
 			// generate a stateless mptcp flow, e.g. for handshake mp_capable
 			// other mptcp option will be generated
 			tcpEV << "Connection without MPTCP PCB" << "\n";

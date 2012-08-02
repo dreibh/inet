@@ -99,6 +99,9 @@ class INET_API MPTCP_Flow
 	 int joinHandshake(uint t,
 	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
 	 		TCPConnection* subflow, TCPOption* option);
+	 int processSQN(uint t,
+			TCPStateVariables* subflow_state, TCPSegment *tcpseg,
+			TCPConnection* subflow, TCPOption* option);
 
   protected:
 
@@ -120,9 +123,12 @@ class INET_API MPTCP_Flow
 	uint64 getReceiverKey();
 	MPTCP_State getState();
 	uint32 getFlow_token();
+	int getSubflowsCNT();
+
 	int setState(MPTCP_State s);
 	void setReceiverKey(uint64 key);
 	void setSenderKey(uint64 key);
+
 
 	// use cases
 	int sendByteStream(TCPConnection* subflow);
@@ -146,7 +152,6 @@ class INET_API MPTCP_Flow
 	int appID;								// The application ID of this Flow
     int appGateIndex;
 
-
     bool joinToACK ;							// TODO Nicht optimal, es können mehr joins in system grad bearbeitet werden
 };
 
@@ -155,10 +160,9 @@ class INET_API MPTCP_PCB
 {
 	public:
 		MPTCP_PCB(int connId,int appGateIndex, TCPConnection* subflow); // public constructor
-
+		~MPTCP_PCB();
 		// Static helper elements for organization
 		static int count ;				// starts by default with zero
-		static MPTCP_PCB* first;
 
 		// Lookup for Multipath Control Block management
 		static MPTCP_PCB* lookupMPTCP_PCB(int connid, int aAppGateIndex);
@@ -172,20 +176,19 @@ class INET_API MPTCP_PCB
 
 		// Getter/ Setter
 		MPTCP_Flow* getFlow();
+		int getID();
 
-		// common identifier
-		int id;
 
 	private:
 		MPTCP_PCB();
-		~MPTCP_PCB();
+
 
 		// helper for process Segments
 		int processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
 		int processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option);
 		int processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg, const TCPOption* option);
 		int processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
-
+		int processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
 		// cleanup
 		int clearAll();
 
@@ -201,6 +204,11 @@ class INET_API MPTCP_PCB
 		// Members for self-organization
 		MPTCP_Flow* flow;
 		MPTCP_PCB* next;
+		static MPTCP_PCB* first;
+
+		// debug
+		int id;
+		void printFlowOverview();
 };
 
 
