@@ -50,26 +50,30 @@ class TCPConnection;
 class TCPSegment;
 class TCPStateVariables;
 
+class INET_API MPTCP_PCB;
+
 using std::vector;
 
 typedef struct _addr_tuple{
 	IPvXAddress addr;
 	int 		port;
 } AddrTupple_t;
+typedef vector <AddrTupple_t*> 			TCP_AddressVector_t;
 
 typedef struct _addr_combi{
 	AddrTupple_t* local;
 	AddrTupple_t* remote;
 } AddrCombi_t;
+typedef vector <AddrCombi_t*> 			TCP_JoinVector_t;
 
 typedef struct _subflow{
-  TCPConnection* flow;
+  TCPConnection* subflow;
   bool active;
-} TCP_SUBFLOW_T;
+} TCP_subflow_t;
+typedef vector <TCP_subflow_t*> 		TCP_SubFlowVector_t;
 
-typedef std::vector <AddrTupple_t*> TCP_AddressVector_t;
-typedef vector <AddrCombi_t*> TCP_JoinVector_t;
-typedef vector<TCP_SUBFLOW_T*> TCP_SubFlowVector_t;
+
+
 
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
 enum MPTCP_SUBTYPES {MP_CAPABLE=0x0000, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
@@ -81,14 +85,14 @@ class INET_API MPTCP_Flow
 	 int rcvbuf;							// receive message queue
 	 int sndbuf;							// send message queue
 	 // TODO								// mptcp 64-bits sequence numbering
+	 MPTCP_PCB* pcb;								// the pcb
 
 	 TCP_AddressVector_t list_laddrtuple;	// list of local addresses
 	 TCP_AddressVector_t list_raddrtuple;	// list of remote addresses
-
-	 int cnt_subflows; 						// count of subflows
 	 TCP_SubFlowVector_t subflow_list; 		// list of all subflows
-	 TCP_JoinVector_t join_queue;				// a queue with all join possibilities
+	 TCP_JoinVector_t join_queue;			// a queue with all join possibilities
 	 TCP_JoinVector_t tried_join;
+
 	 MPTCP_State state;						// Internal State of the multipath protocol control block
 
 	 bool initiator;
@@ -115,7 +119,7 @@ class INET_API MPTCP_Flow
 	 InterfaceTableAccess interfaceTableAccess;
   public:
 
-	MPTCP_Flow(int ID, int aAppGateIndex);
+	MPTCP_Flow(int ID, int aAppGateIndex, MPTCP_PCB* aPCB);
 	~MPTCP_Flow();
 
 	// getter /setter
@@ -123,8 +127,7 @@ class INET_API MPTCP_Flow
 	uint64 getReceiverKey();
 	MPTCP_State getState();
 	uint32 getFlow_token();
-	int getSubflowsCNT();
-
+	MPTCP_PCB* getPCB();
 	int setState(MPTCP_State s);
 	void setReceiverKey(uint64 key);
 	void setSenderKey(uint64 key);
@@ -145,7 +148,8 @@ class INET_API MPTCP_Flow
 
 	// manage subflows
 	bool joinConnection();
-	int addSubflow(int id, TCPConnection* );
+	int  addSubflow(int id, TCPConnection* );
+	const TCP_SubFlowVector_t* getSubflows();
 	bool isSubflowOf(TCPConnection* subflow);
 
 	// common identifier
@@ -155,6 +159,12 @@ class INET_API MPTCP_Flow
     bool joinToACK ;							// TODO Nicht optimal, es können mehr joins in system grad bearbeitet werden
 };
 
+typedef struct _4tupleWithStatus{
+	MPTCP_Flow* flow;
+	bool joinToAck;
+} TuppleWithStatus_t;
+typedef vector <TuppleWithStatus_t*>	AllMultipathSubflowsVector_t;
+
 
 class INET_API MPTCP_PCB
 {
@@ -162,15 +172,10 @@ class INET_API MPTCP_PCB
 		MPTCP_PCB(int connId,int appGateIndex, TCPConnection* subflow); // public constructor
 		~MPTCP_PCB();
 		// Static helper elements for organization
-		static int count ;				// starts by default with zero
-
-		// Lookup for Multipath Control Block management
-		static MPTCP_PCB* lookupMPTCP_PCB(int connid, int aAppGateIndex);
-		static MPTCP_PCB* lookupMPTCP_PCB(TCPSegment *tcpseg);
-		static MPTCP_PCB* lookupMPTCP_PCB(TCPSegment *tcpseg,  TCPConnection* subflow);
-		static MPTCP_PCB* lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow);
-		TCPConnection*    lookupMPTCPConnection(int connId, TCPConnection* subflow,TCPSegment *tcpseg);
-
+		static AllMultipathSubflowsVector_t subflows_vector;
+		// Connection handling
+		static MPTCP_PCB* lookupMPTCP_PCB(int connid, int aAppGateIndex,TCPSegment *tcpseg,  TCPConnection* subflow);
+		TCPConnection*    lookupMPTCPConnection(int connId,int aAppGateIndex, TCPConnection* subflow,TCPSegment *tcpseg);
 		// Use Case
 		static int processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
 
@@ -182,7 +187,7 @@ class INET_API MPTCP_PCB
 	private:
 		MPTCP_PCB();
 
-
+		MPTCP_Flow* flow;
 		// helper for process Segments
 		int processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
 		int processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option);
@@ -192,6 +197,12 @@ class INET_API MPTCP_PCB
 		// cleanup
 		int clearAll();
 
+
+		// Lookup for Multipath Control Block management
+		static MPTCP_PCB* _lookupMPTCP_PCB(int connid, int aAppGateIndex);
+		static MPTCP_PCB* _lookupMPTCPbySubflow_PCB(TCPSegment *tcpseg,  TCPConnection* subflow);
+		static MPTCP_PCB* _lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow);
+
 		// Sending side
 		uint64 snd_una;
 		uint64 snd_nxt;
@@ -200,11 +211,6 @@ class INET_API MPTCP_PCB
 		// Receiver Side
 		uint64 rcv_nxt;
 		uint64 rcv_wnd;
-
-		// Members for self-organization
-		MPTCP_Flow* flow;
-		MPTCP_PCB* next;
-		static MPTCP_PCB* first;
 
 		// debug
 		int id;

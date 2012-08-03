@@ -1330,22 +1330,20 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 
 		// During IDLE and PRE_ESTABLISHED there exists no persistent MPTCP PCB
 		// so first check
-		MPTCP_PCB* tmp = MPTCP_PCB::lookupMPTCP_PCB(this->connId, this->appGateIndex);
-		if (tmp == NULL){
-				tcpEV<< "[MPTCP][PROCESS][INCOMING] Simple Flow Lookup was not successfull, try by Join Option" << "\n";
-				tmp = MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(tcpseg, this);
-		}
+		MPTCP_PCB* tmp = MPTCP_PCB::lookupMPTCP_PCB(this->connId, this->appGateIndex,tcpseg, this );
+
 		if (tmp == NULL){
 			// generate a stateless mptcp flow, e.g. for handshake mp_capable
 			// other mptcp option will be generated
-			tcpEV << "Connection without MPTCP PCB" << "\n";
+			tcpEV << "[MULTIPATH ENTRY] Connection without MPTCP PCB" << "\n";
 			// Unknown Flow, but however we have to send the message
 			tmp = new MPTCP_PCB(this->connId, this->appGateIndex,  this);
 		}
 		else{
 			// OK it exists a PCB for multipath
-			tcpEV << "It is a Multipath Flow" << "\n";
+			tcpEV << "[MULTIPATH ENTRY]It is a Multipath Flow" << "\n";
 		}
+		// write the option anyway
 		MPTCP_Flow* mpflow = tmp->getFlow();
 		t = mpflow->writeMPTCPHeaderOptions(t,state,tcpseg,this);
 	}

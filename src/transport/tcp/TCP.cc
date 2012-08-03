@@ -236,13 +236,8 @@ void TCP::handleMessage(cMessage *msg)
 
         	 // First Subflow, or no Multipath connection
         	if (dynamic_cast<TCPSegment *>(msg)){
-
-        		MPTCP_PCB* pcb = MPTCP_PCB::lookupMPTCP_PCB(connId, appGateIndex);
-				if ((pcb == NULL)){
-
-					TCPSegment *tcpseg = check_and_cast<TCPSegment *>(msg);
-					pcb = MPTCP_PCB::lookupMPTCP_PCBbyMP_JOIN_Option(tcpseg, conn);
-				 }
+        		TCPSegment *tcpseg = check_and_cast<TCPSegment *>(msg);
+        		const MPTCP_PCB* pcb = MPTCP_PCB::lookupMPTCP_PCB(connId, appGateIndex, tcpseg, conn);
 
 				if(pcb==NULL) {
 					pcb = new MPTCP_PCB(connId,appGateIndex, conn);
