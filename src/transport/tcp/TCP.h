@@ -160,6 +160,7 @@ class INET_API TCP : public cSimpleModule
 
 #ifdef PRIVATE
     bool multipath;
+    int subflow_id;
 #endif
 
   public:

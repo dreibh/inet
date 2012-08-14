@@ -61,6 +61,16 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 
             tcpMain->addSockPair(this, localAddr, remoteAddr, localPort, remotePort);
 
+#ifdef PRIVATE
+            {
+        	// TODO Overwrok, which variable do we need
+        	bool multipath =  tcpMain->par("multipath");
+
+            if(multipath){
+        		tcpMain->subflow_id = openCmd->getSubFlowNumber();
+        	}
+            }
+#endif
             // send initial SYN
             selectInitialSeqNum();
             sendSyn();
@@ -70,6 +80,7 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 
         default:
             opp_error("Error processing command OPEN_ACTIVE: connection already exists");
+            break; // MBe add because of Warning
     }
 
     delete openCmd;
@@ -106,6 +117,7 @@ void TCPConnection::process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCom
 
         default:
             opp_error("Error processing command OPEN_PASSIVE: connection already exists");
+            break; // MBe add because of Warning
     }
 
     delete openCmd;
@@ -122,6 +134,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
     {
         case TCP_S_INIT:
             opp_error("Error processing command SEND: connection not open");
+            /* no break */
 
         case TCP_S_LISTEN:
             tcpEV << "SEND command turns passive open into active open, sending initial SYN\n";
@@ -155,6 +168,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
         case TCP_S_CLOSING:
         case TCP_S_TIME_WAIT:
             opp_error("Error processing command SEND: connection closing");
+            /* no break */
     }
 
     delete sendCommand; // msg itself has been taken by the sendQueue
@@ -168,8 +182,18 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
     switch(fsm.getState())
     {
         case TCP_S_INIT:
+#ifdef PRIVATE
+        	{bool multipath =  tcpMain->par("multipath");
+            if(multipath){
+            	//TODO
+            }
+            else{
+#endif
             opp_error("Error processing command CLOSE: connection not open");
-
+            /* no break */
+#ifdef PRIVATE
+        	}}
+#endif
         case TCP_S_LISTEN:
             // Nothing to do here
             break;
@@ -218,6 +242,7 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             // RFC 793 is not entirely clear on how to handle a duplicate close request.
             // Here we treat it as an error.
             opp_error("Duplicate CLOSE command: connection already closing");
+            /* no break */
     }
 }
 
@@ -235,6 +260,7 @@ void TCPConnection::process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, c
     {
         case TCP_S_INIT:
             opp_error("Error processing command ABORT: connection not open");
+            /* no break */
 
         case TCP_S_SYN_RCVD:
         case TCP_S_ESTABLISHED:

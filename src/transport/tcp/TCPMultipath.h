@@ -95,7 +95,6 @@ class INET_API MPTCP_Flow
 
 	 MPTCP_State state;						// Internal State of the multipath protocol control block
 
-	 bool initiator;
 	 void initFlow();
 	 int initialHandshake(uint t,
 	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
@@ -110,12 +109,12 @@ class INET_API MPTCP_Flow
   protected:
 
 	 uint32 flow_token;						// generate after getting keys
-	 uint64 seq;							// start seq-no generated after getting keys
-	 uint64 sender_key;						// setup during handshake
-	 uint64 receiver_key;					// setup during handshake
+	 uint64_t seq;							// start seq-no generated after getting keys
+	 uint64_t sender_key;						// setup during handshake
+	 uint64_t receiver_key;					// setup during handshake
 
 	 bool checksum;
-
+	 bool isPassive;
 	 InterfaceTableAccess interfaceTableAccess;
   public:
 

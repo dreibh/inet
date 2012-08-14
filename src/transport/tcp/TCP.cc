@@ -38,20 +38,20 @@ bool TCP::logverbose;
 #define EPHEMERAL_PORTRANGE_START 1024
 #define EPHEMERAL_PORTRANGE_END   5000
 
-static std::ostream& operator<<(std::ostream& os, const TCP::SockPair& sp)
+static inline std::ostream& operator<<(std::ostream& os, const TCP::SockPair& sp)
 {
     os << "loc=" << IPvXAddress(sp.localAddr) << ":" << sp.localPort << " "
        << "rem=" << IPvXAddress(sp.remoteAddr) << ":" << sp.remotePort;
     return os;
 }
 
-static std::ostream& operator<<(std::ostream& os, const TCP::AppConnKey& app)
+static inline std::ostream& operator<<(std::ostream& os, const TCP::AppConnKey& app)
 {
     os << "connId=" << app.connId << " appGateIndex=" << app.appGateIndex;
     return os;
 }
 
-static std::ostream& operator<<(std::ostream& os, const TCPConnection& conn)
+static inline std::ostream& operator<<(std::ostream& os, const TCPConnection& conn)
 {
     os << "connId=" << conn.connId << " " << TCPConnection::stateName(conn.getFsmState())
        << " state={" << const_cast<TCPConnection&>(conn).getState()->info() << "}";
@@ -65,6 +65,7 @@ void TCP::initialize()
 	multipath =  par("multipath");
 	if(multipath){
 		tcpEV << "Initializing module TCP: Multipath TCP enabled\n";
+		subflow_id = 0;
 	}
 #endif
     lastEphemeralPort = EPHEMERAL_PORTRANGE_START;
@@ -105,8 +106,6 @@ void TCP::handleMessage(cMessage *msg)
 
 
         	if((controlInfo!=NULL) && (controlInfo->getIsMptcpSubflow())){
-        		assert(conn != NULL);
-
         		tcpEV << "TCP connection is a subflow " << msg << "\n";
 
         		// make sure connection is unique
@@ -201,10 +200,15 @@ void TCP::handleMessage(cMessage *msg)
             	// OK, perhapse we have to join a Multipath Connection
             	if(multipath){
             		// Only run this on starting a new subflow
-            		// TODO INCOMING MULTIPATH TCP
+            		// TODO INCOMING MULTIPATH TCP on closed Socket
+            		tcpEV << "Incomming Packets on closed Port, in default TCP we would send a RST\n";
             	}
+            	else{
 #endif
                 segmentArrivalWhileClosed(tcpseg, srcAddr, destAddr);
+#ifdef PRIVATE
+            	}
+#endif
             }
         }
     }
@@ -233,7 +237,6 @@ void TCP::handleMessage(cMessage *msg)
         // Multipath from application view
         // - check for flow and scheduler
         if(multipath){
-
         	 // First Subflow, or no Multipath connection
         	if (dynamic_cast<TCPSegment *>(msg)){
         		TCPSegment *tcpseg = check_and_cast<TCPSegment *>(msg);
@@ -241,7 +244,6 @@ void TCP::handleMessage(cMessage *msg)
 
 				if(pcb==NULL) {
 					pcb = new MPTCP_PCB(connId,appGateIndex, conn);
-	//				delete(pcb);
 				}
         	}
 			if(conn == NULL){

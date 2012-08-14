@@ -343,6 +343,14 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
         tcpAlgorithmClass = tcpMain->par("tcpAlgorithmClass");
     tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
 
+#ifdef PRIVATE
+        bool multipath =  tcpMain->par("multipath");
+        if(multipath){
+        	openCmd->getSubFlowNumber();
+
+        }
+#endif
+
     tcpAlgorithm->setConnection(this);
 
     // create state block

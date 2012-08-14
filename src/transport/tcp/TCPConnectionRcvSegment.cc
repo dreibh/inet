@@ -234,6 +234,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                 return TCP_E_RCV_RST; // this will trigger state transition
 
             default: ASSERT(0);
+            /* no break */
         }
     }
 
@@ -1297,6 +1298,7 @@ void TCPConnection::process_TIMEOUT_CONN_ESTAB()
         default:
             // We should not receive this timeout in this state.
             opp_error("Internal error: received CONN_ESTAB timeout in state %s", stateName(fsm.getState()));
+            /* no break */
     }
 }
 
@@ -1317,6 +1319,7 @@ void TCPConnection::process_TIMEOUT_2MSL()
         default:
             // We should not receive this timeout in this state.
             opp_error("Internal error: received time-wait (2MSL) timeout in state %s", stateName(fsm.getState()));
+            /* no break */
     }
 }
 
@@ -1332,6 +1335,7 @@ void TCPConnection::process_TIMEOUT_FIN_WAIT_2()
         default:
             // We should not receive this timeout in this state.
             opp_error("Internal error: received FIN_WAIT_2 timeout in state %s", stateName(fsm.getState()));
+            /* no break */
     }
 }
 
@@ -1363,6 +1367,7 @@ void TCPConnection::process_TIMEOUT_SYN_REXMIT(TCPEventCode& event)
         case TCP_S_SYN_SENT: sendSyn(); break;
         case TCP_S_SYN_RCVD: sendSynAck(); break;
         default:  opp_error("Internal error: SYN-REXMIT timer expired while in state %s", stateName(fsm.getState()));
+        /* no break */
     }
 
     // reschedule timer
