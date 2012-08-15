@@ -15,6 +15,9 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
+// Include the MPTCP FLOW
+// Include the MPTCP PCB
+#ifdef PRIVATE
 
 #ifndef __INET_MPTCP_H
 #define __INET_MPTCP_H
@@ -73,18 +76,22 @@ typedef struct _subflow{
 typedef vector <TCP_subflow_t*> 		TCP_SubFlowVector_t;
 
 
-
-
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
 enum MPTCP_SUBTYPES {MP_CAPABLE=0x0000, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
 
-
+// ###############################################################################################################
+//													MULTIPATH TCP
+//														FLOW
+// ###############################################################################################################
+/**
+ * The MULTIPATH TCP Flow
+ */
 class INET_API MPTCP_Flow
 {
   private:
 	 int rcvbuf;							// receive message queue
 	 int sndbuf;							// send message queue
-	 // TODO								// mptcp 64-bits sequence numbering
+
 	 MPTCP_PCB* pcb;								// the pcb
 
 	 TCP_AddressVector_t list_laddrtuple;	// list of local addresses
@@ -105,12 +112,13 @@ class INET_API MPTCP_Flow
 	 int processSQN(uint t,
 			TCPStateVariables* subflow_state, TCPSegment *tcpseg,
 			TCPConnection* subflow, TCPOption* option);
+	 bool joinConnection();
 
   protected:
 
 	 uint32 flow_token;						// generate after getting keys
 	 uint64_t seq;							// start seq-no generated after getting keys
-	 uint64_t sender_key;						// setup during handshake
+	 uint64_t sender_key;					// setup during handshake
 	 uint64_t receiver_key;					// setup during handshake
 
 	 bool checksum;
@@ -121,40 +129,36 @@ class INET_API MPTCP_Flow
 	MPTCP_Flow(int ID, int aAppGateIndex, MPTCP_PCB* aPCB);
 	~MPTCP_Flow();
 
-	// getter /setter
-	uint64 getSenderKey();
-	uint64 getReceiverKey();
+	// helper
+	uint64_t getSenderKey();
+	uint64_t getReceiverKey();
 	MPTCP_State getState();
-	uint32 getFlow_token();
+	uint32_t getFlow_token();
 	MPTCP_PCB* getPCB();
 	int setState(MPTCP_State s);
-	void setReceiverKey(uint64 key);
-	void setSenderKey(uint64 key);
+	void setReceiverKey(uint64_t key);
+	void setSenderKey(uint64_t key);
 
 
-	// use cases
+	// use cases Data IN/OUT
 	int sendByteStream(TCPConnection* subflow);
 	int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, TCPConnection* subflow);
 
-	// crypto stuff TODO -> all crypto should be moved to a helper class as static functions
+	// crypto functions ==> see also rfc 2104
 	static uint64 generateKey();
-	int generateTokenAndSQN(uint64 ks, uint64 kr);
-	// see rfc 2104
+	int generateTokenAndSQN(uint64_t key);
 	unsigned char* generateSYNACK_HMAC(uint64 ka, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
 	unsigned char* generateACK_HMAC(uint64 kb, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
 	void hmac_md5(unsigned char*  text, int text_len,unsigned char*  key, int key_len, unsigned char* digest);
 
-
-	// manage subflows
-	bool joinConnection();
-	int  addSubflow(int id, TCPConnection* );
-	const TCP_SubFlowVector_t* getSubflows();
+	// sub ssubflow organisation
+	int addSubflow(int id, TCPConnection*);
 	bool isSubflowOf(TCPConnection* subflow);
+	const TCP_SubFlowVector_t* getSubflows();
 
 	// common identifier
-	int appID;								// The application ID of this Flow
-    int appGateIndex;
-
+	int  appID;								// The application ID of this Flow
+    int  appGateIndex;
     bool joinToACK ;							// TODO Nicht optimal, es können mehr joins in system grad bearbeitet werden
 };
 
@@ -165,6 +169,14 @@ typedef struct _4tupleWithStatus{
 typedef vector <TuppleWithStatus_t*>	AllMultipathSubflowsVector_t;
 
 
+
+// ###############################################################################################################
+//													MULTIPATH TCP
+//														PCB
+// ###############################################################################################################
+/**
+ * The Multipath TCP Protocol Control Block and Meta-socket
+ */
 class INET_API MPTCP_PCB
 {
 	public:
@@ -203,13 +215,13 @@ class INET_API MPTCP_PCB
 		static MPTCP_PCB* _lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow);
 
 		// Sending side
-		uint64 snd_una;
-		uint64 snd_nxt;
-		uint32 snd_wnd;
+		uint64_t snd_una;
+		uint64_t snd_nxt;
+		uint32_t snd_wnd;
 
 		// Receiver Side
-		uint64 rcv_nxt;
-		uint64 rcv_wnd;
+		uint64_t rcv_nxt;
+		uint64_t rcv_wnd;
 
 		// debug
 		int id;
@@ -218,5 +230,5 @@ class INET_API MPTCP_PCB
 
 
 #endif // __INET_MPTCP_H
-
+#endif // Private
 

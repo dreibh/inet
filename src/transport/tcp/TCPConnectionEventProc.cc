@@ -193,6 +193,7 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             /* no break */
 #ifdef PRIVATE
         	}}
+        	/* no break */
 #endif
         case TCP_S_LISTEN:
             // Nothing to do here
