@@ -347,7 +347,7 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
         bool multipath =  tcpMain->par("multipath");
         if(multipath){
         	openCmd->getSubFlowNumber();
-
+        	joinToAck = false;
         }
 #endif
 
@@ -1354,6 +1354,7 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 		// write the option anyway
 		MPTCP_Flow* mpflow = tmp->getFlow();
 		t = mpflow->writeMPTCPHeaderOptions(t,state,tcpseg,this);
+
 	}
 	else{
 		tcpEV << "Connection with disabled MPTCP" << "\n";

@@ -77,7 +77,7 @@ typedef vector <TCP_subflow_t*> 		TCP_SubFlowVector_t;
 
 
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
-enum MPTCP_SUBTYPES {MP_CAPABLE=0x0000, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
+enum MPTCP_SUBTYPES {MP_CAPABLE=0x0008, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
 
 // ###############################################################################################################
 //													MULTIPATH TCP
@@ -116,10 +116,12 @@ class INET_API MPTCP_Flow
 
   protected:
 
-	 uint32 flow_token;						// generate after getting keys
+
 	 uint64_t seq;							// start seq-no generated after getting keys
-	 uint64_t sender_key;					// setup during handshake
-	 uint64_t receiver_key;					// setup during handshake
+
+	 uint64_t local_key;	// B.1.1 Authentication and Metadata
+	 uint64_t remote_key;	// B.1.1 Authentication and Metadata
+	 // TODO MPTCP CHECKSUM // B.1.1 Authentication and Metadata
 
 	 bool checksum;
 	 bool isPassive;
@@ -129,29 +131,36 @@ class INET_API MPTCP_Flow
 	MPTCP_Flow(int ID, int aAppGateIndex, MPTCP_PCB* aPCB);
 	~MPTCP_Flow();
 
+	// It is public
+
+	uint32 local_token;		// B.1.1 Authentication and Metadata
+	uint32 remote_token;	// B.1.1 Authentication and Metadata
 	// helper
-	uint64_t getSenderKey();
-	uint64_t getReceiverKey();
+
 	MPTCP_State getState();
 	uint32_t getFlow_token();
 	MPTCP_PCB* getPCB();
 	int setState(MPTCP_State s);
-	void setReceiverKey(uint64_t key);
-	void setSenderKey(uint64_t key);
 
+	// Setter and Getter for Keys
+	void setRemoteKey(uint64_t key);
+	void setLocalKey(uint64_t key);
+	uint64_t getLocalKey();
+	uint64_t getRemoteKey();
 
 	// use cases Data IN/OUT
 	int sendByteStream(TCPConnection* subflow);
 	int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, TCPConnection* subflow);
 
 	// crypto functions ==> see also rfc 2104
-	static uint64 generateKey();
-	int generateTokenAndSQN(uint64_t key);
+	uint64 generateLocalKey();
+	int generateToken(uint64_t key, bool type);
+
 	unsigned char* generateSYNACK_HMAC(uint64 ka, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
 	unsigned char* generateACK_HMAC(uint64 kb, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
 	void hmac_md5(unsigned char*  text, int text_len,unsigned char*  key, int key_len, unsigned char* digest);
 
-	// sub ssubflow organisation
+	// sub subflow organisation
 	int addSubflow(int id, TCPConnection*);
 	bool isSubflowOf(TCPConnection* subflow);
 	const TCP_SubFlowVector_t* getSubflows();
@@ -159,12 +168,10 @@ class INET_API MPTCP_Flow
 	// common identifier
 	int  appID;								// The application ID of this Flow
     int  appGateIndex;
-    bool joinToACK ;							// TODO Nicht optimal, es können mehr joins in system grad bearbeitet werden
 };
 
 typedef struct _4tupleWithStatus{
 	MPTCP_Flow* flow;
-	bool joinToAck;
 } TuppleWithStatus_t;
 typedef vector <TuppleWithStatus_t*>	AllMultipathSubflowsVector_t;
 
