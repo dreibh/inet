@@ -77,7 +77,7 @@ typedef vector <TCP_subflow_t*> 		TCP_SubFlowVector_t;
 
 
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
-enum MPTCP_SUBTYPES {MP_CAPABLE=0x0008, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
+enum MPTCP_SUBTYPES {MP_CAPABLE=0x0000, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
 
 // ###############################################################################################################
 //													MULTIPATH TCP
@@ -222,13 +222,13 @@ class INET_API MPTCP_PCB
 		static MPTCP_PCB* _lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow);
 
 		// Sending side
-		uint64_t snd_una;
-		uint64_t snd_nxt;
-		uint32_t snd_wnd;
+		uint64_t snd_una; // B.1.2
+		uint64_t snd_nxt; // B.1.2
+		uint32_t snd_wnd; // B.1.2
 
 		// Receiver Side
-		uint64_t rcv_nxt;
-		uint64_t rcv_wnd;
+		uint64_t rcv_nxt; // B.1.2
+		uint64_t rcv_wnd; // B.1.2
 
 		// debug
 		int id;

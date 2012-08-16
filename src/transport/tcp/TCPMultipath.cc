@@ -29,10 +29,10 @@
 #endif
 
 // Helper to set state for a subflow
-#define FSM(state) setState(state); fprintf(stderr,"\n[FSM] CHANGE STATE %d line %d\n",state,__LINE__);
+#define FSM(state) setState(state); fprintf(stderr,"\n[FSM] CHANGE STATE %u line %u\n",state,__LINE__);
 
 // Defines for debugging (Could be removed)
-#define WHERESTR  "\n[MPTCP][file %s, line %d]: "
+#define WHERESTR  "\n[MPTCP][file %s, line %u]: "
 #define WHEREARG  __FILE__, __LINE__
 #define DEBUGPRINT2(...)  fprintf(stderr, __VA_ARGS__)
 
@@ -296,7 +296,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 	// Only work on MPTCP Options!!
 	// (Note: If this is a design problem to do it here, we could move this to TCP...)
 	option.setKind(TCPOPTION_MPTCP); // FIXME depending on IANA request
-	DEBUGPRINT("[FLOW][OUT] Support of MPTCP Kind: %d",TCPOPTION_MPTCP);
+	DEBUGPRINT("[FLOW][OUT] Support of MPTCP Kind: %u",TCPOPTION_MPTCP);
 
 	// If SYN remark this combination as tried
 	if ((tcpseg->getSynBit()) && (!tcpseg->getAckBit())) {
@@ -351,8 +351,8 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 				t = joinHandshake(t, subflow_state, tcpseg, subflow, &option);
 				subflow->joinToAck  = false;
 
-			}else if (subflow->isSubflow){
-				DEBUGPRINT("[FLOW][OUT] Do SQN for subflow (%d) by utilizing DSS",subflow->isSubflow);
+			}else{
+				DEBUGPRINT("[FLOW][OUT] Do SQN for subflow (%u) by utilizing DSS",subflow->isSubflow);
 				processSQN(t, subflow_state, tcpseg, subflow, &option);
 			}
 			break;
@@ -362,8 +362,8 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 			break;
 		case PRE_ESTABLISHED:
 			DEBUGPRINT("[FLOW][OUT] PRE ESTABLISHED (%i)",state);
-			/* no break */
-		default: {
+			t = initialHandshake(t, subflow_state, tcpseg, subflow,  &option);
+			break;
 		case IDLE:
 			DEBUGPRINT("[FLOW][OUT] Work on state %i - Figure out what to do",state);
 			if ((tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
@@ -373,7 +373,8 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 			}
 			t = initialHandshake(t, subflow_state, tcpseg, subflow,  &option);
 			break;
-		}
+
+		default: ASSERT(false); break;
 	}
 	if(this->state == ESTABLISHED){
 		// FIXME Perhaps we need a switch for also handshake from passive side
@@ -411,29 +412,35 @@ int MPTCP_Flow::initialHandshake(uint t, TCPStateVariables* subflow_state,
 	*/
 
 	// Initiate some helper
-	uint32 first_bits = 0x00;
-
+	uint32_t first_bits = 0x0;
+	uint32_t version = 0x0;
 	tcpEV<<"Multipath FSM: Enter Initial Handshake " << "\n";
+
+	first_bits = (first_bits | ((uint16_t) MP_CAPABLE)); //12
+	first_bits = first_bits << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
+
+	version = (version | ((uint16_t) VERSION << MP_VERSION_POS));
+	version = version << (MP_VERSION_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
+	first_bits |= version;
+
 	switch (state) {
 		// Connection initiation SYN; SYN/ACK; ACK of the whole flow it must contain the MP_CAPABLE Option
 		// MPTCP IDLE
 		case IDLE: { // whether a SYN or ACK for a SYN ACK is send -> new MPTCP Flow
 
 			if (!tcpseg->getSynBit()) {
-				DEBUGPRINT("[FLOW][OUT] ERROR MPTCP Connection state: %d", getState());
+				DEBUGPRINT("[FLOW][OUT] ERROR MPTCP Connection state: %u", getState());
 				ASSERT(false);
 				return t;
 			}
 
-			first_bits = first_bits | ((uint16_t) MP_CAPABLE << MP_SUBTYPE_POS);
-			first_bits = first_bits << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
-			first_bits = first_bits | ((uint16_t) VERSION << MP_VERSION_POS);
-			first_bits = first_bits << (MP_VERSION_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
+
 // SYN MP_CAPABLE
 			// Check if it is whether a SYN or SYN/ACK
 			if (tcpseg->getSynBit() && (!tcpseg->getAckBit())) { // SYN
 				tcpEV<< "[MPTCP][HANDSHAKE][MP_CAPABLE] IDLE working for sending a SYN\n";
 
+				// Prepare
 				option->setLength(MP_CAPABLE_SIZE_SYN);
 				option->setValuesArraySize(3);
 				option->setValues(0, first_bits);
@@ -447,13 +454,14 @@ int MPTCP_Flow::initialHandshake(uint t, TCPStateVariables* subflow_state,
 				option->setValues(1, value);
 				value = getLocalKey() >> 32;
 				option->setValues(2, value);
-
+				this->FSM(PRE_ESTABLISHED);
 				DEBUGPRINT("[FLOW][OUT] Generate Sender Key in IDLE for SYN: %lu",getLocalKey());
 
 // SYN-ACK MP_CAPABLE
 			} else if (tcpseg->getSynBit() && tcpseg->getAckBit()) { // SYN/ACK
 				tcpEV << "[MPTCP][HANDSHAKE][MP_CAPABLE] IDLE working for sending a SYN-ACK \n";
 
+				// Prepare
 				option->setLength(MP_CAPABLE_SIZE_SYNACK);
 				option->setValuesArraySize(3);
 				option->setValues(0, first_bits);
@@ -462,13 +470,13 @@ int MPTCP_Flow::initialHandshake(uint t, TCPStateVariables* subflow_state,
 				generateLocalKey();
 				ASSERT(local_key != 0);
 				// set 64 bit value
-				uint32 value = (uint32) getLocalKey();
+				uint32_t value = (uint32_t) getLocalKey();
 				option->setValues(1, value);
 				value = getLocalKey() >> 32;
 				option->setValues(2, value);
 
 				DEBUGPRINT("[FLOW][OUT] Generate Receiver Key in IDLE for SYN-ACK: %lu",getLocalKey());
-				this->FSM(ESTABLISHED);
+				this->FSM(PRE_ESTABLISHED);
 				tcpEV << "[MPTCP][HANDSHAKE][MP_CAPABLE] PRE_ESTABLISHED after send SYN-ACK\n";
 
 			} else
@@ -479,33 +487,30 @@ int MPTCP_Flow::initialHandshake(uint t, TCPStateVariables* subflow_state,
 			t++;
 			break;
 		}
+
 		// MPTCP PRE_ESTABLISHED
 		case PRE_ESTABLISHED: { // whether ACK for a SYN ACK is send -> new MPTCP Flow
 
-			first_bits = first_bits | ((uint16_t) MP_CAPABLE);
-			first_bits = first_bits << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
 
-			first_bits = first_bits | ((uint16_t) VERSION);
-			first_bits = first_bits << (MP_VERSION_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
 
 // ACK MP_CAPABLE
 			// OK we are stateful, however the handshake is not complete
 			if (tcpseg->getAckBit()) { // ACK
 				tcpEV << "[MPTCP][HANDSHAKE][MP_CAPABLE] PRE_ESTABLISHED working for sending  a ACK\n";
+
+				// Prepare
 				option->setLength(MP_CAPABLE_SIZE_ACK);
 				option->setValuesArraySize(5);
-
-				// ACK include both keys
 				option->setValues(0, first_bits);
 
 				// set 64 bit value
-				uint32 value = (uint32) getLocalKey();
+				uint32_t value = (uint32_t) getLocalKey();
 				option->setValues(1, value);
 				value = getLocalKey() >> 32;
 				option->setValues(2, value);
 
 				// set 64 bit value
-				value = (uint32) getRemoteKey();
+				value = (uint32_t) getRemoteKey();
 				option->setValues(3, value);
 				value = getRemoteKey() >> 32;
 				option->setValues(4, value);
@@ -513,9 +518,9 @@ int MPTCP_Flow::initialHandshake(uint t, TCPStateVariables* subflow_state,
 				tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
 				tcpseg->setOptions(t, *option);
 				t++;
-				this->FSM(ESTABLISHED);
-				tcpEV << "[MPTCP][HANDSHAKE][MP_CAPABLE] ESTABLISHED after enqueue a ACK\n";
 
+				tcpEV << "[MPTCP][HANDSHAKE][MP_CAPABLE] ESTABLISHED after enqueue a ACK\n";
+				FSM(ESTABLISHED);
 			} else {
 				ASSERT(false); // FIXME Just for Testing
 			}
@@ -558,7 +563,7 @@ int MPTCP_Flow::joinHandshake(uint t, TCPStateVariables* subflow_state,
 	// NOTE The key material (Token-B and Mac is generated earlier in processMPTCPSegment
 
 	// Initiate some helper
-	uint32 first_bits = 0x0;
+	uint32_t first_bits = 0x0;
 
 	// the state is still established for another subflow, but here we need to initiate the handshake
 	// whether a SYN or ACK for a SYN ACK is send -> new MPTCP Flow
@@ -569,6 +574,8 @@ int MPTCP_Flow::joinHandshake(uint t, TCPStateVariables* subflow_state,
 
 	tcpEV<< "[MPTCP][HANDSHAKE][MP_JOIN] ESTABLISHED should use MP_JOIN \n";
 
+	first_bits = (first_bits | ((uint16_t) MP_JOIN)); //12
+	first_bits = first_bits << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
 
 // SYN MP_JOIN
 	// Add MP_JOIN on a SYN of a established MULTIPATH Connection
@@ -577,18 +584,14 @@ int MPTCP_Flow::joinHandshake(uint t, TCPStateVariables* subflow_state,
 		// ADD is not handled here (FIXME ADD), so it must be a MP_JOIN
 		// this is triggert by a self message, called by joinConnection()
 		tcpEV << "[MPTCP][HANDSHAKE][MP_JOIN] SYN with MP_JOIN \n";
-		first_bits = (first_bits | ((uint16_t) MP_JOIN)); //12
-		first_bits = first_bits << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
 
-
-	// FIXME Missing Address ID (!!!!)
-
+		// Prepare
 		assert(MP_JOIN_SIZE_SYN==12); // In the draft it is defined as 12
 		option->setLength(MP_JOIN_SIZE_SYN);
 		option->setValuesArraySize(3);
 		option->setValues(0, first_bits);
 
-
+		// FIXME Missing Address ID (!!!!)
 		option->setValues(1,remote_token);
 
 		subflow->randomA = 0; // FIXME (uint32)generateKey();
@@ -604,17 +607,17 @@ int MPTCP_Flow::joinHandshake(uint t, TCPStateVariables* subflow_state,
 // SYN-ACK MP_JOIN
 	// Add MP_JOIN on a SYN/ACK of a etablished MULTIPATH Connection
 	else if (tcpseg->getSynBit() && (tcpseg->getAckBit())) {
+		tcpEV << "[MPTCP][HANDSHAKE][MP_JOIN] SYN ACK with MP_JOIN <Not filled yet>\n";
 
-		first_bits = (first_bits | ((uint16_t) MP_JOIN));
-		first_bits = first_bits << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
-
-		// FIXME B
-		// FIXME Adress ID
+		// Prepare
 		assert(MP_JOIN_SIZE_SYNACK==16); // In the draft it is defined as 12
 		option->setLength(MP_JOIN_SIZE_SYNACK);
 		option->setValuesArraySize(3);
-
 		option->setValues(0, first_bits);
+		// FIXME B
+		// FIXME Adress ID
+
+
 		// generate the tuncated MAC (64) and the random Number of the Receiver (Sender of the Packet)
 		// FIXME For second Parameter
 		option->setValues(1, 0); // FIXME truncated MAC 64
@@ -624,20 +627,19 @@ int MPTCP_Flow::joinHandshake(uint t, TCPStateVariables* subflow_state,
 		tcpseg->setOptions(t, *option);
 		t++;
 		tcpEV << "[MPTCP][HANDSHAKE][MP_JOIN] Pre-Established after enqueue of SYN-ACK" << "\n";
-//		this->FSM(PRE_ESTABLISHED);	// Only intern, if the general Flow in ESTABLISHED it will set back later
-		// FIXME for the last ACK we should etablish a connection
+
 // ACK MP_JOIN
 	} else if ((!tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
 		// MPTCP OUT MP_JOIN ACK
 		tcpEV << "[MPTCP][HANDSHAKE][MP_JOIN] ACK with MP_JOIN <Not filled yet>\n";
-		first_bits = (first_bits | ((uint16_t) MP_JOIN));
-		first_bits = first_bits << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
 
-
+		// Prepare
 		assert(MP_JOIN_SIZE_ACK==24); // In the draft it is defined as 12
 		option->setLength(MP_JOIN_SIZE_ACK);
 		option->setValuesArraySize(3);
 		option->setValues(0, first_bits);
+
+
 		// generate the tuncated MAC (64) and the random Number of the Receiver (Sender of the Packet)
 		// FIXME For second Parameter
 		option->setValues(1, 0); // FIXME truncated MAC 64
@@ -648,7 +650,7 @@ int MPTCP_Flow::joinHandshake(uint t, TCPStateVariables* subflow_state,
 		t++;
 
 		tcpEV << "[MPTCP][HANDSHAKE][MP_JOIN] Established after enqueue of SYN" << "\n";
-//		this->FSM(ESTABLISHED);
+
 	}
 	else {
 		tcpEV << "[MPTCP][HANDSHAKE][ERRROR]\n";
@@ -1007,6 +1009,10 @@ int MPTCP_Flow::setState(MPTCP_State s) {
 	if(state == s){
 		ASSERT(state != s);
 	}
+	if(s == ESTABLISHED){
+		DEBUGPRINT("[FLOW][OUT]IS ESTABLISHED Remote Token %u:  ",remote_token);
+		DEBUGPRINT("[FLOW][OUT]IS ESTABLISHED Local Token %u:  ", local_token);
+	}
 	state = s;
 	return state;
 }
@@ -1243,7 +1249,7 @@ int MPTCP_PCB::processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment 
 		DEBUGPRINT("[PRE_ESTABLISHED][CAPABLE][IN Got SYN/ACK with receiver key %lu",
 				flow->getRemoteKey());
 
-		flow->FSM(PRE_ESTABLISHED);
+		// We set state Established, when we send the ACK
 		return STATEFULL;
 	} else if (tcpseg->getAckBit()) {
 		// ACK: We aspect the sender key in the MP_CAPABLE Option
@@ -1281,7 +1287,6 @@ int MPTCP_PCB::processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment 
 
 		// Add (First) Subflow of the connection
 		flow->addSubflow(connId, subflow);
-
 		flow->FSM(ESTABLISHED);
 
 
@@ -1299,38 +1304,14 @@ int MPTCP_PCB::processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment 
 int MPTCP_PCB::processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option) {
 	// Only SYN is important in IDLE
 	if((tcpseg->getSynBit()) && (!tcpseg->getAckBit()) ) {
-		tcpEV << "[MPTCP][IDLE][JOIN] process SYN" << "\n";
-		// First the main flow should be find in the list of flows
-
-		// OK if we are here there exist
-		// - a valid Multipath TCP Control Block
-		// - next step is to send SYN/ACK
-		// ==> add subflow to connection/ multipath flow (For first -> FIXME, handle TCP RST)
-
-		flow->addSubflow(connId,subflow);
-
-		// process the security part
-
-		// get important information of the segment
-		subflow->randomA = option->getValues(2);
-		// It is also a got time to generate Random of B
-		subflow->randomB = 0; // FIXME (uint32) flow->generateKey();
-
-		// Generate truncated
-		flow->generateSYNACK_HMAC(flow->getLocalKey(), flow->getRemoteKey(), subflow->randomA, subflow->randomB, subflow->MAC64);
-		flow->generateACK_HMAC(flow->getLocalKey(), flow->getRemoteKey(), subflow->randomA, subflow->randomB, subflow->MAC160);
-
-
+		processMP_JOIN_ESTABLISHED(connId, subflow, tcpseg, option);
 	}
 	return 0;
 }
 
 int MPTCP_PCB::processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option){
 
-	if (option->getValuesArraySize() < 2) {
-		ASSERT(true);
-		return 0; //should never be happen
-	}
+
 
 	// Now it is time to start a new SUBFLOW
 	// We have to do the normal staff, but we have also look on the still existing flow
@@ -1340,8 +1321,29 @@ int MPTCP_PCB::processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TC
 
 // process SYN
 	if((tcpseg->getSynBit()) && (!tcpseg->getAckBit()) ) {
-		tcpEV << "[MPTCP][ESTABLISHED][JOIN] process SYN" << "\n";
-		ASSERT(true);
+		tcpEV << "[MPTCP][IDLE][JOIN] process SYN" << "\n";
+			// First the main flow should be find in the list of flows
+
+			// OK if we are here there exist
+			// - a valid Multipath TCP Control Block
+			// - next step is to send SYN/ACK
+			// ==> add subflow to connection/ multipath flow (For first -> FIXME, handle TCP RST)
+
+			flow->addSubflow(connId,subflow);
+
+			// process the security part
+
+			// get important information of the segment
+			subflow->randomA = option->getValues(2);
+			// It is also a got time to generate Random of B
+			subflow->randomB = 0; // FIXME (uint32) flow->generateKey();
+
+			// Generate truncated
+			flow->generateSYNACK_HMAC(flow->getLocalKey(), flow->getRemoteKey(), subflow->randomA, subflow->randomB, subflow->MAC64);
+			flow->generateACK_HMAC(flow->getLocalKey(), flow->getRemoteKey(), subflow->randomA, subflow->randomB, subflow->MAC160);
+
+			subflow->joinToAck = true;
+
 	}
 // process SYN/ACK
 	else if((tcpseg->getSynBit()) && (tcpseg->getAckBit()) ) {
@@ -1449,7 +1451,7 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg,
 			}
 			// Get Subtype and check for MP_JOIN
 			uint32_t value = option.getValues(0);
-			uint32_t sub = (value >> (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE));
+			uint16_t sub = (value >> (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE));
 			if(sub == MP_JOIN) {
 				// OK, it is a MP_JOIN
 				if (option.getValuesArraySize() < 2) {
@@ -1516,9 +1518,9 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
 				for (it = subflows_vector.begin(); it != subflows_vector.end(); it++) {
 					TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
 					if (((uint32)subflow->getTcpMain()->subflow_id) == t->flow->local_token){
-						DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] SEARCHED FOR LOCAL TOKEN %d ",(uint32)subflow->getTcpMain()->subflow_id);
-						DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN Local  %d ",t->flow->local_token);
-						DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN REMOTE %d ",t->flow->remote_token);
+						DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] SEARCHED FOR LOCAL TOKEN %u ",(uint32)subflow->getTcpMain()->subflow_id);
+						DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN Local  %u ",t->flow->local_token);
+						DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN REMOTE %u ",t->flow->remote_token);
 						return t->flow->getPCB();
 					}
 				}
@@ -1546,23 +1548,23 @@ void MPTCP_PCB::printFlowOverview(){
 		switch(tmp->flow->getState()){
 		case IDLE:
 			tcpEV<< "[MPTCP][OVERVIEW][PCB] IDLE \n";
-			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %d IDLE",tmp->flow->local_token);
-			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %d IDLE",tmp->flow->remote_token);
+			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u IDLE",tmp->flow->local_token);
+			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u IDLE",tmp->flow->remote_token);
 			break;
 		case PRE_ESTABLISHED:
 			tcpEV<< "[MPTCP][OVERVIEW][PCB] PRE_ESTABLISHED \n";
-			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %d PRE_ESTABLISHED",tmp->flow->local_token);
-			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %d PRE_ESTABLISHED",tmp->flow->remote_token);
+			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u PRE_ESTABLISHED",tmp->flow->local_token);
+			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u PRE_ESTABLISHED",tmp->flow->remote_token);
 			break;
 		case SHUTDOWN:
 			tcpEV<< "[MPTCP][OVERVIEW][PCB] SHUTDOWN \n";
-			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %d SHUTDOWN",tmp->flow->local_token);
-			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %d SHUTDOWN",tmp->flow->remote_token);
+			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u SHUTDOWN",tmp->flow->local_token);
+			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u SHUTDOWN",tmp->flow->remote_token);
 			break;
 		case ESTABLISHED:
 			tcpEV<< "[MPTCP][OVERVIEW][PCB] ESTABLISHED \n";
-			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %d ESTABLISHED",tmp->flow->local_token);
-			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE %d ESTABLISHED",tmp->flow->remote_token);
+			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u ESTABLISHED",tmp->flow->local_token);
+			DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE %u ESTABLISHED",tmp->flow->remote_token);
 			break;
 		default:
 			ASSERT(false);
