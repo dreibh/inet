@@ -13,3 +13,6 @@ Security (MAC)
 Next
 ==========
 - Fill DSS
+
+Denke dran das die Buffer von TCP noch nicht leer gemacht werden dürfen wenn die Cum ACK nicht erreicht ist....
+Denke daran das der Output in Reihenfolge über das Multipath Modul hochgegeben werden muss
