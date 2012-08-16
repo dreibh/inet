@@ -48,6 +48,7 @@
 // TCP dependencies
 #include "TCPConnection.h"
 #include "TCP.h"
+#include "TCPMultipathQueueMngmt.h"
 
 class TCPConnection;
 class TCPSegment;
@@ -77,7 +78,16 @@ typedef vector <TCP_subflow_t*> 		TCP_SubFlowVector_t;
 
 
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
+// compare Section 8. IANA Considerations
 enum MPTCP_SUBTYPES {MP_CAPABLE=0x0000, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
+
+// DSS Flags -> Section 3.3
+const uint8_t DSS_FLAG_A = 0x1;		// Data ACK present
+const uint8_t DSS_FLAG_a = 0x2;		// Data ACK is 8 octets
+const uint8_t DSS_FLAG_M = 0x4;		// Data Sequence Number, Subflow Sequence Number, Data-level  Length, and Checksum present
+const uint8_t DSS_FLAG_m = 0x8;		// Data SQN is 8 Octets
+
+const uint16_t DSS_FLAG_F = 0x10;	// FIN FLAG
 
 // ###############################################################################################################
 //													MULTIPATH TCP
@@ -100,19 +110,22 @@ class INET_API MPTCP_Flow
 	 TCP_JoinVector_t join_queue;			// a queue with all join possibilities
 	 TCP_JoinVector_t tried_join;
 
+	 // Internal organization
 	 MPTCP_State state;						// Internal State of the multipath protocol control block
+	 TCPMultipathQueueMngmt* queue_mgr;     // Receiver queue
 
-	 void initFlow();
-	 int initialHandshake(uint t,
+
+	 void _initFlow();
+	 int _writeInitialHandshakeHeader(uint t,
 	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
 	 		TCPConnection* subflow, TCPOption* option);
-	 int joinHandshake(uint t,
+	 int _writeJoinHandshakeHeader(uint t,
 	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
 	 		TCPConnection* subflow, TCPOption* option);
-	 int processSQN(uint t,
+	 int _writeDSSHeaderandProcessSQN(uint t,
 			TCPStateVariables* subflow_state, TCPSegment *tcpseg,
 			TCPConnection* subflow, TCPOption* option);
-	 bool joinConnection();
+	 bool _prepareJoinConnection();
 
   protected:
 
@@ -138,15 +151,18 @@ class INET_API MPTCP_Flow
 	// helper
 
 	MPTCP_State getState();
+	int setState(MPTCP_State s);
 	uint32_t getFlow_token();
 	MPTCP_PCB* getPCB();
-	int setState(MPTCP_State s);
+
 
 	// Setter and Getter for Keys
 	void setRemoteKey(uint64_t key);
+	uint64_t getRemoteKey();
 	void setLocalKey(uint64_t key);
 	uint64_t getLocalKey();
-	uint64_t getRemoteKey();
+
+	uint64_t getHighestCumSQN();
 
 	// use cases Data IN/OUT
 	int sendByteStream(TCPConnection* subflow);
@@ -160,7 +176,7 @@ class INET_API MPTCP_Flow
 	unsigned char* generateACK_HMAC(uint64 kb, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
 	void hmac_md5(unsigned char*  text, int text_len,unsigned char*  key, int key_len, unsigned char* digest);
 
-	// sub subflow organisation
+	// subflow organisation
 	int addSubflow(int id, TCPConnection*);
 	bool isSubflowOf(TCPConnection* subflow);
 	const TCP_SubFlowVector_t* getSubflows();
@@ -207,13 +223,13 @@ class INET_API MPTCP_PCB
 
 		MPTCP_Flow* flow;
 		// helper for process Segments
-		int processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
-		int processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option);
-		int processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg, const TCPOption* option);
-		int processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
-		int processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
+		int _processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
+		int _processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option);
+		int _processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg, const TCPOption* option);
+		int _processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
+		int _processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
 		// cleanup
-		int clearAll();
+		int _clearAll();
 
 
 		// Lookup for Multipath Control Block management
@@ -232,7 +248,7 @@ class INET_API MPTCP_PCB
 
 		// debug
 		int id;
-		void printFlowOverview();
+		void _printFlowOverview();
 };
 
 

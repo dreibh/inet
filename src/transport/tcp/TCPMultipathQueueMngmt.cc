@@ -17,14 +17,56 @@
 #ifdef PRIVATE
 
 #include "TCPMultipathQueueMngmt.h"
+#include <string.h>
 
-TCPMultipathQueueMngmt::TCPMultipathQueueMngmt() {
-	// TODO Auto-generated constructor stub
+TCPMultipathQueueMngmt::TCPMultipathQueueMngmt(){
+	isInit = false;
 
 }
 
 TCPMultipathQueueMngmt::~TCPMultipathQueueMngmt() {
 	// TODO Auto-generated destructor stub
+}
+
+/**
+ * Init the recvQueue with the start SQN
+ * @param uint64_t The start sqn
+ */
+bool TCPMultipathQueueMngmt::initRECVQueue(uint64_t sqn){
+	rcv_queue.last_cum  = sqn;
+	rcv_queue.high_sqn  = sqn;
+	rcv_queue.last_send_cum = sqn;
+	rcv_queue.rbuf[sqn] = 0x0;
+	rcv_queue.rbuf[sqn] |= SQN_CUM_ACKED;
+	rcv_queue.rbuf[sqn] |= SQN_HIGH;
+
+	snd_queue.highest_received_cum = 0;
+	isInit = true;
+	return true;
+}
+
+/**
+ * Update the receive queue with new send infos
+ */
+bool TCPMultipathQueueMngmt::updateRECVQueue(){
+	ASSERT(isInit);
+	// What is new cum ack
+	// What is the highest ack
+	// What is gap acked
+	return false;
+}
+
+uint64_t TCPMultipathQueueMngmt::getCumSQN(){
+	return rcv_queue.last_cum;
+}
+
+uint64_t TCPMultipathQueueMngmt::getHighestReceivedSQN(){
+	return snd_queue.highest_received_cum;
+}
+
+bool TCPMultipathQueueMngmt::updateHighestReceivedSQN(uint64_t update){
+	snd_queue.highest_received_cum = update;
+	return true;
 }
 
 #endif

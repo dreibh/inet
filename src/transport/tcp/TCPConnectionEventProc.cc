@@ -65,9 +65,8 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             {
         	// TODO Overwrok, which variable do we need
         	bool multipath =  tcpMain->par("multipath");
-
             if(multipath){
-        		tcpMain->subflow_id = openCmd->getSubFlowNumber();
+        		tcpMain->multipath_subflow_id = openCmd->getSubFlowNumber();
         	}
             }
 #endif

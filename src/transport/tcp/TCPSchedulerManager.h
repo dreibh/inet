@@ -15,9 +15,6 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-// Include the MPTCP FLOW
-// Include the MPTCP PCB
-
 #ifdef PRIVATE
 
 #ifndef TCPSCHEDULERMANAGER_H_

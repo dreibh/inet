@@ -94,7 +94,7 @@ enum TCPOptionNumbers
 //  TCPOPTION_RFC3692_STYLE_EXPERIMENT_1 = 253;         // RFC 4727, LENGTH: N
 //  TCPOPTION_RFC3692_STYLE_EXPERIMENT_2 = 254;         // RFC 4727, LENGTH: N
 
-	TCPOPTION_MPTCP = 0x1e;								// MPTCP - Did it like the MPTCP Implementation
+	TCPOPTION_MPTCP = 0x1e;								// MPTCP - compare Section 8. IANA Considerations
 };
 
 //

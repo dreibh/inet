@@ -240,6 +240,8 @@ simple TCP like ITCP
         string receiveQueueClass = default("TCPVirtualDataRcvQueue"); // TCPVirtualDataRcvQueue/TCPMsgBasedRcvQueue
         bool recordStats = default(true); // recording of seqNum etc. into output vectors enabled/disabled
         bool multipath = default(true); // endable and disable multipath
+        bool multipath_DSSDataACK8 = default(false); // switch sending DSS ACK with 8 or 4 Octets
+        bool multipath_DSSSeqNo8 = default(false); // switch sending DSS SQN  with 8 or 4 Octets
         @display("i=block/wheelbarrow");
     gates:
         input appIn[] @labels(TCPCommand/down);

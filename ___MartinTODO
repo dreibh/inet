@@ -3,13 +3,13 @@ MP_JOIN
 
 - Add Flow ID to Option
 
-
+SQN and Buffer Management 
+Scheduler
+Transmit Data
+Security (MAC)
 
 
 
 Next
 ==========
-SQN and Buffer Management 
-Scheduler
-Transmit Data
-Security (MAC)
+- Fill DSS

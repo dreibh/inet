@@ -65,7 +65,10 @@ void TCP::initialize()
 	multipath =  par("multipath");
 	if(multipath){
 		tcpEV << "Initializing module TCP: Multipath TCP enabled\n";
-		subflow_id = 0;
+		multipath_subflow_id = 0;
+
+		multipath_DSSDataACK8 = par("multipath_DSSDataACK8");
+		multipath_DSSSeqNo8 = par("multipath_DSSSeqNo8");
 	}
 #endif
     lastEphemeralPort = EPHEMERAL_PORTRANGE_START;
