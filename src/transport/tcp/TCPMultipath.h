@@ -53,10 +53,14 @@
 class TCPConnection;
 class TCPSegment;
 class TCPStateVariables;
-
 class INET_API MPTCP_PCB;
 
 using std::vector;
+
+// ###############################################################################################################
+//                                                  MULTIPATH TCP
+//                                                 Typedef STUFF
+// ###############################################################################################################
 
 typedef struct _addr_tuple{
 	IPvXAddress addr;
@@ -90,166 +94,50 @@ const uint8_t DSS_FLAG_m = 0x8;		// Data SQN is 8 Octets
 const uint16_t DSS_FLAG_F = 0x10;	// FIN FLAG
 
 // ###############################################################################################################
-//													MULTIPATH TCP
-//														FLOW
+//                                                  MULTIPATH TCP
+//                                                   DEBUG STUFF
 // ###############################################################################################################
-/**
- * The MULTIPATH TCP Flow
- */
-class INET_API MPTCP_Flow
-{
-  private:
-	 int rcvbuf;							// receive message queue
-	 int sndbuf;							// send message queue
-
-	 MPTCP_PCB* pcb;								// the pcb
-
-	 TCP_AddressVector_t list_laddrtuple;	// list of local addresses
-	 TCP_AddressVector_t list_raddrtuple;	// list of remote addresses
-	 TCP_SubFlowVector_t subflow_list; 		// list of all subflows
-	 TCP_JoinVector_t join_queue;			// a queue with all join possibilities
-	 TCP_JoinVector_t tried_join;
-
-	 // Internal organization
-	 MPTCP_State state;						// Internal State of the multipath protocol control block
-	 TCPMultipathQueueMngmt* queue_mgr;     // Receiver queue
 
 
-	 void _initFlow();
-	 int _writeInitialHandshakeHeader(uint t,
-	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
-	 		TCPConnection* subflow, TCPOption* option);
-	 int _writeJoinHandshakeHeader(uint t,
-	 		TCPStateVariables* subflow_state, TCPSegment *tcpseg,
-	 		TCPConnection* subflow, TCPOption* option);
-	 int _writeDSSHeaderandProcessSQN(uint t,
-			TCPStateVariables* subflow_state, TCPSegment *tcpseg,
-			TCPConnection* subflow, TCPOption* option);
-	 bool _prepareJoinConnection();
+// Defines for debugging (Could be removed)
+#define WHERESTR  "\n[MPTCP][file %s, line %u]: "
+#define WHEREARG  __FILE__, __LINE__
+#define DEBUGPRINT2(...)  fprintf(stderr, __VA_ARGS__)
 
-  protected:
-
-
-	 uint64_t seq;							// start seq-no generated after getting keys
-
-	 uint64_t local_key;	// B.1.1 Authentication and Metadata
-	 uint64_t remote_key;	// B.1.1 Authentication and Metadata
-	 // TODO MPTCP CHECKSUM // B.1.1 Authentication and Metadata
-
-	 bool checksum;
-	 bool isPassive;
-	 InterfaceTableAccess interfaceTableAccess;
-  public:
-
-	MPTCP_Flow(int ID, int aAppGateIndex, MPTCP_PCB* aPCB);
-	~MPTCP_Flow();
-
-	// It is public
-
-	uint32 local_token;		// B.1.1 Authentication and Metadata
-	uint32 remote_token;	// B.1.1 Authentication and Metadata
-	// helper
-
-	MPTCP_State getState();
-	int setState(MPTCP_State s);
-	uint32_t getFlow_token();
-	MPTCP_PCB* getPCB();
-
-
-	// Setter and Getter for Keys
-	void setRemoteKey(uint64_t key);
-	uint64_t getRemoteKey();
-	void setLocalKey(uint64_t key);
-	uint64_t getLocalKey();
-
-	uint64_t getHighestCumSQN();
-
-	// use cases Data IN/OUT
-	int sendByteStream(TCPConnection* subflow);
-	int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, TCPConnection* subflow);
-
-	// crypto functions ==> see also rfc 2104
-	uint64 generateLocalKey();
-	int generateToken(uint64_t key, bool type);
-
-	unsigned char* generateSYNACK_HMAC(uint64 ka, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
-	unsigned char* generateACK_HMAC(uint64 kb, uint64 kr, uint32 ra, uint32 rb, unsigned char* digist);
-	void hmac_md5(unsigned char*  text, int text_len,unsigned char*  key, int key_len, unsigned char* digest);
-
-	// subflow organisation
-	int addSubflow(int id, TCPConnection*);
-	bool isSubflowOf(TCPConnection* subflow);
-	const TCP_SubFlowVector_t* getSubflows();
-
-	// common identifier
-	int  appID;								// The application ID of this Flow
-    int  appGateIndex;
-};
-
-typedef struct _4tupleWithStatus{
-	MPTCP_Flow* flow;
-} TuppleWithStatus_t;
-typedef vector <TuppleWithStatus_t*>	AllMultipathSubflowsVector_t;
-
-
+#ifdef PRIVATE_DEBUG
+#define DEBUGPRINT(_fmt, ...)  DEBUGPRINT2(WHERESTR _fmt, WHEREARG, __VA_ARGS__)
+#else
+#define DEBUGPRINT(_fmt, ...) ;
+#endif
 
 // ###############################################################################################################
-//													MULTIPATH TCP
-//														PCB
+//                                                  MULTIPATH TCP
+//                                                   HELPER STUFF
 // ###############################################################################################################
-/**
- * The Multipath TCP Protocol Control Block and Meta-socket
- */
-class INET_API MPTCP_PCB
-{
-	public:
-		MPTCP_PCB(int connId,int appGateIndex, TCPConnection* subflow); // public constructor
-		~MPTCP_PCB();
-		// Static helper elements for organization
-		static AllMultipathSubflowsVector_t subflows_vector;
-		// Connection handling
-		static MPTCP_PCB* lookupMPTCP_PCB(int connid, int aAppGateIndex,TCPSegment *tcpseg,  TCPConnection* subflow);
-		TCPConnection*    lookupMPTCPConnection(int connId,int aAppGateIndex, TCPConnection* subflow,TCPSegment *tcpseg);
-		// Use Case
-		static int processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
-
-		// Getter/ Setter
-		MPTCP_Flow* getFlow();
-		int getID();
 
 
-	private:
-		MPTCP_PCB();
+// Some helper defines
+#define MPTCP_STATEFULL  1
+#define MPTCP_STATELESS 0
+#define MPTCP_LOCAL  1
+#define MPTCP_REMOTE 0
 
-		MPTCP_Flow* flow;
-		// helper for process Segments
-		int _processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
-		int _processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option);
-		int _processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg, const TCPOption* option);
-		int _processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
-		int _processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
-		// cleanup
-		int _clearAll();
+// Some constants for help
+const unsigned int MP_SIGNAL_FIRST_VALUE_TYPE = 16;
+const unsigned int MP_SUBTYPE_POS = MP_SIGNAL_FIRST_VALUE_TYPE - 4;
+const unsigned int MP_VERSION_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - 4;
+const unsigned int MP_C_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_VERSION_POS - 1;
+const unsigned int MP_RESERVED_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_VERSION_POS - MP_C_POS - 4;
+const unsigned int MP_S_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_VERSION_POS - MP_C_POS - MP_RESERVED_POS - 1;
+
+// Helper to set state for a subflow
+#define MPTCP_FSM(state) setState(state); fprintf(stderr,"\n[FSM] CHANGE STATE %u line %u\n",state,__LINE__);
 
 
-		// Lookup for Multipath Control Block management
-		static MPTCP_PCB* _lookupMPTCP_PCB(int connid, int aAppGateIndex);
-		static MPTCP_PCB* _lookupMPTCPbySubflow_PCB(TCPSegment *tcpseg,  TCPConnection* subflow);
-		static MPTCP_PCB* _lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow);
 
-		// Sending side
-		uint64_t snd_una; // B.1.2
-		uint64_t snd_nxt; // B.1.2
-		uint32_t snd_wnd; // B.1.2
 
-		// Receiver Side
-		uint64_t rcv_nxt; // B.1.2
-		uint64_t rcv_wnd; // B.1.2
 
-		// debug
-		int id;
-		void _printFlowOverview();
-};
+
 
 
 #endif // __INET_MPTCP_H

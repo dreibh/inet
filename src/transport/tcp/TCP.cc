@@ -26,7 +26,7 @@
 #include "ICMPv6Message_m.h"
 
 #ifdef PRIVATE
-#include "TCPMultipath.h"
+#include "TCPMultipathPCB.h"
 #endif
 
 Define_Module(TCP);

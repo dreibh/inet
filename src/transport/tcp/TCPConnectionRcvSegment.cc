@@ -28,7 +28,7 @@
 #include "TCPAlgorithm.h"
 
 #ifdef PRIVATE
-#include "TCPMultipath.h"
+#include "TCPMultipathPCB.h"
 #endif
 
 

@@ -35,7 +35,7 @@
 //
 #ifdef PRIVATE
 #include <assert.h>
-#include "TCPMultipath.h"
+#include "TCPMultipathPCB.h"
 #endif
 
 const char *TCPConnection::stateName(int state)
