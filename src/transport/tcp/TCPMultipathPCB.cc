@@ -16,7 +16,10 @@
 //#################################################################################################
 
 
-AllMultipathSubflowsVector_t MPTCP_PCB::subflows_vector;
+AllMultipathSubflowsVector_t MPTCP_PCB::subflows_vector; // TODO This is the first shot of hold all system wide subflows.
+// Note: Alternative implementation. Setup PCB as Singleton implementation and create list in PCB
+
+
 /**
  * Constructor
  */
@@ -39,7 +42,7 @@ MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
     flow = t->flow;
     subflows_vector.push_back(t);
 // For Debug
-    this->_printFlowOverview();
+    this->_printFlowOverview(-1);
 }
 /**
  * De-Constructor
@@ -98,7 +101,7 @@ int MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex,
 */
 int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
     TCPSegment *tcpseg) {
-    _printFlowOverview();
+    _printFlowOverview(0);
     // We are here; so it must be Multipath TCP Stack
     if (!subflow->getTcpMain()->multipath) {
         ASSERT(true); // FIXME Only for testing
@@ -541,9 +544,10 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
                 for (it = subflows_vector.begin(); it != subflows_vector.end(); it++) {
                     TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
                     if (((uint32)subflow->getTcpMain()->multipath_subflow_id) == t->flow->local_token){
-                        DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] SEARCHED FOR LOCAL TOKEN %u ",(uint32)subflow->getTcpMain()->multipath_subflow_id);
-                        DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN Local  %u ",t->flow->local_token);
-                        DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN REMOTE %u ",t->flow->remote_token);
+                        /* keep for debug */
+                        // DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] SEARCHED FOR LOCAL TOKEN %u ",(uint32)subflow->getTcpMain()->multipath_subflow_id);
+                        // DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN Local  %u ",t->flow->local_token);
+                        // DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN REMOTE %u ",t->flow->remote_token);
                         return t->flow->getPCB();
                     }
                 }
@@ -562,12 +566,17 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
 }
 
 
-void MPTCP_PCB::_printFlowOverview(){
+void MPTCP_PCB::_printFlowOverview(int type){
     tcpEV<< "[MPTCP][OVERVIEW][PCB] =======================================" << "\n";
+    static uint64_t rcv_cnt = 0;
+
     AllMultipathSubflowsVector_t::const_iterator it;
+
+    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] >>>>>>>>>>>>>>>>>>>>>>>>>>>>>   SYSTEM SUBFLOWS DURING RECEIVE %llu  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",rcv_cnt++);
+
     for (it = subflows_vector.begin(); it != subflows_vector.end(); it++) {
         TuppleWithStatus_t* tmp = (TuppleWithStatus_t *)(*it);
-        ;
+
         switch(tmp->flow->getState()){
         case IDLE:
             tcpEV<< "[MPTCP][OVERVIEW][PCB] IDLE \n";
@@ -586,15 +595,22 @@ void MPTCP_PCB::_printFlowOverview(){
             break;
         case ESTABLISHED:
             tcpEV<< "[MPTCP][OVERVIEW][PCB] ESTABLISHED \n";
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u ESTABLISHED",tmp->flow->local_token);
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE %u ESTABLISHED",tmp->flow->remote_token);
+            {
+                switch(tmp->flow->appID){
+                case 0:
+                    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] SERVER INSTANCE Flow ID TOKEN Local  %u <--> REMOTE %u ESTABLISHED - Flow Token %u", tmp->flow->local_token,tmp->flow->remote_token, tmp->flow->getPCB()->id);
+                    break;
+                default:
+                    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] CLIENT APP %u   Flow ID TOKEN Local  %u <--> REMOTE %u ESTABLISHED - Flow Token %u",tmp->flow->appID, tmp->flow->local_token,tmp->flow->remote_token, tmp->flow->getPCB()->id);
+                }
+            }
             break;
         default:
             ASSERT(false);
             break;
         }
 
-
+        // TODO
         TCP_SubFlowVector_t::const_iterator it_subflows;
         int subflow_cnt = 0;
         for (it_subflows = tmp->flow->getSubflows()->begin(); it_subflows != tmp->flow->getSubflows()->end(); it_subflows++,subflow_cnt++) {

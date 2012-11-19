@@ -270,7 +270,8 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
     // Only work on MPTCP Options!!
     // (Note: If this is a design problem to do it here, we could move this to TCP...)
     option.setKind(TCPOPTION_MPTCP); // FIXME depending on IANA request
-    DEBUGPRINT("[FLOW][OUT] Support of MPTCP Kind: %u",TCPOPTION_MPTCP);
+    DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] ======================= SENDING IN STATE (%i)  ==========================",state);
+    DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] Support of MPTCP Kind: %u",TCPOPTION_MPTCP);
 
     // If SYN remark this combination as tried
     if ((tcpseg->getSynBit()) && (!tcpseg->getAckBit())) {
@@ -318,7 +319,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 
     switch (this->state) {
         case ESTABLISHED: {
-            DEBUGPRINT("[FLOW][OUT] ESTABLISHED (%i)\n",state);
+            DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] ESTABLISHED (%i)",state);
             // complete additional subflow setup
             // If we in ESTABLISHED state and there comes up a syn we have to add a join for MPTCP transfer
             if ( ((subflow->isSubflow) &&   (tcpseg->getSynBit()))  || subflow->joinToAck ) {
@@ -326,7 +327,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
                 subflow->joinToAck  = false;
 
             }else{
-                DEBUGPRINT("[FLOW][OUT] Do SQN for subflow (%u) by utilizing DSS",subflow->isSubflow);
+                DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] DATA OUT Do SQN for subflow (%u) by utilizing DSS",subflow->isSubflow);
                 _writeDSSHeaderandProcessSQN(t, subflow_state, tcpseg, subflow, &option);
             }
             break;
