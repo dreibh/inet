@@ -2,7 +2,7 @@ MP_JOIN
 ============
 
 - Add Flow ID to Option
-
+- Security elements -> hmac and random numbers (here is a problem)
 
 SQN and Buffer Management 
 Scheduler

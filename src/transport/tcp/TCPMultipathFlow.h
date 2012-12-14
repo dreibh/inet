@@ -50,7 +50,7 @@ class INET_API MPTCP_Flow
   protected:
 
 
-     uint64_t seq;                          // start seq-no generated after getting keys
+     uint64_t base_seq;          // start seq-no generated after getting keys
 
      uint64_t local_key;    // B.1.1 Authentication and Metadata
      uint64_t remote_key;   // B.1.1 Authentication and Metadata
@@ -82,7 +82,8 @@ class INET_API MPTCP_Flow
     void setLocalKey(uint64_t key);
     uint64_t getLocalKey();
 
-    uint64_t getHighestCumSQN();
+    uint64_t getHighestCumSQN();    // SQN band complete up to this number
+    uint64_t getBaseSQN();          // Base of Offset SQN calculation
 
     // use cases Data IN/OUT
     int sendByteStream(TCPConnection* subflow);
@@ -106,8 +107,5 @@ class INET_API MPTCP_Flow
     int  appGateIndex;
 };
 
-typedef struct _4tupleWithStatus{
-    MPTCP_Flow* flow;
-} TuppleWithStatus_t;
-typedef vector <TuppleWithStatus_t*>    AllMultipathSubflowsVector_t;
+
 #endif /* TCPMULTIPATHFLOW_H_ */

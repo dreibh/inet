@@ -24,6 +24,7 @@
 #include "IPvXAddress.h"
 #include "TCP.h"
 #include "TCPSegment.h"
+#include "TCPMultipathPCB.h"
 
 class TCPSegment;
 class TCPCommand;

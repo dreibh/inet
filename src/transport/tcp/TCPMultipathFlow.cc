@@ -843,17 +843,17 @@ int MPTCP_Flow::generateToken(uint64_t key, bool type) {
 
 
     uint32_t *out32 = { 0 };
-//  uint64_t *out64 = { 0 };
+    uint64_t *out64 = { 0 };
 
     SHA1_Init(&ctx);
     // generate SHA-1 for token
     SHA1_Update(&ctx,(const void*) &key, sizeof(uint64_t));
     SHA1_Final((unsigned char*) dm, &ctx);
 
-//  out64 = (uint64*) dm; // Should be a different one, but for simulation it is enough
+    out64 = (uint64*) dm; // Should be a different one, but for simulation it is enough
     out32 = (uint32*) dm; // most significant 32 bits [Section 3.2]
     DEBUGPRINT("[FLOW][OUT] Generate TOKEN: %u:  ",*out32);
-//  DEBUGPRINT("[FLOW][OUT] Generate SQN: %lu:  ",*out64);
+    DEBUGPRINT("[FLOW][OUT] Generate SQN: %llu:  ",*out64);
     switch(type){
     case MPTCP_LOCAL:   local_token = *out32;
         break;
@@ -861,7 +861,7 @@ int MPTCP_Flow::generateToken(uint64_t key, bool type) {
         break;
     default: ASSERT(false); break;
     }
-//  seq = *out64;
+    base_seq = *out64;
     return 0;
 }
 
@@ -1010,6 +1010,9 @@ uint64_t MPTCP_Flow::getHighestCumSQN(){
     return queue_mgr->getHighestReceivedSQN();
 }
 
+uint64_t MPTCP_Flow::getBaseSQN(){
+    return base_seq;
+}
 /**
  * setter for sender_key
  */
