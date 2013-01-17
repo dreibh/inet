@@ -1,0 +1,11 @@
+
+1. Welche Libs müssen installiert werden
+Bei Ubuntu
+apt-get install libssl-dev
+
+2. Es Übersetzt nicht, obwohl alle Libs installiert sind
+
+Häufiges Problem bei der ersten Übersetzung ist die Projekteinstellung bei beim Source Verzeichnis.
+Die Makemakefiles wird von Omnetpp sowohl für das Root als auch das SRC Verzeichnis gesetzt. 
+Wenn Crypto gebraucht wird ist dies immer auf Costum Makefile zu ändern. 
+ 

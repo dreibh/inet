@@ -431,7 +431,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t, TCPStateVariables* subflow_
                 value = getLocalKey() >> 32;
                 option->setValues(2, value);
                 this->MPTCP_FSM(PRE_ESTABLISHED);
-                DEBUGPRINT("[FLOW][OUT] Generate Sender Key in IDLE for SYN: %lu",getLocalKey());
+                DEBUGPRINT("[FLOW][OUT] Generate Sender Key in IDLE for SYN: %llu",getLocalKey());
 
 // SYN-ACK MP_CAPABLE
             } else if (tcpseg->getSynBit() && tcpseg->getAckBit()) { // SYN/ACK
@@ -451,7 +451,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t, TCPStateVariables* subflow_
                 value = getLocalKey() >> 32;
                 option->setValues(2, value);
 
-                DEBUGPRINT("[FLOW][OUT] Generate Receiver Key in IDLE for SYN-ACK: %lu",getLocalKey());
+                DEBUGPRINT("[FLOW][OUT] Generate Receiver Key in IDLE for SYN-ACK: %llu",getLocalKey());
                 this->MPTCP_FSM(PRE_ESTABLISHED);
                 tcpEV << "[MPTCP][HANDSHAKE][MP_CAPABLE] PRE_ESTABLISHED after send SYN-ACK\n";
 
@@ -820,6 +820,7 @@ uint64_t MPTCP_Flow::generateLocalKey() {
 
     // FIXME be sure it is unique
     uint64_t key = intrand(UINT64_MAX);
+
     this->setLocalKey(key); // use setter helper to set in object
     return key;
 }
@@ -844,17 +845,17 @@ int MPTCP_Flow::generateToken(uint64_t key, bool type) {
 
 
     uint32_t *out32 = { 0 };
-//  uint64_t *out64 = { 0 };
+    uint64_t *out64 = { 0 };
 
     SHA1_Init(&ctx);
     // generate SHA-1 for token
     SHA1_Update(&ctx,(const void*) &key, sizeof(uint64_t));
     SHA1_Final((unsigned char*) dm, &ctx);
 
-//  out64 = (uint64*) dm; // Should be a different one, but for simulation it is enough
+    out64 = (uint64*) dm; // Should be a different one, but for simulation it is enough
     out32 = (uint32*) dm; // most significant 32 bits [Section 3.2]
     DEBUGPRINT("[FLOW][OUT] Generate TOKEN: %u:  ",*out32);
-//  DEBUGPRINT("[FLOW][OUT] Generate SQN: %lu:  ",*out64);
+    DEBUGPRINT("[FLOW][OUT] Generate SQN: %llu:  ",*out64);
     switch(type){
     case MPTCP_LOCAL:   local_token = *out32;
         break;
@@ -862,7 +863,7 @@ int MPTCP_Flow::generateToken(uint64_t key, bool type) {
         break;
     default: ASSERT(false); break;
     }
-//  seq = *out64;
+    base_seq = *out64;
     return 0;
 }
 
@@ -877,7 +878,7 @@ unsigned char* MPTCP_Flow::generateSYNACK_HMAC(uint64 ka, uint64 kb, uint32 ra,
 
     // Need MAC-B
     // MAC(KEY=(Key-B + Key-A)), Msg=(R-B + R-A))
-    sprintf(key, "%19lu%19lu", kb, ka);
+    sprintf(key, "%19llu%19llu", kb, ka);
     sprintf(msg, "%10u%10u", rb, ra);
     hmac_md5((unsigned char*) msg, strlen(msg), (unsigned char*) key, strlen(
             key), digist);
@@ -894,7 +895,7 @@ unsigned char* MPTCP_Flow::generateACK_HMAC(uint64 ka, uint64 kb, uint32 ra,
 
     // Need MAC-A
     // MAC(KEY=(Key-A + Key-B)), Msg=(R-A + R-B))
-    sprintf(key, "%19lu%19lu", ka, kb);
+    sprintf(key, "%19llu%19llu", ka, kb);
     sprintf(msg, "%10u%10u", ra, rb);
     hmac_md5((unsigned char*) msg, strlen(msg), (unsigned char*) key, strlen(
             key), digist);
@@ -1011,14 +1012,17 @@ uint64_t MPTCP_Flow::getHighestCumSQN(){
     return queue_mgr->getHighestReceivedSQN();
 }
 
+uint64_t MPTCP_Flow::getBaseSQN(){
+    return base_seq;
+}
 /**
  * setter for sender_key
  */
 void MPTCP_Flow::setRemoteKey(uint64_t key) {
     if(remote_key){
-        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: NEW REMOTE %lu:  ",key);
-        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: OLD LOCAL  %lu:  ",local_key);
-        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: OLD REMOTE %lu:  ",remote_key);
+        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: NEW REMOTE %llu:  ",key);
+        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: OLD LOCAL  %llu:  ",local_key);
+        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: OLD REMOTE %llu:  ",remote_key);
         ASSERT(remote_key == key);
         return;
     }
@@ -1030,9 +1034,9 @@ void MPTCP_Flow::setRemoteKey(uint64_t key) {
  */
 void MPTCP_Flow::setLocalKey(uint64_t key) {
     if(local_key){ // For Testing
-        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: NEW LOCAL %lu:  ",key);
-        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: OLD LOCAL  %lu:  ",local_key);
-        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: OLD REMOTE %lu:  ",remote_key);
+        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: NEW LOCAL %llu:  ",key);
+        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: OLD LOCAL  %llu:  ",local_key);
+        DEBUGPRINT("[FLOW][OUT] Reset TOKEN: OLD REMOTE %llu:  ",remote_key);
         ASSERT(key==local_key);
         return;
     }

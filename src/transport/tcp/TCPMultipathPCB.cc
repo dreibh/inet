@@ -49,7 +49,7 @@ MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
  */
 MPTCP_PCB::~MPTCP_PCB() {
     // FIXME delete flow
-    DEBUGPRINT("[PCB][Destroy] Currently %lu MPTCP Protocol Control Blocks used",subflows_vector.size());
+    DEBUGPRINT("[PCB][Destroy] Currently %u MPTCP Protocol Control Blocks used",subflows_vector.size());
 }
 
 /**
@@ -221,6 +221,10 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
     return 1;
 }
 
+/*
+ *  Process the MPTCP MP CAPABLE Flag
+ *
+ */
 int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option) {
 
     if (option->getValuesArraySize() < 3) {
@@ -237,9 +241,9 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         flow->setRemoteKey(key); // Could be generated every time -> important is key of ACK
 
 
-        DEBUGPRINT("[PRE_ESTABLISHED][CAPABLE][IN] Got SYN/ACK with sender key %lu",
+        DEBUGPRINT("[PRE_ESTABLISHED][CAPABLE][IN] Got SYN/ACK with sender key %llu",
                 flow->getLocalKey());
-        DEBUGPRINT("[PRE_ESTABLISHED][CAPABLE][IN Got SYN/ACK with receiver key %lu",
+        DEBUGPRINT("[PRE_ESTABLISHED][CAPABLE][IN Got SYN/ACK with receiver key %llu",
                 flow->getRemoteKey());
 
         // We set state Established, when we send the ACK
@@ -259,8 +263,8 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         key = (key << 32) | option->getValues(3);
         flow->setLocalKey(key); // Only for check
 
-        DEBUGPRINT("[IDLE][CAPABLE][IN] Got ACK with Sender Key %lu", flow->getLocalKey());
-        DEBUGPRINT("[IDLE][CAPABLE][IN] Got ACK with Receiver Key %lu",flow->getRemoteKey());
+        DEBUGPRINT("[IDLE][CAPABLE][IN] Got ACK with Sender Key %llu", flow->getLocalKey());
+        DEBUGPRINT("[IDLE][CAPABLE][IN] Got ACK with Receiver Key %llu",flow->getRemoteKey());
 
         // Status: Check MPTCP FLOW
         // - this is a MULTIPATH Stack:             OK
@@ -281,19 +285,21 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         // Add (First) Subflow of the connection
         flow->addSubflow(connId, subflow);
         flow->MPTCP_FSM(ESTABLISHED);
-
-
     } else {
         // SYN
         // read 64 bit keys
         uint64 key = option->getValues(2);
         key = (key << 32) | option->getValues(1);
         flow->setRemoteKey(key);
-        DEBUGPRINT("[IDLE][CAPABLE][IN] Got SYN with sender key %lu", flow->getRemoteKey());
+        DEBUGPRINT("[IDLE][CAPABLE][IN] Got SYN with sender key %llu", flow->getRemoteKey());
     }
 
     return MPTCP_STATELESS; // OK we got a MP_CAPABLE in a SYN, we are still stateless
 }
+
+/*
+ *  Process the MPTCP MP Koin in idle state
+ */
 int MPTCP_PCB::_processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option) {
     // Only SYN is important in IDLE
     if((tcpseg->getSynBit()) && (!tcpseg->getAckBit()) ) {
@@ -302,10 +308,10 @@ int MPTCP_PCB::_processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegme
     return 0;
 }
 
+/*
+ * Process the MPTCP MP Koin in established state
+ */
 int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option){
-
-
-
     // Now it is time to start a new SUBFLOW
     // We have to do the normal staff, but we have also look on the still existing flow
     // - procees SYN    -> Error in Established
@@ -384,6 +390,9 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
     return 0;
 }
 
+/*
+ * Process default package with MP DSS
+ */
 int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option){
         tcpEV << "[MPTCP][ESTABLISHED][DSS] process MPTCP Option DSS" << "\n";
         /*
@@ -456,6 +465,7 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCB(int connId, int aAppGateIndex) {
     }
     return NULL;
 }
+
 /**
  * Internal helper to find the Multipath PCB by the MP_JOIN Potion
  */
@@ -513,7 +523,6 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg,
             }
         } // MPTCP Options
     }
-
     return NULL; // No PCB found
 }
 
@@ -536,6 +545,9 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCPbySubflow_PCB(TCPSegment *tcpseg,
     return NULL;
 }
 
+/*
+ *
+ */
 MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *tcpseg,  TCPConnection* subflow){
     MPTCP_PCB* tmp = NULL;
     if(tmp == NULL){
@@ -566,8 +578,11 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
     return tmp;
 }
 
-
+/**
+ *  Debug Information
+ */
 void MPTCP_PCB::_printFlowOverview(int type){
+#ifdef PRIVATE_DEBUG
     tcpEV<< "[MPTCP][OVERVIEW][PCB] =======================================" << "\n";
     static uint64_t rcv_cnt = 0;
 
@@ -605,6 +620,8 @@ void MPTCP_PCB::_printFlowOverview(int type){
                     DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] CLIENT APP %u   Flow ID TOKEN Local  %u <--> REMOTE %u ESTABLISHED - Flow Token %u",tmp->flow->appID, tmp->flow->local_token,tmp->flow->remote_token, tmp->flow->getPCB()->id);
                 }
             }
+            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Base Sequence Number:        %llu",tmp->flow->getBaseSQN());
+            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Highest Cum Sequence number: %llu",tmp->flow->getHighestCumSQN());
             break;
         default:
             ASSERT(false);
@@ -625,7 +642,7 @@ void MPTCP_PCB::_printFlowOverview(int type){
         }
 
     }
-
+#endif
 }
 
 /**
@@ -647,4 +664,4 @@ MPTCP_Flow* MPTCP_PCB::getFlow() {
     return flow;
 }
 
-#endif PRIVATE
+#endif // Private

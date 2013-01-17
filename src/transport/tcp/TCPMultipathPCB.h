@@ -8,7 +8,15 @@
 #ifndef TCPMULTIPATHPCB_H_
 #define TCPMULTIPATHPCB_H_
 
+#include "TCPMultipath.h"
 #include "TCPMultipathFlow.h"
+
+class MPTCP_Flow;
+// helper
+typedef struct _4tupleWithStatus{
+    MPTCP_Flow* flow;
+} TuppleWithStatus_t;
+typedef std::vector <TuppleWithStatus_t*>    AllMultipathSubflowsVector_t;
 
 // ###############################################################################################################
 //                                                  MULTIPATH TCP
