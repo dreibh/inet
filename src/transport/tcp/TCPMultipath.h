@@ -33,6 +33,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include <cstring>
 #include "TCPCommand_m.h"
 #include "TCPSegment.h"
 #include "IPvXAddress.h"

@@ -18,6 +18,7 @@
 
 #include "TCPMultipathFlow.h"
 
+
 #if defined(__APPLE__)
 #define COMMON_DIGEST_FOR_OPENSSL
 #include <CommonCrypto/CommonDigest.h>
@@ -927,7 +928,7 @@ void MPTCP_Flow::hmac_md5(unsigned char* text, int text_len,
         MD5_CTX tctx;
 
         MD5_Init(&tctx);
-        MD5_Update(&tctx, key, key_len);
+        MD5_Update(&tctx, (const void*)  key, (size_t) key_len);
         MD5_Final(tk, &tctx);
 
         key = tk;
@@ -946,10 +947,10 @@ void MPTCP_Flow::hmac_md5(unsigned char* text, int text_len,
      */
 
     /* start out by storing key in pads */
-    bzero(k_ipad, sizeof k_ipad);
-    bzero(k_opad, sizeof k_opad);
-    bcopy(key, k_ipad, key_len);
-    bcopy(key, k_opad, key_len);
+    bzero((void*) k_ipad, sizeof(k_ipad));
+    bzero((void*) k_opad, sizeof(k_opad));
+    bcopy((const void*) key, (void*) k_ipad, key_len);
+    bcopy((const void*) key, (void*) k_opad, key_len);
 
     /* XOR key with ipad and opad values */
     for (i = 0; i < 64; i++) {
@@ -961,8 +962,8 @@ void MPTCP_Flow::hmac_md5(unsigned char* text, int text_len,
      */
     MD5_Init(&context); /* init context for 1st
      * pass */
-    MD5_Update(&context, k_ipad, 64); /* start with inner pad */
-    MD5_Update(&context, text, text_len); /* then text of datagram */
+    MD5_Update(&context, (const void*) k_ipad, (size_t) 64); /* start with inner pad */
+    MD5_Update(&context, (const void*) text, (size_t) text_len); /* then text of datagram */
     MD5_Final(digest, &context); /* finish up 1st pass */
     /*
      * perform outer MD5

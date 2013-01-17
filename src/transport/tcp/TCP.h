@@ -38,9 +38,6 @@ class TCPSegment;
 #define testingEV (ev.disable_tracing||!TCP::testing)?ev:ev
 
 
-
-
-
 /**
  * Implements the TCP protocol. This section describes the internal
  * architecture of the TCP model.

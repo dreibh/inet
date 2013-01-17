@@ -70,6 +70,7 @@ int MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex,
     }else{
         tcpEV<< "[MPTCP][PROCESS][INCOMING] Existing flow" << "\n";
         tcpEV<< "[MPTCP][PROCESS][INCOMING] Flow State ";
+
         switch(tmp->getFlow()->getState()){
         case IDLE:
             tcpEV<< "IDLE";

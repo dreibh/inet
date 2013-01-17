@@ -22,15 +22,16 @@ class INET_API MPTCP_PCB
     public:
         MPTCP_PCB(int connId,int appGateIndex, TCPConnection* subflow); // public constructor
         ~MPTCP_PCB();
-        // Static helper elements for organization
-        static AllMultipathSubflowsVector_t subflows_vector;
+
+
         // Connection handling
         static MPTCP_PCB* lookupMPTCP_PCB(int connid, int aAppGateIndex,TCPSegment *tcpseg,  TCPConnection* subflow);
         TCPConnection*    lookupMPTCPConnection(int connId,int aAppGateIndex, TCPConnection* subflow,TCPSegment *tcpseg);
-        // Use Case
+
+        // Data handling
         static int processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
 
-        // Getter/ Setter
+        // Getter
         MPTCP_Flow* getFlow();
         int getID();
 
@@ -38,7 +39,12 @@ class INET_API MPTCP_PCB
     private:
         MPTCP_PCB();
 
+        // The MPTCP Flow
         MPTCP_Flow* flow;
+
+        // Static helper elements for organization
+        static AllMultipathSubflowsVector_t subflows_vector;
+
         // helper for process Segments
         int _processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
         int _processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const TCPOption* option);
