@@ -458,7 +458,7 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCB(int connId, int aAppGateIndex) {
         for (it_subflows = t->flow->getSubflows()->begin(); it_subflows != t->flow->getSubflows()->end(); it_subflows++) {
             TCP_subflow_t* sub = (TCP_subflow_t*) (*it_subflows);
             if((sub->subflow->connId == connId) && (sub->subflow->appGateIndex == aAppGateIndex)){
-                if(t->flow->local_token!=0 && t->flow->remote_token!=0)
+                if(t->flow->getLocalToken()!=0 && t->flow->getRemoteToken()!=0)
                     return t->flow->getPCB();
             }
         }
@@ -503,8 +503,8 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg,
                     for (it = subflows_vector.begin(); it != subflows_vector.end(); it++) {
                             TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
                             // FIXME -> Of course only one is correct, but I don t wont to differ for the first step
-                            ASSERT(t->flow->local_token != 0);
-                            if(t->flow->local_token == send_local_token) {
+                            ASSERT(t->flow->getLocalToken() != 0);
+                            if(t->flow->getLocalToken() == send_local_token) {
                                 return t->flow->getPCB();
                             }
                     }
@@ -556,7 +556,7 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
                 AllMultipathSubflowsVector_t::const_iterator it;
                 for (it = subflows_vector.begin(); it != subflows_vector.end(); it++) {
                     TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
-                    if (((uint32)subflow->getTcpMain()->multipath_subflow_id) == t->flow->local_token){
+                    if (((uint32)subflow->getTcpMain()->multipath_subflow_id) == t->flow->getLocalToken()){
                         /* keep for debug */
                         // DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] SEARCHED FOR LOCAL TOKEN %u ",(uint32)subflow->getTcpMain()->multipath_subflow_id);
                         // DEBUGPRINT("[MPTCP][OVERVIEW][PCB][LOOKUP] FOUND Flow ID TOKEN Local  %u ",t->flow->local_token);
@@ -596,28 +596,28 @@ void MPTCP_PCB::_printFlowOverview(int type){
         switch(tmp->flow->getState()){
         case IDLE:
             tcpEV<< "[MPTCP][OVERVIEW][PCB] IDLE \n";
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u IDLE",tmp->flow->local_token);
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u IDLE",tmp->flow->remote_token);
+            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u IDLE",tmp->flow->getLocalToken());
+            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u IDLE",tmp->flow->getRemoteToken());
             break;
         case PRE_ESTABLISHED:
             tcpEV<< "[MPTCP][OVERVIEW][PCB] PRE_ESTABLISHED \n";
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u PRE_ESTABLISHED",tmp->flow->local_token);
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u PRE_ESTABLISHED",tmp->flow->remote_token);
+            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u PRE_ESTABLISHED",tmp->flow->getLocalToken());
+            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u PRE_ESTABLISHED",tmp->flow->getRemoteToken());
             break;
         case SHUTDOWN:
             tcpEV<< "[MPTCP][OVERVIEW][PCB] SHUTDOWN \n";
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u SHUTDOWN",tmp->flow->local_token);
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u SHUTDOWN",tmp->flow->remote_token);
+            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN Local  %u SHUTDOWN",tmp->flow->getLocalToken());
+            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Flow ID TOKEN REMOTE  %u SHUTDOWN",tmp->flow->getRemoteToken());
             break;
         case ESTABLISHED:
             tcpEV<< "[MPTCP][OVERVIEW][PCB] ESTABLISHED \n";
             {
                 switch(tmp->flow->appID){
                 case 0:
-                    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] SERVER INSTANCE Flow ID TOKEN Local  %u <--> REMOTE %u ESTABLISHED - Flow Token %u", tmp->flow->local_token,tmp->flow->remote_token, tmp->flow->getPCB()->id);
+                    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] SERVER INSTANCE Flow ID TOKEN Local  %u <--> REMOTE %u ESTABLISHED - Flow Token %u", tmp->flow->getLocalToken(),tmp->flow->getRemoteToken(), tmp->flow->getPCB()->id);
                     break;
                 default:
-                    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] CLIENT APP %u   Flow ID TOKEN Local  %u <--> REMOTE %u ESTABLISHED - Flow Token %u",tmp->flow->appID, tmp->flow->local_token,tmp->flow->remote_token, tmp->flow->getPCB()->id);
+                    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] CLIENT APP %u   Flow ID TOKEN Local  %u <--> REMOTE %u ESTABLISHED - Flow Token %u",tmp->flow->appID, tmp->flow->getLocalToken(),tmp->flow->getRemoteToken(), tmp->flow->getPCB()->id);
                 }
             }
             DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Base Sequence Number:        %llu",tmp->flow->getBaseSQN());

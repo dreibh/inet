@@ -791,7 +791,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     // Data ACK fill with cum SQN
     // TODO getNewCumSQN
 
-    uint64_t cumSQN = queue_mgr->getCumSQN();   // First Step: Report every time a new cum SQN
+    //uint64_t cumSQN = queue_mgr->getCumSQN();   // First Step: Report every time a new cum SQN
     // Switch: NED Parameter multipath_DSSDataACK8
 
     // DSS size is variable ... 8...20
@@ -819,7 +819,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 uint64_t MPTCP_Flow::generateLocalKey() {
 
     // FIXME be sure it is unique
-    uint64_t key = intrand(UINT64_MAX);
+    uint64_t key = intrand((long)UINT64_MAX);
 
     this->setLocalKey(key); // use setter helper to set in object
     return key;
@@ -1042,6 +1042,21 @@ void MPTCP_Flow::setLocalKey(uint64_t key) {
     }
     generateToken(key, MPTCP_LOCAL);
     local_key = key;
+}
+
+
+void MPTCP_Flow::setRemoteToken(uint32_t t){
+    remote_token = t;
+}
+void MPTCP_Flow::setLocalToken(uint32_t t){
+    local_token = t;
+}
+
+uint32_t MPTCP_Flow::getRemoteToken(){
+    return remote_token;
+}
+uint32_t MPTCP_Flow::getLocalToken(){
+    return local_token;
 }
 /**
  * helper set function
