@@ -194,10 +194,12 @@ void TCP::handleMessage(cMessage *msg)
                 error("(%s)%s arrived without control info", tcpseg->getClassName(), tcpseg->getName());
             }
 
+            fprintf(stderr,"[TCP][STATUS] Search Connection From  %s:%d to %s:%d", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(), tcpseg->getDestPort() );
 
             TCPConnection *conn = findConnForSegment(tcpseg, srcAddr, destAddr);
             if (conn)
             {
+                fprintf(stderr,"[TCP][STATUS] Get Data From  %s:%d to %s:%d", conn->remoteAddr.str().c_str(),conn->remotePort, conn->localAddr.str().c_str(),conn->localPort);
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
                 if (!ret)
                     removeConnection(conn);

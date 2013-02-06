@@ -72,7 +72,13 @@ void TCPSACKRexmitQueue::discardUpTo(uint32 seqNum)
     if (rexmitQueue.empty())
         return;
 
+#ifndef PRIVATE
     ASSERT(seqLE(begin,seqNum) && seqLE(seqNum,end));
+#else
+    if(seqLE(begin,seqNum) && seqLE(seqNum,end)==false)
+        //return;
+        ASSERT(false);
+#endif
     begin = seqNum;
 
     RexmitQueue::iterator i = rexmitQueue.begin();
@@ -312,7 +318,13 @@ uint32 TCPSACKRexmitQueue::getAmountOfSackedBytes(uint32 seqNum)
             break;
     }
 
+#ifndef PRIVATE
     ASSERT(seqLE(seqNum,i->beginSeqNum) || seqGE(seqNum,--i->endSeqNum));
+#else
+    if(seqLE(seqNum,i->beginSeqNum) || seqGE(seqNum,--i->endSeqNum)==false)
+        //return bytes;
+        ASSERT(false);
+#endif
 
     while (i!=rexmitQueue.end())
     {
@@ -341,9 +353,13 @@ uint32 TCPSACKRexmitQueue::getNumOfDiscontiguousSacks(uint32 seqNum)
         if (i->beginSeqNum == seqNum)
             break;
     }
-
+#ifndef PRIVATE
     ASSERT(seqLE(seqNum,i->beginSeqNum) || seqGE(seqNum,--i->endSeqNum));
-
+#else
+    if(seqLE(seqNum,i->beginSeqNum) || seqGE(seqNum,--i->endSeqNum)==false)
+        //return counter;
+        ASSERT(false);
+#endif
     // search for discontiguous sacked regions
     while (i!=rexmitQueue.end())
     {
