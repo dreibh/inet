@@ -65,6 +65,14 @@ MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
  */
 MPTCP_PCB::~MPTCP_PCB() {
     // FIXME delete flow
+    mptcp_flow_vector.clear();
+    while (!mptcp_flow_vector.empty())
+    {
+        AllMultipathTCPVector_t::iterator i = mptcp_flow_vector.begin();
+        delete (*i);
+        mptcp_flow_vector.erase(i);
+    }
+    delete this->flow;
 //    DEBUGPRINT("[PCB][Destroy] Currently %u MPTCP Protocol Control Blocks used",(int) subflows_vector.size());
 }
 

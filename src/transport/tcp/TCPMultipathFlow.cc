@@ -89,6 +89,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex,TCPConnection* subflow, MPT
  */
 MPTCP_Flow::~MPTCP_Flow() {
     // TODO(MBe) -> De-Constructor of Flow
+    subflow_list.clear();
 }
 
 /**
@@ -560,12 +561,16 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t, TCPStateVariables* subflow_
                 openCmd->setSubFlowNumber(getLocalToken());
 
                 openCmd->setIsMptcpSubflow(true);
+
                 msg->setControlInfo(openCmd);
                 msg->setContextPointer(newSubflow);
 // TODO: What is better to schedule this as selfmessage or to hande it as call
                //
-//                newSubflow->processAppCommand(msg);
-                newSubflow->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
+                newSubflow->isSubflow = true;
+
+                newSubflow->processAppCommand(msg);
+//                newSubflow->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
+
                 DEBUGPRINT("[MPTCP][HANDSHAKE][MP_CAPABLE] ESTABLISHED after enqueue a ACK%s","\0");
                 MPTCP_FSM(ESTABLISHED);
             } else {
@@ -806,8 +811,10 @@ bool MPTCP_Flow::_prepareJoinConnection() {
                 openCmd->setIsMptcpSubflow(true);
                 msg->setControlInfo(openCmd);
                 msg->setContextPointer(newSubflow);
-     //           newSubflow->processAppCommand(msg);
-                tmp->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
+
+                newSubflow->isSubflow = true;
+                newSubflow->processAppCommand(msg);
+//                tmp->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
                 goto freeAndfinish;
             }
         }
@@ -925,7 +932,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg){
     // easy scheduler
     static int scheduler = 0;
-    int cnt=0;
+    static int cnt=0;
 
     TCP_subflow_t* entry = NULL;
     cPacket* pkt = PK(msg);
@@ -934,15 +941,19 @@ TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg){
     int msg_nr = 0;
     // We split every data for scheduling, if there bigger than connection MMS
     for(int64 offset = 0; offset <len;){
-
-        scheduler++;
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i
                   != subflow_list.end(); i++) {
                   entry = (*i);
                   scheduler++;
-                  DEBUGPRINT("Scheulder %d==%d %d==%d",scheduler,subflow_list.size(),(scheduler%subflow_list.size()),0);
 
                   if(((scheduler%(subflow_list.size())))==0){
+                      DEBUGPRINT("Scheulder %d==%d %d==%d",scheduler,subflow_list.size(),(scheduler%subflow_list.size()),0);
+
+                      scheduler += cnt;
+                      if(cnt < subflow_list.size() )
+                          cnt++;
+                      else
+                          cnt = 1;
 
                       // get the mms
                       uint32 mss = entry->subflow->getState()->snd_mss;
@@ -951,16 +962,14 @@ TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg){
                       offset += mss;
                       if(offset < len){
                           part_msg->setByteLength(mss);
+                          _createMSGforProcess(part_msg,entry->subflow);
                       }
                       else{
                           part_msg->setBitLength(mss-(len-offset));
+                          _createMSGforProcess(part_msg,entry->subflow);
                           delete msg;
+                          break;
                       }
-
-                      DEBUGPRINT("[FLOW][SUBFLOW][%i][STATUS] Send via  %s:%d to %s:%d", cnt, entry->subflow->localAddr.str().c_str(), entry->subflow->localPort, entry->subflow->remoteAddr.str().c_str(), entry->subflow->remotePort);
-                      _createMSGforProcess(part_msg,entry->subflow);
-
-
                   }
         }
 
@@ -970,11 +979,13 @@ TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg){
 
 void MPTCP_Flow::_createMSGforProcess(cMessage *msg, TCPConnection* sc){
    msg->setKind(TCP_C_MPTCP_SEND);
+   DEBUGPRINT("[FLOW][SUBFLOW][STATUS] Send via  %s:%d to %s:%d", sc->localAddr.str().c_str(), sc->localPort, sc->remoteAddr.str().c_str(), sc->remotePort);
+
    TCPSendCommand *cmd = new TCPSendCommand();
    cmd->setConnId(sc->connId);
    msg->setControlInfo(cmd);
    sc->processAppCommand(msg);
-   //sc->getTcpMain()->scheduleAt(simTime() + 0.1, msg);
+   //sc->getTcpMain()->ssend(msg) ;//scheduleAt(simTime() + 0.0001, msg);
 }
 
 void MPTCP_Flow::initKeyMaterial(TCPConnection* subflow){

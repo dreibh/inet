@@ -93,6 +93,7 @@ TCP::~TCP()
         delete (*i).second;
         tcpAppConnMap.erase(i);
     }
+    delete this->mptcp_pcb;
 }
 
 void TCP::handleMessage(cMessage *msg)
@@ -260,33 +261,6 @@ void TCP::handleMessage(cMessage *msg)
 
             tcpEV << "TCP connection created for " << msg << "\n";
         }
-
-#ifdef PRIVATE
-        // Multipath from application view
-        // - check for flow and scheduler
-        if(multipath){
-        	 // First Subflow, or no Multipath connection
-        	if (dynamic_cast<TCPSegment *>(msg)){
-        		TCPSegment *tcpseg = check_and_cast<TCPSegment *>(msg);
-                if(mptcp_pcb != NULL){
-                    mptcp_pcb = MPTCP_PCB::lookupMPTCP_PCB(connId, appGateIndex, tcpseg, conn);
-                    if(mptcp_pcb==NULL) {
-                        tcpEV << "!! OK we should handle information without PCB..." << endl;
-                        mptcp_pcb = new MPTCP_PCB(connId,appGateIndex, conn);
-                    }
-                    // MARTIN  TODO Wofür brauche ich diesen code
-        		}
-        	}
-			if(conn == NULL){
-				// Multipath error, we should not proceed
-				removeConnection(conn);
-				if (ev.isGUI())
-						updateDisplayString();
-				return;
-
-			}
-        }
-#endif
 
         bool ret = conn->processAppCommand(msg);
         if (!ret)
@@ -493,6 +467,9 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
 #endif
     // then insert it into tcpConnMap
     tcpConnMap[key] = conn;
+
+    if(conn->getRexmitQueue()==NULL)
+        tcpEV << "getRexmitQueue is empty "  << "\n";
 
     // mark port as used
     if (localPort>=EPHEMERAL_PORTRANGE_START && localPort<EPHEMERAL_PORTRANGE_END)

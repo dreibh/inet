@@ -106,6 +106,7 @@ const char *TCPConnection::indicationName(int code)
         CASE(TCP_I_CONNECTION_RESET);
         CASE(TCP_I_TIMED_OUT);
         CASE(TCP_I_STATUS);
+        CASE(TCP_I_SEND_MSG);
     }
     return s;
 #undef CASE
@@ -167,17 +168,54 @@ void TCPConnection::printSegmentBrief(TCPSegment *tcpseg)
 }
 #ifdef PRIVATE
 TCPConnection *TCPConnection::cloneMPTCPConnection(bool active){
+    TCPConnection *conn = NULL;
     if(tcpMain->multipath){
-        TCPConnection *tmp = cloneListeningConnection();
-        if(active){
-            // we have to copy some more stuff
-            tmp->remoteAddr = remoteAddr;
-            tmp->remotePort = remotePort;
-            tmp->localAddr =  IPvXAddress();
-            tmp->localPort = -1;
-        }
-        FSM_Goto(tmp->fsm, TCP_S_INIT);
-        return tmp;
+
+
+            if(active){
+                conn = new TCPConnection(tcpMain,appGateIndex,connId);
+                // we have to copy some more stuff
+                conn->remoteAddr = remoteAddr;
+                conn->remotePort = remotePort;
+                conn->localAddr =  IPvXAddress();
+                conn->localPort = -1;
+            }
+            else
+                conn = new TCPConnection(tcpMain,0,0);
+
+            // following code to be kept consistent with initConnection()
+            const char *sendQueueClass = sendQueue->getClassName();
+            conn->sendQueue = check_and_cast<TCPSendQueue *>(createOne(sendQueueClass));
+            conn->sendQueue->setConnection(conn);
+
+            const char *receiveQueueClass = receiveQueue->getClassName();
+            conn->receiveQueue = check_and_cast<TCPReceiveQueue *>(createOne(receiveQueueClass));
+            conn->receiveQueue->setConnection(conn);
+
+            // create SACK retransmit queue
+            rexmitQueue = new TCPSACKRexmitQueue();
+            rexmitQueue->setConnection(this);
+
+            const char *tcpAlgorithmClass = tcpAlgorithm->getClassName();
+            conn->tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
+            conn->tcpAlgorithm->setConnection(conn);
+
+            conn->state = conn->tcpAlgorithm->getStateVariables();
+            configureStateVariables();
+            conn->tcpAlgorithm->initialize();
+
+            // put it into LISTEN, with our localAddr/localPort
+            conn->state->active = false;
+            conn->state->fork = true;
+            conn->localAddr = localAddr;
+            conn->localPort = localPort;
+            // in every case in INIT
+
+       //     if(active)
+                FSM_Goto(conn->fsm, TCP_S_INIT);
+       //     else
+       //         FSM_Goto(conn->fsm, TCP_S_LISTEN);
+            return conn;
     }
     else return NULL;
 }
