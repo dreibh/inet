@@ -23,6 +23,9 @@
 #include <omnetpp.h>
 #include "IPvXAddress.h"
 
+#ifdef PRIVATE
+class MPTCP_PCB;
+#endif
 
 class TCPConnection;
 class TCPSegment;
@@ -156,10 +159,13 @@ class INET_API TCP : public cSimpleModule
     bool recordStatistics;  // output vectors on/off
 
 #ifdef PRIVATE
+    MPTCP_PCB* mptcp_pcb;
     bool multipath;
     bool multipath_DSSDataACK8;
     bool multipath_DSSSeqNo8;
     int  multipath_subflow_id;
+
+    bool isKnownConn(IPvXAddress srcAddr, int rPort, IPvXAddress destAddr,  int lPort);
 #endif
 
   public:

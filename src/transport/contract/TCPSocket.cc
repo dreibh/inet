@@ -86,8 +86,8 @@ void TCPSocket::sendToTCP(cMessage *msg)
 {
     if (!gateToTcp)
         opp_error("TCPSocket: setOutputGate() must be invoked before socket can be used");
-
     check_and_cast<cSimpleModule *>(gateToTcp->getOwnerModule())->send(msg, gateToTcp);
+
 }
 
 void TCPSocket::bind(int lPort)
@@ -172,6 +172,7 @@ void TCPSocket::send(cMessage *msg)
     TCPSendCommand *cmd = new TCPSendCommand();
     cmd->setConnId(connId);
     msg->setControlInfo(cmd);
+
     sendToTCP(msg);
 }
 
@@ -221,6 +222,9 @@ void TCPSocket::renewSocket()
 
 bool TCPSocket::belongsToSocket(cMessage *msg)
 {
+#ifdef PRIVATE
+    return true; // TODO Check if it is the correct socket.
+#endif
     return dynamic_cast<TCPCommand *>(msg->getControlInfo()) &&
            ((TCPCommand *)(msg->getControlInfo()))->getConnId()==connId;
 }

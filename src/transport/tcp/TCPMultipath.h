@@ -34,6 +34,8 @@
 #include <assert.h>
 
 #include <cstring>
+#include <inttypes.h>
+
 #include "TCPCommand_m.h"
 #include "TCPSegment.h"
 #include "IPvXAddress.h"
@@ -47,9 +49,11 @@
 #include "IPv6InterfaceData.h"
 
 // TCP dependencies
+
 #include "TCPConnection.h"
-#include "TCP.h"
 #include "TCPMultipathQueueMngmt.h"
+#include "TCP.h"
+class TCP;
 
 class TCPConnection;
 class TCPSegment;
@@ -70,8 +74,8 @@ typedef struct _addr_tuple{
 typedef vector <AddrTupple_t*> 			TCP_AddressVector_t;
 
 typedef struct _addr_combi{
-	AddrTupple_t* local;
-	AddrTupple_t* remote;
+	AddrTupple_t local;
+	AddrTupple_t remote;
 } AddrCombi_t;
 typedef vector <AddrCombi_t*> 			TCP_JoinVector_t;
 
@@ -98,16 +102,16 @@ const uint16_t DSS_FLAG_F = 0x10;	// FIN FLAG
 //                                                  MULTIPATH TCP
 //                                                   DEBUG STUFF
 // ###############################################################################################################
-
-
+#ifdef PRIVATE_DEBUG
+    static char DEBUGBUF[255];
 // Defines for debugging (Could be removed)
 #define WHERESTR  "\n[MPTCP][file %s, line %u]: "
 #define WHEREARG  __FILE__, __LINE__
-#define DEBUGPRINT2(...)  fprintf(stderr, __VA_ARGS__)
-
-#ifdef PRIVATE_DEBUG
-#define DEBUGPRINT(_fmt, ...)  DEBUGPRINT2(WHERESTR _fmt, WHEREARG, __VA_ARGS__)
+#define DEBUGPRINT2(...)  fprintf(stderr, __VA_ARGS__); sprintf(DEBUGBUF,__VA_ARGS__);   tcpEV << DEBUGBUF << endl;
+#define DEBUGINFO(_s) DEBUGPRINT2(WHERESTR,_s)
+#define DEBUGPRINT(_fmt, ...)  DEBUGPRINT2(WHERESTR _fmt, WHEREARG, __VA_ARGS__);
 #else
+#define DEBUGINFO(_s);
 #define DEBUGPRINT(_fmt, ...) ;
 #endif
 

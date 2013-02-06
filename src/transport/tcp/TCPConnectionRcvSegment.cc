@@ -101,14 +101,23 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     TCPEventCode event;
     if (fsm.getState()==TCP_S_LISTEN)
     {
+        if ((tcpseg->getSynBit()) && (!tcpseg->getAckBit())){
+            tcpEV << "TCP SYN" << endl;
+        }
         event = processSegmentInListen(tcpseg, src, dest);
     }
     else if (fsm.getState()==TCP_S_SYN_SENT)
     {
+        if ((tcpseg->getSynBit()) && (!tcpseg->getAckBit())){
+            tcpEV << "TCP SYN" << endl;
+        }
         event = processSegmentInSynSent(tcpseg, src, dest);
     }
     else
     {
+        if ((tcpseg->getSynBit()) && (!tcpseg->getAckBit())){
+            tcpEV << "TCP SYN" << endl;
+        }
         // RFC 793 steps "first check sequence number", "second check the RST bit", etc
         event = processSegment1stThru8th(tcpseg);
     }
@@ -346,7 +355,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
             return TCP_E_IGNORE;  // if acks something not yet sent, drop it
 #ifdef PRIVATE
         if(tcpMain->multipath){
-        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
+        	tcpMain->mptcp_pcb = MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
         }
 #endif
 
@@ -837,7 +846,7 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
 
 #ifdef PRIVATE
         if(tcpMain->multipath){
-        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
+        	tcpMain->mptcp_pcb = MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
         }
 #endif
         state->ack_now = true;
@@ -958,7 +967,7 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
     {
 #ifdef PRIVATE
         if(tcpMain->multipath){
-        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
+        	tcpMain->mptcp_pcb= MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
         }
 #endif
 

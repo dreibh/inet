@@ -47,7 +47,19 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             remoteAddr = openCmd->getRemoteAddr();
             localPort = openCmd->getLocalPort();
             remotePort = openCmd->getRemotePort();
-
+#ifdef PRIVATE
+            { // create own contex
+            bool multipath =  tcpMain->par("multipath");
+            bool skip = false;
+            if(multipath){
+                tcpEV << "MPTCP: We do not proof ports in case of a multpath link" << endl;
+                if(this->isSubflow){
+                    tcpEV << "We know this subflow as MPTCP flow" << endl;
+                    skip=true;
+                }
+            }
+            if(!skip){
+#endif
             if (remoteAddr.isUnspecified() || remotePort==-1)
                 opp_error("Error processing command OPEN_ACTIVE: remote address and port must be specified");
 
@@ -58,17 +70,20 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             }
 
             tcpEV << "OPEN: " << localAddr << ":" << localPort << " --> " << remoteAddr << ":" << remotePort << "\n";
-
+#ifdef PRIVATE
+            }} // End Multipath contex
+#endif
             tcpMain->addSockPair(this, localAddr, remoteAddr, localPort, remotePort);
 
 #ifdef PRIVATE
-            {
+            { // MPTCP Context
+            bool multipath =  tcpMain->par("multipath");
         	// TODO Overwrok, which variable do we need
-        	bool multipath =  tcpMain->par("multipath");
             if(multipath){
         		tcpMain->multipath_subflow_id = openCmd->getSubFlowNumber();
         	}
-            }
+            } // END MPTCP Context
+
 #endif
             // send initial SYN
             selectInitialSeqNum();
@@ -78,6 +93,9 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             break;
 
         default:
+#ifdef PRIVATE
+            if(!tcpMain->par("multipath"))
+#endif
             opp_error("Error processing command OPEN_ACTIVE: connection already exists");
             break; // MBe add because of Warning
     }
@@ -122,9 +140,22 @@ void TCPConnection::process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCom
     delete openCmd;
     delete msg;
 }
+#ifdef PRIVATE
+void TCPConnection::process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg){
 
+
+    if(this->isSubflow){
+        // easy scheduler for testing
+        TCPConnection* scheduledConn = this->getTcpMain()->mptcp_pcb->getFlow()->schedule(this, msg);
+        //scheduledConn->process_SEND(event,tcpCommand,msg);
+    }
+    else
+        this->process_SEND(event,tcpCommand,msg);
+}
+#endif
 void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)
 {
+
     TCPSendCommand *sendCommand = check_and_cast<TCPSendCommand *>(tcpCommand);
 
     // FIXME how to support PUSH? One option is to treat each SEND as a unit of data,

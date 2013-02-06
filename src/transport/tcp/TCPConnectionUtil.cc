@@ -164,6 +164,23 @@ void TCPConnection::printSegmentBrief(TCPSegment *tcpseg)
     }
     tcpEV << "\n";
 }
+#ifdef PRIVATE
+TCPConnection *TCPConnection::cloneMPTCPConnection(bool active){
+    if(tcpMain->multipath){
+        TCPConnection *tmp = cloneListeningConnection();
+        if(active){
+            // we have to copy some more stuff
+            tmp->remoteAddr = remoteAddr;
+            tmp->remotePort = remotePort;
+            tmp->localAddr =  IPvXAddress();
+            tmp->localPort = -1;
+        }
+        FSM_Goto(tmp->fsm, TCP_S_INIT);
+        return tmp;
+    }
+    else return NULL;
+}
+#endif
 
 TCPConnection *TCPConnection::cloneListeningConnection()
 {
@@ -317,6 +334,8 @@ void TCPConnection::sendToApp(cMessage *msg)
     tcpMain->send(msg, "appOut", appGateIndex);
 }
 
+
+
 void TCPConnection::initConnection(TCPOpenCommand *openCmd)
 {
     // create send queue
@@ -348,6 +367,7 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
         if(multipath){
         	openCmd->getSubFlowNumber();
         	joinToAck = false;
+        	joinToSynAck = false;
         }
 #endif
 
@@ -1338,22 +1358,13 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 
 		// During IDLE and PRE_ESTABLISHED there exists no persistent MPTCP PCB
 		// so first check
-		MPTCP_PCB* tmp = MPTCP_PCB::lookupMPTCP_PCB(this->connId, this->appGateIndex,tcpseg, this );
 
-		if (tmp == NULL){
-			// generate a stateless mptcp flow, e.g. for handshake mp_capable
-			// other mptcp option will be generated
-			tcpEV << "[MULTIPATH ENTRY] Connection without MPTCP PCB" << "\n";
-			// Unknown Flow, but however we have to send the message
-			tmp = new MPTCP_PCB(this->connId, this->appGateIndex,  this);
+
+		if (tcpMain->mptcp_pcb == NULL){
+		    tcpEV << "!! OK we should write header information without PCB..." << endl;
+		    tcpMain->mptcp_pcb = new MPTCP_PCB(this->connId, this->appGateIndex,  this);
 		}
-		else{
-			// OK it exists a PCB for multipath
-			tcpEV << "[MULTIPATH ENTRY]It is a Multipath Flow" << "\n";
-		}
-		// write the option anyway
-		MPTCP_Flow* mpflow = tmp->getFlow();
-		t = mpflow->writeMPTCPHeaderOptions(t,state,tcpseg,this);
+		tcpMain->mptcp_pcb->getFlow()->writeMPTCPHeaderOptions(t,state,tcpseg,this);
 
 	}
 	else{

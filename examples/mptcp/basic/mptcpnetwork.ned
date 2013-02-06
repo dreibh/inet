@@ -8,7 +8,7 @@ import inet.nodes.inet.Router;
 
 network mptcpnetwork
 {
-    @display("bgb=384,206");
+    @display("bgb=833,441");
     types:
         channel C1 extends DatarateChannel
         {
@@ -23,14 +23,14 @@ network mptcpnetwork
     submodules:
         client1: StandardHost {
             parameters:
-                @display("p=50,67;i=device/pc3");
+                @display("p=50,206;i=device/pc3");
                 routingFile = "client1.mrt";
             gates:
                 pppg[2];
         }
         server: StandardHost {
             parameters:
-                @display("p=200,67;i=device/pc2");
+                @display("p=670,193;i=device/pc2");
                 routingFile = "server1.mrt";
             gates:
                 pppg[2];
@@ -38,14 +38,14 @@ network mptcpnetwork
         router1: Router {
             parameters:
                 routingFile = "router1.mrt";
-                @display("p=130,32;i=abstract/router");
+                @display("p=362,107;i=abstract/router");
             gates:
                 pppg[2];
         }
         router2: Router {
             parameters:
                 routingFile = "router2.mrt";
-                @display("p=130,116;i=abstract/router");
+                @display("p=369,328;i=abstract/router");
             gates:
                 pppg[2];
         }

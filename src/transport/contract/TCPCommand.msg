@@ -36,6 +36,9 @@ enum TcpCommandCode
     TCP_C_OPEN_ACTIVE = 1;   // active open (must carry TCPOpenCommand)
     TCP_C_OPEN_PASSIVE = 2;  // passive open (must carry TCPOpenCommand)
     TCP_C_SEND = 3;          // send data (set on data packet)
+//#ifdef PRIVATE
+	TCP_C_MPTCP_SEND = 4;
+//#endif    
     TCP_C_CLOSE = 5;         // "I have no more data to send"
     TCP_C_ABORT = 6;         // abort connection
     TCP_C_STATUS = 7;        // request status info (TCP_I_STATUS) from TCP

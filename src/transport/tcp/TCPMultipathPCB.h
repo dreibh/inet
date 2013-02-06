@@ -12,11 +12,14 @@
 #include "TCPMultipathFlow.h"
 
 class MPTCP_Flow;
-// helper
+
 typedef struct _4tupleWithStatus{
     MPTCP_Flow* flow;
+    bool active;
+    int  connID;
+    int  appGateIndex;
 } TuppleWithStatus_t;
-typedef std::vector <TuppleWithStatus_t*>    AllMultipathSubflowsVector_t;
+typedef std::vector <TuppleWithStatus_t*>    AllMultipathTCPVector_t;
 
 // ###############################################################################################################
 //                                                  MULTIPATH TCP
@@ -31,27 +34,33 @@ class INET_API MPTCP_PCB
         MPTCP_PCB(int connId,int appGateIndex, TCPConnection* subflow); // public constructor
         ~MPTCP_PCB();
 
-
         // Connection handling
         static MPTCP_PCB* lookupMPTCP_PCB(int connid, int aAppGateIndex,TCPSegment *tcpseg,  TCPConnection* subflow);
+        static void addMPTCPFlow(TuppleWithStatus_t* );
         TCPConnection*    lookupMPTCPConnection(int connId,int aAppGateIndex, TCPConnection* subflow,TCPSegment *tcpseg);
 
         // Data handling
-        static int processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
+        static MPTCP_PCB* processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
 
         // Getter
         MPTCP_Flow* getFlow();
         int getID();
 
 
+
+
+        void DEBUGprintFlowOverview(int);
+
+
     private:
         MPTCP_PCB();
-
-        // The MPTCP Flow
         MPTCP_Flow* flow;
 
+        // Selforganisation
+        TuppleWithStatus_t* t; // includes also the flow
+
         // Static helper elements for organization
-        static AllMultipathSubflowsVector_t subflows_vector;
+        static AllMultipathTCPVector_t mptcp_flow_vector;
 
         // helper for process Segments
         int _processSegment(int connId, TCPConnection* subflow, TCPSegment *tcpseg);
@@ -62,24 +71,15 @@ class INET_API MPTCP_PCB
         // cleanup
         int _clearAll();
 
-
         // Lookup for Multipath Control Block management
         static MPTCP_PCB* _lookupMPTCP_PCB(int connid, int aAppGateIndex);
-        static MPTCP_PCB* _lookupMPTCPbySubflow_PCB(TCPSegment *tcpseg,  TCPConnection* subflow);
-        static MPTCP_PCB* _lookupMPTCP_PCBbyMP_JOIN_Option(TCPSegment* tcpseg, TCPConnection* subflow);
+        static MPTCP_PCB* _lookupMPTCPbySubflow_PCB(int connId, int aAppGateIndex, TCPSegment *tcpseg,  TCPConnection* subflow);
+        static MPTCP_PCB* _lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg, TCPConnection* subflow);
 
-        // Sending side
-        uint64_t snd_una; // B.1.2
-        uint64_t snd_nxt; // B.1.2
-        uint32_t snd_wnd; // B.1.2
-
-        // Receiver Side
-        uint64_t rcv_nxt; // B.1.2
-        uint64_t rcv_wnd; // B.1.2
 
         // debug
         int id;
-        void _printFlowOverview(int);
+
 };
 
 

@@ -85,6 +85,9 @@ enum TCPEventCode
     TCP_E_OPEN_ACTIVE,
     TCP_E_OPEN_PASSIVE,
     TCP_E_SEND,
+#ifdef PRIVATE
+    TCP_E_MPTCP_SEND,
+#endif
     TCP_E_CLOSE,
     TCP_E_ABORT,
     TCP_E_STATUS,
@@ -321,6 +324,7 @@ class INET_API TCPConnection
 #ifdef PRIVATE
     bool isSubflow;
     bool joinToAck;
+    bool joinToSynAck;
     uint32 randomA;				// used to store randam of MPTCP MP_JOIN
     uint32 randomB; 			// used to store randam of MPTCP MP_JOIN
     unsigned char MAC64[64];	// Container for truncated MAC
@@ -389,6 +393,9 @@ class INET_API TCPConnection
     virtual void process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
+#ifdef PRIVATE
+    virtual void process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
+#endif
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
@@ -448,8 +455,6 @@ class INET_API TCPConnection
     /** Utility: send SYN */
     virtual void sendSyn();
 
-    /** Utility: send SYN+ACK */
-    virtual void sendSynAck();
 
     /** Utility: readHeaderOptions (Currently only EOL, NOP, MSS, WS, SACK_PERMITTED, SACK and TS are implemented) */
     virtual void readHeaderOptions(TCPSegment *tcpseg);
@@ -466,8 +471,15 @@ class INET_API TCPConnection
     /** Utility: get TSecr from segments TS header option */
     virtual uint32 getTSecr(TCPSegment *tcpseg);
   public:
+
+#ifdef PRIVATE
+    virtual TCPConnection *cloneMPTCPConnection(bool active);
+#endif
+
     /** Utility: send ACK */
     virtual void sendAck();
+    /** Utility: send SYN+ACK */
+    virtual void sendSynAck();
 
     /**
      * Utility: Send data from sendQueue, at most congestionWindow.

@@ -70,6 +70,7 @@ void TCP::initialize()
 		multipath_DSSDataACK8 = par("multipath_DSSDataACK8");
 		multipath_DSSSeqNo8 = par("multipath_DSSSeqNo8");
 	}
+	mptcp_pcb = NULL;
 #endif
     lastEphemeralPort = EPHEMERAL_PORTRANGE_START;
     WATCH(lastEphemeralPort);
@@ -172,13 +173,16 @@ void TCP::handleMessage(cMessage *msg)
             IPvXAddress srcAddr, destAddr;
             if (dynamic_cast<IPControlInfo *>(tcpseg->getControlInfo())!=NULL)
             {
+
                 IPControlInfo *controlInfo = (IPControlInfo *)tcpseg->removeControlInfo();
                 srcAddr = controlInfo->getSrcAddr();
                 destAddr = controlInfo->getDestAddr();
                 delete controlInfo;
+
             }
             else if (dynamic_cast<IPv6ControlInfo *>(tcpseg->getControlInfo())!=NULL)
             {
+
                 IPv6ControlInfo *controlInfo = (IPv6ControlInfo *)tcpseg->removeControlInfo();
                 srcAddr = controlInfo->getSrcAddr();
                 destAddr = controlInfo->getDestAddr();
@@ -189,7 +193,7 @@ void TCP::handleMessage(cMessage *msg)
                 error("(%s)%s arrived without control info", tcpseg->getClassName(), tcpseg->getName());
             }
 
-            // process segment
+
             TCPConnection *conn = findConnForSegment(tcpseg, srcAddr, destAddr);
             if (conn)
             {
@@ -202,9 +206,30 @@ void TCP::handleMessage(cMessage *msg)
 #ifdef PRIVATE
             	// OK, perhapse we have to join a Multipath Connection
             	if(multipath){
-            		// Only run this on starting a new subflow
-            		// TODO INCOMING MULTIPATH TCP on closed Socket
-            		tcpEV << "Incomming Packets on closed Port, in default TCP we would send a RST\n";
+            		// TODO INCOMING MULTIPATH TCP on closed Socket, when Server side open a connection active
+            	    TCPConnection *mptcp_con=NULL;
+
+            	    // The connection should be created in TCPMultipathFlow.cc for new incomming SYNs from Server side.
+            	    // Check if we can find it...
+
+            	    SockPair key;
+            	    key.localAddr = srcAddr;
+            	    key.remoteAddr = IPvXAddress();
+            	    key.localPort = tcpseg->getDestPort();
+            	    key.remotePort = -1;
+
+
+            	    // try with fully qualified SockPair
+            	    TcpConnMap::iterator i;
+            	    i = tcpConnMap.find(key);
+            	    if (i!=tcpConnMap.end())
+            	            mptcp_con = i->second;
+            	    if(mptcp_con!=NULL){
+            	        tcpEV << "Someone is using MPTCP and tries to open a connection server side";
+            	        mptcp_con->processTCPSegment(tcpseg, srcAddr, destAddr);
+
+            	    }
+            	    tcpEV << "Incomming Packets on closed Port, in default TCP we would send a RST\n";
             	}
             	else{
 #endif
@@ -243,11 +268,14 @@ void TCP::handleMessage(cMessage *msg)
         	 // First Subflow, or no Multipath connection
         	if (dynamic_cast<TCPSegment *>(msg)){
         		TCPSegment *tcpseg = check_and_cast<TCPSegment *>(msg);
-        		const MPTCP_PCB* pcb = MPTCP_PCB::lookupMPTCP_PCB(connId, appGateIndex, tcpseg, conn);
-
-				if(pcb==NULL) {
-					pcb = new MPTCP_PCB(connId,appGateIndex, conn);
-				}
+                if(mptcp_pcb != NULL){
+                    mptcp_pcb = MPTCP_PCB::lookupMPTCP_PCB(connId, appGateIndex, tcpseg, conn);
+                    if(mptcp_pcb==NULL) {
+                        tcpEV << "!! OK we should handle information without PCB..." << endl;
+                        mptcp_pcb = new MPTCP_PCB(connId,appGateIndex, conn);
+                    }
+                    // MARTIN  TODO Wofür brauche ich diesen code
+        		}
         	}
 			if(conn == NULL){
 				// Multipath error, we should not proceed
@@ -336,6 +364,30 @@ void TCP::updateDisplayString()
     getDisplayString().setTagArg("t",0,buf2);
 }
 
+#ifdef PRIVATE
+bool TCP::isKnownConn(IPvXAddress srcAddr, int lPort, IPvXAddress destAddr,  int rPort){
+
+    SockPair key;
+    key.localAddr = destAddr;
+    key.remoteAddr = srcAddr;
+    key.localPort = lPort;
+    key.remotePort =rPort;
+
+    // try with fully qualified SockPair
+    TcpConnMap::iterator i;
+    i = tcpConnMap.find(key);
+    if (i!=tcpConnMap.end())
+        return true;
+
+    key.localAddr = IPvXAddress();
+    i = tcpConnMap.find(key);
+    if (i!=tcpConnMap.end())
+        return true;
+
+    return false;
+}
+
+#endif
 TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, IPvXAddress destAddr)
 {
     SockPair key;
@@ -424,11 +476,21 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
                   localAddr.str().c_str(), localPort);
 
         }else{
+#ifdef PRIVATE
+            if(this->multipath){
+                fprintf(stderr,"\n We know it is duplicated, it is multipath\n");
+                return;
+            }
+            else
+#endif
             error("Address already in use: there is already a connection %s:%d to %s:%d",
                   localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
         }
     }
-
+#ifdef PRIVATE
+    fprintf(stderr,"\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    fprintf(stderr,"\nAdd Address in tcpConnMap:  %s:%d to %s:%d\n", localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
+#endif
     // then insert it into tcpConnMap
     tcpConnMap[key] = conn;
 

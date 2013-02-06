@@ -144,12 +144,30 @@ void TCPSessionApp::activity()
     // send
     if (sendBytes>0)
     {
+#ifndef PRIVATE
         waitUntil(tSend);
         EV << "sending " << sendBytes << " bytes\n";
         cPacket *msg = new cPacket("data1");
         msg->setByteLength(sendBytes);
         bytesSent += sendBytes;
         socket.send(msg);
+#else
+        waitUntil(tSend);
+        EV << "sending " << sendBytes << " bytes\n";
+
+        for(int64 offset = 0;offset <  sendBytes;){
+            int message_size = 40;
+            cPacket *msg = new cPacket("data1");
+            offset += message_size;
+            if(offset <= sendBytes)
+                msg->setByteLength(message_size);
+            else
+                msg->setByteLength(message_size - (offset-sendBytes));
+            bytesSent += sendBytes;
+            socket.send(msg);
+        }
+#endif
+
     }
     for (CommandVector::iterator i=commands.begin(); i!=commands.end(); ++i)
     {
