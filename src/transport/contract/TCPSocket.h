@@ -1,5 +1,7 @@
 //
 // Copyright (C) 2004 Andras Varga
+// Copyright (C) 2010 Robin Seggelmann
+// Copyright (C) 2010-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -298,6 +300,11 @@ class INET_API TCPSocket
      * Sends data packet.
      */
     void send(cMessage *msg);
+
+    /**
+     * Sends command.
+     */
+    void sendCommand(cMessage *msg);
 
     /**
      * Closes the local end of the connection. With TCP, a CLOSE operation

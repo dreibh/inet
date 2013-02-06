@@ -45,7 +45,7 @@ class INET_API DropTailQueue : public PassiveQueueBase
     /**
      * Redefined from PassiveQueueBase.
      */
-    virtual bool enqueue(cMessage *msg);
+    virtual bool enqueue(cMessage* msg);
 
     /**
      * Redefined from PassiveQueueBase.
@@ -55,9 +55,14 @@ class INET_API DropTailQueue : public PassiveQueueBase
     /**
      * Redefined from PassiveQueueBase.
      */
-    virtual void sendOut(cMessage *msg);
+    virtual void sendOut(cMessage* msg);
+
+#ifdef DTQUEUE_DEBUG
+    /**
+      * Print message information.
+      */
+    void dumpInfo(const char* info, cMessage* msg);
+#endif
 };
 
 #endif
-
-

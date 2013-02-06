@@ -74,6 +74,7 @@ const char *TCPConnection::eventName(int event)
         CASE(TCP_E_CLOSE);
         CASE(TCP_E_ABORT);
         CASE(TCP_E_STATUS);
+        CASE(TCP_E_QUEUE_BYTES_LIMIT);    
         CASE(TCP_E_RCV_DATA);
         CASE(TCP_E_RCV_ACK);
         CASE(TCP_E_RCV_SYN);
@@ -301,13 +302,14 @@ void TCPConnection::signalConnectionTimeout()
     sendIndicationToApp(TCP_I_TIMED_OUT);
 }
 
-void TCPConnection::sendIndicationToApp(int code)
+void TCPConnection::sendIndicationToApp(int code, const int id)
 {
     tcpEV << "Notifying app: " << indicationName(code) << "\n";
     cMessage *msg = new cMessage(indicationName(code));
     msg->setKind(code);
     TCPCommand *ind = new TCPCommand();
     ind->setConnId(connId);
+    ind->setUserId(id);
     msg->setControlInfo(ind);
     tcpMain->send(msg, "appOut", appGateIndex);
 }
@@ -588,11 +590,11 @@ void TCPConnection::sendSegment(uint32 bytes)
         uint32 forward = rexmitQueue->checkRexmitQueueForSackedOrRexmittedSegments(state->snd_nxt);
         state->snd_nxt = state->snd_nxt + forward;
     }
-
+    
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
     if (bytes > buffered) // last segment?
         bytes = buffered;
-
+    
     // if header options will be added, this could reduce the number of data bytes allowed for this segment,
     // because following condition must to be respected:
     //     bytes + options_len <= snd_mss
@@ -603,44 +605,54 @@ void TCPConnection::sendSegment(uint32 bytes)
     while (bytes + options_len > state->snd_mss)
         bytes--;
     state->sentBytes = bytes;
-
+    
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
     TCPSegment *tcpseg = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
-
+    
     // if sack_enabled copy region of tcpseg to rexmitQueue
     if (state->sack_enabled)
         rexmitQueue->enqueueSentData(state->snd_nxt, state->snd_nxt+bytes);
-
+    
     tcpseg->setAckNo(state->rcv_nxt);
     tcpseg->setAckBit(true);
     tcpseg->setWindow(updateRcvWnd());
-
+    
     // TBD when to set PSH bit?
     // TBD set URG bit if needed
     ASSERT(bytes==tcpseg->getPayloadLength());
-
+    
     state->snd_nxt += bytes;
-
+    
     // check if afterRto bit can be reset
     if (state->afterRto && seqGE(state->snd_nxt, state->snd_max))
         state->afterRto = false;
-
+    
     if (state->send_fin && state->snd_nxt==state->snd_fin_seq)
     {
         tcpEV << "Setting FIN on segment\n";
         tcpseg->setFinBit(true);
         state->snd_nxt = state->snd_fin_seq+1;
     }
-
+    
     // add header options and update header length (from tcpseg_temp)
     tcpseg->setOptionsArraySize(tcpseg_temp->getOptionsArraySize());
     for (uint i=0; i<tcpseg_temp->getOptionsArraySize(); i++)
         tcpseg->setOptions(i, tcpseg_temp->getOptions(i));
     tcpseg->setHeaderLength(tcpseg_temp->getHeaderLength());
     delete tcpseg_temp;
-
+    
     // send it
     sendToIP(tcpseg);
+    
+    // let application fill queue again, if there is space
+    const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
+    const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
+    if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
+        (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
+        // Tell upper layer readiness to accept more data
+        sendIndicationToApp(TCP_I_SEND_MSG, abated);
+        state->queueUpdate = true;
+    }
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)

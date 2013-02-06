@@ -25,7 +25,7 @@
 #include <assert.h>
 
 
-#define MAX_MPTCP_SQN_BAND 0xffffffffffffffff
+#define MAX_MPTCP_SQN_BAND 0xfffffff
 #define SQN_DEFAULT   0x0000
 #define SQN_CUM_ACKED 0x0001
 #define SQN_NOT_ACKED 0x0002

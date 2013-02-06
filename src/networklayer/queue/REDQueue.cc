@@ -1,5 +1,6 @@
 //
 // Copyright (C) 2005 Andras Varga
+// Copyright (C) 2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,8 +16,19 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-
 #include <omnetpp.h>
+
+// ====== Activate debugging mode here! =====================================
+// #define REDQUEUE_DEBUG             // Print drops, queue status, etc.
+// #define REDQUEUE_DEBUG_FORWARDS    // Print all forwards
+// ==========================================================================
+
+#ifdef REDQUEUE_DEBUG
+#include "IPDatagram_m.h"
+#include "SCTPMessage.h"
+#include "SCTPAssociation.h"
+#define EV std::cout
+#endif
 #include "REDQueue.h"
 
 
@@ -50,9 +62,27 @@ void REDQueue::initialize()
     WATCH(q_time);
     WATCH(count);
     WATCH(numEarlyDrops);
+
+#ifdef REDQUEUE_DEBUG
+    // print configuration
+    const cModule* ppp = outGate->getPathEndGate()->getOwnerModule();
+    if(ppp) {
+        const cGate* networkOutputGate = ppp->gate("phys$o");
+        if(networkOutputGate) {
+            const cModule* remoteSide = networkOutputGate->getPathEndGate()->getOwnerModule();
+            if(remoteSide) {
+                EV << "REDQueue from " << ppp->getFullPath() << " to "
+                          << remoteSide->getFullPath()
+                          << ":\twq=" << wq
+                          << "\tminth=" << minth << "\tmaxth=" << maxth
+                          << "\tmaxp=" << maxp << "\tpkrate=" << pkrate << endl;
+            }
+        }
+    }
+#endif
 }
 
-bool REDQueue::enqueue(cMessage *msg)
+bool REDQueue::enqueue(cMessage* msg)
 {
     //"
     // for each packet arrival
@@ -95,12 +125,37 @@ bool REDQueue::enqueue(cMessage *msg)
     //"
 
     bool mark = false;
-    if (minth<=avg && avg<maxth)
+    if ((minth <= avg) && (avg < maxth))   // avg in [minth,maxth)
     {
         count++;
-        double pb = maxp*(avg-minth) / (maxth-minth);
-        double pa = pb / (1-count*pb);
-        if (dblrand() < pa)
+        const double pb = maxp*(avg-minth) / (maxth-minth);
+        double pa;
+        if(count*pb >= 1) {
+           // T.D. 29.07.2011: This condition must be checked. Otherwise, pa
+           //                  may become negative => queue works like FIFO.
+           pa = 1.0;
+        }
+        else {
+           pa = pb / (1-count*pb);
+        }
+        const double r = dblrand();
+
+#if 0
+        const IPDatagram*  ip      = dynamic_cast<const IPDatagram*>(msg);
+        SCTPMessage*       sctpMsg = dynamic_cast<SCTPMessage*>(ip->getEncapsulatedPacket());
+        if(sctpMsg) {
+           std::cout << simTime() << "\t" << getFullPath() << ":\t" << " SCTP message "
+                     << ip->getSrcAddress()  << ":" << sctpMsg->getSrcPort()  << " - "
+                     << ip->getDestAddress() << ":" << sctpMsg->getDestPort() << " -->"
+                     << "\tpa="    << pa
+                     << "\tpb="    << pb
+                     << "\tcount=" << count
+                     << "\tr="     << r
+                     << "\tmark="  << (r < pa) << endl;
+        }
+#endif
+
+        if (r < pa)
         {
             EV << "Random early packet drop (avg queue len=" << avg << ", pa=" << pa << ")\n";
             mark = true;
@@ -108,9 +163,13 @@ bool REDQueue::enqueue(cMessage *msg)
             numEarlyDrops++;
         }
     }
-    else if (maxth <= avg)
+    else if ( (avg >= maxth) /* || (queue.length() >= maxth) */ )
+       // maxth is also the "hard" limit
     {
-        EV << "Avg queue len " << avg << " >= maxth, dropping packet.\n";
+       // T.D. 10.12.09: The hard limit must be checked here.
+       // When mark is set to "true", the count must be reset to 0!
+        EV << "Avg queue len " << avg << ", queue len "
+           << queue.length() << " => dropping packet.\n";
         mark = true;
         count = 0;
     }
@@ -120,14 +179,22 @@ bool REDQueue::enqueue(cMessage *msg)
     }
 
     // carry out decision
-    if (mark || queue.length()>=maxth) // maxth is also the "hard" limit
+    if (mark)
     {
+#ifdef REDQUEUE_DEBUG
+        dumpInfo("DROPPING", msg);
+        EV << " mark=" << (mark ? "yes" : "no") << endl;
+#endif
         delete msg;
         dropVec.record(1);
         return true;
     }
     else
     {
+#ifdef REDQUEUE_DEBUG_FORWARDS
+        dumpInfo("Queuing", msg);
+        EV << endl;
+#endif
         queue.insert(msg);
         qlenVec.record(queue.length());
         return false;
@@ -153,8 +220,12 @@ cMessage *REDQueue::dequeue()
     return pk;
 }
 
-void REDQueue::sendOut(cMessage *msg)
+void REDQueue::sendOut(cMessage* msg)
 {
+#ifdef REDQUEUE_DEBUG_FORWARDS
+    dumpInfo("Sending", msg);
+    EV << endl;
+#endif
     send(msg, outGate);
 }
 
@@ -163,3 +234,42 @@ void REDQueue::finish()
     PassiveQueueBase::finish();
     recordScalar("packets dropped early by RED", numEarlyDrops);
 }
+
+#ifdef REDQUEUE_DEBUG
+// T.D. 10.12.09: Print information on forwarded/dropped packets.
+//                For SCTP, also the ports and DATA chunk TSNs are printed.
+void REDQueue::dumpInfo(const char* info, cMessage* msg)
+{
+   const IPDatagram*  ip      = dynamic_cast<const IPDatagram*>(msg);
+   SCTPMessage*       sctpMsg = dynamic_cast<SCTPMessage*>(ip->getEncapsulatedPacket());
+   if(sctpMsg) {
+      EV << simTime() << "\t" << getFullPath() << ":\t" << info << " SCTP message "
+         << ip->getSrcAddress()  << ":" << sctpMsg->getSrcPort()  << " - "
+         << ip->getDestAddress() << ":" << sctpMsg->getDestPort() << " -->";
+
+      for(uint32 i = 0;i < sctpMsg->getChunksArraySize();i++) {
+         const SCTPChunk* chunk = (const SCTPChunk*)sctpMsg->getChunks(i);
+         if(chunk->getChunkType() == DATA) {
+            const SCTPDataChunk* dataChunk = dynamic_cast<const SCTPDataChunk*>(chunk);
+            EV << "\t" << "DATA " << dataChunk->getTsn();
+         }
+         else if(chunk->getChunkType() == HEARTBEAT) {
+            EV << "\t" << "HEARTBEAT";
+         }
+         else if(chunk->getChunkType() == HEARTBEAT_ACK) {
+            EV << "\t" << "HEARTBEAT_ACK";
+         }
+      }
+   }
+   else {
+      EV << simTime() << ": " << info << " message "
+         << ip->getSrcAddress()  << " - "
+         << ip->getDestAddress() << "   ";
+   }
+   EV << "\tqueueLength=" << queue.length()
+      << "\tavg=" << avg
+      << "\tminTh=" << minth
+      << "\tmaxTh=" << maxth
+      << "\tcount=" << count;
+}
+#endif

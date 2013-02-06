@@ -345,4 +345,14 @@ void TCPConnection::process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, 
     sendToApp(msg);
 }
 
+void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)
+{
+    if(state == NULL) {
+        opp_error("Called process_QUEUE_BYTES_LIMIT on uninitialized TCPConnection!");
+    }
+    state->sendQueueLimit = tcpCommand->getUserId();
+    tcpEV<<"state->sendQueueLimit set to "<<state->sendQueueLimit<<"\n";
+    delete msg;
+    delete tcpCommand;
+}
 

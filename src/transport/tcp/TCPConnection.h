@@ -1,6 +1,8 @@
 //
 // Copyright (C) 2004 Andras Varga
 // Copyright (C) 2009-2010 Thomas Reschka
+// Copyright (C) 2010 Robin Seggelmann
+// Copyright (C) 2010-2011 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -91,6 +93,7 @@ enum TCPEventCode
     TCP_E_CLOSE,
     TCP_E_ABORT,
     TCP_E_STATUS,
+    TCP_E_QUEUE_BYTES_LIMIT,
 
     // TPDU types
     TCP_E_RCV_DATA,
@@ -244,6 +247,10 @@ class INET_API TCPStateVariables : public cPolymorphic
     uint32 sackedBytes;      // number of sackedBytes
     uint32 sackedBytes_old;  // old number of sackedBytes - needed for RFC 3042 to check if last dupAck contained new sack information
     bool lossRecovery;       // indicates if algorithm is in loss recovery phase
+
+    // queue management
+    uint32 sendQueueLimit;
+    bool queueUpdate;
 
     // those counters would logically belong to TCPAlgorithm, but it's a lot easier to manage them here
     uint32 dupacks;          // current number of received consecutive duplicate ACKs
@@ -399,6 +406,7 @@ class INET_API TCPConnection
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
+    virtual void process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     //@}
 
     /** @name Processing TCP segment arrivals. Invoked from processTCPSegment(). */
@@ -543,7 +551,7 @@ class INET_API TCPConnection
     virtual void sendToApp(cMessage *msg);
 
     /** Utility: sends status indication (TCP_I_xxx) to application */
-    virtual void sendIndicationToApp(int code);
+    virtual void sendIndicationToApp(int code, const int id = 0);
 
     /** Utility: sends TCP_I_ESTABLISHED indication with TCPConnectInfo to application */
     virtual void sendEstabIndicationToApp();
