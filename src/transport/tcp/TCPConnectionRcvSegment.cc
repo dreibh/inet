@@ -90,6 +90,14 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     tcpEV << "Seg arrived: ";
     printSegmentBrief(tcpseg);
     tcpEV << "TCB: " << state->info() << "\n";
+#ifdef PRIVATE //debug
+    if((tcpseg->getSequenceNo() == 1101683) && (tcpseg->getAckNo() == 574)){
+        fprintf(stderr,"Searched for Packet");
+    }
+    fprintf(stderr,"\n[TCP][IN] Receive Data from  %s:%d to %s:%d\n", remoteAddr.str().c_str(),remotePort, localAddr.str().c_str(),localPort);
+    fprintf(stderr,"[TCP][IN] Receive Data Seq: %i\t ACK-No: %i\n", tcpseg->getSequenceNo(), tcpseg->getSequenceNo());
+#endif
+
 
     if (rcvSeqVector) rcvSeqVector->record(tcpseg->getSequenceNo());
     if (rcvAckVector) rcvAckVector->record(tcpseg->getAckNo());
@@ -1151,7 +1159,6 @@ TCPEventCode TCPConnection::processRstInSynReceived(TCPSegment *tcpseg)
 bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 {
     tcpEV2 << "Processing ACK in a data transfer state\n";
-
     //
     //"
     //  If SND.UNA < SEG.ACK =< SND.NXT then, set SND.UNA <- SEG.ACK.

@@ -193,13 +193,15 @@ void TCP::handleMessage(cMessage *msg)
             {
                 error("(%s)%s arrived without control info", tcpseg->getClassName(), tcpseg->getName());
             }
-
-            fprintf(stderr,"[TCP][STATUS] Search Connection From  %s:%d to %s:%d", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(), tcpseg->getDestPort() );
-
             TCPConnection *conn = findConnForSegment(tcpseg, srcAddr, destAddr);
             if (conn)
             {
-                fprintf(stderr,"[TCP][STATUS] Get Data From  %s:%d to %s:%d", conn->remoteAddr.str().c_str(),conn->remotePort, conn->localAddr.str().c_str(),conn->localPort);
+#ifdef PRIVATE
+                fprintf(stderr,"\n[GENERAL][TCP][STATUS] Get Data From  %s:%d to %s:%d\n", conn->remoteAddr.str().c_str(),conn->remotePort, conn->localAddr.str().c_str(),conn->localPort);
+                if(conn->getTcpMain()->mptcp_pcb != NULL){
+                    conn->getTcpMain()->mptcp_pcb->getFlow()->DEBUGprintMPTCPFlowStatus();
+                }
+#endif
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
                 if (!ret)
                     removeConnection(conn);
@@ -366,6 +368,20 @@ bool TCP::isKnownConn(IPvXAddress srcAddr, int lPort, IPvXAddress destAddr,  int
 #endif
 TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, IPvXAddress destAddr)
 {
+
+#ifdef PRIVATE // For Debug -> I want to know which Connection TCP knows
+        int cnt = 0;
+       for (TcpConnMap::iterator it = tcpConnMap.begin();
+               it != tcpConnMap.end(); it++, cnt++) {
+           TCPConnection *entry = (it->second);
+           DEBUGPRINT(
+                   "[GENERAL][TCP][STATUS][FLOW][%i] Connections  %s:%d to %s:%d",
+                   cnt, entry->localAddr.str().c_str(), entry->localPort, entry->remoteAddr.str().c_str(), entry->remotePort);
+           DEBUGPRINT(
+                   "[GENERAL][TCP][STATUS][FLOW][%i]rcv_nxt: %i\t snd_nxt: %i\t snd_una: %i",
+                   cnt, entry->getState()->rcv_nxt, entry->getState()->snd_nxt, entry->getState()->snd_una);
+       }
+#endif
     SockPair key;
     key.localAddr = destAddr;
     key.remoteAddr = srcAddr;

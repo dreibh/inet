@@ -481,7 +481,7 @@ class INET_API TCPConnection
   public:
 
 #ifdef PRIVATE
-    virtual TCPConnection *cloneMPTCPConnection(bool active);
+    virtual TCPConnection *cloneMPTCPConnection(bool active, uint64 token, IPvXAddress laddr, IPvXAddress raddr);
 #endif
 
     /** Utility: send ACK */

@@ -167,7 +167,7 @@ void TCPConnection::printSegmentBrief(TCPSegment *tcpseg)
     tcpEV << "\n";
 }
 #ifdef PRIVATE
-TCPConnection *TCPConnection::cloneMPTCPConnection(bool active){
+TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPvXAddress laddr, IPvXAddress raddr){
     TCPConnection *conn = NULL;
     if(tcpMain->multipath){
 
@@ -175,26 +175,64 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active){
             if(active){
                 conn = new TCPConnection(tcpMain,appGateIndex,connId);
                 // we have to copy some more stuff
-                conn->remoteAddr = remoteAddr;
-                conn->remotePort = remotePort;
-                conn->localAddr =  IPvXAddress();
-                conn->localPort = -1;
+
+
+//                the2MSLTimer = new cMessage("2MSL");
+//                connEstabTimer = new cMessage("CONN-ESTAB");
+//                finWait2Timer = new cMessage("FIN-WAIT-2");
+//                synRexmitTimer = new cMessage("SYN-REXMIT");
+
+//                the2MSLTimer->setContextPointer(this);
+//                connEstabTimer->setContextPointer(this);
+//                finWait2Timer->setContextPointer(this);
+//                synRexmitTimer->setContextPointer(this);
+
+                // statistics
+                sndWndVector = NULL;
+                rcvWndVector = NULL;
+                rcvAdvVector = NULL;
+                sndNxtVector = NULL;
+                sndAckVector = NULL;
+                rcvSeqVector = NULL;
+                rcvAckVector = NULL;
+                unackedVector = NULL;
+
+                dupAcksVector = NULL;
+                sndSacksVector = NULL;
+                rcvSacksVector = NULL;
+                rcvOooSegVector = NULL;
+                tcpRcvQueueBytesVector = NULL;
+                tcpRcvQueueDropsVector = NULL;
+                pipeVector = NULL;
+                sackedBytesVector = NULL;
             }
             else
                 conn = new TCPConnection(tcpMain,0,0);
 
+            if (getTcpMain()->recordStatistics)
+            {
+                sndWndVector = new cOutVector("send window");
+                rcvWndVector = new cOutVector("receive window");
+                rcvAdvVector = new cOutVector("advertised window");
+                sndNxtVector = new cOutVector("sent seq");
+                sndAckVector = new cOutVector("sent ack");
+                rcvSeqVector = new cOutVector("rcvd seq");
+                rcvAckVector = new cOutVector("rcvd ack");
+                unackedVector = new cOutVector("unacked bytes");
+                dupAcksVector = new cOutVector("rcvd dupAcks");
+                pipeVector = new cOutVector("pipe");
+                sndSacksVector = new cOutVector("sent sacks");
+                rcvSacksVector = new cOutVector("rcvd sacks");
+                rcvOooSegVector = new cOutVector("rcvd oooseg");
+                sackedBytesVector = new cOutVector("rcvd sackedBytes");
+                tcpRcvQueueBytesVector = new cOutVector("tcpRcvQueueBytes");
+                tcpRcvQueueDropsVector = new cOutVector("tcpRcvQueueDrops");
+            }
+
+            // We could not just create a new per check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
+            // we need a own state instance
             // following code to be kept consistent with initConnection()
-            const char *sendQueueClass = sendQueue->getClassName();
-            conn->sendQueue = check_and_cast<TCPSendQueue *>(createOne(sendQueueClass));
-            conn->sendQueue->setConnection(conn);
 
-            const char *receiveQueueClass = receiveQueue->getClassName();
-            conn->receiveQueue = check_and_cast<TCPReceiveQueue *>(createOne(receiveQueueClass));
-            conn->receiveQueue->setConnection(conn);
-
-            // create SACK retransmit queue
-            rexmitQueue = new TCPSACKRexmitQueue();
-            rexmitQueue->setConnection(this);
 
             const char *tcpAlgorithmClass = tcpAlgorithm->getClassName();
             conn->tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
@@ -207,14 +245,64 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active){
             // put it into LISTEN, with our localAddr/localPort
             conn->state->active = false;
             conn->state->fork = true;
-            conn->localAddr = localAddr;
-            conn->localPort = localPort;
-            // in every case in INIT
+            conn->remoteAddr = raddr;
+            conn->remotePort = remotePort;
 
-       //     if(active)
+            // in every case in INIT
+            TCPOpenCommand *openCmd = new TCPOpenCommand();
+             openCmd->setSendQueueClass(
+                     getTcpMain()->par("sendQueueClass"));
+             openCmd->setReceiveQueueClass(
+                     getTcpMain()->par("receiveQueueClass"));
+             openCmd->setTcpAlgorithmClass(
+                     getTcpMain()->par("tcpAlgorithmClass"));
+             openCmd->setSubFlowNumber(token);
+             openCmd->setFork(true);
+             openCmd->setConnId(connId);
+             // initiate handshake for subflow
+             openCmd->setIsMptcpSubflow(true);
+             conn->isSubflow = true;
+            if(!active){
+
+                cMessage *msg = new cMessage("PassiveOPEN", TCP_E_OPEN_PASSIVE); // Passive Server Side
+                conn->localAddr = laddr;
+                conn->localPort = localPort;
+
+                // openCmd->setLocalAddr(subflow->localAddr);
+                openCmd->setLocalAddr(IPvXAddress("0.0.0.0"));
+                openCmd->setLocalPort(localPort);
+
+                msg->setControlInfo(openCmd);
+                msg->setContextPointer(conn);
+
                 FSM_Goto(conn->fsm, TCP_S_INIT);
-       //     else
-       //         FSM_Goto(conn->fsm, TCP_S_LISTEN);
+
+                conn->processAppCommand(msg);
+                // newSubflow->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
+                FSM_Goto(conn->fsm, TCP_S_LISTEN);
+            }
+            else{
+
+                cMessage *msg = new cMessage("ActiveOPEN", TCP_C_OPEN_ACTIVE); // Client Side Connection
+
+                conn->localAddr =  IPvXAddress();
+                conn->localPort = -1;
+
+                // setup the subflow
+                openCmd->setLocalAddr(laddr);
+                openCmd->setLocalPort(localPort);
+                openCmd->setRemoteAddr(raddr);
+                openCmd->setRemotePort(remotePort);
+
+                msg->setControlInfo(openCmd);
+                msg->setContextPointer(conn);
+                FSM_Goto(conn->fsm, TCP_S_INIT);
+                getTcpMain()->addForkedConnection(this, conn, this->localAddr, this->remoteAddr, localPort , remotePort);
+                conn->processAppCommand(msg);
+//
+                // tmp->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
+            }
+
             return conn;
     }
     else return NULL;
@@ -593,7 +681,6 @@ void TCPConnection::sendAck()
 
     // write header options
     writeHeaderOptions(tcpseg);
-
     // send it
     sendToIP(tcpseg);
 
