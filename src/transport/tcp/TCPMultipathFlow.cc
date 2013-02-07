@@ -924,52 +924,27 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
     // easy scheduler
-    static int scheduler = 0;
     static int cnt = 0;
+
     int test = 0;
     TCP_subflow_t* entry = NULL;
-    cPacket* pkt = PK(msg);
-    int64 len = pkt->getByteLength();
-    char message_name[255];
+    char name[255];
     int msg_nr = 0;
     // We split every data for scheduling, if there bigger than connection MMS
-    for (int64 offset = 0; offset < len;) {
-        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                i != subflow_list.end(); i++) {
-            entry = (*i);
-            scheduler++;
-            //           if(((scheduler%(subflow_list.size())))==0){
-            test++;
-            if (test == (subflow_list.size() > 2 ? 2 : 1)) { // 2:1 verursacht das Problem
-                DEBUGPRINT(
-                        "Scheulder %d==%d %d==%d",
-                        scheduler, subflow_list.size(), (scheduler%subflow_list.size()), 0);
 
-                scheduler += cnt;
-                if (cnt < subflow_list.size())
-                    cnt++;
-                else
-                    cnt = 1;
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+        i != subflow_list.end(); i++) {
+    entry = (*i);
 
-                // get the mms
-                uint32 mss = entry->subflow->getState()->snd_mss;
-                sprintf(message_name, "MPTCP%i", scheduler);
-                cPacket *part_msg = new cPacket(message_name);
-                offset += mss;
-                if (offset <= len) {
-                    part_msg->setByteLength(mss);
-                    _createMSGforProcess(part_msg, entry->subflow);
-                    if(offset==len)
-                            break;
-                } else {
-                    part_msg->setBitLength(mss - (len - offset));
-                    _createMSGforProcess(part_msg, entry->subflow);
-                    delete msg;
-                    break;
-                }
-
-            }
+        test++;
+        if (test == (subflow_list.size() > 2 ? 1 : 1)) { // 2:1 verursacht das Problem
+            cnt++;
+            sprintf(name,"Test-%i",cnt);
+            msg->setName(name);
+            _createMSGforProcess(msg,entry->subflow);
+            break;
         }
+
 
     }
     return save;
@@ -1289,7 +1264,7 @@ void MPTCP_Flow::DEBUGprintMPTCPFlowStatus() {
 #endif
 }
 void MPTCP_Flow::DEBUGprintStatus() {
-#ifdef PRIVATE_DEBUG
+#ifdef PRIVATE_DEBUG_
 
     DEBUGPRINT(
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %lu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",

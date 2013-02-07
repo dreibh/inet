@@ -297,7 +297,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
                 msg->setControlInfo(openCmd);
                 msg->setContextPointer(conn);
                 FSM_Goto(conn->fsm, TCP_S_INIT);
-                getTcpMain()->addForkedConnection(this, conn, this->localAddr, this->remoteAddr, localPort , remotePort);
+//                getTcpMain()->addForkedConnection(this, conn, this->localAddr, this->remoteAddr, localPort , remotePort);
                 conn->processAppCommand(msg);
 //
                 // tmp->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);

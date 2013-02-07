@@ -91,11 +91,11 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     printSegmentBrief(tcpseg);
     tcpEV << "TCB: " << state->info() << "\n";
 #ifdef PRIVATE //debug
-    if((tcpseg->getSequenceNo() == 1101683) && (tcpseg->getAckNo() == 574)){
+    if((tcpseg->getSequenceNo() == 589031) && (tcpseg->getAckNo() == 574)){
         fprintf(stderr,"Searched for Packet");
     }
     fprintf(stderr,"\n[TCP][IN] Receive Data from  %s:%d to %s:%d\n", remoteAddr.str().c_str(),remotePort, localAddr.str().c_str(),localPort);
-    fprintf(stderr,"[TCP][IN] Receive Data Seq: %i\t ACK-No: %i\n", tcpseg->getSequenceNo(), tcpseg->getSequenceNo());
+    fprintf(stderr,"[TCP][IN] Receive Data Seq: %i\t ACK-No: %i\n", tcpseg->getSequenceNo(), tcpseg->getAckNo());
 #endif
 
 
@@ -1159,6 +1159,13 @@ TCPEventCode TCPConnection::processRstInSynReceived(TCPSegment *tcpseg)
 bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 {
     tcpEV2 << "Processing ACK in a data transfer state\n";
+#ifdef PRIVATE //debug
+    if((tcpseg->getSequenceNo() == 574) && (tcpseg->getAckNo() == 668011)){
+        fprintf(stderr,"Searched for Packet");
+    }
+    fprintf(stderr,"\n[TCP][IN] Receive ACK from  %s:%d to %s:%d\n", remoteAddr.str().c_str(),remotePort, localAddr.str().c_str(),localPort);
+    fprintf(stderr,"[TCP][IN] Receive ACK Seq: %i\t ACK-No: %i\n", tcpseg->getSequenceNo(), tcpseg->getAckNo());
+#endif
     //
     //"
     //  If SND.UNA < SEG.ACK =< SND.NXT then, set SND.UNA <- SEG.ACK.
