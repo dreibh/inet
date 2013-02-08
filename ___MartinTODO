@@ -1,19 +1,25 @@
-MP_JOIN
-============
-
-- Add Flow ID to Option
-- Security elements -> hmac and random numbers (here is a problem)
-
-SQN and Buffer Management 
-Scheduler
-Transmit Data
-Security (MAC)
-
-
+Status
+=================
+MP_CAPABLE 	= Done
+MP_JOIN		= Done
+MP_DSS		= In process
+Scheduler	= In process
+CC			= Open
 
 Next
-==========
-- Fill DSS
+=================
 
-Denke dran das die Buffer von TCP noch nicht leer gemacht werden dürfen wenn die Cum ACK nicht erreicht ist....
-Denke daran das der Output in Reihenfolge über das Multipath Modul hochgegeben werden muss
+- Fill DSS
+- adaptation of sendToApp
+- adaptation of sendToIP
+
+Open issues:
+=================
+- Handshake
+
+What is new
+=================
+- 08.13 break up fixed 1:1 PCB <=> Flow  relation  
+
+
+

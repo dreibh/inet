@@ -16,6 +16,7 @@
 
 #ifdef PRIVATE
 
+#include "TCPConnection.h"
 #include "TCPMultipathFlow.h"
 
 #if defined(__APPLE__)
@@ -172,6 +173,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
     // set subflow as active
     t->active = true;
     t->subflow = subflow;
+    t->subflow->flow = this;
     DEBUGPRINT(
                     "[FLOW][SUBFLOW][STATUS] add subflow from  %s:%d to %s:%d",
                     subflow->localAddr.str().c_str(), subflow->localPort, subflow->remoteAddr.str().c_str(), subflow->remotePort);
@@ -1264,7 +1266,7 @@ void MPTCP_Flow::DEBUGprintMPTCPFlowStatus() {
 #endif
 }
 void MPTCP_Flow::DEBUGprintStatus() {
-#ifdef PRIVATE_DEBUG_
+#ifdef PRIVATE_DEBUG
 
     DEBUGPRINT(
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %lu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",

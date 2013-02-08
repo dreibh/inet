@@ -26,8 +26,11 @@
 #include "IPvXAddress.h"
 #include "TCP.h"
 #include "TCPSegment.h"
-#include "TCPMultipathPCB.h"
 
+#ifdef PRIVATE
+#include "TCPMultipath.h"
+#include "TCPMultipathPCB.h"
+#include "TCPMultipathFlow.h"
 class TCPSegment;
 class TCPCommand;
 class TCPOpenCommand;
@@ -36,7 +39,8 @@ class TCPSACKRexmitQueue;
 class TCPReceiveQueue;
 class TCPAlgorithm;
 class MPTCP_PCB;
-
+class MPTCP_Flow;
+#endif
 //
 // TCP FSM states
 //
@@ -332,6 +336,7 @@ class INET_API TCPConnection
     bool isSubflow;
     bool joinToAck;
     bool joinToSynAck;
+    MPTCP_Flow* flow;
     uint32 randomA;				// used to store randam of MPTCP MP_JOIN
     uint32 randomB; 			// used to store randam of MPTCP MP_JOIN
     unsigned char MAC64[64];	// Container for truncated MAC

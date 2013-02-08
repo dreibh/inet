@@ -167,6 +167,7 @@ TCPConnection::TCPConnection()
 {
 #ifdef PRIVATE
 	isSubflow = false;
+	flow = NULL;
 	randomA = 0;
 	randomB = 0;
 #endif
@@ -191,6 +192,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 {
 #ifdef PRIVATE
 	isSubflow = false;
+	flow = NULL;
 	randomA = 0;
 	randomB = 0;
 #endif

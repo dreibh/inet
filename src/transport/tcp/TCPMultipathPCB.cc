@@ -5,7 +5,7 @@
  *      Author: becke
  */
 #ifdef PRIVATE
-
+#include "TCPConnection.h"
 #include "TCPMultipathPCB.h"
 
 
@@ -35,7 +35,7 @@ MPTCP_PCB::MPTCP_PCB(){
  */
 MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
 
-    flow = NULL;
+    subflow->flow = NULL;
     // Static helper elements for organization
     AllMultipathTCPVector_t::const_iterator it;
     for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
@@ -43,22 +43,22 @@ MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
        if(t->active){   // this flow is active
            if(t->flow->isSubflowOf(subflow)){
                // This is a known multipath subflow
-               flow = t->flow;
+               subflow->flow = t->flow;
            }
        }
     }
 
-    if(flow==NULL){
+    if(subflow->flow==NULL){
         // Setup PCB and make first subflow persistent
         t = new TuppleWithStatus_t();
-        flow = new MPTCP_Flow(connId, appGateIndex, subflow, this);
+        subflow->flow = new MPTCP_Flow(connId, appGateIndex, subflow, this);
         t->active = true;
-        t->flow = flow;
+        t->flow = subflow->flow;
         t->appGateIndex = appGateIndex;
         t->connID = connId;
         addMPTCPFlow(t);
     }
-    ASSERT(flow!=NULL);
+    ASSERT(subflow->flow!=NULL);
 }
 /**
  * De-Constructor
@@ -69,10 +69,14 @@ MPTCP_PCB::~MPTCP_PCB() {
     while (!mptcp_flow_vector.empty())
     {
         AllMultipathTCPVector_t::iterator i = mptcp_flow_vector.begin();
+        TuppleWithStatus_t* entry = *i;
+        if(entry->flow!=NULL)
+            delete entry->flow;
+        entry->flow = NULL;
         delete (*i);
         mptcp_flow_vector.erase(i);
     }
-    delete this->flow;
+
 //    DEBUGPRINT("[PCB][Destroy] Currently %u MPTCP Protocol Control Blocks used",(int) subflows_vector.size());
 }
 
@@ -97,9 +101,9 @@ MPTCP_PCB* MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex,
 
     }else{
         DEBUGPRINT("[MPTCP][PROCESS][INCOMING] Existing flow use exiting PCB%s","\0");
-        tmp->flow->DEBUGprintStatus();
+        subflow->flow->DEBUGprintStatus();
 
-        switch(tmp->getFlow()->getState()){
+        switch(subflow->flow->getState()){
         case IDLE:
             DEBUGPRINT("IDLE%s","\0");
             break;
@@ -153,7 +157,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
      * CASE "NEW MPTCP FLOW" or "NO MPTCP FLOW"
      */
     // Check if this is still a Multipath Connection with an existing Flow
-    if (flow == NULL || (flow->getState() == IDLE) || (flow->getState() == PRE_ESTABLISHED)) {
+    if (subflow->flow == NULL || (subflow->flow->getState() == IDLE) || (subflow->flow->getState() == PRE_ESTABLISHED)) {
 
         // There exist no MPTCP Flow so we are in the first handshake phase or this is not a MPTCP Flow
         // We don't care about the SYN, because it is stateless. But during getting SYN/ACK and ACK we become stateful
@@ -281,9 +285,9 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         // read 64 bit keys
         uint64 key = option->getValues(2);
         key = (key << 32) | option->getValues(1);
-        flow->setRemoteKey(key); // Could be generated every time -> important is key of ACK
+        subflow->flow->setRemoteKey(key); // Could be generated every time -> important is key of ACK
         // We set state Established, when we send the ACK
-        flow->addSubflow(connId, subflow);
+        subflow->flow->addSubflow(connId, subflow);
         return MPTCP_STATEFULL;
     } else if (tcpseg->getAckBit()) {
         // ACK: We aspect the sender key in the MP_CAPABLE Option
@@ -295,10 +299,10 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         // read 64 bit keys
         uint64 key = option->getValues(2);
         key = (key << 32) | option->getValues(1);
-        flow->setRemoteKey(key);
+        subflow->flow->setRemoteKey(key);
         key = option->getValues(4);
         key = (key << 32) | option->getValues(3);
-        flow->setLocalKey(key); // Only for check
+        subflow->flow->setLocalKey(key); // Only for check
 
 
         // Status: Check MPTCP FLOW
@@ -316,19 +320,19 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
          * 2) Remove this Working Flow from List
          */
 
-        ASSERT(flow!=NULL);
+        ASSERT(subflow->flow!=NULL);
 
         // OK new stateful MPTCP flow, calculate the token and Start-SQN
 
         // Add (First) Subflow of the connection
-        flow->addSubflow(connId, subflow);
+        subflow->flow->addSubflow(connId, subflow);
 
     } else {
         // SYN
         // read 64 bit keys
         uint64 key = option->getValues(2);
         key = (key << 32) | option->getValues(1);
-        flow->setRemoteKey(key);
+        subflow->flow->setRemoteKey(key);
     }
 
     return MPTCP_STATELESS; // OK we got a MP_CAPABLE in a SYN, we are still stateless
@@ -365,7 +369,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
             // - next step is to send SYN/ACK
             // ==> add subflow to connection/ multipath flow (For first -> FIXME, handle TCP RST)
 
-            flow->addSubflow(connId,subflow);
+            subflow->flow->addSubflow(connId,subflow);
 
             // process the security part
 
@@ -375,7 +379,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
             subflow->randomB = 0; // FIXME (uint32) flow->generateKey();
 
             // Generate truncated
-            flow->initKeyMaterial(subflow);
+            subflow->flow->initKeyMaterial(subflow);
             subflow->joinToSynAck = true;
 
 //            subflow->sendSynAck();    /** Utility: send SYN+ACK */
@@ -452,7 +456,7 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         */
 #ifdef PRIVATE_DEBUG
         if(subflow->isSubflow){
-            flow->DEBUGprintMPTCPFlowStatus();
+            subflow->flow->DEBUGprintMPTCPFlowStatus();
         }
 #endif
         // Data Sequence Mapping [Section 3.3.1] ==> IN
@@ -490,7 +494,7 @@ TCPConnection* MPTCP_PCB::lookupMPTCPConnection(int connId, int aAppGateIndex,
 /**
  * PCB lookup by ID
  */
-MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCB(int connId, int aAppGateIndex) {
+MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCB(int connId, int aAppGateIndex, TCPConnection *subflow) {
 
     /* lookup is not easy, the best case for omnet is by connID and AppGateIndex */
     AllMultipathTCPVector_t::const_iterator it;
@@ -502,6 +506,8 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCB(int connId, int aAppGateIndex) {
                 TCP_subflow_t* sub = (TCP_subflow_t*) (*it_mpflows);
                 if((sub->subflow->connId == connId) && (sub->subflow->appGateIndex == aAppGateIndex)){
                     if(t->flow->getLocalToken()!=0 && t->flow->getRemoteToken()!=0)
+                        if(subflow->flow != t->flow)
+                            subflow->flow = t->flow;
                         return t->flow->getPCB();
                 }
             }
@@ -521,6 +527,7 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg,
         DEBUGPRINT("We got an ACK, we should find Flow by Token,%s","\0");
     }
     if (!subflow->getTcpMain()->multipath) {
+        subflow->flow = NULL;
         return NULL;
     }
 
@@ -556,8 +563,10 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg,
                     AllMultipathTCPVector_t::const_iterator it;
                     for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
                            TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
-                           if(t->flow->keysAreEqual(remote_key,local_key))
+                           if(t->flow->keysAreEqual(remote_key,local_key)){
+                               subflow->flow = t->flow;
                                return t->flow->getPCB();
+                           }
                     }
                 }
             }
@@ -577,6 +586,7 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg,
                             // FIXME -> Of course only one is correct, but I don t wont to differ for the first step
                             //ASSERT(t->flow->getLocalToken() != 0);
                             if(t->flow->getLocalToken() == send_local_token) {
+                                subflow->flow = t->flow;
                                 return t->flow->getPCB();
                             }
                     }
@@ -621,8 +631,7 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCPbySubflow_PCB(int connId, int aAppGateIndex, T
            if((t->appGateIndex == aAppGateIndex) && (t->connID == connId)){
                 DEBUGPRINT("APP GATE UND ConnID sind gleich %i==%i %i==%i",t->appGateIndex ,aAppGateIndex,t->connID, connId);
                 if (t->flow->isSubflowOf(subflow)) {
-                    // So here we are, this subflow belongs to this flow,
-                    // this flow is controlled by this PCB
+                    subflow->flow = t->flow;
                     return t->flow->getPCB();
                 }
            }
@@ -644,6 +653,7 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
                     TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
                     if(t->flow != NULL){
                         if (((uint32)subflow->getTcpMain()->multipath_subflow_id) == t->flow->getLocalToken()){
+                            subflow->flow = t->flow;    // Should be the same TODO add an ASSERT
                             return t->flow->getPCB();
                         }
                     }
@@ -676,19 +686,20 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
  */
 int MPTCP_PCB::_clearAll() {
     // FIXME shutdown
-    if (flow != NULL) {
+/*    if (flow != NULL) {
         delete flow;
         flow = NULL;
     }
+    */
     return 0;
 }
 
 /**
  * helper to get the flow
  */
-MPTCP_Flow* MPTCP_PCB::getFlow() {
-    return flow;
-}
+//MPTCP_Flow* MPTCP_PCB::getFlow() {
+//    return flow;
+//}
 
 
 

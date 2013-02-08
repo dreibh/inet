@@ -262,6 +262,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
              // initiate handshake for subflow
              openCmd->setIsMptcpSubflow(true);
              conn->isSubflow = true;
+             conn->flow = flow;
             if(!active){
 
                 cMessage *msg = new cMessage("PassiveOPEN", TCP_E_OPEN_PASSIVE); // Passive Server Side
@@ -1501,7 +1502,7 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 		    tcpEV << "!! OK we should write header information without PCB..." << endl;
 		    tcpMain->mptcp_pcb = new MPTCP_PCB(this->connId, this->appGateIndex,  this);
 		}
-		tcpMain->mptcp_pcb->getFlow()->writeMPTCPHeaderOptions(t,state,tcpseg,this);
+		flow->writeMPTCPHeaderOptions(t,state,tcpseg,this);
 
 	}
 	else{

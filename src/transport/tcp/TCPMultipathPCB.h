@@ -9,7 +9,7 @@
 #define TCPMULTIPATHPCB_H_
 
 #include "TCPMultipath.h"
-#include "TCPMultipathFlow.h"
+//#include "TCPMultipathFlow.h"
 
 class MPTCP_Flow;
 
@@ -43,7 +43,7 @@ class INET_API MPTCP_PCB
         static MPTCP_PCB* processMPTCPSegment(int connId,int aAppGateIndex, TCPConnection* subflow, TCPSegment *tcpseg);
 
         // Getter
-        MPTCP_Flow* getFlow();
+//        MPTCP_Flow* getFlow();
         int getID();
 
 
@@ -54,7 +54,7 @@ class INET_API MPTCP_PCB
 
     private:
         MPTCP_PCB();
-        MPTCP_Flow* flow;
+//        MPTCP_Flow* flow;
 
         // Selforganisation
         TuppleWithStatus_t* t; // includes also the flow
@@ -72,7 +72,7 @@ class INET_API MPTCP_PCB
         int _clearAll();
 
         // Lookup for Multipath Control Block management
-        static MPTCP_PCB* _lookupMPTCP_PCB(int connid, int aAppGateIndex);
+        static MPTCP_PCB* _lookupMPTCP_PCB(int connid, int aAppGateIndex, TCPConnection *subflow);
         static MPTCP_PCB* _lookupMPTCPbySubflow_PCB(int connId, int aAppGateIndex, TCPSegment *tcpseg,  TCPConnection* subflow);
         static MPTCP_PCB* _lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg, TCPConnection* subflow);
 

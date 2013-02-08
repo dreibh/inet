@@ -146,7 +146,7 @@ void TCPConnection::process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpComman
 
     if(this->isSubflow){
         // easy scheduler for testing
-        TCPConnection* scheduledConn = this->getTcpMain()->mptcp_pcb->getFlow()->schedule(this, msg);
+        TCPConnection* scheduledConn = this->flow->schedule(this, msg);
         //scheduledConn->process_SEND(event,tcpCommand,msg);
     }
     else

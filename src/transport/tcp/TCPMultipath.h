@@ -19,8 +19,8 @@
 // Include the MPTCP PCB
 #ifdef PRIVATE
 
-#ifndef __INET_MPTCP_H
-#define __INET_MPTCP_H
+#ifndef __TCP_MULTIPATH_H
+#define __TCP_MULTIPATH_H
 
 #include <omnetpp.h>
 
@@ -50,11 +50,11 @@
 
 // TCP dependencies
 
-#include "TCPConnection.h"
+//#include "TCPConnection.h"
 #include "TCPMultipathQueueMngmt.h"
 #include "TCP.h"
-class TCP;
 
+class TCP;
 class TCPConnection;
 class TCPSegment;
 class TCPStateVariables;
@@ -79,14 +79,15 @@ typedef struct _addr_combi{
 } AddrCombi_t;
 typedef vector <AddrCombi_t*> 			TCP_JoinVector_t;
 
+enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
 typedef struct _subflow{
   TCPConnection* subflow;
   bool active;
 } TCP_subflow_t;
-typedef vector <TCP_subflow_t*> 		TCP_SubFlowVector_t;
+typedef vector <TCP_subflow_t*>         TCP_SubFlowVector_t;
+//#include "TCPMultipath.h"
 
 
-enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
 // compare Section 8. IANA Considerations
 enum MPTCP_SUBTYPES {MP_CAPABLE=0x0000, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
 
@@ -145,6 +146,6 @@ const unsigned int MP_S_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_V
 
 
 
-#endif // __INET_MPTCP_H
+#endif // __TCP_MULTIPATH_H
 #endif // Private
 
