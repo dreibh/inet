@@ -197,12 +197,7 @@ void TCP::handleMessage(cMessage *msg)
             TCPConnection *conn = findConnForSegment(tcpseg, srcAddr, destAddr);
             if (conn)
             {
-#ifdef PRIVATE
-                fprintf(stderr,"\n[GENERAL][TCP][STATUS] Get Data From  %s:%d to %s:%d\n", conn->remoteAddr.str().c_str(),conn->remotePort, conn->localAddr.str().c_str(),conn->localPort);
-                if(conn->getTcpMain()->mptcp_pcb != NULL){
-                    conn->flow->DEBUGprintMPTCPFlowStatus();
-                }
-#endif
+
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
                 if (!ret)
                     removeConnection(conn);
