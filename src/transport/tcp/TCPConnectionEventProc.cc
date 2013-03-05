@@ -210,7 +210,9 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             opp_error("Error processing command SEND: connection closing");
             /* no break */
     }
-
+    if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) > state->sendQueueLimit)) {
+        state->queueUpdate = false;
+    }
     delete sendCommand; // msg itself has been taken by the sendQueue
 }
 
@@ -358,13 +360,15 @@ void TCPConnection::process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, 
 void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)
 {
     if(state == NULL) {
-#ifdef PRIVATE
-        // DEBUG
-        return;
-#endif
         opp_error("Called process_QUEUE_BYTES_LIMIT on uninitialized TCPConnection!");
     }
+#ifdef PRIVATE
+    if(this->isSubflow)
+        this->flow->setSendQueueLimit(tcpCommand->getUserId());
+    else
+#endif
     state->sendQueueLimit = tcpCommand->getUserId();
+
     tcpEV<<"state->sendQueueLimit set to "<<state->sendQueueLimit<<"\n";
     delete msg;
     delete tcpCommand;

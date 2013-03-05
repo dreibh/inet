@@ -79,6 +79,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     if (subflow->localPort > 0)
         _initFlow(subflow->localPort);
     queue_mgr = new TCPMultipathQueueMngmt();
+    sendEstablished = false;
 }
 
 /**
@@ -924,31 +925,65 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     return 0;
 }
 
+void MPTCP_Flow::sendToApp(cMessage* msg){
+    bool found = false;
+    // Search for a subflow with a connection
+    // TODO For first try we use the app of the first connection we have with an appGateIndex
+    // We have to think about what happend if we delete this
+
+    TCPConnection* con;
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+               i != subflow_list.end(); i++) {
+           TCP_subflow_t* entry = (*i);
+           if(!(entry->subflow->appGateIndex < 0)){
+               found = true;
+               con = entry->subflow;
+               break;
+           }
+       }
+
+    if(found){
+       DEBUGPRINT("[MPTCP][SEND TO APP] Over App Gate Index %i%s",con->appGateIndex,"\0");
+       con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
+    }
+    return;
+}
+void MPTCP_Flow::setSendQueueLimit(int limit){
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+          i != subflow_list.end(); i++) {
+      TCP_subflow_t* entry = (*i);
+      entry->subflow->getState()->sendQueueLimit = limit;
+    }
+    return;
+}
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
     // easy scheduler
     static int cnt = 0;
 
-    int test = 0;
-    TCP_subflow_t* entry = NULL;
+//    int test = 0;
+//    TCP_subflow_t* entry = NULL;
     char name[255];
-    int msg_nr = 0;
+//    int msg_nr = 0;
     // We split every data for scheduling, if there bigger than connection MMS
-
+/*
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
         i != subflow_list.end(); i++) {
     entry = (*i);
 
         test++;
         if (test == (subflow_list.size() > 2 ? 1 : 1)) { // 2:1 verursacht das Problem
-            cnt++;
-            sprintf(name,"Test-%i",cnt);
-            msg->setName(name);
+);
             _createMSGforProcess(msg,entry->subflow);
             break;
         }
 
 
     }
+    */
+    cnt++;
+    sprintf(name,"Test-%i",cnt);
+    msg->setName(name);
+    _createMSGforProcess(msg,save);
     return save;
 }
 

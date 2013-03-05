@@ -211,22 +211,55 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 
             if (getTcpMain()->recordStatistics)
             {
-                sndWndVector = new cOutVector("send window");
-                rcvWndVector = new cOutVector("receive window");
-                rcvAdvVector = new cOutVector("advertised window");
-                sndNxtVector = new cOutVector("sent seq");
+                char name[255];
+                int  cnt = this->flow->getSubflows()->size();
+                sprintf(name,"[subflow][%i] send window",cnt);
+                sndWndVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] receive window",cnt);
+                rcvWndVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] advertised window",cnt);
+                rcvAdvVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] sent seq",cnt);
+                sndNxtVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] sent ack",cnt);
                 sndAckVector = new cOutVector("sent ack");
-                rcvSeqVector = new cOutVector("rcvd seq");
-                rcvAckVector = new cOutVector("rcvd ack");
-                unackedVector = new cOutVector("unacked bytes");
-                dupAcksVector = new cOutVector("rcvd dupAcks");
-                pipeVector = new cOutVector("pipe");
-                sndSacksVector = new cOutVector("sent sacks");
-                rcvSacksVector = new cOutVector("rcvd sacks");
-                rcvOooSegVector = new cOutVector("rcvd oooseg");
-                sackedBytesVector = new cOutVector("rcvd sackedBytes");
-                tcpRcvQueueBytesVector = new cOutVector("tcpRcvQueueBytes");
-                tcpRcvQueueDropsVector = new cOutVector("tcpRcvQueueDrops");
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] rcvd seq",cnt);
+                rcvSeqVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] rcvd ack",cnt);
+                rcvAckVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] unacked bytes",cnt);
+                unackedVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] rcvd dupAcks",cnt);
+                dupAcksVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] pipe",cnt);
+                pipeVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] sent sacks",cnt);
+                sndSacksVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] rcvd sacks",cnt);
+                rcvSacksVector = new cOutVector("1");
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] rcvd oooseg",cnt);
+                rcvOooSegVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] rcvd sackedBytes",cnt);
+                sackedBytesVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] tcpRcvQueueBytes",cnt);
+                tcpRcvQueueBytesVector = new cOutVector(name);
+                memset(name,'\0',sizeof(name));
+                sprintf(name,"[subflow][%i] tcpRcvQueueDrops",cnt);
+                tcpRcvQueueDropsVector = new cOutVector(name);
             }
 
             // We could not just create a new per check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
@@ -443,6 +476,17 @@ void TCPConnection::sendIndicationToApp(int code, const int id)
 
 void TCPConnection::sendEstabIndicationToApp()
 {
+#ifdef PRIVATE
+    // The application only need one notification, otherwise he work on more than one connection
+    if(tcpMain->multipath){
+        if(this->flow->sendEstablished){
+
+            return; // we need no notification message
+        }
+        this->flow->sendEstablished = true;
+    }
+
+#endif
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
     cMessage *msg = new cMessage(indicationName(TCP_I_ESTABLISHED));
     msg->setKind(TCP_I_ESTABLISHED);
@@ -460,6 +504,12 @@ void TCPConnection::sendEstabIndicationToApp()
 
 void TCPConnection::sendToApp(cMessage *msg)
 {
+#ifdef PRIVATE
+    if((this->tcpMain->multipath) && (this->isSubflow)){
+        this->flow->sendToApp(msg);
+    }
+    else
+#endif
     tcpMain->send(msg, "appOut", appGateIndex);
 }
 
@@ -769,7 +819,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     
     // send it
     sendToIP(tcpseg);
-    
+
     // let application fill queue again, if there is space
     const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
     const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
@@ -777,7 +827,7 @@ void TCPConnection::sendSegment(uint32 bytes)
         (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
         // Tell upper layer readiness to accept more data
         sendIndicationToApp(TCP_I_SEND_MSG, abated);
-        state->queueUpdate = true;
+        state->queueUpdate = false;  // TODO was true;
     }
 }
 
@@ -855,7 +905,13 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     {
         while (bytesToSend >= effectiveMaxBytesSend)
         {
+            const ulong b0 = sendQueue->getBytesAvailable(state->snd_nxt);
             sendSegment(state->snd_mss);
+            const ulong b1 = sendQueue->getBytesAvailable(state->snd_nxt);
+            if(b0 - state->sentBytes != b1) {
+                // FIXME: This happens sometimes when SACKs are enabled. Is this a bug?
+                break;
+            }
             bytesToSend -= state->sentBytes;
         }
     }

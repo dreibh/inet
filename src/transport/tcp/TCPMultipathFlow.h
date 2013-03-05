@@ -44,6 +44,7 @@ class INET_API MPTCP_Flow
     // Some Helper for Omnet ID stuff
     int getAppID();
     int getappGateIndex();
+    void sendToApp(cMessage* msg);
 
     // use cases Data IN/OUT
     int sendByteStream(TCPConnection* subflow);
@@ -64,7 +65,7 @@ class INET_API MPTCP_Flow
 
     int  setState(MPTCP_State s);
 
-
+    void setSendQueueLimit(int limit);
 
     // subflow organisation
     int addSubflow(int id, TCPConnection*);
@@ -74,6 +75,7 @@ class INET_API MPTCP_Flow
     void DEBUGprintStatus();
     void DEBUGprintMPTCPFlowStatus();
 
+    bool sendEstablished;
   protected:
 
     bool checksum;

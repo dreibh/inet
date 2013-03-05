@@ -336,6 +336,7 @@ class INET_API TCPConnection
     bool isSubflow;
     bool joinToAck;
     bool joinToSynAck;
+
     MPTCP_Flow* flow;
     uint32 randomA;				// used to store randam of MPTCP MP_JOIN
     uint32 randomB; 			// used to store randam of MPTCP MP_JOIN

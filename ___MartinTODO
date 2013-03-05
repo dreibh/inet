@@ -5,21 +5,26 @@ MP_JOIN		= Done
 MP_DSS		= In process
 Scheduler	= In process
 CC			= Open
+adaptation of sendToApp = Done
 
 Next
 =================
 
 - Fill DSS
-- adaptation of sendToApp
-- adaptation of sendToIP
+- adaptation of sendToIP (Is this a must?)
 
 Open issues:
 =================
 - Handshake
+- filling sending Queue with netperfmeter (not optimal)
 
 What is new
 =================
-- 08.13 break up fixed 1:1 PCB <=> Flow  relation  
+- 08.13 break up fixed 1:1 PCB <=> Flow relation  
+
+Observations
+========================
+- Options decrease performance on just one link, this could be a problem for Messages near on MSS. 
 
 
 

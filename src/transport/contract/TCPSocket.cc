@@ -307,11 +307,11 @@ void TCPSocket::processMessage(cMessage *msg)
              if (cb)
                  cb->socketStatusArrived(connId, yourPtr, status);
              break;
-#ifdef PRIVATE
-        case TCP_I_SEND_MSG:
-            // Here not supported yet
-            break;
-#endif
+//#ifdef PRIVATE
+//        case TCP_I_SEND_MSG:
+//            // Here not supported yet
+//            break;
+//#endif
         default:
              opp_error("TCPSocket: invalid msg kind %d, one of the TCP_I_xxx constants expected", msg->getKind());
     }

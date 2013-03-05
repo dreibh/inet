@@ -112,6 +112,9 @@ TCPStateVariables::TCPStateVariables()
     usedRcvBuffer = 0;
     freeRcvBuffer = 0;
     tcpRcvQueueDrops = 0;
+
+    sendQueueLimit = 0;
+    queueUpdate = true;
 }
 
 std::string TCPStateVariables::info() const
@@ -246,6 +249,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 
     if (getTcpMain()->recordStatistics)
     {
+#ifndef PRIVATE
         sndWndVector = new cOutVector("send window");
         rcvWndVector = new cOutVector("receive window");
         rcvAdvVector = new cOutVector("advertised window");
@@ -262,6 +266,57 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
         sackedBytesVector = new cOutVector("rcvd sackedBytes");
         tcpRcvQueueBytesVector = new cOutVector("tcpRcvQueueBytes");
         tcpRcvQueueDropsVector = new cOutVector("tcpRcvQueueDrops");
+#else
+        char name[255];
+        int  cnt = 0;
+        sprintf(name,"[subflow][%i] send window",cnt);
+        sndWndVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] receive window",cnt);
+        rcvWndVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] advertised window",cnt);
+        rcvAdvVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] sent seq",cnt);
+        sndNxtVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] sent ack",cnt);
+        sndAckVector = new cOutVector("sent ack");
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] rcvd seq",cnt);
+        rcvSeqVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] rcvd ack",cnt);
+        rcvAckVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] unacked bytes",cnt);
+        unackedVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] rcvd dupAcks",cnt);
+        dupAcksVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] pipe",cnt);
+        pipeVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] sent sacks",cnt);
+        sndSacksVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] rcvd sacks",cnt);
+        rcvSacksVector = new cOutVector("1");
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] rcvd oooseg",cnt);
+        rcvOooSegVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] rcvd sackedBytes",cnt);
+        sackedBytesVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] tcpRcvQueueBytes",cnt);
+        tcpRcvQueueBytesVector = new cOutVector(name);
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][%i] tcpRcvQueueDrops",cnt);
+        tcpRcvQueueDropsVector = new cOutVector(name);
+#endif
     }
 }
 

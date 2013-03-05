@@ -448,6 +448,12 @@ void NetPerfMeter::handleMessage(cMessage* msg)
             if(SocketTCP != NULL) {   // T.D. 16.11.2011: Ensure that there is still a TCP socket!
                SendingAllowed = true;
                sendDataOfSaturatedStreams(tcpCommand->getUserId(), NULL);
+#ifdef PRIVATE // DEBUG
+               static int cnt = 0;
+               static int bytes_sent = 0;
+               bytes_sent += tcpCommand->getUserId();
+               fprintf(stderr,"[NETPERFMETER][INFO]] Try to send %i, in total %i by %i sendcalls \n",tcpCommand->getUserId(), bytes_sent, cnt++);
+#endif
             }
            }
           break;
