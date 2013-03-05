@@ -22,48 +22,15 @@
 //                           Scheduler manager
 // ######################################################################################
 
+MPTCP_SchedulerI* TCPSchedulerManager::scheduler = NULL;
 
-TCPSchedulerManager::TCPSchedulerManager() {
-	// TODO Auto-generated constructor stub
-
-}
-
-TCPSchedulerManager::~TCPSchedulerManager() {
-	// TODO Auto-generated destructor stub
-}
-
-
-// ######################################################################################
-//                           Round Robin Scheduler
-// ######################################################################################
-
-/**
- * Constructor
- */
-TCPRoundRobinScheduler::TCPRoundRobinScheduler(){
-
-}
-
-/**
- * Destructor
- */
-TCPRoundRobinScheduler::~TCPRoundRobinScheduler(){
-
-}
-
-/**
- * send TCP in Round Robin manner
- */
-bool TCPRoundRobinScheduler::sendTCPSegment(){
-	return true;
-}
-
-/**
- * Print statistical information for Round Robin
- */
-bool TCPRoundRobinScheduler::printStatus(){
-	return true;
-}
-
+MPTCP_SchedulerI* TCPSchedulerManager::getMPTCPScheduler(TCP* pcb, MPTCP_Flow* flow){
+     if(scheduler==NULL){
+         pcb->par("multipath_DSSDataACK8");
+         scheduler = check_and_cast<MPTCP_SchedulerI *> (createOne("MPTCP_RoundRobinScheduler"));
+         scheduler->initialize(flow);
+     }
+     return scheduler;
+ }
 
 #endif //Private

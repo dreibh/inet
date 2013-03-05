@@ -125,8 +125,7 @@ class INET_API MPTCP_Flow
     void     setRemoteToken(uint32_t key);
     void     setLocalToken(uint32_t key);
 
-    // Message handlign -> TODO SCHEDULER
-    void _createMSGforProcess(cMessage *msg, TCPConnection* sc);
+
 
     // MPTCP Flow Organisation
     // Token to identify

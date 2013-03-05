@@ -22,6 +22,9 @@
 
 #include <omnetpp.h>
 #include "INETDefs.h"
+#include "TCPMultipathFlow.h"
+#include "TCPMultipathSchedulerI.h"
+
 
 class TCPScheduler; 			// Interface to Scheduler
 class TCPRoundRobinScheduler;	// Round Robin
@@ -30,33 +33,11 @@ class TCPRoundRobinScheduler;	// Round Robin
 class INET_API TCPSchedulerManager : public cPolymorphic
 {
 public:
-	static bool sendTCPSegment();
-	virtual ~TCPSchedulerManager();
+	static MPTCP_SchedulerI* getMPTCPScheduler(TCP* pcb, MPTCP_Flow* flow);
 private:
-	TCPSchedulerManager();
-	TCPScheduler* scheduler;
+    static MPTCP_SchedulerI* scheduler;
 };
 
-/**
- * Abstract Scheduler Class - Interface to scheduler function
- * Future scheduler classes should base on this
- */
-class TCPScheduler
-{
-public:
-	virtual ~TCPScheduler(){};
-	virtual bool sendTCPSegment() = 0;
-	virtual bool printStatus() = 0;
-};
-
-// Round Robin
-class TCPRoundRobinScheduler: public TCPScheduler{
-public:
-	TCPRoundRobinScheduler();
-	virtual ~TCPRoundRobinScheduler();
-	virtual bool sendTCPSegment();
-	virtual bool printStatus();
-};
 
 #endif /* TCPSCHEDULERMANAGER_H_ */
 

@@ -18,6 +18,7 @@
 
 #include "TCPConnection.h"
 #include "TCPMultipathFlow.h"
+#include "TCPSchedulerManager.h"
 
 #if defined(__APPLE__)
 #define COMMON_DIGEST_FOR_OPENSSL
@@ -960,45 +961,16 @@ TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
     // easy scheduler
     static int cnt = 0;
 
-//    int test = 0;
-//    TCP_subflow_t* entry = NULL;
     char name[255];
-//    int msg_nr = 0;
-    // We split every data for scheduling, if there bigger than connection MMS
-/*
-    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-        i != subflow_list.end(); i++) {
-    entry = (*i);
 
-        test++;
-        if (test == (subflow_list.size() > 2 ? 1 : 1)) { // 2:1 verursacht das Problem
-);
-            _createMSGforProcess(msg,entry->subflow);
-            break;
-        }
+    MPTCP_SchedulerI* scheduler = TCPSchedulerManager::getMPTCPScheduler(save->getTcpMain(),this);
 
-
-    }
-    */
-    cnt++;
-    sprintf(name,"Test-%i",cnt);
+    sprintf(name,"Test-%i",cnt++);
     msg->setName(name);
-    _createMSGforProcess(msg,save);
+    scheduler->schedule(save, msg);
     return save;
 }
 
-void MPTCP_Flow::_createMSGforProcess(cMessage *msg, TCPConnection* sc) {
-    msg->setKind(TCP_C_MPTCP_SEND);
-    DEBUGPRINT(
-            "[FLOW][SUBFLOW][STATUS] Send via  %s:%d to %s:%d",
-            sc->localAddr.str().c_str(), sc->localPort, sc->remoteAddr.str().c_str(), sc->remotePort);
-
-    TCPSendCommand *cmd = new TCPSendCommand();
-    cmd->setConnId(sc->connId);
-    msg->setControlInfo(cmd);
-    sc->processAppCommand(msg);
-    //sc->getTcpMain()->scheduleAt(simTime() + 0.0001, msg);
-}
 
 void MPTCP_Flow::initKeyMaterial(TCPConnection* subflow) {
     _generateSYNACK_HMAC(_getLocalKey(), _getRemoteKey(), subflow->randomA,
