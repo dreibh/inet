@@ -19,6 +19,7 @@
 #include "TCPConnection.h"
 #include "TCPMultipathRoundRobinScheduler.h"
 
+Register_Class(MPTCP_RoundRobinScheduler);
 
 MPTCP_RoundRobinScheduler::MPTCP_RoundRobinScheduler(){
 }

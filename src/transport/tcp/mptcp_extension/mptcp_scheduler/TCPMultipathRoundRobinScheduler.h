@@ -8,8 +8,9 @@
 #ifndef TCPMULTIPATHROUNDROBINSCHEDULER_H_
 #define TCPMULTIPATHROUNDROBINSCHEDULER_H_
 
-
+#include <omnetpp.h>
 #include "TCPMultipathSchedulerI.h"
+
 
 
 // ###############################################################################################################
@@ -19,7 +20,7 @@
 /**
  * The MULTIPATH TCP Scheduler Interface
  */
-class INET_API MPTCP_RoundRobinScheduler : public MPTCP_SchedulerI
+class INET_API MPTCP_RoundRobinScheduler : public MPTCP_SchedulerI , public cPolymorphic
 {
 
   public:

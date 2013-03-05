@@ -12,6 +12,7 @@ Next
 
 - Fill DSS
 - adaptation of sendToIP (Is this a must?)
+- fill sending queues of alternative paths
 
 Open issues:
 =================

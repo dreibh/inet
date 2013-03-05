@@ -17,6 +17,9 @@
 #ifdef PRIVATE
 
 #include "TCPSchedulerManager.h"
+#include "TCPMultipathRoundRobinScheduler.h"
+
+
 
 // ######################################################################################
 //                           Scheduler manager
@@ -26,8 +29,8 @@ MPTCP_SchedulerI* TCPSchedulerManager::scheduler = NULL;
 
 MPTCP_SchedulerI* TCPSchedulerManager::getMPTCPScheduler(TCP* pcb, MPTCP_Flow* flow){
      if(scheduler==NULL){
-         pcb->par("multipath_DSSDataACK8");
-         scheduler = check_and_cast<MPTCP_SchedulerI *> (createOne("MPTCP_RoundRobinScheduler"));
+
+         scheduler = check_and_cast<MPTCP_SchedulerI *> (createOne(pcb->par("multipath_Scheduler")));
          scheduler->initialize(flow);
      }
      return scheduler;
