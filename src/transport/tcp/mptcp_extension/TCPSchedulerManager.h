@@ -34,6 +34,7 @@ class INET_API TCPSchedulerManager : public cPolymorphic
 {
 public:
 	static MPTCP_SchedulerI* getMPTCPScheduler(TCP* pcb, MPTCP_Flow* flow);
+	static void destroyMPTCPScheduler();
 private:
     static MPTCP_SchedulerI* scheduler;
 };

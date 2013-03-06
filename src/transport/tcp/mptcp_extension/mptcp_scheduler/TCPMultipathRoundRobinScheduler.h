@@ -10,6 +10,7 @@
 
 #include <omnetpp.h>
 #include "TCPMultipathSchedulerI.h"
+#include "TCPConnection.h"
 
 
 
@@ -28,9 +29,12 @@ class INET_API MPTCP_RoundRobinScheduler : public MPTCP_SchedulerI , public cPol
     virtual ~MPTCP_RoundRobinScheduler();
     virtual void initialize(MPTCP_Flow* flow);
     virtual void schedule(TCPConnection* origin, cMessage* msg);
+    virtual uint32_t getFreeSendBuffer();
   private:
     // Message handlign -> TODO SCHEDULER
-    void _createMSGforProcess(cMessage *msg, TCPConnection* sc);
+    void _createMSGforProcess(cMessage *msg);
+    static TCPConnection* lastUsed;
+    MPTCP_Flow* flow;
 };
 
 

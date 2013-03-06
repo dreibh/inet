@@ -89,6 +89,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 MPTCP_Flow::~MPTCP_Flow() {
     // TODO(MBe) -> De-Constructor of Flow
     subflow_list.clear();
+    TCPSchedulerManager::destroyMPTCPScheduler();
 }
 
 /**

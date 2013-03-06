@@ -29,11 +29,15 @@ MPTCP_SchedulerI* TCPSchedulerManager::scheduler = NULL;
 
 MPTCP_SchedulerI* TCPSchedulerManager::getMPTCPScheduler(TCP* pcb, MPTCP_Flow* flow){
      if(scheduler==NULL){
-
          scheduler = check_and_cast<MPTCP_SchedulerI *> (createOne(pcb->par("multipath_Scheduler")));
          scheduler->initialize(flow);
      }
      return scheduler;
  }
 
+void TCPSchedulerManager::destroyMPTCPScheduler(){
+    if(scheduler!=NULL)
+        delete scheduler;
+    scheduler =NULL;
+}
 #endif //Private

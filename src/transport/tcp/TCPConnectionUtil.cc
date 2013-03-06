@@ -36,6 +36,7 @@
 #ifdef PRIVATE
 #include <assert.h>
 #include "TCPMultipathPCB.h"
+#include "TCPSchedulerManager.h"
 #endif
 
 const char *TCPConnection::stateName(int state)
@@ -267,17 +268,17 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
             // following code to be kept consistent with initConnection()
 
 
-            const char *tcpAlgorithmClass = tcpAlgorithm->getClassName();
-            conn->tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
-            conn->tcpAlgorithm->setConnection(conn);
+//            const char *tcpAlgorithmClass = tcpAlgorithm->getClassName();
+//            conn->tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
+//            conn->tcpAlgorithm->setConnection(conn);
 
-            conn->state = conn->tcpAlgorithm->getStateVariables();
-            configureStateVariables();
-            conn->tcpAlgorithm->initialize();
+//            conn->state = conn->tcpAlgorithm->getStateVariables();
+//            configureStateVariables();
+//            conn->tcpAlgorithm->initialize();
 
             // put it into LISTEN, with our localAddr/localPort
-            conn->state->active = false;
-            conn->state->fork = true;
+//            conn->state->active = false;
+//            conn->state->fork = true;
             conn->remoteAddr = raddr;
             conn->remotePort = remotePort;
 
@@ -823,10 +824,17 @@ void TCPConnection::sendSegment(uint32 bytes)
     // let application fill queue again, if there is space
     const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
     const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
-    if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
+    if ((state->sendQueueLimit > 0) && // (state->queueUpdate == false) &&
+#ifndef PRIVATE
         (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
         // Tell upper layer readiness to accept more data
-        sendIndicationToApp(TCP_I_SEND_MSG, abated);
+            sendIndicationToApp(TCP_I_SEND_MSG, abated);
+#else
+        (TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow)->getFreeSendBuffer()  >= state->snd_mss)) {
+              // Tell upper layer readiness to accept more data
+                  sendIndicationToApp(TCP_I_SEND_MSG, TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow)->getFreeSendBuffer());
+#endif
+
         state->queueUpdate = false;  // TODO was true;
     }
 }
