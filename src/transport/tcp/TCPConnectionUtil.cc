@@ -263,22 +263,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
                 tcpRcvQueueDropsVector = new cOutVector(name);
             }
 
-            // We could not just create a new per check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
-            // we need a own state instance
-            // following code to be kept consistent with initConnection()
 
-
-//            const char *tcpAlgorithmClass = tcpAlgorithm->getClassName();
-//            conn->tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
-//            conn->tcpAlgorithm->setConnection(conn);
-
-//            conn->state = conn->tcpAlgorithm->getStateVariables();
-//            configureStateVariables();
-//            conn->tcpAlgorithm->initialize();
-
-            // put it into LISTEN, with our localAddr/localPort
-//            conn->state->active = false;
-//            conn->state->fork = true;
             conn->remoteAddr = raddr;
             conn->remotePort = remotePort;
 
@@ -332,11 +317,28 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
                 msg->setControlInfo(openCmd);
                 msg->setContextPointer(conn);
                 FSM_Goto(conn->fsm, TCP_S_INIT);
-//                getTcpMain()->addForkedConnection(this, conn, this->localAddr, this->remoteAddr, localPort , remotePort);
                 conn->processAppCommand(msg);
-//
-                // tmp->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
             }
+
+            // check some configuration stuff
+            conn->getState()->nagle_enabled = this->getState()->nagle_enabled;
+            conn->getState()->delayed_acks_enabled = this->getState()->delayed_acks_enabled;
+            conn->getState()->limited_transmit_enabled = this->getState()->limited_transmit_enabled;
+            conn->getState()->increased_IW_enabled = this->getState()->increased_IW_enabled;
+            conn->getState()->ws_support = this->getState()->ws_support;
+            conn->getState()->ws_enabled = this->getState()->ws_enabled;
+            conn->getState()->snd_ws = this->getState()->snd_ws;
+            conn->getState()->rcv_ws = this->getState()->rcv_ws;
+            conn->getState()->rcv_wnd_scale = this->getState()->rcv_wnd_scale;
+            conn->getState()->snd_wnd_scale = this->getState()->snd_wnd_scale;
+
+            conn->getState()->ts_support = this->getState()->ts_support;
+            conn->getState()->ts_enabled = this->getState()->ts_enabled;
+            conn->getState()->snd_initial_ts = this->getState()->snd_initial_ts;
+            conn->getState()->rcv_initial_ts = this->getState()->rcv_initial_ts;
+            // TIMESTAMP related variables
+            conn->getState()->sack_support = this->getState()->sack_support;
+            conn->getState()->sack_enabled = this->getState()->sack_enabled;
 
             return conn;
     }
@@ -778,11 +780,13 @@ void TCPConnection::sendSegment(uint32 bytes)
     TCPSegment *tcpseg_temp = createTCPSegment(NULL);
     tcpseg_temp->setAckBit(true); // needed for TS option, otherwise TSecr will be set to 0
     writeHeaderOptions(tcpseg_temp);
+
     uint options_len = tcpseg_temp->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
+
     while (bytes + options_len > state->snd_mss)
         bytes--;
     state->sentBytes = bytes;
-    
+
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
     TCPSegment *tcpseg = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
     
@@ -824,19 +828,30 @@ void TCPConnection::sendSegment(uint32 bytes)
     // let application fill queue again, if there is space
     const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
     const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
-    if ((state->sendQueueLimit > 0) && // (state->queueUpdate == false) &&
-#ifndef PRIVATE
-        (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
-        // Tell upper layer readiness to accept more data
-            sendIndicationToApp(TCP_I_SEND_MSG, abated);
-#else
-        (TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow)->getFreeSendBuffer()  >= state->snd_mss)) {
-              // Tell upper layer readiness to accept more data
-                  sendIndicationToApp(TCP_I_SEND_MSG, TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow)->getFreeSendBuffer());
+
+#ifdef PRIVATE
+      if(this->getTcpMain()->multipath){
+          if ((state->sendQueueLimit > 0) && // (state->queueUpdate == false) &&
+            (TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow)->getFreeSendBuffer()  >= state->snd_mss)) {
+                  // Tell upper layer readiness to accept more data
+                      sendIndicationToApp(TCP_I_SEND_MSG, TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow)->getFreeSendBuffer());
+                      state->queueUpdate = false;  // TODO was true;
+          }
+     }
+     else{
+#endif
+     if ((state->sendQueueLimit > 0) && // (state->queueUpdate == false) &&
+          (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
+          // Tell upper layer readiness to accept more data
+              sendIndicationToApp(TCP_I_SEND_MSG, abated);
+              state->queueUpdate = false;  // TODO was true;
+      }
+#ifdef PRIVATE
+     }
 #endif
 
-        state->queueUpdate = false;  // TODO was true;
-    }
+
+
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
@@ -876,6 +891,10 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     uint32 effectiveMaxBytesSend = state->snd_mss;
     if (state->ts_enabled)
         effectiveMaxBytesSend -= TCP_OPTION_TS_SIZE;
+#ifdef PRIVATE
+    if(this->isSubflow)
+        effectiveMaxBytesSend -= 8;    // for Multipath
+#endif
 
     // last segment could be less than state->snd_mss (or less than snd_mss-TCP_OPTION_TS_SIZE is using TS option)
     if (fullSegmentsOnly && buffered > (ulong)effectiveWin &&
@@ -2003,7 +2022,10 @@ void TCPConnection::setPipe()
     uint32 shift = state->snd_mss;
     if (state->ts_enabled)
         shift -= TCP_OPTION_TS_SIZE;
-
+#ifdef PRIVATE
+    if(this->isSubflow)
+        shift -= 8;    // for Multipath
+#endif
     // RFC 3517, page 3: "This routine traverses the sequence space from HighACK to HighData
     // and MUST set the "pipe" variable to an estimate of the number of
     // octets that are currently in transit between the TCP sender and
@@ -2060,7 +2082,10 @@ uint32 TCPConnection::nextSeg()
     uint32 shift = state->snd_mss;
     if (state->ts_enabled)
         shift -= TCP_OPTION_TS_SIZE;
-
+#ifdef PRIVATE
+    if(this->isSubflow)
+        shift -= 8;    // for Multipath
+#endif
     // RFC 3517, page 5: "(1) If there exists a smallest unSACKed sequence number 'S2' that
     // meets the following three criteria for determining loss, the
     // sequence range of one segment of up to SMSS octets starting

@@ -46,12 +46,18 @@ std::string TCPSACKRexmitQueue::str() const
 
 void TCPSACKRexmitQueue::info()
 {
-    str();
+//    str();
     RexmitQueue::iterator i = rexmitQueue.begin();
     uint j = 1;
+#ifdef PRIVATE
+    fprintf(stderr,"\t\t[TCP]][SACK][CONNECTION] local:  %s:%d remote %s:%d RexmitQueue Size in INFO:%i\n", conn->localAddr.str().c_str(), conn->localPort, conn->remoteAddr.str().c_str(), conn->remotePort,rexmitQueue.size());
+#endif
     while (i!=rexmitQueue.end())
     {
         tcpEV << j << ". region: [" << i->beginSeqNum << ".." << i->endSeqNum << ") \t sacked=" << i->sacked << "\t rexmitted=" << i->rexmitted << "\n";
+#ifdef PRIVATE
+        fprintf(stderr,"\t\t[TCP]][SACK][IN] Rexmit Queue-Entry %i \tregion[%i..%i] %i sacked=%i rexmitted=%i\n",j, i->beginSeqNum,i->endSeqNum,(i->endSeqNum-i->beginSeqNum),i->sacked, i->rexmitted);
+#endif
         i++;
         j++;
     }
@@ -71,7 +77,7 @@ void TCPSACKRexmitQueue::discardUpTo(uint32 seqNum)
 {
     if (rexmitQueue.empty())
         return;
-
+    int j = 1;
     ASSERT(seqLE(begin,seqNum) && seqLE(seqNum,end));
 
     begin = seqNum;
@@ -79,15 +85,22 @@ void TCPSACKRexmitQueue::discardUpTo(uint32 seqNum)
     RexmitQueue::iterator i = rexmitQueue.begin();
     while (i!=rexmitQueue.end()) // discard/delete regions from rexmit queue, which have been acked
     {
-        if (seqLess(i->beginSeqNum,begin))
+        if (seqLess(i->beginSeqNum,begin)){
+            fprintf(stderr,"\t\t[TCP]][SACK][DEL] Rexmit Queue-Entry %i \tregion[%i..%i] step %i sacked=%i rexmitted=%i\n",j, i->beginSeqNum,i->endSeqNum,(i->endSeqNum-i->beginSeqNum),i->sacked, i->rexmitted);
             i = rexmitQueue.erase(i);
+        }
         else
             i++;
+        j++;
     }
-
+#ifdef PRIVATE
+    fprintf(stderr,"\t\t[TCP]][SACK][QUEUE] local: %s:%d remote %s:%d rexmitQueue size %i\n", conn->localAddr.str().c_str(), conn->localPort, conn->remoteAddr.str().c_str(), conn->remotePort, rexmitQueue.size());
+#endif
     // update begin and end of rexmit queue
-    if (rexmitQueue.empty())
+    if (rexmitQueue.empty()){
+        rexmitQueue.clear();
         begin = end = 0;
+    }
     else
     {
         i = rexmitQueue.begin();
@@ -108,7 +121,11 @@ void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
     region.endSeqNum = toSeqNum;
     region.sacked = false;
     region.rexmitted = false;
-
+#ifdef PRIVATE //test
+    if((toSeqNum-fromSeqNum)!=1436){
+        region.rexmitted = false;
+    }
+#endif
     if (getQueueLength()==0)
     {
         begin = fromSeqNum;
@@ -332,7 +349,7 @@ uint32 TCPSACKRexmitQueue::getAmountOfSackedBytes(uint32 seqNum)
 uint32 TCPSACKRexmitQueue::getNumOfDiscontiguousSacks(uint32 seqNum)
 {
     uint32 counter = 0;
-
+    rexmitQueue.size();
     if (rexmitQueue.empty() || seqGE(seqNum,end))
         return counter;
 
@@ -343,6 +360,7 @@ uint32 TCPSACKRexmitQueue::getNumOfDiscontiguousSacks(uint32 seqNum)
         if (i->beginSeqNum == seqNum)
             break;
     }
+    if((seqLE(seqNum,i->beginSeqNum) || seqGE(seqNum,--i->endSeqNum)) == false)
     ASSERT(seqLE(seqNum,i->beginSeqNum) || seqGE(seqNum,--i->endSeqNum));
 
     // search for discontiguous sacked regions

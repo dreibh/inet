@@ -460,7 +460,9 @@ void TCPConnection::sendSegment(uint32 bytes)
     // TBD when to set PSH bit?
     // TBD set URG bit if needed
     ASSERT(bytes==tcpseg->getPayloadLength());
-
+    if(bytes != 1400){
+        state->snd_nxt += bytes;
+    }
     state->snd_nxt += bytes;
 
     // check if afterRto bit can be reset

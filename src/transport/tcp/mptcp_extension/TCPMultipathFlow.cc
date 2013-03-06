@@ -19,6 +19,7 @@
 #include "TCPConnection.h"
 #include "TCPMultipathFlow.h"
 #include "TCPSchedulerManager.h"
+#include "TCPSACKRexmitQueue.h"
 
 #if defined(__APPLE__)
 #define COMMON_DIGEST_FOR_OPENSSL
@@ -1274,7 +1275,7 @@ void MPTCP_Flow::DEBUGprintMPTCPFlowStatus() {
 #endif
 }
 void MPTCP_Flow::DEBUGprintStatus() {
-#ifdef PRIVATE_DEBUG
+#ifdef PRIVATE
 
     DEBUGPRINT(
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %lu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",
@@ -1295,8 +1296,10 @@ void MPTCP_Flow::DEBUGprintStatus() {
                 "[FLOW][SUBFLOW][%i][STATUS] Connections  %s:%d to %s:%d",
                 cnt, entry->subflow->localAddr.str().c_str(), entry->subflow->localPort, entry->subflow->remoteAddr.str().c_str(), entry->subflow->remotePort);
         DEBUGPRINT(
-                "[FLOW][SUBFLOW][%i][STATUS] rcv_nxt: %i\t snd_nxt: %i\t snd_una: %i",
-                cnt, entry->subflow->getState()->rcv_nxt, entry->subflow->getState()->snd_nxt, entry->subflow->getState()->snd_una);
+                "[FLOW][SUBFLOW][%i][STATUS][SEND] rcv_nxt: %i\t snd_nxt: %i\t snd_una: %i snd_max: %i",
+                cnt, entry->subflow->getState()->rcv_nxt, entry->subflow->getState()->snd_nxt, entry->subflow->getState()->snd_una, entry->subflow->getState()->snd_max);
+        DEBUGPRINT("[FLOW][SUBFLOW][%i][STATUS]\n",cnt);
+        entry->subflow->getRexmitQueue()->info();
     }
 
     DEBUGPRINT(

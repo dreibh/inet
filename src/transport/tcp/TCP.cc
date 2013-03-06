@@ -197,7 +197,12 @@ void TCP::handleMessage(cMessage *msg)
             TCPConnection *conn = findConnForSegment(tcpseg, srcAddr, destAddr);
             if (conn)
             {
+#ifdef PRIVATE
+               // We have to be realy sure, if the connection is the connection we look for
+                fprintf(stderr,"\n[TCP][NEW SEG] from  %s:%d to %s:%d\n", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(),tcpseg->getDestPort());
+                fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
 
+#endif
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
                 if (!ret)
                     removeConnection(conn);
@@ -368,14 +373,14 @@ TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, 
 #ifdef PRIVATE // For Debug -> I want to know which Connection TCP knows
         int cnt = 0;
        for (TcpConnMap::iterator it = tcpConnMap.begin();
-               it != tcpConnMap.end(); it++, cnt++) {
+           it != tcpConnMap.end(); it++, cnt++) {
            TCPConnection *entry = (it->second);
            DEBUGPRINT(
-                   "[GENERAL][TCP][STATUS][FLOW][%i] Connections  %s:%d to %s:%d",
+                   "[GENERAL][TCP][STATUS][SUBFLOW][%i] Connections  %s:%d to %s:%d",
                    cnt, entry->localAddr.str().c_str(), entry->localPort, entry->remoteAddr.str().c_str(), entry->remotePort);
            DEBUGPRINT(
-                   "[GENERAL][TCP][STATUS][FLOW][%i]rcv_nxt: %i\t snd_nxt: %i\t snd_una: %i",
-                   cnt, entry->getState()->rcv_nxt, entry->getState()->snd_nxt, entry->getState()->snd_una);
+                   "[GENERAL][TCP][STATUS][SUBFLOW][%i]rcv_nxt: %i\t snd_nxt: %i\t snd_una: %i snd_max: %i",
+                   cnt, entry->getState()->rcv_nxt, entry->getState()->snd_nxt, entry->getState()->snd_una, entry->getState()->snd_max);
        }
 #endif
     SockPair key;
@@ -476,8 +481,7 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
         }
     }
 #ifdef PRIVATE
-    fprintf(stderr,"\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-    fprintf(stderr,"\nAdd Address in tcpConnMap:  %s:%d to %s:%d\n", localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
+    fprintf(stderr,"\[TCP][NEW CONNECTION]nAdd Address in tcpConnMap:  %s:%d to %s:%d\n", localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
 #endif
     // then insert it into tcpConnMap
     tcpConnMap[key] = conn;

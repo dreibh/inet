@@ -238,10 +238,14 @@ class INET_API TCPStateVariables : public cPolymorphic
     // SACK related variables
     bool sack_support;       // set if the host supports selective acknowledgment (header option) (RFC 2018, 2883, 3517)
     bool sack_enabled;       // set if the connection uses selective acknowledgment (header option)
+
     bool snd_sack_perm;      // set if SACK_PERMITTED has been sent
     bool rcv_sack_perm;      // set if SACK_PERMITTED has been received
+
     uint32 start_seqno;      // start sequence number of last received out-of-order segment
     uint32 end_seqno;        // end sequence number of last received out-of-order segment
+
+
     bool snd_sack;           // set if received vaild out-of-order segment or rcv_nxt changed, but receivedQueue is not empty
     bool snd_dsack;          // set if received duplicated segment (sequenceNo+PLength < rcv_nxt) or (segment is not acceptable)
     Sack sacks_array[MAX_SACK_BLOCKS]; // MAX_SACK_BLOCKS is set to 60
