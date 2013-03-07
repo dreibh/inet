@@ -243,6 +243,9 @@ simple TCP like ITCP
         bool multipath_DSSDataACK8 = default(false); // switch sending DSS ACK with 8 or 4 Octets
         bool multipath_DSSSeqNo8 = default(false); // switch sending DSS SQN  with 8 or 4 Octets
         string multipath_Scheduler = default("MPTCP_RoundRobinScheduler");	// Set scheduler for the subflows of multipath
+        string multipath_receiveQueueClass = default("TCPMultipathVirtualDataRcvQueue");	// Set scheduler for the subflows of multipath
+        bool multipath_ordered = default(true); // endable and disable ordered multipath transmission -> just for testing
+        
         @display("i=block/wheelbarrow");
     gates:
         input appIn[] @labels(TCPCommand/down);

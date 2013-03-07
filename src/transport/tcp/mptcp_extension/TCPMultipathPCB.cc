@@ -454,11 +454,15 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         |  Data-level Length (2 octets) |      Checksum (2 octets)     |    // Data Sequence Mapping
         +-------------------------------+------------------------------+
         */
-#ifdef PRIVATE_DEBUG
-        if(subflow->isSubflow){
-            subflow->flow->DEBUGprintMPTCPFlowStatus();
-        }
-#endif
+        //
+        DEBUGPRINT("[FLOW][DSS][STATUS] snd_una: %ld", subflow->flow->mptcp_snd_una);
+        DEBUGPRINT("[FLOW][DSS][STATUS] snd_nxt: %ld", subflow->flow->mptcp_snd_nxt);
+        DEBUGPRINT("[FLOW][DSS][STATUS] snd_wnd: %d",  subflow->flow->mptcp_snd_wnd);
+        DEBUGPRINT("[FLOW][DSS][STATUS] rcv_nxt: %ld", subflow->flow->mptcp_rcv_nxt);
+        DEBUGPRINT("[FLOW][DSS][STATUS] rcv_wnd: %ld", subflow->flow->mptcp_rcv_wnd);
+
+        // The data itself will be pushed to the applicatio later during -> Flow sendtoapp
+
         // Data Sequence Mapping [Section 3.3.1] ==> IN
         // TODO check for Flag M
         {
@@ -476,6 +480,9 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         // compare with old...  flow->getHighestCumSQN(); // can we free memory
 
         }
+
+
+
         return 0;
 }
 
@@ -744,7 +751,7 @@ void MPTCP_PCB::DEBUGprintFlowOverview(int type){
                 }
             }
             DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Base Sequence Number:        %ld",tmp->flow->getBaseSQN());
-            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Highest Cum Sequence number: %ld",tmp->flow->getHighestCumSQN());
+//            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Highest Cum Sequence number: %ld",tmp->flow->getHighestCumSQN());
             break;
         default:
             ASSERT(false);

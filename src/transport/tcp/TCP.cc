@@ -541,7 +541,10 @@ void TCP::addForkedConnection(TCPConnection *conn, TCPConnection *newConn, IPvXA
 void TCP::removeConnection(TCPConnection *conn)
 {
     tcpEV << "Deleting TCP connection\n";
-
+#ifdef PRIVATE
+    // In case of my tests this vectors are irritating
+    conn->removeVectors();
+#endif
     AppConnKey key;
     key.appGateIndex = conn->appGateIndex;
     key.connId = conn->connId;

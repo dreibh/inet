@@ -7,18 +7,17 @@
 
 #ifndef TCPMULTIPATHFLOW_H_
 #define TCPMULTIPATHFLOW_H_
+#include <omnetpp.h>
+#include "INETDefs.h"
+
 #include <vector>
 #include <map>
 #include <set>
 
 #include "TCPMultipath.h"
+#include "TCPMultipathReceiveQueue.h"
 
-
-//#include "TCPMultipath.h"
-
-
-// helper
-
+class TCPMultipathReceiveQueue;
 
 // ###############################################################################################################
 //                                                  MULTIPATH TCP
@@ -40,53 +39,79 @@ class INET_API MPTCP_Flow
     MPTCP_State getState();
     MPTCP_PCB*  getPCB();
 
+    //######################################################
+    // Use Cases
+    // 1) Exchange with socket interface (Send)
+    // 2) Exchange with application
+    // 3) Manipulate message format
+    // 4) Read Msg (is done by PCB)
+    // 6) Schedule msg
+    // 7) Congestion & Flow Control ->Open
 
-    // Some Helper for Omnet ID stuff
-    int getAppID();
-    int getappGateIndex();
+    // for 2 -> Omnet Interface
     void sendToApp(cMessage* msg);
-
-    // use cases Data IN/OUT
-    int sendByteStream(TCPConnection* subflow);
+    // for 1 & 3
     int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, TCPConnection* subflow);
+    // for 6
     TCPConnection* schedule(TCPConnection* save, cMessage* msg);
 
+    //######################################################
+    // Security
     void initKeyMaterial(TCPConnection* subflow);
     bool keysAreEqual(uint64_t rk, uint64_t lk );
     void     setRemoteKey(uint64_t key);
     void     setLocalKey(uint64_t key);
     uint32_t getRemoteToken();              // unique per PCB
     uint32_t getLocalToken();               // unique per PCB
+
+    //######################################################
+    // SQN and buffer
     uint64_t getHighestCumSQN();
     uint64_t getBaseSQN();          // Base of Offset SQN calculation
-
     uint64_t getSQN();
     void setBaseSQN(uint64_t s);
-
     int  setState(MPTCP_State s);
-
     void setSendQueueLimit(int limit);
+    // Some Helper for Omnet ID stuff
+    int getAppID();
+    int getappGateIndex();
 
+    //######################################################
     // subflow organisation
     int addSubflow(int id, TCPConnection*);
     bool isSubflowOf(TCPConnection* subflow);
     const TCP_SubFlowVector_t* getSubflows();
+    bool sendEstablished;
 
+    //######################################################
+    // Debug
     void DEBUGprintStatus();
     void DEBUGprintMPTCPFlowStatus();
 
-    bool sendEstablished;
+
+    //######################################################
+    // Draft stuff
+    // Sending side
+    uint64_t mptcp_snd_una;                       // B.1.2
+    uint64_t mptcp_snd_nxt;                       // B.1.2
+    uint32_t mptcp_snd_wnd;                       // B.1.2
+
+    // Receiver Side
+    uint64_t mptcp_rcv_nxt;                       // B.1.2
+    uint64_t mptcp_rcv_wnd;                       // B.1.2
+    uint64_t seq;                           	  // start seq-no generated after getting keys for the first flow
   protected:
 
     bool checksum;
     bool isPassive;
+    bool ordered;
     InterfaceTableAccess interfaceTableAccess;
 
   private:
-    // From the ITEF Draft
-    int rcvbuf;                             // receive message queue
-    int sndbuf;                             // send message queue
+    // Receive Queue
+    TCPMultipathReceiveQueue* mptcp_receiveQueue;
 
+    // From the ITEF Draft
     MPTCP_State state;                      // Internal State of the multipath protocol control block
     MPTCP_PCB* pcb;                                // the pcb
 
@@ -99,7 +124,7 @@ class INET_API MPTCP_Flow
     TCP_SubFlowVector_t     subflow_list;      // list of all subflows
     TCP_JoinVector_t        join_queue;           // a queue with all join possibilities
     TCP_JoinVector_t        tried_join;
-    TCPMultipathQueueMngmt* queue_mgr;     // Receiver queue
+
 
     void _initFlow(int port);
     // Helper - Write packets
@@ -133,15 +158,7 @@ class INET_API MPTCP_Flow
     uint32_t remote_token;                  // B.1.1 Authentication and Metadata
 
 
-    // Sending side
-    uint64_t snd_una;                       // B.1.2
-    uint64_t snd_nxt;                       // B.1.2
-    uint32_t snd_wnd;                       // B.1.2
 
-    // Receiver Side
-    uint64_t rcv_nxt;                       // B.1.2
-    uint64_t rcv_wnd;                       // B.1.2
-    uint64_t seq;                           // start seq-no generated after getting keys for the first flow
 
 
     // common Omnetpp identifier

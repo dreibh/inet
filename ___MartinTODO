@@ -3,9 +3,10 @@ Status
 MP_CAPABLE 	= Done
 MP_JOIN		= Done
 MP_DSS		= In process
-Scheduler	= In process
+Scheduler	= Round Robin (initial) 
 CC			= Open
 adaptation of sendToApp = Done
+Unordered   = Done
 
 Next
 =================
@@ -13,11 +14,25 @@ Next
 - Fill DSS
 - adaptation of sendToIP (Is this a must?)
 - fill sending queues of alternative paths
+- Something goes wrong with retransmissions in SACK
 
 Open issues:
 =================
 - Handshake
+
 - filling sending Queue with netperfmeter (not optimal)
+
+Features
+=================
+- Alternative Scheduler
+- Congestion Control
+- DSSSeqNo8 = false
+- DSSDataACK8 = false
+
+Nice To have
+==================
+- Rename is not early enough, there are still some Vectores with I0-X
+==> Could be ignored, because they just give the info for the first SYN
 
 What is new
 =================

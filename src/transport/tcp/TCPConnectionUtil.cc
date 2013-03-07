@@ -170,182 +170,201 @@ void TCPConnection::printSegmentBrief(TCPSegment *tcpseg)
 #ifdef PRIVATE
 TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPvXAddress laddr, IPvXAddress raddr){
     TCPConnection *conn = NULL;
+    static int _count_active_a = 0;
+    static int _count_passiv_a = 0;
     if(tcpMain->multipath){
 
+		if(active){
+			conn = new TCPConnection(tcpMain,appGateIndex,connId);
+		}
+		else
+			conn = new TCPConnection(tcpMain,0,0);
 
-            if(active){
-                conn = new TCPConnection(tcpMain,appGateIndex,connId);
-                // we have to copy some more stuff
+		conn->remoteAddr = raddr;
+		conn->remotePort = remotePort;
 
+		// in every case in INIT
+		TCPOpenCommand *openCmd = new TCPOpenCommand();
+		 openCmd->setSendQueueClass(
+				 getTcpMain()->par("sendQueueClass"));
+		 openCmd->setReceiveQueueClass(
+				 getTcpMain()->par("receiveQueueClass"));
+		 openCmd->setTcpAlgorithmClass(
+				 getTcpMain()->par("tcpAlgorithmClass"));
+		 openCmd->setSubFlowNumber(token);
+		 openCmd->setFork(true);
+		 openCmd->setConnId(connId);
+		 // initiate handshake for subflow
+		 openCmd->setIsMptcpSubflow(true);
+		 conn->isSubflow = true;
+		 conn->flow = flow;
+		if(!active){
+			_count_passiv_a++;
+			cMessage *msg = new cMessage("PassiveOPEN", TCP_E_OPEN_PASSIVE); // Passive Server Side
+			conn->localAddr = laddr;
+			conn->localPort = localPort;
 
-//                the2MSLTimer = new cMessage("2MSL");
-//                connEstabTimer = new cMessage("CONN-ESTAB");
-//                finWait2Timer = new cMessage("FIN-WAIT-2");
-//                synRexmitTimer = new cMessage("SYN-REXMIT");
+			// openCmd->setLocalAddr(subflow->localAddr);
+			openCmd->setLocalAddr(IPvXAddress("0.0.0.0"));
+			openCmd->setLocalPort(localPort);
 
-//                the2MSLTimer->setContextPointer(this);
-//                connEstabTimer->setContextPointer(this);
-//                finWait2Timer->setContextPointer(this);
-//                synRexmitTimer->setContextPointer(this);
+			msg->setControlInfo(openCmd);
+			msg->setContextPointer(conn);
 
-                // statistics
-                sndWndVector = NULL;
-                rcvWndVector = NULL;
-                rcvAdvVector = NULL;
-                sndNxtVector = NULL;
-                sndAckVector = NULL;
-                rcvSeqVector = NULL;
-                rcvAckVector = NULL;
-                unackedVector = NULL;
+			FSM_Goto(conn->fsm, TCP_S_INIT);
 
-                dupAcksVector = NULL;
-                sndSacksVector = NULL;
-                rcvSacksVector = NULL;
-                rcvOooSegVector = NULL;
-                tcpRcvQueueBytesVector = NULL;
-                tcpRcvQueueDropsVector = NULL;
-                pipeVector = NULL;
-                sackedBytesVector = NULL;
-            }
-            else
-                conn = new TCPConnection(tcpMain,0,0);
+			conn->processAppCommand(msg);
+			// newSubflow->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
+			FSM_Goto(conn->fsm, TCP_S_LISTEN);
+		}
+		else{
+			_count_active_a++;
+			cMessage *msg = new cMessage("ActiveOPEN", TCP_C_OPEN_ACTIVE); // Client Side Connection
 
-            if (getTcpMain()->recordStatistics)
-            {
-                char name[255];
-                int  cnt = this->flow->getSubflows()->size();
-                sprintf(name,"[subflow][%i] send window",cnt);
-                sndWndVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] receive window",cnt);
-                rcvWndVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] advertised window",cnt);
-                rcvAdvVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] sent seq",cnt);
-                sndNxtVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] sent ack",cnt);
-                sndAckVector = new cOutVector("sent ack");
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] rcvd seq",cnt);
-                rcvSeqVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] rcvd ack",cnt);
-                rcvAckVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] unacked bytes",cnt);
-                unackedVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] rcvd dupAcks",cnt);
-                dupAcksVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] pipe",cnt);
-                pipeVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] sent sacks",cnt);
-                sndSacksVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] rcvd sacks",cnt);
-                rcvSacksVector = new cOutVector("1");
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] rcvd oooseg",cnt);
-                rcvOooSegVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] rcvd sackedBytes",cnt);
-                sackedBytesVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] tcpRcvQueueBytes",cnt);
-                tcpRcvQueueBytesVector = new cOutVector(name);
-                memset(name,'\0',sizeof(name));
-                sprintf(name,"[subflow][%i] tcpRcvQueueDrops",cnt);
-                tcpRcvQueueDropsVector = new cOutVector(name);
-            }
+			conn->localAddr =  IPvXAddress();
+			conn->localPort = -1;
 
+			// setup the subflow
+			openCmd->setLocalAddr(laddr);
+			openCmd->setLocalPort(localPort);
+			openCmd->setRemoteAddr(raddr);
+			openCmd->setRemotePort(remotePort);
 
-            conn->remoteAddr = raddr;
-            conn->remotePort = remotePort;
+			msg->setControlInfo(openCmd);
+			msg->setContextPointer(conn);
+			FSM_Goto(conn->fsm, TCP_S_INIT);
+			conn->processAppCommand(msg);
+		}
+		// Clean up stuff
+		conn->removeVectors();
 
-            // in every case in INIT
-            TCPOpenCommand *openCmd = new TCPOpenCommand();
-             openCmd->setSendQueueClass(
-                     getTcpMain()->par("sendQueueClass"));
-             openCmd->setReceiveQueueClass(
-                     getTcpMain()->par("receiveQueueClass"));
-             openCmd->setTcpAlgorithmClass(
-                     getTcpMain()->par("tcpAlgorithmClass"));
-             openCmd->setSubFlowNumber(token);
-             openCmd->setFork(true);
-             openCmd->setConnId(connId);
-             // initiate handshake for subflow
-             openCmd->setIsMptcpSubflow(true);
-             conn->isSubflow = true;
-             conn->flow = flow;
-            if(!active){
+		// rename
+		char cnt[255];
+		int _cnt = this->flow->getSubflows()->size();
+		if(active)
+			sprintf(cnt,"A%i-%i",_cnt,_count_active_a);
+		else
+			sprintf(cnt,"A%i-%i",_cnt,_count_passiv_a);
 
-                cMessage *msg = new cMessage("PassiveOPEN", TCP_E_OPEN_PASSIVE); // Passive Server Side
-                conn->localAddr = laddr;
-                conn->localPort = localPort;
+		conn->renameMPTCPVectors(cnt);
 
-                // openCmd->setLocalAddr(subflow->localAddr);
-                openCmd->setLocalAddr(IPvXAddress("0.0.0.0"));
-                openCmd->setLocalPort(localPort);
+		// check some configuration stuff
+		conn->getState()->nagle_enabled = this->getState()->nagle_enabled;
+		conn->getState()->delayed_acks_enabled = this->getState()->delayed_acks_enabled;
+		conn->getState()->limited_transmit_enabled = this->getState()->limited_transmit_enabled;
+		conn->getState()->increased_IW_enabled = this->getState()->increased_IW_enabled;
+		conn->getState()->ws_support = this->getState()->ws_support;
+		conn->getState()->ws_enabled = this->getState()->ws_enabled;
+		conn->getState()->snd_ws = this->getState()->snd_ws;
+		conn->getState()->rcv_ws = this->getState()->rcv_ws;
+		conn->getState()->rcv_wnd_scale = this->getState()->rcv_wnd_scale;
+		conn->getState()->snd_wnd_scale = this->getState()->snd_wnd_scale;
 
-                msg->setControlInfo(openCmd);
-                msg->setContextPointer(conn);
+		conn->getState()->ts_support = this->getState()->ts_support;
+		conn->getState()->ts_enabled = this->getState()->ts_enabled;
+		conn->getState()->snd_initial_ts = this->getState()->snd_initial_ts;
+		conn->getState()->rcv_initial_ts = this->getState()->rcv_initial_ts;
+		// TIMESTAMP related variables
+		conn->getState()->sack_support = this->getState()->sack_support;
+		conn->getState()->sack_enabled = this->getState()->sack_enabled;
+		conn->getState()->last_ack_sent = 0;
+		conn->getState()->pipe = 0;
+		conn->getState()->dupacks = 0;
+		conn->getState()->sackedBytes = 0;
+		conn->getState()->sendQueueLimit = this->getState()->sendQueueLimit;
 
-                FSM_Goto(conn->fsm, TCP_S_INIT);
-
-                conn->processAppCommand(msg);
-                // newSubflow->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
-                FSM_Goto(conn->fsm, TCP_S_LISTEN);
-            }
-            else{
-
-                cMessage *msg = new cMessage("ActiveOPEN", TCP_C_OPEN_ACTIVE); // Client Side Connection
-
-                conn->localAddr =  IPvXAddress();
-                conn->localPort = -1;
-
-                // setup the subflow
-                openCmd->setLocalAddr(laddr);
-                openCmd->setLocalPort(localPort);
-                openCmd->setRemoteAddr(raddr);
-                openCmd->setRemotePort(remotePort);
-
-                msg->setControlInfo(openCmd);
-                msg->setContextPointer(conn);
-                FSM_Goto(conn->fsm, TCP_S_INIT);
-                conn->processAppCommand(msg);
-            }
-
-            // check some configuration stuff
-            conn->getState()->nagle_enabled = this->getState()->nagle_enabled;
-            conn->getState()->delayed_acks_enabled = this->getState()->delayed_acks_enabled;
-            conn->getState()->limited_transmit_enabled = this->getState()->limited_transmit_enabled;
-            conn->getState()->increased_IW_enabled = this->getState()->increased_IW_enabled;
-            conn->getState()->ws_support = this->getState()->ws_support;
-            conn->getState()->ws_enabled = this->getState()->ws_enabled;
-            conn->getState()->snd_ws = this->getState()->snd_ws;
-            conn->getState()->rcv_ws = this->getState()->rcv_ws;
-            conn->getState()->rcv_wnd_scale = this->getState()->rcv_wnd_scale;
-            conn->getState()->snd_wnd_scale = this->getState()->snd_wnd_scale;
-
-            conn->getState()->ts_support = this->getState()->ts_support;
-            conn->getState()->ts_enabled = this->getState()->ts_enabled;
-            conn->getState()->snd_initial_ts = this->getState()->snd_initial_ts;
-            conn->getState()->rcv_initial_ts = this->getState()->rcv_initial_ts;
-            // TIMESTAMP related variables
-            conn->getState()->sack_support = this->getState()->sack_support;
-            conn->getState()->sack_enabled = this->getState()->sack_enabled;
-
-            return conn;
+		return conn;
     }
     else return NULL;
 }
-#endif
 
+void TCPConnection::removeVectors(){
+	// remove old names
+	if(sndWndVector != NULL) delete sndWndVector;
+	sndWndVector = NULL;
+	if(rcvWndVector != NULL) delete rcvWndVector;
+	rcvWndVector = NULL;
+	if(rcvAdvVector != NULL) delete rcvAdvVector;
+	rcvAdvVector = NULL;
+	if(sndNxtVector != NULL) delete sndNxtVector;
+	sndNxtVector = NULL;
+	if(sndAckVector != NULL) delete sndAckVector;
+	sndAckVector = NULL;
+	if(rcvSeqVector != NULL) delete rcvSeqVector;
+	rcvSeqVector = NULL;
+	if(rcvAckVector != NULL) delete rcvAckVector;
+	rcvAckVector = NULL;
+	if(unackedVector != NULL) delete unackedVector;
+	unackedVector = NULL;
+	if(dupAcksVector != NULL) delete dupAcksVector;
+	dupAcksVector = NULL;
+	if(sndSacksVector != NULL) delete sndSacksVector;
+	sndSacksVector = NULL;
+	if(rcvSacksVector != NULL) delete rcvSacksVector;
+	rcvSacksVector = NULL;
+	if(rcvOooSegVector != NULL) delete rcvOooSegVector;
+	rcvOooSegVector = NULL;
+	if(tcpRcvQueueBytesVector != NULL) delete tcpRcvQueueBytesVector;
+	tcpRcvQueueBytesVector = NULL;
+	if(tcpRcvQueueDropsVector != NULL) delete tcpRcvQueueDropsVector;
+	tcpRcvQueueDropsVector = NULL;
+	if(pipeVector != NULL) delete pipeVector;
+	pipeVector = NULL;
+	if(sackedBytesVector != NULL) delete sackedBytesVector;
+	sackedBytesVector = NULL;
+}
+
+void TCPConnection::renameMPTCPVectors(char* cnt){
+	char name[255];
+	sprintf(name,"[subflow][%s] send window",cnt);
+	sndWndVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] receive window",cnt);
+	rcvWndVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] advertised window",cnt);
+	rcvAdvVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] sent seq",cnt);
+	sndNxtVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] sent ack",cnt);
+	sndAckVector = new cOutVector("sent ack");
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] rcvd seq",cnt);
+	rcvSeqVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] rcvd ack",cnt);
+	rcvAckVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] unacked bytes",cnt);
+	unackedVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] rcvd dupAcks",cnt);
+	dupAcksVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] pipe",cnt);
+	pipeVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] sent sacks",cnt);
+	sndSacksVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] rcvd sacks",cnt);
+	rcvSacksVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] rcvd oooseg",cnt);
+	rcvOooSegVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] rcvd sackedBytes",cnt);
+	sackedBytesVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] tcpRcvQueueBytes",cnt);
+	tcpRcvQueueBytesVector = new cOutVector(name);
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] tcpRcvQueueDrops",cnt);
+	tcpRcvQueueDropsVector = new cOutVector(name);
+}
+#endif
 TCPConnection *TCPConnection::cloneListeningConnection()
 {
     TCPConnection *conn = new TCPConnection(tcpMain,appGateIndex,connId);
@@ -376,6 +395,30 @@ TCPConnection *TCPConnection::cloneListeningConnection()
     conn->state->fork = true;
     conn->localAddr = localAddr;
     conn->localPort = localPort;
+
+#ifdef PRIVATE
+    // We don t need it, and it is overhead, but rename it when multipath
+    if(tcpMain->multipath){
+		static int _count_active_b = 0;
+		static int _count_passiv_b = 0;
+		bool active = false; // FIXME - Is other optien thinkable?
+		(active)?_count_active_b++:_count_passiv_b++;
+
+		char cnt[255];
+		int _cnt = 0;
+		if(flow!= NULL)
+			_cnt = this->flow->getSubflows()->size();
+
+		if(active)
+			sprintf(cnt,"A%i-%i",_cnt,_count_active_b);
+		else
+			sprintf(cnt,"A%i-%i",_cnt,_count_passiv_b);
+		// Clean up stuff
+		conn->removeVectors();
+		conn->renameMPTCPVectors(cnt);
+    }
+#endif
+
     FSM_Goto(conn->fsm, TCP_S_LISTEN);
 
     return conn;

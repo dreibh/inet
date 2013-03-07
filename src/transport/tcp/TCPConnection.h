@@ -412,6 +412,7 @@ class INET_API TCPConnection
     virtual void process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
 #ifdef PRIVATE
     virtual void process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
+
 #endif
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
@@ -492,6 +493,8 @@ class INET_API TCPConnection
 
 #ifdef PRIVATE
     virtual TCPConnection *cloneMPTCPConnection(bool active, uint64 token, IPvXAddress laddr, IPvXAddress raddr);
+    virtual void removeVectors();
+    virtual void renameMPTCPVectors(char* cnt);
 #endif
 
     /** Utility: send ACK */

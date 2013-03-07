@@ -50,8 +50,6 @@
 
 // TCP dependencies
 
-//#include "TCPConnection.h"
-#include "TCPMultipathQueueMngmt.h"
 #include "TCP.h"
 
 class TCP;

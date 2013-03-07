@@ -18,8 +18,8 @@
 
 #include "TCPConnection.h"
 #include "TCPMultipathFlow.h"
-#include "TCPSchedulerManager.h"
 #include "TCPSACKRexmitQueue.h"
+#include "TCPSchedulerManager.h"
 
 #if defined(__APPLE__)
 #define COMMON_DIGEST_FOR_OPENSSL
@@ -70,18 +70,24 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     local_token = 0;
     remote_token = 0;
     // Sending side
-    snd_una = 0;
-    snd_nxt = 0;
-    snd_wnd = 0;
+    mptcp_snd_una = 0;
+    mptcp_snd_nxt = 0;
+    mptcp_snd_wnd = 0;
     // Receiver Side
-    rcv_nxt = 0;
-    rcv_wnd = 0;
+    mptcp_rcv_nxt = 0;
+    mptcp_rcv_wnd = 0;
     isPassive = false;
     // Init the flow
     if (subflow->localPort > 0)
         _initFlow(subflow->localPort);
-    queue_mgr = new TCPMultipathQueueMngmt();
+
     sendEstablished = false;
+    // initial Receive Queue
+    mptcp_receiveQueue = check_and_cast<TCPMultipathReceiveQueue*>
+    						(createOne(subflow->getTcpMain()->par("multipath_receiveQueueClass")));
+    mptcp_receiveQueue->setFlow(this);
+    ordered = subflow->getTcpMain()->par("multipath_ordered");
+
 }
 
 /**
@@ -261,13 +267,6 @@ bool MPTCP_Flow::isSubflowOf(TCPConnection* subflow) {
     return false;
 }
 
-/**
- * TODO ???
- */
-int MPTCP_Flow::sendByteStream(TCPConnection* subflow) {
-    ASSERT(false);
-    return 0;
-}
 
 /**
  * Main Entry Point for outgoing MPTCP segments.
@@ -930,25 +929,49 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
 void MPTCP_Flow::sendToApp(cMessage* msg){
     bool found = false;
-    // Search for a subflow with a connection
+    // 1) Add data in MPTCP Receive Queue
+    // 	(Not here => This is done when we got DSS Information pcb->processDSS)
+    //  (Here is just the trigger if there is something to deliver on the app)
+    // 2) Search for a subflow with a connection to app
+    // 3) Check if Data in Order for Application
+    // 4) Send Data to Connection
     // TODO For first try we use the app of the first connection we have with an appGateIndex
-    // We have to think about what happend if we delete this
+    // We have to think about what will happen if we delete this
 
-    TCPConnection* con;
-    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-               i != subflow_list.end(); i++) {
-           TCP_subflow_t* entry = (*i);
-           if(!(entry->subflow->appGateIndex < 0)){
-               found = true;
-               con = entry->subflow;
-               break;
-           }
-       }
+    // 2) Search Connection
+	TCPConnection* con;
+	for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+		   i != subflow_list.end(); i++) {
+	   TCP_subflow_t* entry = (*i);
+	   if(!(entry->subflow->appGateIndex < 0)){
+		   found = true;
+		   con = entry->subflow;
+		   break;
+	   }
+	}
 
     if(found){
-       DEBUGPRINT("[MPTCP][SEND TO APP] Over App Gate Index %i%s",con->appGateIndex,"\0");
-       con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
+       DEBUGPRINT("[MPTCP][SEND TO APP] Over Conn ID %i App Gate Index %i%s",con->connId, con->appGateIndex,"\0");
+       // 3) OK we got a valid connection to an app, check if there data
+       if(ordered){	// Ordered is just for debugging, makes things more easy
+		   while ((msg=mptcp_receiveQueue->extractBytesUpTo(mptcp_rcv_nxt))!=NULL)
+		   {
+				// 4) Send Data to Connection
+				cPacket *mptcp_msg = NULL;
+				mptcp_msg->setKind(TCP_I_DATA);
+				TCPCommand *cmd = new TCPCommand();
+				cmd->setConnId(con->connId);
+				mptcp_msg->setControlInfo(cmd);
+				con->getTcpMain()->send(mptcp_msg, "appOut", con->appGateIndex);
+			}
+    	}
+       else{
+    	   con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
+       }
     }
+    else
+    	ASSERT(false);
+
     return;
 }
 void MPTCP_Flow::setSendQueueLimit(int limit){
@@ -1188,7 +1211,8 @@ MPTCP_PCB* MPTCP_Flow::getPCB() {
 }
 
 uint64_t MPTCP_Flow::getHighestCumSQN() {
-    return queue_mgr->getHighestReceivedSQN();
+	ASSERT(false);
+    return 0;
 }
 
 uint64_t MPTCP_Flow::getBaseSQN() {
@@ -1229,6 +1253,9 @@ uint64_t MPTCP_Flow::getSQN() {
 void MPTCP_Flow::setBaseSQN(uint64_t s) {
     DEBUGPRINT("[FLOW][INFO] INIT SQN from %ld to %ld", seq, s);
     ASSERT(seq == 0);
+    mptcp_receiveQueue->init(seq);
+    mptcp_snd_una = seq;
+    mptcp_rcv_nxt = seq;
     seq = s;
 }
 
@@ -1281,11 +1308,11 @@ void MPTCP_Flow::DEBUGprintStatus() {
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %lu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",
             this->getRemoteToken());
     DEBUGPRINT("[FLOW][STATUS] Sequence Number: %ld", seq);
-    DEBUGPRINT("[FLOW][STATUS] snd_una: %ld", snd_una);
-    DEBUGPRINT("[FLOW][STATUS] snd_nxt: %ld", snd_nxt);
-    DEBUGPRINT("[FLOW][STATUS] snd_wnd: %d", snd_wnd);
-    DEBUGPRINT("[FLOW][STATUS] rcv_nxt: %ld", rcv_nxt);
-    DEBUGPRINT("[FLOW][STATUS] rcv_wnd: %ld", rcv_wnd);
+    DEBUGPRINT("[FLOW][STATUS] snd_una: %ld", mptcp_snd_una);
+    DEBUGPRINT("[FLOW][STATUS] snd_nxt: %ld", mptcp_snd_nxt);
+    DEBUGPRINT("[FLOW][STATUS] snd_wnd: %d",  mptcp_snd_wnd);
+    DEBUGPRINT("[FLOW][STATUS] rcv_nxt: %ld", mptcp_rcv_nxt);
+    DEBUGPRINT("[FLOW][STATUS] rcv_wnd: %ld", mptcp_rcv_wnd);
 
     int cnt = 0;
     TCP_subflow_t* entry = NULL;
