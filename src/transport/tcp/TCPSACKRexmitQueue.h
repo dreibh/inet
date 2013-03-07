@@ -102,6 +102,8 @@ class INET_API TCPSACKRexmitQueue
      */
     virtual void enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum);
 
+    virtual uint32 getEndOfRegion(uint32 fromSeqNum);
+
     /**
      * Called when data sender received selective acknowledgments.
      * Tells the queue which bytes have been transmitted and SACKed,

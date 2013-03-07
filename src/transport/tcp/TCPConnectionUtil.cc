@@ -791,9 +791,9 @@ void TCPConnection::sendSegment(uint32 bytes)
     TCPSegment *tcpseg = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
     
     // if sack_enabled copy region of tcpseg to rexmitQueue
-    if (state->sack_enabled)
+    if (state->sack_enabled){
         rexmitQueue->enqueueSentData(state->snd_nxt, state->snd_nxt+bytes);
-    
+    }
     tcpseg->setAckNo(state->rcv_nxt);
     tcpseg->setAckBit(true);
     tcpseg->setWindow(updateRcvWnd());
@@ -1028,6 +1028,17 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     {
         ASSERT(bytes != 0);
 
+#ifdef PRIVATE
+        // Not every packet has the same length
+        // we have to figure out what is inside the SACK Queue
+
+        // SACK Fix
+        if (state->sack_enabled){
+            uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
+            ASSERT(offset != 0);
+            bytes = offset - state->snd_una;
+        }
+#endif
         sendSegment(bytes);
 
         if (!called_at_rto)
@@ -1046,6 +1057,8 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
             // retransmission of the same data, set HighRxt to the highest
             // sequence number in the retransmitted segment."
             state->highRxt = rexmitQueue->getHighestRexmittedSeqNum();
+            if (seqGreater(old_snd_nxt, state->snd_nxt))
+                 state->snd_nxt = old_snd_nxt;
         }
     }
 }
