@@ -1,1 +1,1 @@
-../../../src/inet -r 0 -u Cmdenv -c Default_Netperfmeter -n ../..:../../../simulations:../../../src omnetpp.ini
+../../../src/inet -r 0 -u Cmdenv -c Default_Netperfmeter -n ../..:../../../simulations:../../../src  omnetpp.ini > dat.log 2> err.log 

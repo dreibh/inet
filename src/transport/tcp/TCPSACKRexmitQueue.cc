@@ -131,7 +131,7 @@ void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
 //        tcpEV << "rexmitQ: rexmitQLength=" << getQueueLength() << "\n";
         return;
     }
-
+#ifndef PRIVATE // old
     if (seqLE(begin,fromSeqNum) && seqLE(toSeqNum,end))
     {
         // Search for region in queue!
@@ -146,7 +146,22 @@ void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
             i++;
         }
     }
-
+#else
+    if (seqLE(begin,fromSeqNum) && seqLE(toSeqNum,end))
+     {
+         // Search for region in queue!
+         RexmitQueue::iterator i = rexmitQueue.begin();
+         while (i!=rexmitQueue.end())
+         {
+             if (i->beginSeqNum == fromSeqNum && i->endSeqNum == toSeqNum)
+             {
+                 i->rexmitted = true; // set rexmitted bit
+                 found = true;
+             }
+             i++;
+         }
+     }
+#endif
     if (!found)
     {
         if(!seqLE(end,toSeqNum))

@@ -782,7 +782,13 @@ void TCPConnection::sendSegment(uint32 bytes)
     writeHeaderOptions(tcpseg_temp);
 
     uint options_len = tcpseg_temp->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
-
+    if(this->getTcpMain()->multipath){
+		if (state->sack_enabled){
+			 uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
+			 if(offset > 0)	// we know this segment.... send only segment size
+				 bytes = offset - state->snd_una;	// FIXME: In this case we overwrite for a retransmission the sending window
+		}
+    }
     while (bytes + options_len > state->snd_mss)
         bytes--;
     state->sentBytes = bytes;
@@ -1057,8 +1063,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
             // retransmission of the same data, set HighRxt to the highest
             // sequence number in the retransmitted segment."
             state->highRxt = rexmitQueue->getHighestRexmittedSeqNum();
-            if (seqGreater(old_snd_nxt, state->snd_nxt))
-                 state->snd_nxt = old_snd_nxt;
+
         }
     }
 }

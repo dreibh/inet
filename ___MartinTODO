@@ -27,5 +27,6 @@ Observations
 ========================
 - Options decrease performance on just one link, this could be a problem for Messages near on MSS. 
 - What happend on a round robin scheduler if it scheduled on base of messages or on base of mss, bit stream
-
+- We have to check up Handshake and many Connection up and downs ..http request
+- SACK is not working well ... Some Hotfixes included
 
