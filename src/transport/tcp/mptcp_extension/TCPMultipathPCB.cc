@@ -692,12 +692,15 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
  * FIXME Check Function
  */
 int MPTCP_PCB::_clearAll() {
-    // FIXME shutdown
-/*    if (flow != NULL) {
-        delete flow;
-        flow = NULL;
-    }
-    */
+	AllMultipathTCPVector_t::const_iterator it;
+	for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
+		TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
+		if(t->flow != NULL){
+			delete t->flow;
+			t->flow = NULL;
+		}
+	}
+	mptcp_flow_vector.clear();
     return 0;
 }
 

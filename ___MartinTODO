@@ -33,6 +33,7 @@ Nice To have
 ==================
 - Rename is not early enough, there are still some Vectores with I0-X
 ==> Could be ignored, because they just give the info for the first SYN
+==> delete all Objects on end
 
 What is new
 =================
