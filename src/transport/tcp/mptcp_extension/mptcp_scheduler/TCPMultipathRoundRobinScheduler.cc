@@ -83,7 +83,7 @@ uint32_t MPTCP_RoundRobinScheduler::getFreeSendBuffer(){
           uint32 alreadyQueued = conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq());
           abated += (conn->getState()->sendQueueLimit > alreadyQueued) ? conn->getState()->sendQueueLimit - alreadyQueued : 0;
     }
-    return (abated/subflow_list->size());
+    return (abated!=0)?(abated/subflow_list->size()):0;
 }
 
 void MPTCP_RoundRobinScheduler::_createMSGforProcess(cMessage *msg) {

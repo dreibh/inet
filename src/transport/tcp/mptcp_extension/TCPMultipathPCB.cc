@@ -187,8 +187,6 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
                 uint32_t first = option.getValues(0);
                 uint16_t sub = (first >> (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE));
 
-
-
                 // OK, it is a MPTCP Option, so lets figure out which subtype
                 switch(sub){
                     case MP_CAPABLE:
@@ -263,6 +261,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
                     break;
                 }
             }
+            subflow->flow->refreshSendMPTCPWindow();
         }
     }
     return 1;
@@ -455,11 +454,11 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         +-------------------------------+------------------------------+
         */
         //
-        DEBUGPRINT("[FLOW][DSS][STATUS] snd_una: %ld", subflow->flow->mptcp_snd_una);
-        DEBUGPRINT("[FLOW][DSS][STATUS] snd_nxt: %ld", subflow->flow->mptcp_snd_nxt);
-        DEBUGPRINT("[FLOW][DSS][STATUS] snd_wnd: %d",  subflow->flow->mptcp_snd_wnd);
-        DEBUGPRINT("[FLOW][DSS][STATUS] rcv_nxt: %ld", subflow->flow->mptcp_rcv_nxt);
-        DEBUGPRINT("[FLOW][DSS][STATUS] rcv_wnd: %ld", subflow->flow->mptcp_rcv_wnd);
+        DEBUGPRINT("[FLOW][RCV][DSS][STATUS] snd_una: %ld", subflow->flow->mptcp_snd_una);
+        DEBUGPRINT("[FLOW][RCV][DSS][STATUS] snd_nxt: %ld", subflow->flow->mptcp_snd_nxt);
+        DEBUGPRINT("[FLOW][RCV][DSS][STATUS] snd_wnd: %d",  subflow->flow->mptcp_snd_wnd);
+        DEBUGPRINT("[FLOW][RCV][DSS][STATUS] rcv_nxt: %ld", subflow->flow->mptcp_rcv_nxt);
+        DEBUGPRINT("[FLOW][RCV][DSS][STATUS] rcv_wnd: %ld", subflow->flow->mptcp_rcv_wnd);
 
         // The data itself will be pushed to the applicatio later during -> Flow sendtoapp
 
@@ -480,8 +479,6 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         // compare with old...  flow->getHighestCumSQN(); // can we free memory
 
         }
-
-
 
         return 0;
 }

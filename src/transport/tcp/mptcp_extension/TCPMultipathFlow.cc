@@ -287,7 +287,7 @@ bool MPTCP_Flow::isSubflowOf(TCPConnection* subflow) {
  * @param TCPConnection* The connection itself
  */
 int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
-        TCPStateVariables* subflow_state, TCPSegment *tcpseg,
+        TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
         TCPConnection* subflow) {
 
     // 1) Depending on state and segment type add multipath tcp options
@@ -376,7 +376,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
             DEBUGPRINT(
                     "[FLOW][OUT][SEND A MPTCP PACKET] DATA OUT Do SQN for subflow (%u) by utilizing DSS",
                     subflow->isSubflow);
-            _writeDSSHeaderandProcessSQN(t, subflow_state, tcpseg, subflow,
+            _writeDSSHeaderandProcessSQN(t, subflow_state, tcpseg, bytes, subflow,
                     &option);
         }
         break;
@@ -858,8 +858,8 @@ bool MPTCP_Flow::_prepareJoinConnection() {
  * @param TCPOption* A prepared TCP Option object
  */
 int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
-        TCPStateVariables* subflow_state, TCPSegment *tcpseg,
-        TCPConnection* subflow, TCPOption* option) {
+        TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
+        TCPConnection* subflow,  TCPOption* option) {
 
     /*
      The Data Sequence Mapping and the Data ACK are signalled in the Data
@@ -886,7 +886,53 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
      |  Data-level Length (2 octets) |      Checksum (2 octets)     |    // Data Sequence Mapping
      +-------------------------------+------------------------------+
      */
+	// Some Debug
 
+
+	DEBUGprintDSSInfo();
+	if(bytes < 1) return 0;
+	uint32 old_bytes = bytes;
+	// First calculate,w hat will be send
+	uint options_len = tcpseg->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
+
+	if (subflow->getState()->sack_enabled){
+		 uint32 offset =  subflow->rexmitQueue->getEndOfRegion(subflow->getState()->snd_una);
+		 if(offset > 0)	// we know this segment.... send only segment size
+			 bytes = offset - subflow->getState()->snd_una;	// FIXME: In this case we overwrite for a retransmission the sending window
+	}
+
+	while (bytes + options_len > subflow->getState()->snd_mss)
+		bytes--;
+
+	// we have also to divide the option length for MPTCP
+	//bytes -= 8; //  Fixme must be variable for 4 and 8
+	if((old_bytes > 0) && (bytes < 1)){
+		ASSERT("Uih...sending window is just less 8 bytes... if we want send, we have to fix this");
+	}
+	// OK, we are in sending state. Possible data are outstanding for MPTCP
+
+	// get Start DSS
+	uint64 dss_start = this->mptcp_snd_una;		// will be manipulated in process_dss of the pcb
+
+	// fill the dss seq nr map
+	// FIXME -> Perhaps it is enough to hold list like on SACK
+	uint32 snd_nxt_tmp = subflow->getState()->snd_nxt;
+	for(uint64 cnt = 0; cnt < bytes;cnt++,this->mptcp_snd_nxt++,snd_nxt_tmp++){
+		// check if there is any in the list
+		if(subflow->dss_dataMapofSubflow.find(this->mptcp_snd_nxt)==subflow->dss_dataMapofSubflow.end()){
+			// It is not so we can proceed
+			DSS_INFO* dss_info = (DSS_INFO*) malloc(sizeof(DSS_INFO));
+			dss_info->dss_seq = this->mptcp_snd_nxt;
+			dss_info->re_scheduled = 0;
+			dss_info->delivered = false;
+			subflow->dss_dataMapofSubflow[snd_nxt_tmp] = dss_info;
+		}
+		else ASSERT (false);
+	}
+	// this->mptcp_snd_nxt += bytesToSend;
+	uint64 dss_end = this->mptcp_snd_nxt-1;
+	if(dss_end == dss_start)
+		return 0;
     // Initiate some helper
     uint32 first_bits = 0x0;
     DEBUGPRINT("[MPTCP][PROCESS SQN] start%s", "\0");
@@ -906,18 +952,15 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     // Data-Level length Payload
     // Checksum if flag in MP_CAPABLE was set
 
-// Data Acknowledgments [Section 3.3.2] ==> OUT
+    // Data Acknowledgments [Section 3.3.2] ==> OUT
     // Note: if ACK is available we have to set the flag
     first_bits |= DSS_FLAG_A;
     // Switch: NED Parameter multipath_DSSDataACK8
     if (subflow->getTcpMain()->multipath_DSSDataACK8) {
         first_bits |= DSS_FLAG_a; // 8 or 4 Octets
     }
-    // Note:
-    // Data ACK fill with cum SQN
-    // TODO getNewCumSQN
 
-    //uint64_t cumSQN = queue_mgr->getCumSQN();   // First Step: Report every time a new cum SQN
+
     // Switch: NED Parameter multipath_DSSDataACK8
 
     // DSS size is variable ... 8...20
@@ -933,9 +976,54 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     tcpseg->setOptions(t, *option);
     t++;
 
+    DEBUGPRINT("[FLOW][SND][DSS][STATUS] snd_una: %ld", mptcp_snd_una);
+   	DEBUGPRINT("[FLOW][SND][DSS][STATUS] snd_nxt: %ld", mptcp_snd_nxt);
+   	DEBUGPRINT("[FLOW][SND][DSS][STATUS] snd_wnd: %d",  mptcp_snd_wnd);
+   	DEBUGPRINT("[FLOW][SND][DSS][STATUS] rcv_nxt: %ld", mptcp_rcv_nxt);
+   	DEBUGPRINT("[FLOW][SND][DSS][STATUS] rcv_wnd: %ld", mptcp_rcv_wnd);
+
     return 0;
 }
+void MPTCP_Flow::DEBUGprintDSSInfo() {
+	TCP_subflow_t* entry = NULL;
+	for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+			i != subflow_list.end(); i++) {
+		entry = (*i);
+		TCPMultipathDSSStatus::const_iterator it;
+		DEBUGPRINT("[FLOW][STATUS][DSS] DSS MAP SIZE %d",entry->subflow->dss_dataMapofSubflow.size());
+//		for (it = entry->subflow->dss_dataMapofSubflow.begin(); it != entry->subflow->dss_dataMapofSubflow.end(); ++it) {
+//			uint32 subflow_seq = it->first;
+//			DSS_INFO* dss_info = it->second;
+//			DEBUGPRINT("[FLOW][STATUS][DSS] Subflow SEQ: %d -> DSS SEQ %ld", subflow_seq, dss_info->dss_seq);
+//		}
+	}
+}
+void MPTCP_Flow::refreshSendMPTCPWindow(){
+	TCP_subflow_t* entry = NULL;
+	for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+			i != subflow_list.end(); i++) {
+		entry = (*i);
+		if(entry->subflow->dss_dataMapofSubflow.empty())
+			continue;	// Nothing to do
 
+		// Clear sending memory (DSS MAP)
+		TCPConnection* conn = entry->subflow;
+		uint32 cum = entry->subflow->getState()->snd_una-1;
+		TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.find(cum);
+		while(( it != conn->dss_dataMapofSubflow.end()) &&
+				(cum != entry->subflow->getState()->snd_una)){
+			uint32 subflow_seq = it->first;
+			DSS_INFO* dss_info = it->second;
+//			DEBUGPRINT("[FLOW][STATUS][DSS][REMOVE] SEQ: %d -> DSS SEQ %ld", subflow_seq, dss_info->dss_seq);
+			delete dss_info;
+			conn->dss_dataMapofSubflow.erase(cum);
+			cum--;
+			it = conn->dss_dataMapofSubflow.find(cum);
+		}
+
+
+	}
+}
 void MPTCP_Flow::sendToApp(cMessage* msg){
     bool found = false;
     // 1) Add data in MPTCP Receive Queue
@@ -1261,11 +1349,12 @@ uint64_t MPTCP_Flow::getSQN() {
 }
 void MPTCP_Flow::setBaseSQN(uint64_t s) {
     DEBUGPRINT("[FLOW][INFO] INIT SQN from %ld to %ld", seq, s);
-    ASSERT(seq == 0);
+
+    seq = s;
     mptcp_receiveQueue->init(seq);
     mptcp_snd_una = seq;
+    mptcp_snd_nxt = seq +1;
     mptcp_rcv_nxt = seq;
-    seq = s;
 }
 
 void MPTCP_Flow::setRemoteToken(uint32_t t) {

@@ -40,6 +40,15 @@ class TCPReceiveQueue;
 class TCPAlgorithm;
 class MPTCP_PCB;
 class MPTCP_Flow;
+
+
+typedef struct _DSS_INFO{
+	uint64 dss_seq;
+	int re_scheduled;
+	bool delivered;
+} DSS_INFO;
+
+typedef std::map<uint32,DSS_INFO*> TCPMultipathDSSStatus;
 #endif
 //
 // TCP FSM states
@@ -346,6 +355,7 @@ class INET_API TCPConnection
     uint32 randomB; 			// used to store randam of MPTCP MP_JOIN
     unsigned char MAC64[64];	// Container for truncated MAC
     unsigned char MAC160[160];	// Container for 160 bits MAC
+    TCPMultipathDSSStatus dss_dataMapofSubflow;
 #endif
 
   protected:
@@ -479,8 +489,11 @@ class INET_API TCPConnection
     virtual void readHeaderOptions(TCPSegment *tcpseg);
 
     /** Utility: writeHeaderOptions (Currently only EOL, NOP, MSS, WS, SACK_PERMITTED, SACK and TS are implemented) */
+#ifdef PRIVATE
+    virtual TCPSegment writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 bytes);
+#else
     virtual TCPSegment writeHeaderOptions(TCPSegment *tcpseg);
-
+#endif
     /** Utility: adds SACKs to segments header options field */
     virtual TCPSegment addSacks(TCPSegment *tcpseg);
 
@@ -493,6 +506,7 @@ class INET_API TCPConnection
 
 #ifdef PRIVATE
     virtual TCPConnection *cloneMPTCPConnection(bool active, uint64 token, IPvXAddress laddr, IPvXAddress raddr);
+
     virtual void removeVectors();
     virtual void renameMPTCPVectors(char* cnt);
 #endif

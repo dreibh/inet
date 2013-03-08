@@ -19,6 +19,7 @@
 
 class TCPMultipathReceiveQueue;
 
+
 // ###############################################################################################################
 //                                                  MULTIPATH TCP
 //                                                      FLOW
@@ -51,10 +52,11 @@ class INET_API MPTCP_Flow
     // for 2 -> Omnet Interface
     void sendToApp(cMessage* msg);
     // for 1 & 3
-    int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, TCPConnection* subflow);
+    int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32, TCPConnection* subflow);
     // for 6
     TCPConnection* schedule(TCPConnection* save, cMessage* msg);
 
+    void refreshSendMPTCPWindow();
     //######################################################
     // Security
     void initKeyMaterial(TCPConnection* subflow);
@@ -87,7 +89,7 @@ class INET_API MPTCP_Flow
     // Debug
     void DEBUGprintStatus();
     void DEBUGprintMPTCPFlowStatus();
-
+    void DEBUGprintDSSInfo();
 
     //######################################################
     // Draft stuff
@@ -133,7 +135,7 @@ class INET_API MPTCP_Flow
     TCPConnection* subflow, TCPOption* option);
     int _writeJoinHandshakeHeader(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg,
               TCPConnection* subflow, TCPOption* option);
-    int _writeDSSHeaderandProcessSQN(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg,
+    int _writeDSSHeaderandProcessSQN(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
               TCPConnection* subflow, TCPOption* option);
     bool _prepareJoinConnection();
 

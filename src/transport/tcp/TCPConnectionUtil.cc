@@ -697,7 +697,11 @@ void TCPConnection::sendSyn()
     state->snd_max = state->snd_nxt = state->iss+1;
 
     // write header options
+#ifdef PRIVATE
+    writeHeaderOptionsWithMPTCP(tcpseg, 0);
+#else
     writeHeaderOptions(tcpseg);
+#endif
 
     // send it
     sendToIP(tcpseg);
@@ -717,7 +721,11 @@ void TCPConnection::sendSynAck()
     state->snd_max = state->snd_nxt = state->iss+1;
 
     // write header options
+#ifdef PRIVATE
+    writeHeaderOptionsWithMPTCP(tcpseg, 0);
+#else
     writeHeaderOptions(tcpseg);
+#endif
 
     // send it
     sendToIP(tcpseg);
@@ -777,7 +785,11 @@ void TCPConnection::sendAck()
     tcpseg->setWindow(updateRcvWnd());
 
     // write header options
+#ifdef PRIVATE
+    writeHeaderOptionsWithMPTCP(tcpseg, 0);
+#else
     writeHeaderOptions(tcpseg);
+#endif
     // send it
     sendToIP(tcpseg);
 
@@ -822,7 +834,12 @@ void TCPConnection::sendSegment(uint32 bytes)
     //     bytes + options_len <= snd_mss
     TCPSegment *tcpseg_temp = createTCPSegment(NULL);
     tcpseg_temp->setAckBit(true); // needed for TS option, otherwise TSecr will be set to 0
+#ifdef PRIVATE
+    writeHeaderOptionsWithMPTCP(tcpseg_temp, bytes);
+#else
     writeHeaderOptions(tcpseg_temp);
+#endif
+
 
     uint options_len = tcpseg_temp->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
     if(this->getTcpMain()->multipath){
@@ -1426,8 +1443,13 @@ bool TCPConnection::processSACKOption(TCPSegment *tcpseg, const TCPOption& optio
     return true;
 }
 
+
+#ifdef PRIVATE
+TCPSegment TCPConnection::writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 bytes){
+#else
 TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 {
+#endif
     TCPOption option;
     uint t = 0;
 
@@ -1630,7 +1652,6 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 
         // TODO delegate to TCPAlgorithm as well -- it may want to append additional options
     }
-
 #ifdef PRIVATE
 	if(tcpMain->multipath){
 		/**
@@ -1646,7 +1667,8 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 		    tcpEV << "!! OK we should write header information without PCB..." << endl;
 		    tcpMain->mptcp_pcb = new MPTCP_PCB(this->connId, this->appGateIndex,  this);
 		}
-		flow->writeMPTCPHeaderOptions(t,state,tcpseg,this);
+
+		flow->writeMPTCPHeaderOptions(t,state,tcpseg, bytes, this);
 
 	}
 	else{
