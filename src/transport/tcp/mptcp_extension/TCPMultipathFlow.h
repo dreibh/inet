@@ -102,6 +102,7 @@ class INET_API MPTCP_Flow
     uint64_t mptcp_rcv_nxt;                       // B.1.2
     uint64_t mptcp_rcv_wnd;                       // B.1.2
     uint64_t seq;                           	  // start seq-no generated after getting keys for the first flow
+    uint64_t start_seq;
   protected:
 
     bool checksum;

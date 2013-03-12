@@ -958,8 +958,14 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     if (state->ts_enabled)
         effectiveMaxBytesSend -= TCP_OPTION_TS_SIZE;
 #ifdef PRIVATE
-    if(this->isSubflow)
-        effectiveMaxBytesSend -= 8;    // for Multipath
+    if(this->isSubflow){
+        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
+        if(this->getTcpMain()->multipath_DSSSeqNo8)
+          dss_option_offset += 4;
+        if(this->getTcpMain()->multipath_DSSDataACK8)
+          dss_option_offset += 4;
+        effectiveMaxBytesSend -= dss_option_offset;
+    }
 #endif
 
     // last segment could be less than state->snd_mss (or less than snd_mss-TCP_OPTION_TS_SIZE is using TS option)
@@ -2106,8 +2112,14 @@ void TCPConnection::setPipe()
     if (state->ts_enabled)
         shift -= TCP_OPTION_TS_SIZE;
 #ifdef PRIVATE
-    if(this->isSubflow)
-        shift -= 8;    // for Multipath
+    if(this->isSubflow){ // FIXME
+        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
+        if(this->getTcpMain()->multipath_DSSSeqNo8)
+          dss_option_offset += 4;
+        if(this->getTcpMain()->multipath_DSSDataACK8)
+          dss_option_offset += 4;
+       shift -=  dss_option_offset;
+    }
 #endif
     // RFC 3517, page 3: "This routine traverses the sequence space from HighACK to HighData
     // and MUST set the "pipe" variable to an estimate of the number of
@@ -2166,8 +2178,14 @@ uint32 TCPConnection::nextSeg()
     if (state->ts_enabled)
         shift -= TCP_OPTION_TS_SIZE;
 #ifdef PRIVATE
-    if(this->isSubflow)
-        shift -= 8;    // for Multipath
+    if(this->isSubflow){ // FIXME
+        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
+        if(this->getTcpMain()->multipath_DSSSeqNo8)
+          dss_option_offset += 4;
+        if(this->getTcpMain()->multipath_DSSDataACK8)
+          dss_option_offset += 4;
+       shift -=  dss_option_offset;
+    }
 #endif
     // RFC 3517, page 5: "(1) If there exists a smallest unSACKed sequence number 'S2' that
     // meets the following three criteria for determining loss, the

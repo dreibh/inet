@@ -90,10 +90,10 @@ typedef vector <TCP_subflow_t*>         TCP_SubFlowVector_t;
 enum MPTCP_SUBTYPES {MP_CAPABLE=0x0000, MP_JOIN=0x0001, MP_DSS=0x0002, MP_ADD_ADDR=0x0003, MP_REMOVE_ADDR=0x0004, MP_PRIO=0x0005, MP_FAIL=0x0006};
 
 // DSS Flags -> Section 3.3
-const uint8_t DSS_FLAG_A = 0x1;		// Data ACK present
-const uint8_t DSS_FLAG_a = 0x2;		// Data ACK is 8 octets
-const uint8_t DSS_FLAG_M = 0x4;		// Data Sequence Number, Subflow Sequence Number, Data-level  Length, and Checksum present
-const uint8_t DSS_FLAG_m = 0x8;		// Data SQN is 8 Octets
+const uint8_t DSS_FLAG_A = 0x01;		// Data ACK present
+const uint8_t DSS_FLAG_a = 0x02;		// Data ACK is 8 octets
+const uint8_t DSS_FLAG_M = 0x04;		// Data Sequence Number, Subflow Sequence Number, Data-level  Length, and Checksum present
+const uint8_t DSS_FLAG_m = 0x08;		// Data SQN is 8 Octets
 
 const uint16_t DSS_FLAG_F = 0x10;	// FIN FLAG
 
@@ -102,7 +102,7 @@ const uint16_t DSS_FLAG_F = 0x10;	// FIN FLAG
 //                                                   DEBUG STUFF
 // ###############################################################################################################
 #ifdef PRIVATE_DEBUG
-    static char DEBUGBUF[255];
+static char DEBUGBUF[255];
 // Defines for debugging (Could be removed)
 #define WHERESTR  "\n[MPTCP][file %s, line %u]: "
 #define WHEREARG  __FILE__, __LINE__
@@ -134,8 +134,11 @@ const unsigned int MP_C_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_V
 const unsigned int MP_RESERVED_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_VERSION_POS - MP_C_POS - 4;
 const unsigned int MP_S_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_VERSION_POS - MP_C_POS - MP_RESERVED_POS - 1;
 
+
+const unsigned int MP_DSS_OPTIONLENGTH_4BYTE = 20;
+
 // Helper to set state for a subflow
-#define MPTCP_FSM(state) setState(state); fprintf(stderr,"\n[FSM] CHANGE STATE %u line %u\n",state,__LINE__);
+#define MPTCP_FSM(state) setState(state); // fprintf(stderr,"\n[FSM] CHANGE STATE %u line %u\n",state,__LINE__);
 
 
 

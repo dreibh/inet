@@ -44,9 +44,16 @@ class MPTCP_Flow;
 
 typedef struct _DSS_INFO{
 	uint64 dss_seq;
+	uint32 seq_offset;
 	int re_scheduled;
 	bool delivered;
+	bool section_end;
 } DSS_INFO;
+
+typedef struct _DSS_BASE_INFO{
+    uint64 dss_seq;
+    uint32 subflow_seq;
+} DSS_BASE_INFO;
 
 typedef std::map<uint32,DSS_INFO*> TCPMultipathDSSStatus;
 #endif
@@ -177,6 +184,7 @@ class INET_API TCPStateVariables : public cPolymorphic
 
     // send sequence number variables (see RFC 793, "3.2. Terminology")
     uint32 snd_una;      // send unacknowledged
+
     uint32 snd_nxt;      // send next (drops back on retransmission)
     uint32 snd_max;      // max seq number sent (needed because snd_nxt is re-set on retransmission)
     uint32 snd_wnd;      // send window
@@ -355,7 +363,9 @@ class INET_API TCPConnection
     uint32 randomB; 			// used to store randam of MPTCP MP_JOIN
     unsigned char MAC64[64];	// Container for truncated MAC
     unsigned char MAC160[160];	// Container for 160 bits MAC
+
     TCPMultipathDSSStatus dss_dataMapofSubflow;
+    DSS_BASE_INFO         base_una_dss_info;
 #endif
 
   protected:

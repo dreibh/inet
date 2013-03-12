@@ -19,8 +19,9 @@ Next
 Open issues:
 =================
 - Handshake
-
 - filling sending Queue with netperfmeter (not optimal)
+- Option length handling when it is not an multipath connection and data is enqueued 
+- For Options there is a bug, by shift of 16 bit
 
 Features
 =================
@@ -45,4 +46,11 @@ Observations
 - What happend on a round robin scheduler if it scheduled on base of messages or on base of mss, bit stream
 - We have to check up Handshake and many Connection up and downs ..http request
 - SACK is not working well ... Some Hotfixes included
+- Die DSS müssen ja nicht sofort mitgesendet werden, was passiert wenn ich hier optimiere....
+
+
+Work for SHKs
+=======================
+FIXME -> I have a shift of 16 bit during use of  option->setValues
+FIXME -> check module destructor - > clean Modules 
 

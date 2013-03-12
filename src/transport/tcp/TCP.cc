@@ -199,8 +199,8 @@ void TCP::handleMessage(cMessage *msg)
             {
 #ifdef PRIVATE
                // We have to be realy sure, if the connection is the connection we look for
-                fprintf(stderr,"\n[TCP][NEW SEG] from  %s:%d to %s:%d\n", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(),tcpseg->getDestPort());
-                fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
+//                fprintf(stderr,"\n[TCP][NEW SEG] from  %s:%d to %s:%d\n", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(),tcpseg->getDestPort());
+//                fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
 
 #endif
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
@@ -471,7 +471,7 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
         }else{
 #ifdef PRIVATE
             if(this->multipath){
-                fprintf(stderr,"\n We know it is duplicated, it is multipath\n");
+//                fprintf(stderr,"\n We know it is duplicated, it is multipath\n");
                 return;
             }
             else
@@ -481,7 +481,7 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
         }
     }
 #ifdef PRIVATE
-    fprintf(stderr,"\[TCP][NEW CONNECTION]nAdd Address in tcpConnMap:  %s:%d to %s:%d\n", localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
+    // fprintf(stderr,"\[TCP][NEW CONNECTION]nAdd Address in tcpConnMap:  %s:%d to %s:%d\n", localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
 #endif
     // then insert it into tcpConnMap
     tcpConnMap[key] = conn;

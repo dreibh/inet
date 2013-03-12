@@ -50,13 +50,13 @@ void TCPSACKRexmitQueue::info()
     RexmitQueue::iterator i = rexmitQueue.begin();
     uint j = 1;
 #ifdef PRIVATE
-    fprintf(stderr,"\t\t[TCP]][SACK][CONNECTION] local:  %s:%d remote %s:%d RexmitQueue Size in INFO:%i\n", conn->localAddr.str().c_str(), conn->localPort, conn->remoteAddr.str().c_str(), conn->remotePort,rexmitQueue.size());
+ //   fprintf(stderr,"\t\t[TCP]][SACK][CONNECTION] local:  %s:%d remote %s:%d RexmitQueue Size in INFO:%i\n", conn->localAddr.str().c_str(), conn->localPort, conn->remoteAddr.str().c_str(), conn->remotePort,rexmitQueue.size());
 #endif
     while (i!=rexmitQueue.end())
     {
         tcpEV << j << ". region: [" << i->beginSeqNum << ".." << i->endSeqNum << ") \t sacked=" << i->sacked << "\t rexmitted=" << i->rexmitted << "\n";
 #ifdef PRIVATE
-        fprintf(stderr,"\t\t[TCP]][SACK][IN] Rexmit Queue-Entry %i \tregion[%i..%i] %i sacked=%i rexmitted=%i\n",j, i->beginSeqNum,i->endSeqNum,(i->endSeqNum-i->beginSeqNum),i->sacked, i->rexmitted);
+ //       fprintf(stderr,"\t\t[TCP]][SACK][IN] Rexmit Queue-Entry %i \tregion[%i..%i] %i sacked=%i rexmitted=%i\n",j, i->beginSeqNum,i->endSeqNum,(i->endSeqNum-i->beginSeqNum),i->sacked, i->rexmitted);
 #endif
         i++;
         j++;
@@ -87,7 +87,7 @@ void TCPSACKRexmitQueue::discardUpTo(uint32 seqNum)
     while (i!=rexmitQueue.end()) // discard/delete regions from rexmit queue, which have been acked
     {
         if (seqLess(i->beginSeqNum,begin)){
-            fprintf(stderr,"\t\t[TCP]][SACK][DEL] Rexmit Queue-Entry %i \tregion[%i..%i] step %i sacked=%i rexmitted=%i\n",j, i->beginSeqNum,i->endSeqNum,(i->endSeqNum-i->beginSeqNum),i->sacked, i->rexmitted);
+//            fprintf(stderr,"\t\t[TCP]][SACK][DEL] Rexmit Queue-Entry %i \tregion[%i..%i] step %i sacked=%i rexmitted=%i\n",j, i->beginSeqNum,i->endSeqNum,(i->endSeqNum-i->beginSeqNum),i->sacked, i->rexmitted);
             i = rexmitQueue.erase(i);
         }
         else
@@ -95,7 +95,7 @@ void TCPSACKRexmitQueue::discardUpTo(uint32 seqNum)
         j++;
     }
 #ifdef PRIVATE
-    fprintf(stderr,"\t\t[TCP]][SACK][QUEUE] local: %s:%d remote %s:%d rexmitQueue size %i\n", conn->localAddr.str().c_str(), conn->localPort, conn->remoteAddr.str().c_str(), conn->remotePort, rexmitQueue.size());
+//    fprintf(stderr,"\t\t[TCP]][SACK][QUEUE] local: %s:%d remote %s:%d rexmitQueue size %i\n", conn->localAddr.str().c_str(), conn->localPort, conn->remoteAddr.str().c_str(), conn->remotePort, rexmitQueue.size());
 #endif
     // update begin and end of rexmit queue
     if (rexmitQueue.empty()){
@@ -382,7 +382,7 @@ uint32 TCPSACKRexmitQueue::getNumOfDiscontiguousSacks(uint32 seqNum)
     uint32 max = 0;
     uint32 intern = 0;
     if (rexmitQueue.empty() || seqGE(seqNum,end))
-        return counter; fprintf(stderr,"\nEND OF QUEUE II: %i",end);
+        return counter;
 
     RexmitQueue::iterator i = rexmitQueue.begin();
     while (i!=rexmitQueue.end() && seqLess(i->beginSeqNum, seqNum)) // search for seqNum

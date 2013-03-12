@@ -452,7 +452,6 @@ void NetPerfMeter::handleMessage(cMessage* msg)
                static int cnt = 0;
                static int bytes_sent = 0;
                bytes_sent += tcpCommand->getUserId();
-               fprintf(stderr,"[NETPERFMETER][INFO]] Try to send %i, in total %i by %i sendcalls \n",tcpCommand->getUserId(), bytes_sent, cnt++);
 #endif
             }
            }

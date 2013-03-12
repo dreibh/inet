@@ -90,14 +90,6 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     tcpEV << "Seg arrived: ";
     printSegmentBrief(tcpseg);
     tcpEV << "TCB: " << state->info() << "\n";
-#ifdef PRIVATE //debug
-    if((tcpseg->getSequenceNo() == 589031) && (tcpseg->getAckNo() == 574)){
-        fprintf(stderr,"Searched for Packet");
-    }
-    fprintf(stderr,"\n[TCP][IN] Receive Data from  %s:%d to %s:%d\n", remoteAddr.str().c_str(),remotePort, localAddr.str().c_str(),localPort);
-    fprintf(stderr,"[TCP][IN] Receive Data Seq: %i\t ACK-No: %i\n", tcpseg->getSequenceNo(), tcpseg->getAckNo());
-#endif
-
 
     if (rcvSeqVector) rcvSeqVector->record(tcpseg->getSequenceNo());
     if (rcvAckVector) rcvAckVector->record(tcpseg->getAckNo());
@@ -585,6 +577,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                         state->ack_now = true; // although not mentioned in [Stevens, W.R.: TCP/IP Illustrated, Volume 2, page 861] seems like we have to set ack_now
                         tcpEV << "All segments arrived up to the FIN segment, advancing rcv_nxt over the FIN\n";
                         state->rcv_nxt = state->rcv_fin_seq+1;
+
                         // state transitions will be done in the state machine, here we just set
                         // the proper event code (TCP_E_RCV_FIN or TCP_E_RCV_FIN_ACK)
                         event = TCP_E_RCV_FIN;
@@ -660,6 +653,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
             // advance rcv_nxt over FIN now
             tcpEV << "FIN arrived, advancing rcv_nxt over the FIN\n";
             state->rcv_nxt++;
+
             // state transitions will be done in the state machine, here we just set
             // the proper event code (TCP_E_RCV_FIN or TCP_E_RCV_FIN_ACK)
             event = TCP_E_RCV_FIN;
@@ -1159,13 +1153,7 @@ TCPEventCode TCPConnection::processRstInSynReceived(TCPSegment *tcpseg)
 bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 {
     tcpEV2 << "Processing ACK in a data transfer state\n";
-#ifdef PRIVATE //debug
-    if((tcpseg->getSequenceNo() == 574) && (tcpseg->getAckNo() == 668011)){
-        fprintf(stderr,"Searched for Packet");
-    }
-    fprintf(stderr,"\n[TCP][IN] Receive ACK from  %s:%d to %s:%d\n", remoteAddr.str().c_str(),remotePort, localAddr.str().c_str(),localPort);
-    fprintf(stderr,"[TCP][IN] Receive ACK Seq: %i\t ACK-No: %i\n", tcpseg->getSequenceNo(), tcpseg->getAckNo());
-#endif
+
     //
     //"
     //  If SND.UNA < SEG.ACK =< SND.NXT then, set SND.UNA <- SEG.ACK.
@@ -1238,6 +1226,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
         // ack in window.
         uint32 old_snd_una = state->snd_una;
         state->snd_una = tcpseg->getAckNo();
+
         if (unackedVector) unackedVector->record(state->snd_max - state->snd_una);
 
         // after retransmitting a lost segment, we may get an ack well ahead of snd_nxt

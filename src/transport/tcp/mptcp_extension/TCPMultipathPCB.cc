@@ -25,7 +25,7 @@ AllMultipathTCPVector_t MPTCP_PCB::mptcp_flow_vector; // TODO This is the first 
  * Constructor
  */
 MPTCP_PCB::MPTCP_PCB(){
-    ASSERT(false);
+    ASSERT(false && "EMPTY CONSTRUCTOR NOT ALLOWED");
 }
 
 /**
@@ -58,7 +58,7 @@ MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
         t->connID = connId;
         addMPTCPFlow(t);
     }
-    ASSERT(subflow->flow!=NULL);
+    ASSERT(subflow->flow!=NULL && "SUBFLOW SHOULD NEVER BE NULL HERE");
 }
 /**
  * De-Constructor
@@ -117,12 +117,12 @@ MPTCP_PCB* MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex,
             DEBUGPRINT("ESTABLISHED%s","\0");
             break;
         default:
-            ASSERT(false);
+            ASSERT(false && "STATE IS NOT DEFINED");
             break;
         }
 
     }
-    ASSERT(tmp->_processSegment(connId, subflow, tcpseg));
+    ASSERT(tmp->_processSegment(connId, subflow, tcpseg) && "SOMETHING WENT WRONG IN PROCEEDING THE SEGMENT");
 
     DEBUGPRINT("End Process Segment <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%s","\n");
     return tmp;
@@ -141,7 +141,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
     TCPSegment *tcpseg) {
     // We are here; so it must be Multipath TCP Stack
     if (!subflow->getTcpMain()->multipath) {
-        ASSERT(true); // FIXME Only for testing
+        ASSERT(false && "UPS...We are not in Multipath -> What is wrong here...?"); // FIXME Only for testing
         return 0;
     }
     if ((!tcpseg->getSynBit()) && (tcpseg->getAckBit())){
@@ -152,6 +152,10 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
     }
     if ((tcpseg->getSynBit()) && (tcpseg->getAckBit())){
         DEBUGPRINT("TCP SYN ACK%s","\0");
+    }
+
+    if (tcpseg->getFinBit()){
+        DEBUGPRINT("TCP FIN SEND%s","\0");
     }
     /**
      * CASE "NEW MPTCP FLOW" or "NO MPTCP FLOW"
@@ -169,7 +173,6 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
         // In every case we expect a MP_CAPABEL Option
         // FIXME check Option, if not exist return
         if (tcpseg->getHeaderLength() <= TCP_HEADER_OCTETS) {
-            ASSERT(true);
             return 0; // No MPTCP Options
         }
         // lets parse the options
@@ -180,7 +183,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
 
             if (kind == TCPOPTION_MPTCP) {
                 if(option.getLength() < 4) {
-                    ASSERT(true); //should never be happen
+                    ASSERT(false && "We need some more options for multipath"); //should never be happen
                     return 0;
                 }
 
@@ -199,11 +202,10 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
                         break;
                     case MP_DSS:
                         DEBUGPRINT("[MPTCP][IDLE][MPTCP OPTION][IN] MP_DSS%s","\0");
-                        //FIXME ASSERT(false);
                         break;
                     default:
                         DEBUGPRINT("[MPTCP][IDLE][MPTCP OPTION][IN] Not supported%s","\0");
-                        ASSERT(false);
+                        ASSERT(false && "MPTCP State not supported");
                         break;
                 }
                 break;
@@ -222,7 +224,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
             {
                 DEBUGPRINT("[MPTCP][IDLE][MPTCP OPTION][IN] process%s","\0");
                 if(option.getLength() < 4) {
-                    ASSERT(true); //should never be happen
+                    ASSERT(false && "We need some more options..."); //should never be happen
                     return 0;
                 }
 
@@ -236,7 +238,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
                         _processMP_CAPABLE(connId, subflow, tcpseg, &option);
                     }
                     else
-                        ASSERT(false);
+                        ASSERT(false && "This state is currently not allowed");
                     break;
                 case MP_JOIN:
                     // Subtype MP_JOIN
@@ -257,7 +259,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
                     break;
                 default:
                     DEBUGPRINT("[MPTCP][ESTABLISHED][MPTCP OPTION][IN] Not supported%s","\0");
-                    ASSERT(false);
+                    ASSERT(false && "This MPTCP Message Type is not supported");
                     break;
                 }
             }
@@ -274,7 +276,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
 int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option) {
 
     if (option->getValuesArraySize() < 3) {
-        ASSERT(true);
+        ASSERT(false && "We need some more options...");
         return 0; //should never be happen
     }
     // In every case we expect a sender key
@@ -291,7 +293,7 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
     } else if (tcpseg->getAckBit()) {
         // ACK: We aspect the sender key in the MP_CAPABLE Option
         if (option->getValuesArraySize() < 5) {
-            ASSERT(false);
+            ASSERT(false && "we need some more options..." );
             return 0; //should never be happen
         }
 
@@ -319,7 +321,7 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
          * 2) Remove this Working Flow from List
          */
 
-        ASSERT(subflow->flow!=NULL);
+        ASSERT(subflow->flow!=NULL && "Why is the subflow NULL?");
 
         // OK new stateful MPTCP flow, calculate the token and Start-SQN
 
@@ -437,6 +439,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
  */
 int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option){
         DEBUGPRINT("[MPTCP][ESTABLISHED][DSS] process MPTCP Option DSS%s","\0");
+        // Note: it does not matter on which flow the data comes in.... we have the flow, so proceed...
         /*
         DSS packet format:
         1                   2                   3
@@ -444,7 +447,7 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         +---------------+---------------+-------+----------------------+
         |     Kind      |    Length     |Subtype| (reserved) |F|m|M|a|A|    // Flags defined in Header
         +---------------+---------------+-------+----------------------+
-        |           Data ACK (4 or 8 octets, depending on flags)       |    // Data Acknowledgements
+        |           Data ACK (4 or 8 octets, depending on flags)       |    // Data Acknowledgments
         +--------------------------------------------------------------+
         |   Data Sequence Number (4 or 8 octets, depending on flags)   |    // Data Sequence Mapping
         +--------------------------------------------------------------+
@@ -460,7 +463,16 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         DEBUGPRINT("[FLOW][RCV][DSS][STATUS] rcv_nxt: %ld", subflow->flow->mptcp_rcv_nxt);
         DEBUGPRINT("[FLOW][RCV][DSS][STATUS] rcv_wnd: %ld", subflow->flow->mptcp_rcv_wnd);
 
-        // The data itself will be pushed to the applicatio later during -> Flow sendtoapp
+        // The data itself will be pushed to the application later during -> Flow sendtoapp
+        // 1) read data of packet
+        // 2) enqueue data to receive queue
+        // 3) proceed data in sendtoapp (we don t have to check, if still the subflow is not in sync)
+
+        // some checks
+        if(option->getValuesArraySize() < 4){
+            ASSERT(false && "We need some more options...");
+        }
+
 
         // Data Sequence Mapping [Section 3.3.1] ==> IN
         // TODO check for Flag M
@@ -491,7 +503,7 @@ TCPConnection* MPTCP_PCB::lookupMPTCPConnection(int connId, int aAppGateIndex,
 
     //FIXME OK, now we have to choose by the scheduler which flow we should use next....
     //FIXME Scheduler
-    ASSERT(false);
+    ASSERT(false && "This is just a test function....don t use");
     return subflow;
 }
 
@@ -553,7 +565,7 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg,
                 if((!tcpseg->getSynBit()) && (tcpseg->getAckBit())) {   // It is an ACK we have to know this
                     // ACK: We aspect the sender key in the MP_CAPABLE Option
                     if (option.getValuesArraySize() < 5) {
-                        ASSERT(false);
+                        ASSERT(false && "We need some more options");
                         return 0; //should never be happen
                     }
 
@@ -587,8 +599,10 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg,
                     // FIXME Check if the comparison is correct here
                     for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
                             TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
+
                             // FIXME -> Of course only one is correct, but I don t wont to differ for the first step
-                            //ASSERT(t->flow->getLocalToken() != 0);
+                            // Later we have time for error handling
+
                             if(t->flow->getLocalToken() == send_local_token) {
                                 subflow->flow = t->flow;
                                 return t->flow->getPCB();
@@ -603,7 +617,7 @@ MPTCP_PCB* MPTCP_PCB::_lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg,
                     AllMultipathTCPVector_t::const_iterator it;
                     // FIXME Check if the comparison is correct here
 
-                     //   ASSERT(false);
+
 
                 }
                 // Check MPCB for MP_JOIN
@@ -657,7 +671,7 @@ MPTCP_PCB* MPTCP_PCB::lookupMPTCP_PCB(int connId, int aAppGateIndex,TCPSegment *
                     TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
                     if(t->flow != NULL){
                         if (((uint32)subflow->getTcpMain()->multipath_subflow_id) == t->flow->getLocalToken()){
-                            subflow->flow = t->flow;    // Should be the same TODO add an ASSERT
+                            subflow->flow = t->flow;    // Fixme Should be the same -> TODO add an ASSERT
                             return t->flow->getPCB();
                         }
                     }
@@ -714,7 +728,7 @@ int MPTCP_PCB::_clearAll() {
  *  Debug Information
  */
 void MPTCP_PCB::DEBUGprintFlowOverview(int type){
-#ifdef PRIVATE_DEBUG
+#ifdef _PRIVATE_DEBUG
    DEBUGPRINT("[MPTCP][OVERVIEW][PCB] =======================================%s","\0");
     static uint64_t rcv_cnt = 0;
 
@@ -754,7 +768,7 @@ void MPTCP_PCB::DEBUGprintFlowOverview(int type){
 //            DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] Highest Cum Sequence number: %ld",tmp->flow->getHighestCumSQN());
             break;
         default:
-            ASSERT(false);
+            ASSERT(false && "State not supported");
             break;
         }
     }
