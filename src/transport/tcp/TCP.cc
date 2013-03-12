@@ -88,14 +88,23 @@ void TCP::initialize()
 
 TCP::~TCP()
 {
+	while (!tcpAppConnMap.empty())
+	{
+		TcpAppConnMap::iterator i = tcpAppConnMap.begin();
+		if((*i).second!= NULL){
+#ifdef PRIVATE
+			if((*i).second->isSubflow){
+				tcpAppConnMap.erase(i);
+				continue;
+			}
+#endif
+			delete (*i).second;
+		}
+		(*i).second= NULL;
+		tcpAppConnMap.erase(i);
+	}
 	delete this->mptcp_pcb;
-    while (!tcpAppConnMap.empty())
-    {
-        TcpAppConnMap::iterator i = tcpAppConnMap.begin();
-        if((*i).second!= NULL)
-        	delete (*i).second;
-        tcpAppConnMap.erase(i);
-    }
+
 }
 
 void TCP::handleMessage(cMessage *msg)
