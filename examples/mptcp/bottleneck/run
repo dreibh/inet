@@ -1,9 +1,14 @@
 #!/bin/bash
-
+echo "Run Script"
 ../../../src/inet -r 0 -u Cmdenv -c Default_Netperfmeter -n ../..:../../../simulations:../../../src  omnetpp.ini > dat.log 2> err.log 
-cat err.log | grep "[DSS][STATUS]" > dss_status.log &
-
-echo "Grep DSS RCV Status > dss_rcv_status.log"; 
-cat err.log | grep "\[FLOW\]\[RCV\]\[DSS\]\[STATUS\]" > dss_rcv_status.log &
-echo "Grep DSS SND Status > dss_snd_status.log";
-cat err.log | grep "\[FLOW\]\[SND\]\[DSS\]\[STATUS\]" > dss_snd_status.log &
+echo "==================== RESULT =========================" > abort.log
+cat dat.log | grep "ASSERT:" >> abort.log 
+cat dat.log | grep "No more events -- simulation ended at event" >> abort.log  
+echo "==================== Do Log Files =========================" 
+echo "Grep DSS RCV Status > dss_rcv_status.log" 
+cat err.log | grep "\[FLOW\]\[RCV\]\[DSS\]\[STATUS\]"  > dss_rcv_status.log 
+cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[RCV\]"   >> dss_rcv_status.log
+echo "Grep DSS SND Status > dss_snd_status.log" 
+cat err.log | grep "\[FLOW\]\[SND\]\[DSS\]\[STATUS\]"  > dss_snd_status.log
+cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[SND\]"   >> dss_snd_status.log  
+cat abort.log 

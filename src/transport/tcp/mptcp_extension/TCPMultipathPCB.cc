@@ -469,29 +469,69 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         // 3) proceed data in sendtoapp (we don t have to check, if still the subflow is not in sync)
 
         // some checks
-        if(option->getValuesArraySize() < 4){
-            ASSERT(false && "We need some more options...");
+        ASSERT((option->getValuesArraySize() > 3) && "We need some more options...");
+
+        // First get the flags so we know what to do
+        uint32 option_cnt = 0;
+        uint32_t option_v[6] = {0};
+
+        uint64 ack_seq  = 0;
+        uint64 snd_seq  = 0;
+        uint32 flow_seq = 0;
+        uint16 data_len = 0;
+
+        for(option_cnt = 0;option_cnt < option->getValuesArraySize() ;option_cnt++){
+            option_v[option_cnt] = option->getValues(option_cnt);
         }
+        option_cnt = 0;
+        // Currently the flags are at the first bits of the Option 0
+        uint8_t flags = option_v[option_cnt] >> 16;
+        bool isDSS_FLAG_A = (flags&DSS_FLAG_A)?true:false; // DSS_FLAG_A (0x01) Data ACK present
+        bool isDSS_FLAG_a = (flags&DSS_FLAG_a)?true:false; // DSS_FLAG_a (0x02) Data ACK is 8 octets
+        bool isDSS_FLAG_M = (flags&DSS_FLAG_M)?true:false; // DSS_FLAG_M (0x04) Data Sequence Number, Subflow Sequence Number, Data-level  Length, and Checksum present
+        bool isDSS_FLAG_m = (flags&DSS_FLAG_m)?true:false; // DSS_FLAG_m (0x08) Data SQN is 8 Octets
 
-
-        // Data Sequence Mapping [Section 3.3.1] ==> IN
-        // TODO check for Flag M
-        {
-        // Note:
-        // Fill Data Sequence Number with complete 64bit number or lowest 32
-        // Subflow SQN is relativ to the SYN
-        // Data-Level length Payload
-        // Checksum if flag in MP_CAPABLE was set
+        if(isDSS_FLAG_A){
+            // Data Ack
+            uint16_t first16  = option_v[option_cnt];
+            uint16_t second16 = option_v[++option_cnt] >> 16;
+            ack_seq |= (uint32_t) first16 << 16;
+            ack_seq |= (uint32_t) second16;
+            if(isDSS_FLAG_a){
+                // 8 octets
+                // TODO
+                ASSERT(false && "NOT Implemented yet");
+            }else{
+                // we have to guess the rest... it should have the same offset like flow->mptcp_snd_una
+                // FIXME overflow border
+                uint64_t first32_bits = subflow->flow->mptcp_snd_una >> 32;
+                ack_seq |= first32_bits << 32;
+            }
         }
-        // Data Acknowledgements [Section 3.3.2] ==> IN
-        // TODO check for Flag A
-        {
-        // Data ACK = cum SQN
-        // TODO Read Option and
-        // compare with old...  flow->getHighestCumSQN(); // can we free memory
+        if(isDSS_FLAG_M){
+            // seq no
 
+            uint16_t first16  = option_v[option_cnt];
+            uint16_t second16 = option_v[++option_cnt] >> 16;
+            snd_seq |= (uint32_t) first16 << 16;
+            snd_seq |= (uint32_t) second16;
+            if(isDSS_FLAG_m){
+                // 8 octets
+                // TODO
+                ASSERT(false && "NOT Implemented yet");
+            }else{
+                // we have to guess the rest... it should have the same offset like flow->mptcp_rcv_nxt
+                // FIXME overflow border
+                uint64_t first32_bits = subflow->flow->mptcp_rcv_nxt >> 32;
+                snd_seq |= first32_bits << 32;
+            }
+
+            flow_seq  = option_v[option_cnt] << 16;
+            flow_seq |= option_v[++option_cnt] >> 16;
+
+            data_len =  option_v[option_cnt];
         }
-
+        DEBUGPRINT("[FLOW][DSS][INFO][RCV] Ack Seq: %ld \t SND Seq: %ld \t Subflow Seq: %d \t Data length: %d", ack_seq, snd_seq, flow_seq, data_len);
         return 0;
 }
 

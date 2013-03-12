@@ -983,6 +983,11 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     uint32_t array_cnt = 0;
     uint32_t flags = 0;
 
+    uint64 ack_seq  = 0;
+    uint64 snd_seq  = 0;
+    uint32 flow_seq = 0;
+    uint16 data_len = 0;
+
 
     flags |= DSS_FLAG_M;
     // Switch: NED Parameter multipath_DSSSeqNo8
@@ -1016,7 +1021,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
        ASSERT(false && "Not implemented yet");
     }
     // Ack Seq number
-    l_seq = this->mptcp_rcv_nxt;
+    l_seq = ack_seq = this->mptcp_rcv_nxt;
 
 
     first_bits |= l_seq>>16;
@@ -1034,7 +1039,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     }
 
     // Data seq no.
-    l_seq =  this->mptcp_snd_una;
+    l_seq = snd_seq = this->mptcp_snd_una;
 
     first_bits |= l_seq>>16;
     option->setValues(array_cnt++, first_bits);
@@ -1044,14 +1049,14 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     first_bits |= l_seq<<16;
 
     // Offset of sequence number
-    l_seq = subflow->getState()->snd_nxt - subflow->getState()->iss;
+    l_seq = flow_seq = subflow->getState()->snd_nxt - subflow->getState()->iss;
     first_bits |= l_seq>>16;
 
     option->setValues(array_cnt++, first_bits);
     first_bits = 0;
     first_bits |= l_seq << 16;
 
-    first_bits |= bytes;
+    first_bits |= data_len = bytes;
     option->setValues(array_cnt++, first_bits);
 
     // FIXME Checksum is missing
@@ -1059,6 +1064,8 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
     tcpseg->setOptions(t, *option);
     t++;
+
+    DEBUGPRINT("[FLOW][DSS][INFO][SND] Ack Seq: %ld \t SND Seq: %ld \t Subflow Seq: %d \t Data length: %d", ack_seq, snd_seq, flow_seq, data_len);
 
     DEBUGPRINT("[FLOW][SND][DSS][STATUS] snd_una: %ld", mptcp_snd_una);
    	DEBUGPRINT("[FLOW][SND][DSS][STATUS] snd_nxt: %ld", mptcp_snd_nxt);
