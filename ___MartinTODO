@@ -52,6 +52,5 @@ Observations
 Work for SHKs
 =======================
 FIXME -> I have a shift of 16 bit during use of  option->setValues
-FIXME -> check module destructor - > clean Modules 
 FIXME -> Sequencenumber handling
 

@@ -1188,7 +1188,7 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
 				con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
 			}
 		   if (mptcpRcvBufferSize)
-			   mptcpRcvBufferSize->record(mptcp_receiveQueue->getAmountOfBufferedBytes());
+			   mptcpRcvBufferSize->record(mptcp_receiveQueue->getQueueLength());
     	}
        else{
     	   con->getTcpMain()->send(msg, "appOut", con->appGateIndex);

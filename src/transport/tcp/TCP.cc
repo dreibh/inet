@@ -88,13 +88,14 @@ void TCP::initialize()
 
 TCP::~TCP()
 {
+	delete this->mptcp_pcb;
     while (!tcpAppConnMap.empty())
     {
         TcpAppConnMap::iterator i = tcpAppConnMap.begin();
-        delete (*i).second;
+        if((*i).second!= NULL)
+        	delete (*i).second;
         tcpAppConnMap.erase(i);
     }
-    delete this->mptcp_pcb;
 }
 
 void TCP::handleMessage(cMessage *msg)
