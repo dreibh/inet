@@ -18,7 +18,7 @@
 
 
 #include "TCPMultipathMsgBasedRcvQueue.h"
-
+#include "TCPMultipath.h"
 Register_Class(TCPMultipathMsgBasedRcvQueue);
 
 
@@ -51,21 +51,23 @@ std::string TCPMultipathMsgBasedRcvQueue::info() const
     return os.str();
 }
 
-uint64 TCPMultipathMsgBasedRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg)
+uint64 TCPMultipathMsgBasedRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg,  uint64 dss_start_seq, uint32 data_len)
 {
-    TCPMultipathVirtualDataRcvQueue::insertBytesFromSegment(tcpseg);
+    TCPMultipathVirtualDataRcvQueue::insertBytesFromSegment(tcpseg,dss_start_seq,data_len);
 
-
-    cPacket *msg;
-    uint64 endSeqNo;
-/*    while ((msg=tcpseg->removeFirstPayloadMessage(endSeqNo))!=NULL)
+    cPacket *msg = NULL;
+    uint32 endSeqNo = 0; // will be filled by removeFirstPayloadMessage
+    uint32 oldSeqNo = 0;
+    while ((msg=tcpseg->removeFirstPayloadMessage(endSeqNo))!=NULL)
     {
+    	oldSeqNo = endSeqNo;
+    	endSeqNo = endSeqNo - oldSeqNo;
         // insert, avoiding duplicates
-        PayloadList::iterator i = payloadList.find(endSeqNo);
+        PayloadList::iterator i = payloadList.find(oldSeqNo + dss_start_seq);
         if (i!=payloadList.end()) {delete msg; continue;}
-        payloadList[endSeqNo] = msg;
+        payloadList[oldSeqNo + dss_start_seq] = msg;
     }
-*/
+
     return rcv_nxt;
 }
 
@@ -74,11 +76,13 @@ cPacket *TCPMultipathMsgBasedRcvQueue::extractBytesUpTo(uint64 seq)
     extractTo(seq);
 
     // pass up payload messages, in sequence number order
-    if (payloadList.empty() || seqGreater(payloadList.begin()->first, seq))
+    uint64_t current = payloadList.begin()->first;
+    if (payloadList.empty() || (current <= seq))
         return NULL;
 
     cPacket *msg = payloadList.begin()->second;
     payloadList.erase(payloadList.begin());
+    DEBUGPRINT("[MPTCP][RCV QUEUE][OUT DATA] Packet size %ld",  payloadList.begin()->first+msg->getByteLength());
     return msg;
 }
 

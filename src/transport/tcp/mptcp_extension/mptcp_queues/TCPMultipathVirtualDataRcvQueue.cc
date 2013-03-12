@@ -51,10 +51,10 @@ std::string TCPMultipathVirtualDataRcvQueue::info() const
     return res;
 }
 
-uint64 TCPMultipathVirtualDataRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg)
+uint64 TCPMultipathVirtualDataRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg,  uint64 dss_start_seq, uint32 data_len)
 {
-    merge(tcpseg->getSequenceNo(), tcpseg->getSequenceNo()+tcpseg->getPayloadLength());
-    if (seqGE(rcv_nxt, regionList.begin()->begin))
+    merge(dss_start_seq, dss_start_seq+data_len);
+    if (rcv_nxt >= regionList.begin()->begin)
         rcv_nxt = regionList.begin()->end;
     return rcv_nxt;
 }
@@ -80,7 +80,7 @@ void TCPMultipathVirtualDataRcvQueue::merge(uint64 segmentBegin, uint64 segmentE
     }
 
     // skip regions which fall entirely before seg (no overlap or touching)
-    while (i!=regionList.end() && seqLess(i->end,seg.begin))
+    while (i!=regionList.end() && i->end < seg.begin)
     {
         ++i;
     }
@@ -92,20 +92,20 @@ void TCPMultipathVirtualDataRcvQueue::merge(uint64 segmentBegin, uint64 segmentE
         return;
     }
 
-    if (seqLess(seg.end,i->begin))
+    if ((seg.end < i->begin))
     {
         // segment entirely before region "i": insert as separate region before "i"
         regionList.insert(i, seg);
         return;
     }
 
-    if (seqLess(seg.begin,i->begin))
+    if ((seg.begin < i->begin))
     {
         // segment starts before region "i": extend region
         i->begin = seg.begin;
     }
 
-    if (seqLess(i->end,seg.end))
+    if ((i->end < seg.end))
     {
         // segment ends past end of region "i": extend region
         i->end = seg.end;
@@ -113,10 +113,10 @@ void TCPMultipathVirtualDataRcvQueue::merge(uint64 segmentBegin, uint64 segmentE
         // maybe we have to merge region "i" with next one(s)
         RegionList::iterator j = i;
         ++j;
-        while (j!=regionList.end() && seqGE(i->end,j->begin)) // while there's overlap
+        while (j!=regionList.end() && (i->end >= j->begin)) // while there's overlap
         {
             // if "j" is longer: extend "i"
-            if (seqLess(i->end,j->end))
+            if ((i->end < j->end))
                 i->end = j->end;
 
             // erase "j" (it was merged into "i")
@@ -139,29 +139,37 @@ cPacket *TCPMultipathVirtualDataRcvQueue::extractBytesUpTo(uint64 seq)
 
 ulong TCPMultipathVirtualDataRcvQueue::extractTo(uint64 seq)
 {
-    ASSERT(seqLE(seq,rcv_nxt));
+    ASSERT((seq <= rcv_nxt));
 
     RegionList::iterator i = regionList.begin();
     if (i==regionList.end())
         return 0;
 
-    ASSERT(seqLess(i->begin,i->end)); // empty regions cannot exist
+    ASSERT((i->begin < i->end)); // empty regions cannot exist
 
     // seq below 1st region
-    if (seqLE(seq,i->begin))
+    if ((seq <= i->begin))
         return 0;
+    // Just for debug
+    static uint64 old_end = i->begin;
 
-    if (seqLess(seq,i->end))
+    if ((seq < i->end))
     {
         // part of 1st region
         ulong octets = seq - i->begin;
         i->begin = seq;
+        ASSERT(i->begin == old_end && "UPS....not in order");
+        old_end = i->end;
+        DEBUGPRINT("[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %ld ...%ld", i->begin, i->end );
         return octets;
     }
     else
     {
         // full 1st region
         ulong octets = i->end - i->begin;
+        ASSERT(i->begin == old_end && "UPS....not in order");
+        old_end = i->end;
+        DEBUGPRINT("[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %ld ...%ld", i->begin, i->end );
         regionList.erase(i);
         return octets;
     }
@@ -206,10 +214,10 @@ uint64 TCPMultipathVirtualDataRcvQueue::getLE(uint64 fromSeqNum)
     RegionList::iterator i = regionList.begin();
     while (i!=regionList.end())
     {
-        if (seqLE(i->begin, fromSeqNum) && seqLE(fromSeqNum, i->end))
+        if ((i->begin < fromSeqNum) && (fromSeqNum < i->end))
         {
 //            tcpEV << "Enqueued region: [" << i->begin << ".." << i->end << ")\n";
-            if (seqLess(i->begin, fromSeqNum))
+            if ((i->begin < fromSeqNum))
                 return i->begin;
             return fromSeqNum;
         }
@@ -223,10 +231,10 @@ uint64 TCPMultipathVirtualDataRcvQueue::getRE(uint64 toSeqNum)
     RegionList::iterator i = regionList.begin();
     while (i!=regionList.end())
     {
-        if (seqLE(i->begin, toSeqNum) && seqLE(toSeqNum, i->end))
+        if ((i->begin < toSeqNum) && (toSeqNum < i->end))
         {
-//            tcpEV << "Enqueued region: [" << i->begin << ".." << i->end << ")\n";
-            if (seqLess(toSeqNum, i->end))
+
+            if ((toSeqNum <  i->end))
                 return i->end;
             return toSeqNum;
         }

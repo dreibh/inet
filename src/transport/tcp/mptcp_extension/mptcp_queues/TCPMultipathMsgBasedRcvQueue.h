@@ -60,7 +60,7 @@ class INET_API TCPMultipathMsgBasedRcvQueue : public TCPMultipathVirtualDataRcvQ
     /**
      * Called when a TCP segment arrives. Returns sequence number for ACK.
      */
-    virtual uint64 insertBytesFromSegment(TCPSegment *tcpseg);
+    virtual uint64 insertBytesFromSegment(TCPSegment *tcpseg,  uint64 dss_start_seq, uint32 data_len);
 
     /**
      *

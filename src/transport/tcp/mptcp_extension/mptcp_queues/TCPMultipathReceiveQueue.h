@@ -77,7 +77,7 @@ class INET_API TCPMultipathReceiveQueue : public cPolymorphic
      *
      * The method should return the sequence number to be ACKed.
      */
-    virtual uint64 insertBytesFromSegment(TCPSegment *tcpseg) = 0;
+    virtual uint64 insertBytesFromSegment(TCPSegment *tcpseg,  uint64 dss_start_seq, uint32 data_len) = 0;
 
     /**
      * Should create a packet to be passed up to the app, up to (but NOT

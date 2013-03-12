@@ -51,6 +51,7 @@
 // Version of MPTCP
 #define VERSION 0x0
 
+int MPTCP_Flow::ID = 0;
 /**
  * Constructor
  * @param int ID for each Flow
@@ -60,7 +61,7 @@
 MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
         MPTCP_PCB* aPCB) :
         state(IDLE), local_key(0), remote_key(0) {
-
+	ID++;
     // For easy PCB Lookup set ID and Application Index
     appID = connID;
     appGateIndex = aAppGateIndex;
@@ -86,8 +87,12 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     mptcp_receiveQueue = check_and_cast<TCPMultipathReceiveQueue*>
     						(createOne(subflow->getTcpMain()->par("multipath_receiveQueueClass")));
     mptcp_receiveQueue->setFlow(this);
+
     ordered = subflow->getTcpMain()->par("multipath_ordered");
 
+    char name[255];
+	sprintf(name,"[flow][%d] send window",ID);
+	mptcpRcvBufferSize = new cOutVector(name);
 }
 
 /**
@@ -106,6 +111,8 @@ MPTCP_Flow::~MPTCP_Flow() {
     TCPSchedulerManager::destroyMPTCPScheduler();
     if(mptcp_receiveQueue!=NULL)
     	delete mptcp_receiveQueue;
+
+    delete mptcpRcvBufferSize;
 }
 
 /**
@@ -940,7 +947,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 			snd_nxt_tmp += bytes_tmp;
 
             cnt += bytes_tmp;
-            this->mptcp_snd_nxt += bytes_tmp;
+            this->mptcp_snd_nxt += bytes_tmp-1;
 
 //		}
 //		else ASSERT (false);
@@ -1026,7 +1033,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
     first_bits |= l_seq>>16;
     option->setValues(array_cnt++, first_bits);
-
+    first_bits = 0;
     first_bits |= l_seq<<16;
 
     // // Data Sequence Mapping [Section 3.3.1] ==> OUT
@@ -1039,7 +1046,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     }
 
     // Data seq no.
-    l_seq = snd_seq = this->mptcp_snd_una;
+    l_seq = snd_seq = this->mptcp_snd_nxt-1 - bytes;
 
     first_bits |= l_seq>>16;
     option->setValues(array_cnt++, first_bits);
@@ -1083,11 +1090,11 @@ void MPTCP_Flow::DEBUGprintDSSInfo() {
 		entry = (*i);
 		TCPMultipathDSSStatus::const_iterator it;
 		DEBUGPRINT("[FLOW][STATUS][DSS] DSS MAP SIZE %d",entry->subflow->dss_dataMapofSubflow.size());
-//		for (it = entry->subflow->dss_dataMapofSubflow.begin(); it != entry->subflow->dss_dataMapofSubflow.end(); ++it) {
-//			uint32 subflow_seq = it->first;
-//			DSS_INFO* dss_info = it->second;
-//			DEBUGPRINT("[FLOW][STATUS][DSS] Subflow SEQ: %d -> DSS SEQ %ld", subflow_seq, dss_info->dss_seq);
-//		}
+		for (it = entry->subflow->dss_dataMapofSubflow.begin(); it != entry->subflow->dss_dataMapofSubflow.end(); ++it) {
+			uint32 subflow_seq = it->first;
+			DSS_INFO* dss_info = it->second;
+			DEBUGPRINT("[FLOW][STATUS][DSS] Subflow SEQ: %d -> DSS SEQ %ld", subflow_seq, dss_info->dss_seq);
+		}
 	}
 #endif
 }
@@ -1170,16 +1177,18 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
        DEBUGPRINT("[MPTCP][SEND TO APP] Over Conn ID %i App Gate Index %i%s",con->connId, con->appGateIndex,"\0");
        // 3) OK we got a valid connection to an app, check if there data
        if(ordered){	// Ordered is just for debugging, makes things more easy
+    	   delete msg; // this message is not needed anymore
 		   while ((msg=mptcp_receiveQueue->extractBytesUpTo(mptcp_rcv_nxt))!=NULL)
 		   {
 				// 4) Send Data to Connection
-				cPacket *mptcp_msg = NULL;
-				mptcp_msg->setKind(TCP_I_DATA);
+				msg->setKind(TCP_I_DATA);
 				TCPCommand *cmd = new TCPCommand();
 				cmd->setConnId(con->connId);
-				mptcp_msg->setControlInfo(cmd);
-				con->getTcpMain()->send(mptcp_msg, "appOut", con->appGateIndex);
+				msg->setControlInfo(cmd);
+				con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
 			}
+		   if (mptcpRcvBufferSize)
+			   mptcpRcvBufferSize->record(mptcp_receiveQueue->getAmountOfBufferedBytes());
     	}
        else{
     	   con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
@@ -1190,6 +1199,11 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
 
     return;
 }
+
+void MPTCP_Flow::enqueueMPTCPData(TCPSegment *mptcp_tcpseg, uint64 dss_start_seq, uint32 data_len){
+	this->mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(mptcp_tcpseg,dss_start_seq,data_len);
+}
+
 void MPTCP_Flow::setSendQueueLimit(int limit){
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
           i != subflow_list.end(); i++) {
@@ -1280,8 +1294,8 @@ int MPTCP_Flow::_generateToken(uint64_t key, bool type) {
         ASSERT(false && "What type is this?");
         break;
     }
-    if (type == MPTCP_LOCAL)
-        setBaseSQN(*out64);
+    //if (type == MPTCP_LOCAL)
+    setBaseSQN(*out64);
     return 0;
 }
 
@@ -1474,6 +1488,7 @@ void MPTCP_Flow::setBaseSQN(uint64_t s) {
     mptcp_snd_una = seq;
     mptcp_snd_nxt = seq +1;
     mptcp_rcv_nxt = seq;
+    mptcp_receiveQueue->init(seq);
 }
 
 void MPTCP_Flow::setRemoteToken(uint32_t t) {
@@ -1516,7 +1531,7 @@ void MPTCP_Flow::DEBUGprintMPTCPFlowStatus() {
 #endif
 }
 void MPTCP_Flow::DEBUGprintStatus() {
-#ifdef _PRIVATE
+#ifdef PRIVATE
 
     DEBUGPRINT(
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %lu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",

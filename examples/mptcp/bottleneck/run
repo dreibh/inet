@@ -1,14 +1,22 @@
 #!/bin/bash
 echo "Run Script"
-../../../src/inet -r 0 -u Cmdenv -c Default_Netperfmeter -n ../..:../../../simulations:../../../src  omnetpp.ini > dat.log 2> err.log 
+time ../../../src/inet -r 0 -u Cmdenv -c Default_Netperfmeter -n ../..:../../../simulations:../../../src  omnetpp.ini > dat.log 2> err.log 
 echo "==================== RESULT =========================" > abort.log
 cat dat.log | grep "ASSERT:" >> abort.log 
 cat dat.log | grep "No more events -- simulation ended at event" >> abort.log  
 echo "==================== Do Log Files =========================" 
 echo "Grep DSS RCV Status > dss_rcv_status.log" 
-cat err.log | grep "\[FLOW\]\[RCV\]\[DSS\]\[STATUS\]"  > dss_rcv_status.log 
-cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[RCV\]"   >> dss_rcv_status.log
+cat err.log | grep "\[FLOW\]\[RCV\]\[DSS\]\[STATUS\]"  		 > dss_rcv_status.log 
+cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[RCV\]"   		>> dss_rcv_status.log
 echo "Grep DSS SND Status > dss_snd_status.log" 
-cat err.log | grep "\[FLOW\]\[SND\]\[DSS\]\[STATUS\]"  > dss_snd_status.log
-cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[SND\]"   >> dss_snd_status.log  
+cat err.log | grep "\[FLOW\]\[SND\]\[DSS\]\[STATUS\]"  		 > dss_snd_status.log
+cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[SND\]"   		>> dss_snd_status.log  
+echo "Grep Data Names"
+cat err.log | grep "\[MPTCP\]\[RCV QUEUE\]\[OUT IN SEQUENCE\]" 	 > seq.log
+echo "Grep Out of Order Data"
+cat err.log | grep "\[MPTCP\]\[SEND TO APP\]\[NOT IN ORDER\]" 	 > out_of_order.log
+echo "Grep Queue Info"
+cat err.log | grep "\[MPTCP\]\[RCV QUEUE\] size after insert" 	 > queue.log
+cat err.log | grep "\[MPTCP\]\[RCV QUEUE\] after extract" 	>> queue.log
+
 cat abort.log 

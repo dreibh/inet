@@ -7,7 +7,7 @@
 #ifdef PRIVATE
 #include "TCPConnection.h"
 #include "TCPMultipathPCB.h"
-
+#include "TCPSegment.h"
 
 //##################################################################################################
 //#
@@ -531,6 +531,13 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
 
             data_len =  option_v[option_cnt];
         }
+
+        // we know everything ...lets queue in if data > 0
+        if(data_len > 0){
+        	//TCPSegment *mptcp_tcpseg =  new TCPSegment(*tcpseg);
+        	subflow->flow->enqueueMPTCPData(tcpseg, snd_seq, data_len);
+        }
+
         DEBUGPRINT("[FLOW][DSS][INFO][RCV] Ack Seq: %ld \t SND Seq: %ld \t Subflow Seq: %d \t Data length: %d", ack_seq, snd_seq, flow_seq, data_len);
         return 0;
 }
@@ -768,7 +775,7 @@ int MPTCP_PCB::_clearAll() {
  *  Debug Information
  */
 void MPTCP_PCB::DEBUGprintFlowOverview(int type){
-#ifdef _PRIVATE_DEBUG
+#ifdef PRIVATE
    DEBUGPRINT("[MPTCP][OVERVIEW][PCB] =======================================%s","\0");
     static uint64_t rcv_cnt = 0;
 

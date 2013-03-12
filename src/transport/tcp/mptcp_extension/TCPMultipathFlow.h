@@ -31,6 +31,7 @@ class INET_API MPTCP_Flow
 {
 
   public:
+	static int ID;
 
     // Flow could only be initilized with an Protocol Control Block
     MPTCP_Flow(int ID, int aAppGateIndex,TCPConnection* subflow, MPTCP_PCB* aPCB);
@@ -50,6 +51,7 @@ class INET_API MPTCP_Flow
     // 7) Congestion & Flow Control ->Open
 
     // for 2 -> Omnet Interface
+    void enqueueMPTCPData(TCPSegment *tcpseg, uint64 dss_start_seq, uint32 data_len);
     void sendToApp(cMessage* msg);
     // for 1 & 3
     int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32, TCPConnection* subflow);
@@ -104,11 +106,13 @@ class INET_API MPTCP_Flow
     uint64_t seq;                           	  // start seq-no generated after getting keys for the first flow
     uint64_t start_seq;
   protected:
-
     bool checksum;
     bool isPassive;
     bool ordered;
     InterfaceTableAccess interfaceTableAccess;
+
+    // Vector and Scalar
+    cOutVector *mptcpRcvBufferSize;
 
   private:
     // Receive Queue
