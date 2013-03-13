@@ -33,6 +33,7 @@ class INET_API MPTCP_RoundRobinScheduler : public MPTCP_SchedulerI , public cPol
   private:
     // Message handlign -> TODO SCHEDULER
     void _createMSGforProcess(cMessage *msg);
+    void _next(uint32 bytes);
     static TCPConnection* lastUsed;
     MPTCP_Flow* flow;
 };

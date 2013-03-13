@@ -185,6 +185,9 @@ TCPConnection::TCPConnection()
     sndWndVector = rcvWndVector = rcvAdvVector = sndNxtVector = sndAckVector = rcvSeqVector = rcvAckVector = unackedVector =
     dupAcksVector = sndSacksVector = rcvSacksVector = rcvOooSegVector =
     tcpRcvQueueBytesVector = tcpRcvQueueDropsVector = pipeVector = sackedBytesVector = NULL;
+#ifdef PRIVATE
+    scheduledBytesVector = NULL;
+#endif
 }
 
 //
@@ -246,6 +249,9 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     tcpRcvQueueDropsVector = NULL;
     pipeVector = NULL;
     sackedBytesVector = NULL;
+
+    // MPTCP Vectors
+    scheduledBytesVector = NULL;
 
     if (getTcpMain()->recordStatistics)
     {
@@ -318,6 +324,13 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
         memset(name,'\0',sizeof(name));
         sprintf(name,"[subflow][I0-%i] tcpRcvQueueDrops",cnt);
         tcpRcvQueueDropsVector = new cOutVector(name);
+
+
+        // MPTCP Vector
+        memset(name,'\0',sizeof(name));
+        sprintf(name,"[subflow][I0-%i] scheduledBytes",cnt);
+        scheduledBytesVector = new cOutVector(name);
+
 #endif
     }
 }
@@ -352,6 +365,9 @@ TCPConnection::~TCPConnection()
     delete tcpRcvQueueDropsVector;
     delete pipeVector;
     delete sackedBytesVector;
+#ifdef PRIVATE
+    delete scheduledBytesVector;
+#endif
 }
 
 bool TCPConnection::processTimer(cMessage *msg)

@@ -383,7 +383,9 @@ class INET_API TCPConnection
  public:
 
     TCPSACKRexmitQueue *rexmitQueue;
-
+#ifdef PRIVATE
+    cOutVector *scheduledBytesVector;    // bytes scheduled on subflow
+#endif
  protected:
     // TCP behavior in data transfer state
     TCPAlgorithm *tcpAlgorithm;
@@ -413,6 +415,8 @@ class INET_API TCPConnection
     cOutVector *sackedBytesVector;        // current number of received sacked bytes
     cOutVector *tcpRcvQueueBytesVector;   // current amount of used bytes in tcp receive queue
     cOutVector *tcpRcvQueueDropsVector;   // number of drops in tcp receive queue
+
+
 
   protected:
     /** @name FSM transitions: analysing events and executing state transitions */

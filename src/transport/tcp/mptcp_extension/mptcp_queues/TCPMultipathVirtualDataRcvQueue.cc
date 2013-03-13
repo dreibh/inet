@@ -40,12 +40,12 @@ std::string TCPMultipathVirtualDataRcvQueue::info() const
 {
     std::string res;
     char buf[32];
-    sprintf(buf, "rcv_nxt=%u ", rcv_nxt);
+    sprintf(buf, "rcv_nxt=%ld ", rcv_nxt);
     res = buf;
 
     for (RegionList::const_iterator i=regionList.begin(); i!=regionList.end(); ++i)
     {
-        sprintf(buf, "[%u..%u) ", i->begin, i->end);
+        sprintf(buf, "[%ld..%ld) ", i->begin, i->end);
         res+=buf;
     }
     return res;
@@ -56,6 +56,7 @@ uint64 TCPMultipathVirtualDataRcvQueue::insertBytesFromSegment(TCPSegment *tcpse
     merge(dss_start_seq, dss_start_seq+data_len);
     if (rcv_nxt >= regionList.begin()->begin)
         rcv_nxt = regionList.begin()->end;
+    DEBUGPRINT("[MPTCP][RCV QUEUE] size after insert %lu",regionList.size());
     return rcv_nxt;
 }
 
@@ -132,6 +133,8 @@ cPacket *TCPMultipathVirtualDataRcvQueue::extractBytesUpTo(uint64 seq)
     if (numBytes==0)
         return NULL;
 
+    DEBUGPRINT("[MPTCP][RCV QUEUE] after extract %lu",regionList.size());
+
     cPacket *msg = new cPacket("data");
     msg->setByteLength(numBytes);
     return msg;
@@ -161,7 +164,7 @@ ulong TCPMultipathVirtualDataRcvQueue::extractTo(uint64 seq)
         ASSERT(i->begin == old_end && "UPS....not in order");
         old_end = i->end;
         regionList.erase(i);
-        DEBUGPRINT("[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %ld ...%ld", i->begin, i->end );
+        DEBUGPRINT("[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %x%x ...%x%x", (uint32)(i->begin>>32),(uint32)i->begin,(uint32) (i->end>>32),(uint32) i->end );
         return octets;
     }
     else
@@ -170,7 +173,7 @@ ulong TCPMultipathVirtualDataRcvQueue::extractTo(uint64 seq)
         ulong octets = i->end - i->begin;
         ASSERT(i->begin == old_end && "UPS....not in order");
         old_end = i->end;
-        DEBUGPRINT("[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %ld ...%ld", i->begin, i->end );
+        DEBUGPRINT("[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %x%x ...%x%x", (uint32)(i->begin>>32),(uint32)i->begin,(uint32) (i->end>>32),(uint32) i->end );
         regionList.erase(i);
         return octets;
     }
@@ -199,7 +202,7 @@ uint64 TCPMultipathVirtualDataRcvQueue::getAmountOfFreeBytes(uint64 maxRcvBuffer
     return freeRcvBuffer;
 }
 
-uint64 TCPMultipathVirtualDataRcvQueue::getQueueLength()
+size_t TCPMultipathVirtualDataRcvQueue::getQueueLength()
 {
     return regionList.size();
 }

@@ -11,12 +11,13 @@ cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[RCV\]"   		>> dss_rcv_status.log
 echo "Grep DSS SND Status > dss_snd_status.log" 
 cat err.log | grep "\[FLOW\]\[SND\]\[DSS\]\[STATUS\]"  		 > dss_snd_status.log
 cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[SND\]"   		>> dss_snd_status.log  
-echo "Grep Data Names"
+echo "Grep Data Names > seq.log"
 cat err.log | grep "\[MPTCP\]\[RCV QUEUE\]\[OUT IN SEQUENCE\]" 	 > seq.log
-echo "Grep Out of Order Data"
+echo "Grep Out of Order Data > out_of_order.log"
 cat err.log | grep "\[MPTCP\]\[SEND TO APP\]\[NOT IN ORDER\]" 	 > out_of_order.log
-echo "Grep Queue Info"
-cat err.log | grep "\[MPTCP\]\[RCV QUEUE\] size after insert" 	 > queue.log
-cat err.log | grep "\[MPTCP\]\[RCV QUEUE\] after extract" 	>> queue.log
+echo "Grep Queue Info > queue.log"
+cat err.log | grep "\[MPTCP\]\[RCV QUEUE\]" 	 > queue.log
+cat err.log | grep "\[MPTCP\]\[RCV QUEUE\]\[RECORD\]" > queue_record.log 
 
+# Don t touch
 cat abort.log 

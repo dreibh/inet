@@ -312,6 +312,11 @@ void TCPConnection::removeVectors(){
 	pipeVector = NULL;
 	if(sackedBytesVector != NULL) delete sackedBytesVector;
 	sackedBytesVector = NULL;
+
+	// MPTCP Vectors
+	if(scheduledBytesVector != NULL) delete scheduledBytesVector;
+	scheduledBytesVector = NULL;
+
 }
 
 void TCPConnection::renameMPTCPVectors(char* cnt){
@@ -363,6 +368,12 @@ void TCPConnection::renameMPTCPVectors(char* cnt){
 	memset(name,'\0',sizeof(name));
 	sprintf(name,"[subflow][%s] tcpRcvQueueDrops",cnt);
 	tcpRcvQueueDropsVector = new cOutVector(name);
+
+	// MPTCP Vectors
+	memset(name,'\0',sizeof(name));
+	sprintf(name,"[subflow][%s] scheduledBytes",cnt);
+	scheduledBytesVector = new cOutVector(name);
+
 }
 #endif
 TCPConnection *TCPConnection::cloneListeningConnection()
@@ -526,7 +537,7 @@ void TCPConnection::sendEstabIndicationToApp()
     // The application only need one notification, otherwise he work on more than one connection
     if(tcpMain->multipath){
         if(this->flow->sendEstablished){
-
+            sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
             return; // we need no notification message
         }
         this->flow->sendEstablished = true;
@@ -824,16 +835,17 @@ void TCPConnection::sendSegment(uint32 bytes)
         uint32 forward = rexmitQueue->checkRexmitQueueForSackedOrRexmittedSegments(state->snd_nxt);
         state->snd_nxt = state->snd_nxt + forward;
     }
-    
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
-    if (bytes > buffered) // last segment?
+    if (bytes > buffered){ // last segment?
         bytes = buffered;
-    
+        fprintf(stderr,"send less bytes as possible [possible: %u], because there are less data enqueued [enqueued: %u]",bytes,buffered);
+    }
     // if header options will be added, this could reduce the number of data bytes allowed for this segment,
     // because following condition must to be respected:
     //     bytes + options_len <= snd_mss
     TCPSegment *tcpseg_temp = createTCPSegment(NULL);
     tcpseg_temp->setAckBit(true); // needed for TS option, otherwise TSecr will be set to 0
+
 #ifdef PRIVATE
     writeHeaderOptionsWithMPTCP(tcpseg_temp, bytes);
 #else
@@ -854,6 +866,8 @@ void TCPConnection::sendSegment(uint32 bytes)
     state->sentBytes = bytes;
 
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
+
+    ASSERT((!state->fin_rcvd) && (!state->send_fin) && "FIN Bit is set");
     TCPSegment *tcpseg = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
     
     // if sack_enabled copy region of tcpseg to rexmitQueue
@@ -892,17 +906,22 @@ void TCPConnection::sendSegment(uint32 bytes)
     sendToIP(tcpseg);
 
     // let application fill queue again, if there is space
+#ifndef PRIVATE
     const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
+#else
+    const uint32 alreadyQueued = sendQueue->getBytesAvailable(state->snd_una);
+#endif
     const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
 
 #ifdef PRIVATE
-      if(this->getTcpMain()->multipath){
-          if ((state->sendQueueLimit > 0) && // (state->queueUpdate == false) &&
-            (TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow)->getFreeSendBuffer()  >= state->snd_mss)) {
-                  // Tell upper layer readiness to accept more data
-                      sendIndicationToApp(TCP_I_SEND_MSG, TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow)->getFreeSendBuffer());
-                      state->queueUpdate = false;  // TODO was true;
-          }
+     if(this->getTcpMain()->multipath){
+      // OK we should check if there enough data for the next sending process otherwise, we should request some
+      if((state->sendQueueLimit > 0) && (abated > this->getState()->snd_mss)){
+              MPTCP_SchedulerI* scheduler = TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow);
+              sendIndicationToApp(TCP_I_SEND_MSG, abated);
+              fprintf(stderr,"Request data drom app %d",abated);
+              state->queueUpdate = false;  // TODO was true;
+      }
      }
      else{
 #endif

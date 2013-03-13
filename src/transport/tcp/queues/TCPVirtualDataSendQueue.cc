@@ -62,6 +62,9 @@ uint32 TCPVirtualDataSendQueue::getBufferEndSeq()
 TCPSegment *TCPVirtualDataSendQueue::createSegmentWithBytes(uint32 fromSeq, ulong numBytes)
 {
     //tcpEV << "sendQ: " << info() << " createSeg(seq=" << fromSeq << " len=" << numBytes << ")\n";
+    if(fromSeq+numBytes > end){
+        fprintf(stdout,"\n begin %d <= fromSeq %d && fromSeq+numBytes %d <= end %d use bytes = %lu Diff %lu",begin,fromSeq, fromSeq+numBytes,end,numBytes,fromSeq+numBytes-end );
+    }
     ASSERT(seqLE(begin,fromSeq) && seqLE(fromSeq+numBytes,end));
 
     char msgname[32];

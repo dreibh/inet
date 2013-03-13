@@ -91,7 +91,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     ordered = subflow->getTcpMain()->par("multipath_ordered");
 
     char name[255];
-	sprintf(name,"[flow][%d] send window",ID);
+	sprintf(name,"[FLOW-%d][RCV-QUEUE] size",ID);
 	mptcpRcvBufferSize = new cOutVector(name);
 }
 
@@ -881,7 +881,10 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     // check if we need to add DSS
     if(bytes < 1) return 0;
 
-
+    // Special cases: Retranmission
+    bool isRetranmission = false;
+    uint64 rtx_snd_seq = 0;
+    uint32 rtx_msg_length = 0;
     // First calculate possible message size
     uint options_len = 0;
     for (uint i=0; i<tcpseg->getOptionsArraySize(); i++)
@@ -927,27 +930,35 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 	for(uint64 cnt = 0; cnt < bytes;cnt++,this->mptcp_snd_nxt++,snd_nxt_tmp++){
 		// check if there is any in the list
 	    // FIXME Check if it is still in the queue, overflow
-	    // if(subflow->dss_dataMapofSubflow.find(this->mptcp_snd_nxt)==subflow->dss_dataMapofSubflow.end()){
-		    // It is not so we can proceed
+	        TCPMultipathDSSStatus::const_iterator it = subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
+            if(it != subflow->dss_dataMapofSubflow.end()){
+                // this is a retransmission
+                isRetranmission = true;
+                DSS_INFO* dss_info = it->second;
+                rtx_msg_length = dss_info->seq_offset;
+                rtx_snd_seq = dss_info->dss_seq;
+                // FIXME check if it really could be only one message
+                break;
+            }
+            else{
+                DSS_INFO* dss_info = (DSS_INFO*) malloc(sizeof(DSS_INFO));
+                dss_info->dss_seq = this->mptcp_snd_nxt;
+                dss_info->seq_offset = bytes_tmp;
+                dss_info->section_end = false;
+                // we work wit a offset parameter if we have numbers in sequence
+                // I think it is more easy to handle this in mss sections
 
+                // information stuff
+                dss_info->re_scheduled = 0;
+                dss_info->delivered = false;
+                subflow->dss_dataMapofSubflow[snd_nxt_tmp] = dss_info;//dss_info;
+                DEBUGPRINT("[MPTCP][DSS INFO] start dss %ld flow seq: %d offset:%d",this->mptcp_snd_nxt, snd_nxt_tmp, dss_info->seq_offset);
+                // recalc the offset
+                snd_nxt_tmp += bytes_tmp;
 
-			DSS_INFO* dss_info = (DSS_INFO*) malloc(sizeof(DSS_INFO));
-			dss_info->dss_seq = this->mptcp_snd_nxt;
-			dss_info->seq_offset = bytes_tmp;
-			dss_info->section_end = false;
-			// we work wit a offset parameter if we have numbers in sequence
-			// I think it is more easy to handle this in mss sections
-
-			// information stuff
-			dss_info->re_scheduled = 0;
-			dss_info->delivered = false;
-			subflow->dss_dataMapofSubflow[snd_nxt_tmp] = dss_info;//dss_info;
-			DEBUGPRINT("[MPTCP][DSS INFO] start dss %ld flow seq: %d offset:%d",this->mptcp_snd_nxt, snd_nxt_tmp, dss_info->seq_offset);
-			// recalc the offset
-			snd_nxt_tmp += bytes_tmp;
-
-            cnt += bytes_tmp;
-            this->mptcp_snd_nxt += bytes_tmp-1;
+                cnt += bytes_tmp;
+                this->mptcp_snd_nxt += bytes_tmp-1;
+            }
 
 //		}
 //		else ASSERT (false);
@@ -1046,7 +1057,10 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     }
 
     // Data seq no.
-    l_seq = snd_seq = this->mptcp_snd_nxt-1 - bytes;
+    if(isRetranmission)
+        l_seq = snd_seq = rtx_snd_seq - 1;
+    else
+        l_seq = snd_seq = this->mptcp_snd_nxt-1 - bytes;
 
     first_bits |= l_seq>>16;
     option->setValues(array_cnt++, first_bits);
@@ -1063,7 +1077,10 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     first_bits = 0;
     first_bits |= l_seq << 16;
 
-    first_bits |= data_len = bytes;
+    if(isRetranmission)
+        first_bits |= data_len =  rtx_msg_length;
+    else
+        first_bits |= data_len = bytes;
     option->setValues(array_cnt++, first_bits);
 
     // FIXME Checksum is missing
@@ -1126,7 +1143,10 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 		uint32 cum = 0;
 		for(; cum < bytes; this->mptcp_snd_una++){
 		    TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.find(start+cum);
-
+		    if(it==conn->dss_dataMapofSubflow.end()){
+		        // Fixme Is something wrong when I get here...
+		        break;
+		    }
 		    DSS_INFO* dss_info = it->second;
 		    DEBUGPRINT("[MPTCP][DSS INFO] del dss %ld flow seq: %d offset:%d", this->mptcp_snd_una, start+cum, dss_info->seq_offset);
 		    if(dss_info->seq_offset > 0){
@@ -1187,8 +1207,10 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
 				msg->setControlInfo(cmd);
 				con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
 			}
+		   size_t queue_len = mptcp_receiveQueue->getQueueLength();
 		   if (mptcpRcvBufferSize)
-			   mptcpRcvBufferSize->record(mptcp_receiveQueue->getQueueLength());
+			   mptcpRcvBufferSize->record(mptcp_receiveQueue->getAmountOfBufferedBytes());
+		   DEBUGPRINT("[MPTCP][RCV QUEUE][RECORD] size %lu with bytes. %ld",queue_len, mptcp_receiveQueue->getAmountOfBufferedBytes());
     	}
        else{
     	   con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
@@ -1534,7 +1556,7 @@ void MPTCP_Flow::DEBUGprintStatus() {
 #ifdef PRIVATE
 
     DEBUGPRINT(
-            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %lu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",
+            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %u >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",
             this->getRemoteToken());
     DEBUGPRINT("[FLOW][STATUS] Sequence Number: %ld", seq);
     DEBUGPRINT("[FLOW][STATUS] snd_una: %ld", mptcp_snd_una);
@@ -1546,7 +1568,7 @@ void MPTCP_Flow::DEBUGprintStatus() {
     int cnt = 0;
     TCP_subflow_t* entry = NULL;
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-            i != subflow_list.end(); i++, cnt) {
+            i != subflow_list.end(); i++, cnt++) {
         entry = (*i);
         DEBUGPRINT(
                 "[FLOW][SUBFLOW][%i][STATUS] Connections  %s:%d to %s:%d",
@@ -1559,7 +1581,7 @@ void MPTCP_Flow::DEBUGprintStatus() {
     }
 
     DEBUGPRINT(
-            "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< FLOW %lu <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",
+            "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< FLOW %u <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",
             this->getRemoteToken());
 #endif
 }

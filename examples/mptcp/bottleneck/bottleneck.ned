@@ -12,13 +12,13 @@ network bottleneck
     types:
         channel C1 extends DatarateChannel
         {
-            datarate = 1Mbps;
-            delay = 1 ms;
+            datarate = 10 Mbps;
+            //delay = 1 ms;
         }
         channel C2 extends DatarateChannel
         {
-            datarate = 1Mbps;
-            delay = 1 ms;
+            datarate = 10 Mbps;
+            // delay = 1 ms;
         }
     submodules:
         client1: StandardHost {
@@ -69,12 +69,13 @@ network bottleneck
     //        }
     connections:
         client1.pppg++ <--> C1 <--> router1.pppg++;
-//        router1.pppg++ <--> C2 <--> router3.pppg++;
-       router1.pppg++ <--> C2 {  per = 0.01; } <--> router3.pppg++;
+        //        router1.pppg++ <--> C2 <--> router3.pppg++;
+        //		  router1.pppg++ <--> C2 { delay = 1 ms; per = 0.01; } <--> router3.pppg++;
+        router1.pppg++ <--> C2 {  delay = 1 ms; per = 0.01; } <--> router3.pppg++;
         router3.pppg++ <--> C1 <--> server.pppg++;
         client1.pppg++ <--> C1 <--> router2.pppg++;
-//        router2.pppg++ <--> C2  <--> router4.pppg++;
-        router2.pppg++ <--> C2  {  per = 0.01; }<--> router4.pppg++;
+        //        router2.pppg++ <--> C2  <--> router4.pppg++;
+        router2.pppg++ <--> C2 {  delay = 1 ms; per = 0.01; } <--> router4.pppg++;
         router4.pppg++ <--> C1 <--> server.pppg++;
 }
 
