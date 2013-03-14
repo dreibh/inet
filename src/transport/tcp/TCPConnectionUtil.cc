@@ -876,8 +876,6 @@ void TCPConnection::sendSegment(uint32 bytes)
     state->sentBytes = bytes;
 
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
-
-    ASSERT((!state->fin_rcvd) && (!state->send_fin) && "FIN Bit is set");
     TCPSegment *tcpseg = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
     
     // if sack_enabled copy region of tcpseg to rexmitQueue
