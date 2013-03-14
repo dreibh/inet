@@ -53,7 +53,10 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
             cPacket* msg_tmp = new cPacket(*pkt);
             msg_tmp->setByteLength(lastUsed->getState()->snd_mss);
             _next(msg_tmp->getByteLength());
-            if(lastUsed==NULL) return; // NO SUBFLOW FOR DATA
+            if(lastUsed==NULL) {
+                delete msg;
+                return; // NO SUBFLOW FOR DATA
+            }
             _createMSGforProcess(msg_tmp);
             pkt->setByteLength(pkt->getByteLength()- lastUsed->getState()->snd_mss); // FIXME What is about the options
             if(lastUsed->scheduledBytesVector)
@@ -61,7 +64,10 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
         }
     }
     _next(pkt->getByteLength());
-    if(lastUsed==NULL) return; // NO SUBFLOW FOR DATA
+    if(lastUsed==NULL) {
+        delete msg;
+        return; // NO SUBFLOW FOR DATA
+    }
     _createMSGforProcess(pkt);
     if(lastUsed->scheduledBytesVector)
         lastUsed->scheduledBytesVector->record(pkt->getByteLength());
@@ -94,10 +100,13 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
 
 #ifdef PRIVATE  // for debug
            if(!(max_counter < subflow_list->size())){
-               DEBUGPRINT("[SCHEDLUER][ROUND ROBIN][QUEUE][ERROR] too much data for buffer %d",bytes);
+               // FIXME -> MSG Data Queues (something is wrong in their behaivior)
+               fprintf(stderr,"[SCHEDLUER][ROUND ROBIN][QUEUE][ERROR] too much data for buffer %d",bytes);
+               tcpEV << "[SCHEDLUER][ROUND ROBIN][QUEUE][ERROR] too much data for buffer " << bytes << endl;
                lastUsed = NULL;
                break;
            }
+           // Assert not reached because, we work here wit warnings...
 #endif
            ASSERT(max_counter < subflow_list->size() && "Ups...The Application send more Data as I can handle..");
            max_counter++;

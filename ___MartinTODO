@@ -22,8 +22,7 @@ Open issues:
 - Option length handling when it is not an multipath connection and data is enqueued 
 - For Options there is a bug, by shift of 16 bit for the MPTCP Options
 - Messages could only be MTU-Header
-- if queue is to small there comes failures up by creating messages (example 100 000 B)
-  ==> ASSERT: condition seqLE(begin,fromSeq) && seqLE(fromSeq+numBytes,end) false in function createSegmentWithBytes, transport/tcp/queues/TCPMsgBasedSendQueue.cc line 71
+
 
 Features
 =================
@@ -55,5 +54,4 @@ Work for SHKs
 =======================
 FIXME -> I have a shift of 16 bit during use of  option->setValues
 FIXME -> Sequencenumber handling
-FIXME -> MSG Data Queues (something is wrong in their behaivior)
-
+FIXME -> MSG Data Queues (something is wrong in their behaivior) -> filling the queue
