@@ -202,7 +202,7 @@ uint64 TCPMultipathVirtualDataRcvQueue::getAmountOfFreeBytes(uint64 maxRcvBuffer
     return freeRcvBuffer;
 }
 
-size_t TCPMultipathVirtualDataRcvQueue::getQueueLength()
+uint64 TCPMultipathVirtualDataRcvQueue::getQueueLength()
 {
     return regionList.size();
 }
