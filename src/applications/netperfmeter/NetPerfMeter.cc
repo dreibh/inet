@@ -1046,15 +1046,18 @@ void NetPerfMeter::sendDataOfNonSaturatedStreams(const unsigned long long bytesA
 // ###### Receive data ######################################################
 void NetPerfMeter::receiveMessage(cMessage* msg)
 {
-   const NetPerfMeterDataMessage* dataMessage =
-      dynamic_cast<const NetPerfMeterDataMessage*>(msg);
+    const cPacket* dataMessage =
+                  dynamic_cast<const cPacket*>(msg);
+
    if(dataMessage != NULL) {
       unsigned int    streamID = 0;
       const simtime_t delay    = simTime() - dataMessage->getCreationTime();
 
       if(TransportProtocol == SCTP) {
+          const NetPerfMeterDataMessage* sctp_dataMessage =
+              dynamic_cast<const NetPerfMeterDataMessage*>(msg);
          const SCTPRcvCommand* receiveCommand =
-            check_and_cast<const SCTPRcvCommand*>(dataMessage->getControlInfo());
+            check_and_cast<const SCTPRcvCommand*>(sctp_dataMessage->getControlInfo());
          streamID = receiveCommand->getSid();
       }
 

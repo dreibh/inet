@@ -1170,31 +1170,19 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 	}
 }
 void MPTCP_Flow::sendToApp(cMessage* msg){
-    bool found = false;
+    bool found = true;  // TODO ...what happens if we remove our communication flow
     // 1) Add data in MPTCP Receive Queue
     // 	(Not here => This is done when we got DSS Information pcb->processDSS)
     //  (Here is just the trigger if there is something to deliver on the app)
-    // 2) Search for a subflow with a connection to app
-    // 3) Check if Data in Order for Application
-    // 4) Send Data to Connection
+    // 2) Check if Data in Order for Application
+    // 3) Send Data to Connection
     // TODO For first try we use the app of the first connection we have with an appGateIndex
     // We have to think about what will happen if we delete this
-
-    // 2) Search Connection
-	TCPConnection* con;
-	for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-		   i != subflow_list.end(); i++) {
-	   TCP_subflow_t* entry = (*i);
-	   if(!(entry->subflow->appGateIndex < 0)){
-		   found = true;
-		   con = entry->subflow;
-		   break;
-	   }
-	}
 
     if(found){
        DEBUGPRINT("[MPTCP][SEND TO APP] Over Conn ID %i App Gate Index %i%s",con->connId, con->appGateIndex,"\0");
        // 3) OK we got a valid connection to an app, check if there data
+       TCP_SubFlowVector_t::iterator i = subflow_list.begin();
        if(ordered){	// Ordered is just for debugging, makes things more easy
     	   delete msg; // this message is not needed anymore
 		   while ((msg=mptcp_receiveQueue->extractBytesUpTo(mptcp_rcv_nxt))!=NULL)
@@ -1202,9 +1190,10 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
 				// 4) Send Data to Connection
 				msg->setKind(TCP_I_DATA);
 				TCPCommand *cmd = new TCPCommand();
-				cmd->setConnId(con->connId);
+				cmd->setConnId((*i)->subflow->connId);
 				msg->setControlInfo(cmd);
-				con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
+				(*i)->subflow->getTcpMain()->send(msg, "appOut", (*i)->subflow->appGateIndex);
+
 			}
 		   size_t queue_len = mptcp_receiveQueue->getQueueLength();
 		   if (mptcpRcvBufferSize)
@@ -1212,7 +1201,7 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
 		   DEBUGPRINT("[MPTCP][RCV QUEUE][RECORD] size %lu with bytes. %ld",queue_len, mptcp_receiveQueue->getAmountOfBufferedBytes());
     	}
        else{
-    	   con->getTcpMain()->send(msg, "appOut", con->appGateIndex);
+           (*i)->subflow->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
        }
     }
     else

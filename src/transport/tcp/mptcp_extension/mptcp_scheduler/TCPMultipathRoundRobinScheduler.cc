@@ -47,28 +47,31 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
 
     if(lastUsed->getState()->sendQueueLimit)
         ASSERT(lastUsed->getState()->sendQueueLimit > pkt->getByteLength() && "What is the application doing...? Too much data!");
-    while(pkt->getByteLength() > lastUsed->getState()->snd_mss){
 
-        if(pkt->getByteLength() > lastUsed->getState()->snd_mss){
-            cPacket* msg_tmp = new cPacket(*pkt);
-            msg_tmp->setByteLength(lastUsed->getState()->snd_mss);
-            _next(msg_tmp->getByteLength());
-            if(lastUsed==NULL) {
-                delete msg;
-                return; // NO SUBFLOW FOR DATA
-            }
-            _createMSGforProcess(msg_tmp);
-            pkt->setByteLength(pkt->getByteLength()- lastUsed->getState()->snd_mss); // FIXME What is about the options
-            if(lastUsed->scheduledBytesVector)
-                lastUsed->scheduledBytesVector->record(msg_tmp->getByteLength());
-        }
-    }
+//  FIXME is this what we need? TODO pipe the netperfmeter information
+//     while(pkt->getByteLength() > lastUsed->getState()->snd_mss){
+//
+//        if(pkt->getByteLength() > lastUsed->getState()->snd_mss){
+//            cPacket* msg_tmp = new cPacket(*pkt);
+//            msg_tmp->setByteLength(lastUsed->getState()->snd_mss);
+//            _next(msg_tmp->getByteLength());
+//            if(lastUsed==NULL) {
+//                delete msg;
+//                return; // NO SUBFLOW FOR DATA
+//            }
+//            _createMSGforProcess(msg_tmp);
+//            pkt->setByteLength(pkt->getByteLength()- lastUsed->getState()->snd_mss); // FIXME What is about the options
+//            if(lastUsed->scheduledBytesVector)
+//                lastUsed->scheduledBytesVector->record(msg_tmp->getByteLength());
+//        }
+//    }
+
     _next(pkt->getByteLength());
     if(lastUsed==NULL) {
         delete msg;
         return; // NO SUBFLOW FOR DATA
     }
-    _createMSGforProcess(pkt);
+    _createMSGforProcess(msg);
     if(lastUsed->scheduledBytesVector)
         lastUsed->scheduledBytesVector->record(pkt->getByteLength());
 }

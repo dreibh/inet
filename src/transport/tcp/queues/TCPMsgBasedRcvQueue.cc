@@ -70,9 +70,9 @@ uint32 TCPMsgBasedRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg)
 cPacket *TCPMsgBasedRcvQueue::extractBytesUpTo(uint32 seq)
 {
     extractTo(seq);
-
+    uint32 first_seq = payloadList.begin()->first;
     // pass up payload messages, in sequence number order
-    if (payloadList.empty() || seqGreater(payloadList.begin()->first, seq))
+    if (payloadList.empty() || seqGreater(first_seq, seq))
         return NULL;
 
     cPacket *msg = payloadList.begin()->second;
