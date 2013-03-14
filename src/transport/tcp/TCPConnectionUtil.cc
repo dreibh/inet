@@ -521,6 +521,11 @@ void TCPConnection::signalConnectionTimeout()
 
 void TCPConnection::sendIndicationToApp(int code, const int id)
 {
+#ifdef PRIVATE
+    // check if it is a good idea to request for further messages
+    if(this->getState()->send_fin || this->getState()->fin_rcvd)
+        return;
+#endif
     tcpEV << "Notifying app: " << indicationName(code) << "\n";
     cMessage *msg = new cMessage(indicationName(code));
     msg->setKind(code);
@@ -824,7 +829,10 @@ void TCPConnection::sendFin()
 
     // send it
     sendToIP(tcpseg);
+#ifdef PRIVATE
+    if(this->isSubflow)
 
+#endif
     // notify
     tcpAlgorithm->ackSent();
 }
