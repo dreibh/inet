@@ -32,6 +32,7 @@ class INET_API TCPVirtualDataSendQueue : public TCPSendQueue
   protected:
     uint32 begin;  // 1st sequence number stored
     uint32 end;    // last sequence number stored +1
+    uint32 start;
 
   public:
     /**

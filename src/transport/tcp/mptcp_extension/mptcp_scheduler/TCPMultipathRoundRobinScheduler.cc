@@ -45,7 +45,6 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
     // We have to split data on mss size
     cPacket* pkt = check_and_cast<cPacket*> (msg);
 
-    DEBUGPRINT("What is the application doing...sending more data as we have buffer [Configured %d] [Application Send %d]",lastUsed->getState()->sendQueueLimit, pkt->getByteLength());
     if(lastUsed->getState()->sendQueueLimit)
         ASSERT(lastUsed->getState()->sendQueueLimit > pkt->getByteLength() && "What is the application doing...? Too much data!");
     while(pkt->getByteLength() > lastUsed->getState()->snd_mss){
@@ -54,6 +53,7 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
             cPacket* msg_tmp = new cPacket(*pkt);
             msg_tmp->setByteLength(lastUsed->getState()->snd_mss);
             _next(msg_tmp->getByteLength());
+            if(lastUsed==NULL) return; // NO SUBFLOW FOR DATA
             _createMSGforProcess(msg_tmp);
             pkt->setByteLength(pkt->getByteLength()- lastUsed->getState()->snd_mss); // FIXME What is about the options
             if(lastUsed->scheduledBytesVector)
@@ -61,40 +61,55 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
         }
     }
     _next(pkt->getByteLength());
+    if(lastUsed==NULL) return; // NO SUBFLOW FOR DATA
     _createMSGforProcess(pkt);
     if(lastUsed->scheduledBytesVector)
         lastUsed->scheduledBytesVector->record(pkt->getByteLength());
 }
 
 void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
-    bool foundLast = true;
+    bool foundLast = false;
     TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)lastUsed->flow->getSubflows();
 
     TCP_subflow_t* entry = NULL;
-    TCP_SubFlowVector_t::iterator it;
-    for (it = subflow_list->begin(); it != subflow_list->end(); it++) {
+    TCP_SubFlowVector_t::iterator it = subflow_list->begin();
+    uint32_t max_counter = 0;
+    while (true) {
        entry = (*it);
 
-       if(!foundLast){
+       // First organize the send queue limit
+       if(!lastUsed->getState()->sendQueueLimit )
+           lastUsed->getState()->sendQueueLimit = flow->flow_send_queue_limit;
+       // go to the nextwith free space
+       if(foundLast){
            lastUsed = entry->subflow;
-           const uint32 free = lastUsed->getState()->sendQueueLimit - lastUsed->getSendQueue()->getBytesAvailable(lastUsed->getState()->snd_una);
-           if(free < bytes){
-               continue;
+           const uint32 free = lastUsed->getState()->sendQueueLimit - lastUsed->getSendQueue()->getBytesAvailable(lastUsed->getSendQueue()->getBufferStartSeq());
+           if(bytes < free && lastUsed->isQueueAble){
+               //DEBUGPRINT("[SCHEDLUER][ROUND ROBIN][QUEUE] fill %d! Send queue local %s:%d remote %s:%d [left: %d]",
+               //                   max_counter, lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort, free - bytes);
+               break;
            }
-           foundLast = true;
-           break;
+           //DEBUGPRINT("[SCHEDLUER][ROUND ROBIN][QUEUE] Next %d! Send queue of local %s:%d remote %s:%d is full [left: %d]",
+           //        max_counter, lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort, free);
+
+#ifdef PRIVATE  // for debug
+           if(!(max_counter < subflow_list->size())){
+               DEBUGPRINT("[SCHEDLUER][ROUND ROBIN][QUEUE][ERROR] too much data for buffer %d",bytes);
+               lastUsed = NULL;
+               break;
+           }
+#endif
+           ASSERT(max_counter < subflow_list->size() && "Ups...The Application send more Data as I can handle..");
+           max_counter++;
        }
        // first we have to check if buffer is empty
-       if(entry->subflow == lastUsed){
-           foundLast = false;
-           continue;
+       else if(entry->subflow == lastUsed){
+           foundLast = true;
        }
+       it++;
+       if(it == subflow_list->end())
+           it = subflow_list->begin();
     }
-    if(!foundLast){ // it was the last element in the list
-        it = subflow_list->begin();
-        lastUsed= (*it)->subflow;
-    }
-    ASSERT((lastUsed->getState()->sendQueueLimit - lastUsed->getSendQueue()->getBytesAvailable(lastUsed->getState()->snd_una)>0) && "Not enough space in buffer");
 }
 
 void MPTCP_RoundRobinScheduler::initialize(MPTCP_Flow* f){
@@ -117,9 +132,9 @@ void MPTCP_RoundRobinScheduler::_createMSGforProcess(cMessage *msg) {
     if(lastUsed==NULL)
           return;
     msg->setKind(TCP_C_MPTCP_SEND);
-    DEBUGPRINT(
-            "[SCHEDULER][ROUND ROBIN][OUT] Send via  %s:%d to %s:%d",
-            lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort);
+//    DEBUGPRINT(
+//            "[SCHEDULER][ROUND ROBIN][OUT] Send via  %s:%d to %s:%d",
+//            lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort);
 
     TCPSendCommand *cmd = new TCPSendCommand();
     cmd->setConnId(lastUsed->connId);

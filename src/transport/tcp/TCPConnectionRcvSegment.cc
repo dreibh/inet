@@ -989,6 +989,11 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
         {
             state->snd_una = tcpseg->getAckNo();
             sendQueue->discardUpTo(state->snd_una);
+#ifdef PRIVATE
+            if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) < state->sendQueueLimit)) {
+                state->queueUpdate = false;
+            }
+#endif
             if (state->sack_enabled)
                 rexmitQueue->discardUpTo(state->snd_una);
 
@@ -1136,6 +1141,11 @@ TCPEventCode TCPConnection::processRstInSynReceived(TCPSegment *tcpseg)
     //"
 
     sendQueue->discardUpTo(sendQueue->getBufferEndSeq()); // flush send queue
+#ifdef PRIVATE
+        if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) < state->sendQueueLimit)) {
+            state->queueUpdate = false;
+        }
+#endif
     if (state->sack_enabled)
         rexmitQueue->discardUpTo(rexmitQueue->getBufferEndSeq()); // flush rexmit queue
 
@@ -1257,6 +1267,11 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 
         // acked data no longer needed in send queue
         sendQueue->discardUpTo(discardUpToSeq);
+#ifdef PRIVATE
+        if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) < state->sendQueueLimit)) {
+            state->queueUpdate = false;
+        }
+#endif
         // acked data no longer needed in rexmit queue
         if (state->sack_enabled)
             rexmitQueue->discardUpTo(discardUpToSeq);

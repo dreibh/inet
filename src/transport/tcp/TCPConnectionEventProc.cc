@@ -210,9 +210,11 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             opp_error("Error processing command SEND: connection closing");
             /* no break */
     }
+#ifndef PRIVATE
     if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) > state->sendQueueLimit)) {
         state->queueUpdate = false;
     }
+#endif
     delete sendCommand; // msg itself has been taken by the sendQueue
 }
 

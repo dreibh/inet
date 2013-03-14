@@ -33,6 +33,7 @@ void TCPVirtualDataSendQueue::init(uint32 startSeq)
 {
     begin = startSeq;
     end = startSeq;
+    start = startSeq;
 }
 
 std::string TCPVirtualDataSendQueue::info() const
@@ -46,6 +47,7 @@ void TCPVirtualDataSendQueue::enqueueAppData(cPacket *msg)
 {
     //tcpEV << "sendQ: " << info() << " enqueueAppData(bytes=" << msg->getByteLength() << ")\n";
     end += msg->getByteLength();
+    ASSERT (start < end && "Overflow in Send Queue");
     delete msg;
 }
 
@@ -62,9 +64,6 @@ uint32 TCPVirtualDataSendQueue::getBufferEndSeq()
 TCPSegment *TCPVirtualDataSendQueue::createSegmentWithBytes(uint32 fromSeq, ulong numBytes)
 {
     //tcpEV << "sendQ: " << info() << " createSeg(seq=" << fromSeq << " len=" << numBytes << ")\n";
-    if(fromSeq+numBytes > end){
-        fprintf(stdout,"\n begin %d <= fromSeq %d && fromSeq+numBytes %d <= end %d use bytes = %lu Diff %lu",begin,fromSeq, fromSeq+numBytes,end,numBytes,fromSeq+numBytes-end );
-    }
     ASSERT(seqLE(begin,fromSeq) && seqLE(fromSeq+numBytes,end));
 
     char msgname[32];

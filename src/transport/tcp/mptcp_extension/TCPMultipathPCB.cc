@@ -87,9 +87,7 @@ MPTCP_PCB::~MPTCP_PCB() {
  */
 MPTCP_PCB* MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex,
     TCPConnection* subflow, TCPSegment *tcpseg) {
-    DEBUGPRINT("MPTCP Block%s","\n");
-
-    DEBUGPRINT(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Process Segment%s","\0");
+    DEBUGPRINT("Process Segment >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>%s","\0");
     // First look for a Multipath Protocol Control Block
     MPTCP_PCB* tmp = MPTCP_PCB::lookupMPTCP_PCB(connId, aAppGateIndex,tcpseg, subflow);
 
@@ -123,7 +121,7 @@ MPTCP_PCB* MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex,
     }
     ASSERT(tmp->_processSegment(connId, subflow, tcpseg) && "SOMETHING WENT WRONG IN PROCEEDING THE SEGMENT");
 
-    DEBUGPRINT("End Process Segment <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%s","\n");
+    DEBUGPRINT("End Process Segment <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%s","\0");
     return tmp;
 }
 

@@ -162,7 +162,7 @@ void MPTCP_Flow::_initFlow(int port) {
     } else {
         // Should never happen...
         tcpEV
-                     << "[MPTCP FLOW][ERROR] Problems by adding all known IP adresses\n";
+                     << "[MPTCP FLOW][ERROR] Problems by adding all known IP adresses";
     }
     return;
 }
@@ -251,7 +251,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
                 to_join->remote.port = tmp_r->port;
 
                 DEBUGPRINT(
-                        "\nAdd Possible MPTCP Subflow: %s:%d to %s:%d\n",
+                        "Add Possible MPTCP Subflow: %s:%d to %s:%d",
                         to_join->local.addr.str().c_str(), to_join->local.port, to_join->remote.addr.str().c_str(), to_join->remote.port);
 
                 // add to join queue () - joinConnection() will work for this queue
@@ -425,8 +425,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
             _prepareJoinConnection(); // FIXME -> Perhaps there is a better place, but in first try we check if there are new data received
         }
     }DEBUGPRINT(
-            "End Preparing Outgoing Segment <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%s",
-            "\n");
+            "End Preparing Outgoing Segment <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%c",'\0');
     return t;
 }
 
@@ -525,7 +524,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
                     _getLocalKey());
             this->MPTCP_FSM(ESTABLISHED); //TEST
             tcpEV
-                         << "[MPTCP][HANDSHAKE][MP_CAPABLE] PRE_ESTABLISHED after send SYN-ACK\n";
+                         << "[MPTCP][HANDSHAKE][MP_CAPABLE] PRE_ESTABLISHED after send SYN-ACK";
 
         } else
             ASSERT(false);
@@ -763,7 +762,7 @@ bool MPTCP_Flow::_prepareJoinConnection() {
         for (it = join_queue.begin(); it != join_queue.end(); it++, cnt++) {
             AddrCombi_t* c = (AddrCombi_t *) (*it);
             DEBUGPRINT(
-                    "Work on possible Join: %s:%d to %s:%d\n",
+                    "Work on possible Join: %s:%d to %s:%d",
                     c->local.addr.str().c_str(), c->local.port, c->remote.addr.str().c_str(), c->remote.port);
 
             ASSERT(subflow_list.size() != 0 && "Ups...why is the subflow_list empty");
@@ -776,7 +775,7 @@ bool MPTCP_Flow::_prepareJoinConnection() {
                         && (entry->subflow->localAddr == c->local.addr)
                         && (entry->subflow->localPort == c->local.port)) {
                     DEBUGPRINT(
-                            "We know: %s:%d to %s:%d\n",
+                            "We know: %s:%d to %s:%d",
                             c->local.addr.str().c_str(), c->local.port, c->remote.addr.str().c_str(), c->remote.port);
                     skip = true;
                     break;
@@ -792,7 +791,7 @@ bool MPTCP_Flow::_prepareJoinConnection() {
             ASSERT(tmp->getTcpMain()!=NULL && "There should allways a TCP MAIN");
 
             DEBUGPRINT(
-                    "Check if new MPTCP Subflow: %s:%d to %s:%d\n",
+                    "Check if new MPTCP Subflow: %s:%d to %s:%d",
                     c->local.addr.str().c_str(), c->local.port, c->remote.addr.str().c_str(), c->remote.port);
 
             // ignore local addresses
@@ -829,7 +828,7 @@ bool MPTCP_Flow::_prepareJoinConnection() {
                 //               if(tmp->getTcpMain()->isKnownConn(c->local.addr,tmp->localPort,c->remote.addr,tmp->remotePort))
                 //                       continue; // OK TCP still knows this subflow, do nothing
                 DEBUGPRINT(
-                        "\nTry to add Subflow: %s:%d to %s:%d\n",
+                        "Try to add Subflow: %s:%d to %s:%d",
                         c->local.addr.str().c_str(), c->local.port, c->remote.addr.str().c_str(), c->remote.port);
 
                 // create a internal message for another active open connection
@@ -1227,11 +1226,7 @@ void MPTCP_Flow::enqueueMPTCPData(TCPSegment *mptcp_tcpseg, uint64 dss_start_seq
 }
 
 void MPTCP_Flow::setSendQueueLimit(int limit){
-    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-          i != subflow_list.end(); i++) {
-      TCP_subflow_t* entry = (*i);
-      entry->subflow->getState()->sendQueueLimit = limit;
-    }
+    flow_send_queue_limit = limit;
     return;
 }
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
@@ -1553,7 +1548,7 @@ void MPTCP_Flow::DEBUGprintMPTCPFlowStatus() {
 #endif
 }
 void MPTCP_Flow::DEBUGprintStatus() {
-#ifdef PRIVATE
+#ifdef _PRIVATE
 
     DEBUGPRINT(
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %u >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",
@@ -1576,8 +1571,7 @@ void MPTCP_Flow::DEBUGprintStatus() {
         DEBUGPRINT(
                 "[FLOW][SUBFLOW][%i][STATUS][SEND] rcv_nxt: %i\t snd_nxt: %i\t snd_una: %i snd_max: %i",
                 cnt, entry->subflow->getState()->rcv_nxt, entry->subflow->getState()->snd_nxt, entry->subflow->getState()->snd_una, entry->subflow->getState()->snd_max);
-        DEBUGPRINT("[FLOW][SUBFLOW][%i][STATUS]\n",cnt);
-        entry->subflow->getRexmitQueue()->info();
+        // entry->subflow->getRexmitQueue()->info();
     }
 
     DEBUGPRINT(

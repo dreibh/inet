@@ -535,9 +535,11 @@ void TCPConnection::sendEstabIndicationToApp()
 {
 #ifdef PRIVATE
     // The application only need one notification, otherwise he work on more than one connection
+    isQueueAble = true;
+    state->queueUpdate = false;
     if(tcpMain->multipath){
         if(this->flow->sendEstablished){
-            sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
+            sendIndicationToApp(TCP_I_SEND_MSG, state->snd_mss);
             return; // we need no notification message
         }
         this->flow->sendEstablished = true;
@@ -838,7 +840,13 @@ void TCPConnection::sendSegment(uint32 bytes)
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
     if (bytes > buffered){ // last segment?
         bytes = buffered;
-        fprintf(stderr,"send less bytes as possible [possible: %u], because there are less data enqueued [enqueued: %u]",bytes,buffered);
+#ifdef PRIVATE
+        DEBUGPRINT("send less bytes as possible [possible: %u], because there are less data enqueued [enqueued: %u]",bytes,buffered);
+        if(!buffered){
+            DEBUGPRINT("['TCP][SEND][WARNING] No Data send, because no data available for sending %d", buffered);
+            return;
+        }
+#endif
     }
     // if header options will be added, this could reduce the number of data bytes allowed for this segment,
     // because following condition must to be respected:
@@ -854,6 +862,7 @@ void TCPConnection::sendSegment(uint32 bytes)
 
 
     uint options_len = tcpseg_temp->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
+#ifdef PRIVATE
     if(this->getTcpMain()->multipath){
 		if (state->sack_enabled){
 			 uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
@@ -861,6 +870,7 @@ void TCPConnection::sendSegment(uint32 bytes)
 				 bytes = offset - state->snd_una;	// FIXME: In this case we overwrite for a retransmission the sending window
 		}
     }
+#endif
     while (bytes + options_len > state->snd_mss)
         bytes--;
     state->sentBytes = bytes;
@@ -906,37 +916,25 @@ void TCPConnection::sendSegment(uint32 bytes)
     sendToIP(tcpseg);
 
     // let application fill queue again, if there is space
-#ifndef PRIVATE
-    const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
-#else
-    const uint32 alreadyQueued = sendQueue->getBytesAvailable(state->snd_una);
-#endif
-    const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
+    uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
+    uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
 
 #ifdef PRIVATE
-     if(this->getTcpMain()->multipath){
-      // OK we should check if there enough data for the next sending process otherwise, we should request some
-      if((state->sendQueueLimit > 0) && (abated > this->getState()->snd_mss)){
-              MPTCP_SchedulerI* scheduler = TCPSchedulerManager::getMPTCPScheduler(this->getTcpMain(),this->flow);
-              sendIndicationToApp(TCP_I_SEND_MSG, abated);
-              fprintf(stderr,"Request data drom app %d",abated);
-              state->queueUpdate = false;  // TODO was true;
-      }
-     }
-     else{
+    int msg_cnt = ((abated * 0.8)/ (state->snd_mss-options_len));
+    (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
+
+    // FIXME Test we work with bigger steps, because it needs a long simulation time to create it for posssibe every message
+    if((state->sendQueueLimit > 0) && (abated < (state->sendQueueLimit * 0.05)))
+            abated = 0;
+    if(isQueueAble)
 #endif
-     if ((state->sendQueueLimit > 0) && // (state->queueUpdate == false) &&
+     if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
           (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
-          // Tell upper layer readiness to accept more data
+              // Tell upper layer readiness to accept more data
+              // DEBUGPRINT("[TCP][SUBFLOW][QUEUE] Request data from APP %u by data to send per packet(%i) %u", abated, msg_cnt, state->snd_mss-options_len);
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
-              state->queueUpdate = false;  // TODO was true;
+              state->queueUpdate = true;  // TODO was true;
       }
-#ifdef PRIVATE
-     }
-#endif
-
-
-
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
