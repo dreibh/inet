@@ -549,7 +549,9 @@ void TCPConnection::sendEstabIndicationToApp()
         }
         this->flow->sendEstablished = true;
     }
-
+    else
+        sendIndicationToApp(TCP_I_SEND_MSG, getState()->sendQueueLimit);
+        getState()->queueUpdate = true;
 #endif
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
     cMessage *msg = new cMessage(indicationName(TCP_I_ESTABLISHED));
