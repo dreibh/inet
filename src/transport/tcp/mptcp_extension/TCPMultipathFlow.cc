@@ -104,7 +104,8 @@ MPTCP_Flow::~MPTCP_Flow() {
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                i != subflow_list.end(); i++) {
            TCP_subflow_t* entry = (*i);
-           delete entry->subflow;
+           if(entry->subflow != NULL)
+               delete entry->subflow;
            entry->subflow = NULL;
     }
     subflow_list.clear();
