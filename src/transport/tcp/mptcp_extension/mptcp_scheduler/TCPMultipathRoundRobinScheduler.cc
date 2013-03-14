@@ -101,8 +101,8 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
 #ifdef PRIVATE  // for debug
            if(!(max_counter < subflow_list->size())){
                // FIXME -> MSG Data Queues (something is wrong in their behaivior)
-               fprintf(stderr,"[SCHEDLUER][ROUND ROBIN][QUEUE][ERROR] too much data for buffer %d",bytes);
-               tcpEV << "[SCHEDLUER][ROUND ROBIN][QUEUE][ERROR] too much data for buffer " << bytes << endl;
+               fprintf(stderr,"[SCHEDLUER][ROUND ROBIN][QUEUE][WARNING] too much data for buffer %d",bytes);
+               tcpEV << "[SCHEDLUER][ROUND ROBIN][QUEUE][WARNING] too much data for buffer " << bytes << endl;
                lastUsed = NULL;
                break;
            }

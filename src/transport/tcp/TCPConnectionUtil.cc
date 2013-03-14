@@ -843,7 +843,8 @@ void TCPConnection::sendSegment(uint32 bytes)
 #ifdef PRIVATE
         DEBUGPRINT("send less bytes as possible [possible: %u], because there are less data enqueued [enqueued: %u]",bytes,buffered);
         if(!buffered){
-            DEBUGPRINT("['TCP][SEND][WARNING] No Data send, because no data available for sending %d", buffered);
+            fprintf(stderr,"['TCP][SEND][WARNING] No Data send, because no data available for sending %d (Send Window too small?)", buffered);
+            // this is inly possible if all data in the queue is on the wire
             return;
         }
 #endif
@@ -918,13 +919,18 @@ void TCPConnection::sendSegment(uint32 bytes)
     uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
 
 #ifdef PRIVATE
-    int msg_cnt = ((abated * 0.8)/ (state->snd_mss-options_len));
-    (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
+    if(this->getTcpMain()->multipath){
+        int msg_cnt = ((abated * 0.8)/ (state->snd_mss-options_len));
+        (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
 
-    // FIXME Test we work with bigger steps, because it needs a long simulation time to create it for posssibe every message
-    if((state->sendQueueLimit > 0) && (abated < (state->sendQueueLimit * 0.05)))
-            abated = 0;
-    if(isQueueAble)
+        // FIXME Test we work with bigger steps, because it needs a long simulation time to create it for posssibe every message
+        if((state->sendQueueLimit > 0) && (abated < (state->sendQueueLimit * 0.05)))
+                abated = 0;
+    }else{
+        state->queueUpdate = false;
+        abated +=  (state->snd_mss - options_len);
+    }
+    if(isQueueAble && abated)
 #endif
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
           (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS

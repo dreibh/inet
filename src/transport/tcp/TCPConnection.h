@@ -592,14 +592,18 @@ class INET_API TCPConnection
 
     /** Utility: sends packet to application */
     virtual void sendToApp(cMessage *msg);
-
+#ifndef PRIVATE
     /** Utility: sends status indication (TCP_I_xxx) to application */
     virtual void sendIndicationToApp(int code, const int id = 0);
-
+#endif
     /** Utility: sends TCP_I_ESTABLISHED indication with TCPConnectInfo to application */
     virtual void sendEstabIndicationToApp();
 
   public:
+#ifdef PRIVATE
+    /** Utility: sends status indication (TCP_I_xxx) to application */
+    virtual void sendIndicationToApp(int code, const int id = 0);
+#endif
     /** Utility: prints local/remote addr/port and app gate index/connId */
     virtual void printConnBrief();
     /** Utility: prints important header fields */
