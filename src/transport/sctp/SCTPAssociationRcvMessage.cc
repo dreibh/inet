@@ -1510,7 +1510,6 @@ void SCTPAssociation::process_TIMEOUT_HEARTBEAT(SCTPPathVariables* path)
             /* notify the application, in case the PATH STATE has changed from ACTIVE to INACTIVE */
             pathStatusIndication(path, false);
         }
-
     }
 }
 

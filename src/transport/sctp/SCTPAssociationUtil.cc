@@ -36,7 +36,6 @@
 #include "UDPControlInfo_m.h"
 
 
-
 void SCTPAssociation::printSctpPathMap() const
 {
     sctpEV3 << "SCTP PathMap:" << endl;
