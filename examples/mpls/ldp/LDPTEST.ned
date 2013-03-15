@@ -14,11 +14,11 @@
 
 package inet.examples.mpls.ldp;
 
+import inet.base.UnimplementedModule;
 import inet.networklayer.extras.FailureManager;
 import inet.nodes.inet.StandardHost;
 import inet.nodes.mpls.LDP_LSR;
-import inet.world.NAMTrace;
-import inet.world.ScenarioManager;
+import inet.world.scenario.ScenarioManager;
 import ned.DatarateChannel;
 
 
@@ -41,10 +41,6 @@ network LDPTEST
             delay = 15us;
         }
     submodules:
-        nam: NAMTrace {
-            parameters:
-                @display("p=152,280");
-        }
         LSR1: LDP_LSR {
             parameters:
                 peers = "ppp0 ppp1 ppp2";
@@ -104,6 +100,7 @@ network LDPTEST
             parameters:
                 @display("p=350,50");
         }
+        configurator: UnimplementedModule;
     connections:
         LSR1.pppg[0] <--> C15 <--> LSR2.pppg[0];
         LSR1.pppg[1] <--> C5 <--> LSR4.pppg[0];

@@ -17,12 +17,12 @@
 package inet.networklayer.mpls;
 
 //
-// Stores the LIB (Label Information Base), accessed by MPLS and its
-// associated control protocols (RSVP, LDP) via direct C++ method calls.
+// Stores the LIB (Label Information Base), accessed by ~MPLS and its
+// associated control protocols (~RSVP, ~LDP) via direct C++ method calls.
 //
 simple LIBTable
 {
     parameters:
-        xml conf; // table contents to be loaded on startup
+        xml config = default(xml("<libtable/>")); // table contents to be loaded on startup
         @display("i=block/table2");
 }

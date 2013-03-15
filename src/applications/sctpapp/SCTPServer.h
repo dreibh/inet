@@ -19,11 +19,15 @@
 #ifndef __SCTPSERVER_H_
 #define __SCTPSERVER_H_
 
-#include <omnetpp.h>
+#include "INETDefs.h"
+
 #include "SCTPAssociation.h"
 #include "SCTPSocket.h"
 
 
+/**
+ * Implements the SCTPServer simple module. See the NED file for more info.
+ */
 class INET_API SCTPServer : public cSimpleModule
 {
   protected:
@@ -91,6 +95,74 @@ class INET_API SCTPServer : public cSimpleModule
     void finish();
     void handleTimer(cMessage *msg);
     void generateAndSend();
+// FIXME Merge delete
+//    protected:
+//        int32 notifications;
+//        int32 assocId;
+//        SCTPSocket *socket;
+//        double delay;
+//        double delayFirstRead;
+//        bool readInt;
+//        bool schedule;
+//        bool firstData;
+//        bool shutdownReceived;
+//        bool echo;
+//        bool finishEndsSimulation;
+//        bool ordered;
+//        bool abortSent;
+//        uint64 bytesSent;
+//        uint64 packetsSent;
+//        uint64 packetsRcvd;
+//        uint64 numRequestsToSend; // requests to send in this session
+//        int32 numSessions;
+//        int32 queueSize;
+//        int32 count;
+//        cMessage *timeoutMsg;
+//        cMessage *delayTimer;
+//        cMessage *delayFirstReadTimer;
+//        //cPacket* abort;
+//        int32 inboundStreams;
+//        int32 outboundStreams;
+//        int32 lastStream;
+//
+//        struct ServerAssocStat
+//        {
+//            simtime_t start;
+//            simtime_t stop;
+//            uint64 rcvdBytes;
+//            uint64 sentPackets;
+//            uint64 rcvdPackets;
+//            simtime_t lifeTime;
+//            bool abortSent;
+//            bool peerClosed;
+//        };
+//
+//        typedef std::map<int32,ServerAssocStat> ServerAssocStatMap;
+//        ServerAssocStatMap serverAssocStatMap;
+//
+//        typedef std::map<int32,cOutVector*> BytesPerAssoc;
+//        BytesPerAssoc bytesPerAssoc;
+//
+//        typedef std::map<int32,cDoubleHistogram*> HistEndToEndDelay;
+//        HistEndToEndDelay histEndToEndDelay;
+//
+//        typedef std::map<int32,cOutVector*> EndToEndDelay;
+//        EndToEndDelay endToEndDelay;
+//
+//    protected:
+//        void sendOrSchedule(cPacket *msg);
+//        cPacket* makeAbortNotification(SCTPCommand* msg);
+//        cPacket* makeReceiveRequest(cPacket* msg);
+//        cPacket* makeDefaultReceive();
+//        int32 ssn;
+//
+//    public:
+//        virtual ~SCTPServer();
+//        void initialize();
+//        void handleMessage(cMessage *msg);
+//        void finish();
+//        void handleTimer(cMessage *msg);
+//        void generateAndSend();
 };
 
 #endif

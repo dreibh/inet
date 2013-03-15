@@ -35,19 +35,25 @@ TCPBasicClientApp::~TCPBasicClientApp()
     cancelAndDelete(timeoutMsg);
 }
 
-void TCPBasicClientApp::initialize()
+void TCPBasicClientApp::initialize(int stage)
 {
-    TCPGenericCliAppBase::initialize();
-
-    timeoutMsg = new cMessage("timer");
+    TCPGenericCliAppBase::initialize(stage);
+    if (stage != 3)
+        return;
 
     numRequestsToSend = 0;
     earlySend = false;  // TBD make it parameter
     WATCH(numRequestsToSend);
     WATCH(earlySend);
 
+    simtime_t startTime = par("startTime");
+    stopTime = par("stopTime");
+    if (stopTime != 0 && stopTime <= startTime)
+        error("Invalid startTime/stopTime parameters");
+
+    timeoutMsg = new cMessage("timer");
     timeoutMsg->setKind(MSGKIND_CONNECT);
-    scheduleAt((simtime_t)par("startTime"), timeoutMsg);
+    scheduleAt(startTime, timeoutMsg);
 }
 
 void TCPBasicClientApp::sendRequest()
@@ -56,8 +62,10 @@ void TCPBasicClientApp::sendRequest()
 
      long requestLength = par("requestLength");
      long replyLength = par("replyLength");
-     if (requestLength<1) requestLength=1;
-     if (replyLength<1) replyLength=1;
+     if (requestLength < 1)
+         requestLength = 1;
+     if (replyLength < 1)
+         replyLength = 1;
 
      sendPacket(requestLength, replyLength);
 }
@@ -83,6 +91,9 @@ void TCPBasicClientApp::handleTimer(cMessage *msg)
            // no scheduleAt(): next request will be sent when reply to this one
            // arrives (see socketDataArrived())
            break;
+
+        default:
+            throw cRuntimeError("Invalid timer msg: kind=%d", msg->getKind());
     }
 }
 
@@ -92,23 +103,45 @@ void TCPBasicClientApp::socketEstablished(int connId, void *ptr)
 
     // determine number of requests in this session
     numRequestsToSend = (long) par("numRequestsPerSession");
-    if (numRequestsToSend<1) numRequestsToSend=1;
+    if (numRequestsToSend < 1)
+        numRequestsToSend = 1;
 
     // perform first request if not already done (next one will be sent when reply arrives)
     if (!earlySend)
         sendRequest();
+
     numRequestsToSend--;
+}
+
+void TCPBasicClientApp::rescheduleOrDeleteTimer(simtime_t d, short int msgKind)
+{
+    cancelEvent(timeoutMsg);
+
+    if (stopTime == 0 || stopTime > d)
+    {
+        timeoutMsg->setKind(msgKind);
+        scheduleAt(d, timeoutMsg);
+    }
+    else
+    {
+        delete timeoutMsg;
+        timeoutMsg = NULL;
+    }
 }
 
 void TCPBasicClientApp::socketDataArrived(int connId, void *ptr, cPacket *msg, bool urgent)
 {
     TCPGenericCliAppBase::socketDataArrived(connId, ptr, msg, urgent);
 
-    if (numRequestsToSend>0)
+    if (numRequestsToSend > 0)
     {
         EV << "reply arrived\n";
-        timeoutMsg->setKind(MSGKIND_SEND);
-        scheduleAt(simTime()+(simtime_t)par("thinkTime"), timeoutMsg);
+
+        if (timeoutMsg)
+        {
+            simtime_t d = simTime() + (simtime_t) par("thinkTime");
+            rescheduleOrDeleteTimer(d, MSGKIND_SEND);
+        }
     }
     else
     {
@@ -122,8 +155,11 @@ void TCPBasicClientApp::socketClosed(int connId, void *ptr)
     TCPGenericCliAppBase::socketClosed(connId, ptr);
 
     // start another session after a delay
-    timeoutMsg->setKind(MSGKIND_CONNECT);
-    scheduleAt(simTime()+(simtime_t)par("idleInterval"), timeoutMsg);
+    if (timeoutMsg)
+    {
+        simtime_t d = simTime() + (simtime_t) par("idleInterval");
+        rescheduleOrDeleteTimer(d, MSGKIND_CONNECT);
+    }
 }
 
 void TCPBasicClientApp::socketFailure(int connId, void *ptr, int code)
@@ -131,7 +167,10 @@ void TCPBasicClientApp::socketFailure(int connId, void *ptr, int code)
     TCPGenericCliAppBase::socketFailure(connId, ptr, code);
 
     // reconnect after a delay
-    timeoutMsg->setKind(MSGKIND_CONNECT);
-    scheduleAt(simTime()+(simtime_t)par("reconnectInterval"), timeoutMsg);
+    if (timeoutMsg)
+    {
+        simtime_t d = simTime() + (simtime_t) par("reconnectInterval");
+        rescheduleOrDeleteTimer(d, MSGKIND_CONNECT);
+    }
 }
 

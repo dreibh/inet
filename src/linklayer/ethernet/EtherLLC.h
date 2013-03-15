@@ -18,8 +18,10 @@
 #ifndef __INET_ETHERLLC_H
 #define __INET_ETHERLLC_H
 
-#include "Ethernet.h"
-#include "EtherFrame_m.h"
+#include "INETDefs.h"
+
+// Forward declarations:
+class EtherFrameWithLLC;
 
 
 /**
@@ -29,7 +31,8 @@ class INET_API EtherLLC : public cSimpleModule
 {
   protected:
     int seqNum;
-    std::map<int,int> dsapToPort;  // DSAP registration table
+    typedef std::map<int,int> DsapToPortMap;  // DSAP registration table
+    DsapToPortMap dsapToPort;  // DSAP registration table
 
     // statistics
     long dsapsRegistered;       // number DSAPs (higher layers) registered
@@ -37,11 +40,16 @@ class INET_API EtherLLC : public cSimpleModule
     long totalFromMAC;          // total number of frames received from MAC
     long totalPassedUp;         // total number of packets passed up to higher layer
     long droppedUnknownDSAP;    // frames dropped because no such DSAP was registered here
+    static simsignal_t dsapSignal;
+    static simsignal_t encapPkSignal;
+    static simsignal_t decapPkSignal;
+    static simsignal_t passedUpPkSignal;
+    static simsignal_t droppedPkUnknownDSAPSignal;
+    static simsignal_t pauseSentSignal;
 
   protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
-    virtual void finish();
 
     virtual void processPacketFromHigherLayer(cPacket *msg);
     virtual void processFrameFromMAC(EtherFrameWithLLC *msg);
@@ -55,5 +63,3 @@ class INET_API EtherLLC : public cSimpleModule
 };
 
 #endif
-
-

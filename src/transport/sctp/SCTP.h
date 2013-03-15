@@ -23,16 +23,22 @@
 #pragma warning(disable : 4786)
 #endif
 
-#include <omnetpp.h>
 #include <map>
+
+#include "INETDefs.h"
+
 #include "IPvXAddress.h"
 #include "UDPSocket.h"
 
-#if defined(__LINUX__) || defined(__linux__) || defined(__linux) || defined(__FreeBSD__) || (__APPLE__)
-#define HAVE_GETTIMEOFDAY
-#include <sys/time.h>
-#include <time.h>
-#endif
+// FIXME Merge delete
+//#if defined(__LINUX__) || defined(__linux__) || defined(__linux) || defined(__FreeBSD__) || (__APPLE__)
+//#define HAVE_GETTIMEOFDAY
+//#include <sys/time.h>
+//#include <time.h>
+//#endif
+//=======
+#define SCTP_UDP_PORT  9899
+
 
 #define sctpEV3 (!SCTP::testing==true)?std::cerr:std::cerr
 
@@ -101,9 +107,100 @@ class INET_API SCTP : public cSimpleModule
             if (appGateIndex!=b.appGateIndex) {
                return appGateIndex<b.appGateIndex;
             }
+<<<<<<< HEAD
             else {
                return assocId<b.assocId;
             }
+=======
+        };
+        struct VTagPair
+        {
+            uint32 peerVTag;
+            uint32 localVTag;
+            uint16 localPort;
+            uint16 remotePort;
+
+            /*inline bool operator<(const VTagPair& b) const
+            {
+                if (peerVTag!=b.peerVTag)
+                    return peerVTag<b.peerVTag;
+                else if (remotePort!=b.remotePort)
+                    return remotePort<b.remotePort;
+                else
+                    return localPort<b.localPort;
+            }*/
+        };
+        typedef struct
+        {
+            int32 assocId;
+            simtime_t start;
+            simtime_t stop;
+            uint64 rcvdBytes;
+            uint64 sentBytes;
+            uint64 transmittedBytes;
+            uint64 ackedBytes;
+            uint32 numFastRtx;
+            uint32 numDups;
+            uint32 numT3Rtx;
+            uint32 numPathFailures;
+            uint32 numForwardTsn;
+            double throughput;
+            simtime_t lifeTime;
+        }AssocStat;
+
+        typedef std::map<int32,AssocStat> AssocStatMap;
+        AssocStatMap assocStatMap;
+        typedef std::map<int32, VTagPair> SctpVTagMap;
+        SctpVTagMap sctpVTagMap;
+
+
+        typedef std::map<AppConnKey,SCTPAssociation*> SctpAppConnMap;
+        typedef std::map<SockPair,SCTPAssociation*> SctpConnMap;
+
+        SctpAppConnMap sctpAppConnMap;
+        SctpConnMap sctpConnMap;
+        std::list<SCTPAssociation*>assocList;
+
+        UDPSocket udpSocket;
+
+    protected:
+        int32 sizeConnMap;
+        static int32 nextConnId;
+
+        uint16 nextEphemeralPort;
+
+        SCTPAssociation *findAssocForMessage(IPvXAddress srcAddr, IPvXAddress destAddr, uint32 srcPort, uint32 destPort, bool findListen);
+        SCTPAssociation *findAssocForApp(int32 appGateIndex, int32 assocId);
+        void sendAbortFromMain(SCTPMessage* sctpmsg, IPvXAddress srcAddr, IPvXAddress destAddr);
+        void sendShutdownCompleteFromMain(SCTPMessage* sctpmsg, IPvXAddress srcAddr, IPvXAddress destAddr);
+        void updateDisplayString();
+
+    public:
+        static bool testing;         // switches between sctpEV and testingEV
+        static bool logverbose;  // if !testing, turns on more verbose logging
+        void printInfoConnMap();
+        void printVTagMap();
+
+        void removeAssociation(SCTPAssociation *assoc);
+        simtime_t testTimeout;
+        uint32 numGapReports;
+        uint32 numPacketsReceived;
+        uint32 numPacketsDropped;
+        //double failover();
+    public:
+        //Module_Class_Members(SCTP, cSimpleModule, 0);
+        virtual ~SCTP();
+        virtual void initialize();
+        virtual void handleMessage(cMessage *msg);
+        virtual void finish();
+
+        inline AssocStat* getAssocStat(uint32 assocId) {
+            SCTP::AssocStatMap::iterator found = assocStatMap.find(assocId);
+            if (found != assocStatMap.end()) {
+              return (&found->second);
+            }
+            return (NULL);
+>>>>>>> origin/master
         }
     };
 

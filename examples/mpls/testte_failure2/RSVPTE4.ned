@@ -14,22 +14,23 @@
 
 package inet.examples.mpls.testte_failure2;
 
-import inet.networklayer.autorouting.NetworkConfigurator;
+import inet.base.UnimplementedModule;
+import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 import inet.networklayer.extras.FailureManager;
 import inet.nodes.inet.StandardHost;
 import inet.nodes.mpls.RSVP_LSR;
-import inet.world.ScenarioManager;
+import inet.world.scenario.ScenarioManager;
 
 
 //
-// Example network to demonstrate \RSVP-TE.
+// Example network to demonstrate RSVP-TE.
 //
 // See the README file in the model directory for scenario description.
 //
 network RSVPTE4
 {
     submodules:
-        configurator: NetworkConfigurator {
+        configurator: IPv4NetworkConfigurator {
             parameters:
                 @display("p=115,50");
         }
@@ -89,6 +90,7 @@ network RSVPTE4
             parameters:
                 @display("p=500,50");
         }
+        configurator: UnimplementedModule;
     connections:
         LSR1.pppg++ <--> {  delay = 15ms; datarate = 600kbps; } <--> LSR2.pppg++;
         LSR1.pppg++ <--> {  delay = 5ms; datarate = 600kbps; } <--> LSR3.pppg++;

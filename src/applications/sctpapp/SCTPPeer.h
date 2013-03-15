@@ -18,13 +18,19 @@
 #ifndef __SCTPPEER_H_
 #define __SCTPPEER_H_
 
-#include <omnetpp.h>
+#include "INETDefs.h"
+
 #include "SCTPAssociation.h"
 #include "SCTPSocket.h"
 
+class SCTPConnectInfo;
 
+/**
+ * Implements the SCTPPeer simple module. See the NED file for more info.
+ */
 class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInterface
 {
+<<<<<<< HEAD
   protected:
     int32 notifications;
     int32 serverAssocId;
@@ -81,6 +87,81 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
     void generateAndSend(SCTPConnectInfo *connectInfo);
     void connect();
 
+// FIXME Merge delete
+//    protected:
+//        int32 notifications;
+//        int32 serverAssocId;
+//        int32 clientAssocId;
+//        SCTPSocket clientSocket;
+//        double delay;
+//        bool echo;
+//        bool schedule;
+//        bool shutdownReceived;
+//        bool ordered;
+//        bool sendAllowed;
+//        long bytesSent;
+//        int32 packetsSent;
+//        int32 packetsRcvd;
+//        int32 numSessions;
+//        int32 numRequestsToSend; // requests to send in this session
+//        int32 queueSize;
+//        cMessage *timeoutMsg;
+//        int32 outboundStreams;
+//        cMessage *timeMsg;
+//        cMessage *connectTimer;
+//        int32 bytesRcvd;
+//        int32 echoedBytesSent;
+//        int32 lastStream;
+//        int32 numPacketsToReceive;
+//
+//        // statistics
+//        typedef std::map<int32,long> RcvdPacketsPerAssoc;
+//        RcvdPacketsPerAssoc rcvdPacketsPerAssoc;
+//
+//        typedef std::map<int32,long> SentPacketsPerAssoc;
+//        SentPacketsPerAssoc sentPacketsPerAssoc;
+//
+//        typedef std::map<int32,long> RcvdBytesPerAssoc;
+//        RcvdBytesPerAssoc rcvdBytesPerAssoc;
+//
+//        typedef std::map<int32,cOutVector*> BytesPerAssoc;
+//        BytesPerAssoc bytesPerAssoc;
+//
+//        typedef std::map<int32,cDoubleHistogram*> HistEndToEndDelay;
+//        HistEndToEndDelay histEndToEndDelay;
+//
+//        typedef std::map<int32,cOutVector*> EndToEndDelay;
+//        EndToEndDelay endToEndDelay;
+//
+//    protected:
+//        void sendOrSchedule(cPacket *msg);
+//        void sendRequest(bool last = true);
+//        int32 ssn;
+//        static simsignal_t sentPkSignal;
+//        static simsignal_t echoedPkSignal;
+//        static simsignal_t rcvdPkSignal;
+//
+//    public:
+//        struct pathStatus {
+//            bool active;
+//            bool primaryPath;
+//            IPv4Address  pid;
+//        };
+//        typedef std::map<IPvXAddress,pathStatus> SCTPPathStatus;
+//        SCTPPathStatus sctpPathStatus;
+//
+//    public:
+//        SCTPPeer();
+//        ~SCTPPeer();
+//
+//    protected:
+//        void initialize();
+//        void handleMessage(cMessage *msg);
+//        void finish();
+//        void handleTimer(cMessage *msg);
+//        void generateAndSend(SCTPConnectInfo *connectInfo);
+//        void connect();
+
     /** Does nothing but update statistics/status. Redefine to perform or schedule first sending. */
     void socketEstablished(int32 connId, void *yourPtr);
 
@@ -100,6 +181,7 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
     /** Does nothing but update statistics/status. Redefine if you want to try reconnecting after a delay. */
     void socketFailure(int32 connId, void *yourPtr, int32 code);
 
+
     /** Redefine to handle incoming SCTPStatusInfo. */
     void socketStatusArrived(int32 connId, void *yourPtr, SCTPStatusInfo *status);
     //@}
@@ -110,6 +192,16 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
     void sendQueueRequest();
     void shutdownReceivedArrived(int32 connId);
     void sendqueueFullArrived(int32 connId);
+// FIXME Merge delete
+//        /** Redefine to handle incoming SCTPStatusInfo. */
+//        void socketStatusArrived(int32 connId, void *yourPtr, SCTPStatusInfo *status);
+//        //@}
+//        void setPrimaryPath();
+//        void sendRequestArrived();
+//        void sendQueueRequest();
+//        void shutdownReceivedArrived(int32 connId);
+//        void sendqueueFullArrived(int32 connId);
+
 
     void setStatusString(const char *s);
     void addressAddedArrived(int32 assocId, IPvXAddress remoteAddr);

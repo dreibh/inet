@@ -51,9 +51,30 @@ void SCTPAssociation::storePacket(SCTPPathVariables* pathVar,
         const uint16       dataChunksAdded,
         const bool         authAdded)
 {
+
     if (SCTP::checkQueues) {
         checkOutstandingBytes();
     }
+
+    int32                    bytesToSend;
+    const SCTPDataMsg* datMsg = peekOutboundDataMsg();
+    if (datMsg != NULL) {
+        const uint32 ums = datMsg->getBooksize();        // Get user message size
+            const uint32 num = (uint32)floor((double)(pathVar->pmtu - 32) / (ums + SCTP_DATA_CHUNK_LENGTH));
+            if (num * ums > state->peerRwnd) {
+                // Receiver cannot handle data yet
+                bytesToSend = 0;
+            }
+            else {
+                // Receiver will accept data
+                bytesToSend = num * ums;
+            }
+    }
+    else {
+        bytesToSend = 0;
+    }
+    return (bytesToSend);
+}
 
     uint32 packetBytes = 0;
     for (uint16 i = 0; i < sctpMsg->getChunksArraySize(); i++) {
@@ -67,7 +88,10 @@ void SCTPAssociation::storePacket(SCTPPathVariables* pathVar,
     state->chunksAdded = chunksAdded;
     state->dataChunksAdded = dataChunksAdded;
     state->packetBytes = packetBytes;
+
     state->authAdded = authAdded;
+
+
     sctpEV3 << "storePacket: path=" << pathVar->remoteAddress
             << " state->packetBytes=" << state->packetBytes
             << " osb=" << pathVar->outstandingBytes << " -> "
@@ -275,7 +299,9 @@ SCTPDataVariables* SCTPAssociation::makeDataVarFromDataMsg(SCTPDataMsg*       da
 
     datVar->bbit = datMsg->getBBit();
     datVar->ebit = datMsg->getEBit();
+
     datVar->ibit = datMsg->getSackNow();
+
     datVar->enqueuingTime = datMsg->getEnqueuingTime();
     datVar->expiryTime = datMsg->getExpiryTime();
     datVar->ppid = datMsg->getPpid();
@@ -283,6 +309,7 @@ SCTPDataVariables* SCTPAssociation::makeDataVarFromDataMsg(SCTPDataMsg*       da
     datVar->sid = datMsg->getSid();
     datVar->allowedNoRetransmissions = datMsg->getRtx();
     datVar->booksize = datMsg->getBooksize();
+
     datVar->prMethod = datMsg->getPrMethod();
     datVar->priority = datMsg->getPriority();
     datVar->strReset = datMsg->getStrReset();
@@ -291,6 +318,12 @@ SCTPDataVariables* SCTPAssociation::makeDataVarFromDataMsg(SCTPDataMsg*       da
     SCTPSendStreamMap::iterator iterator = sendStreams.find(datMsg->getSid());
     SCTPSendStream*             stream = iterator->second;
     uint32                      nextSSN = stream->getNextStreamSeqNum();
+// FIXME Merge stream
+//    // ------ Stream handling ---------------------------------------
+//    SCTPSendStreamMap::iterator iterator = sendStreams.find(datMsg->getSid());
+//    SCTPSendStream*              stream = iterator->second;
+//    uint32                           nextSSN = stream->getNextStreamSeqNum();
+
     datVar->userData = datMsg->decapsulate();
     if (datMsg->getOrdered()) {
         // ------ Ordered mode: assign SSN ---------
@@ -324,11 +357,12 @@ SCTPDataVariables* SCTPAssociation::makeDataVarFromDataMsg(SCTPDataMsg*       da
 
 SCTPPathVariables* SCTPAssociation::choosePathForRetransmission()
 {
-    uint32             max = 0;
+    uint32               max = 0;
     SCTPPathVariables* temp = NULL;
 
     for (SCTPPathMap::iterator iterator = sctpPathMap.begin(); iterator != sctpPathMap.end(); ++iterator) {
-        SCTPPathVariables*         path = iterator->second;
+        SCTPPathVariables*          path = iterator->second;
+
         CounterMap::const_iterator tq = qCounter.roomTransQ.find(path->remoteAddress);
         if ((tq != qCounter.roomTransQ.end()) && (tq->second > max)) {
             max = tq->second;
@@ -370,7 +404,7 @@ void SCTPAssociation::sendOnAllPaths(SCTPPathVariables* firstPath)
 #ifdef PRIVATE
     if(state->allowCMT) {
         // ------ Send on provided path first ... -----------------------------
-        if(firstPath != NULL) {
+        if (firstPath != NULL) {
             sendOnPath(firstPath);
         }
 
@@ -832,6 +866,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
     uint16 dataChunksAdded = 0;
     uint32 totalChunksSent = 0;
     uint32 totalPacketsSent = 0;
+
     uint32 outstandingBytes = 0;
 
     uint32 tcount = 0;   // Bytes in transmission queue on the selected path
@@ -840,10 +875,22 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
     int32 bytesToSend = 0;
 
     bool headerCreated = false;
+// FIXME Merge delelte
+//    uint32 packetBytes = 0;
+//    uint32 outstandingBytes = 0;
+//
+//    uint32 tcount = 0;     // Bytes in transmission queue on the selected path
+//    uint32 scount = 0;     // Bytes in send streams
+//    int32 bytesToSend = 0;
+//
+//    bool headerCreated = false;
+//    bool rtxActive = false;
+
     bool sendOneMorePacket = false;
     bool sendingAllowed = true;
     bool authAdded = false;
     bool sackAdded = false;
+
     bool forwardPresent = false;
 
 #ifdef PRIVATE
@@ -854,12 +901,15 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
    }
 #endif
 
+
     // ====== Obtain path ====================================================
     sctpEV3 << endl << "##### sendAll(";
     if (pathId) {
         sctpEV3 << pathId->remoteAddress;
     }
+
     sctpEV3 << ") at t=" << simTime() << " #####" << endl;
+
     while (sendingAllowed)
     {
         headerCreated = false;
@@ -1181,6 +1231,23 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                                 startTimer(path->T3_RtxTimer, path->pathRto);
                             }
                         }
+// FIXME Merge delete
+//                                                            path->pmtu - sctpMsg->getByteLength() - 20,
+//                                                            (bytes.packet == true) ? path->pmtu : allowance);
+//                }
+//                if (datVar != NULL) {
+//                    assert(datVar->getNextDestinationPath() == path);
+//                    datVar->numberOfRetransmissions++;
+//                    if (chunkHasBeenAcked(datVar) == false) {
+//                        sctpEV3 << simTime() << ": Retransmission #" << datVar->numberOfRetransmissions
+//                                  << " of TSN " << datVar->tsn
+//                                  << " on path " << datVar->getNextDestination()
+//                                  << " (last was " << datVar->getLastDestination() << ")" << endl;
+//
+//                        datVar->countsAsOutstanding = true;
+//                        datVar->hasBeenReneged = false;
+//                        increaseOutstandingBytes(datVar, path); // NOTE: path == datVar->getNextDestinationPath()
+
                     }
 
                     if (datVar != NULL) {
@@ -1271,6 +1338,12 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
 #else
                     if (path == state->getPrimaryPath()) {
 #endif
+// FIXME Merge delete
+//                             ((uint32)scount >= path->pmtu - 32 - 20) || // Data to fill at least one path MTU
+//                             ((scount > 0) && (state->nagleEnabled) && (outstandingBytes == 0)) ) {   // Data to send, Nagle on and no outstanding bytes
+//
+//                    if (path == state->getPrimaryPath()) {
+
 
                         // ------ Dequeue data message ----------------------------
                         SCTPDataMsg* datMsg = dequeueOutboundDataMsg(path, path->pmtu-sctpMsg->getByteLength() - 20,
@@ -1427,9 +1500,11 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                     datVar->countsAsOutstanding = true;
                     datVar->hasBeenReneged = false;
                     datVar->sendTime = simTime(); //I.R. to send Fast RTX just once a RTT
+
                     if (datVar->firstSendTime == 0) {
                         datVar->firstSendTime = simTime();
                     }
+
 
                     // ------ First transmission of datVar -----------------------
                     if (datVar->numberOfTransmissions == 0) {
@@ -1472,6 +1547,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                     dataChunksAdded++;
                     sctpEV3 << assocId << ": DataChunk with TSN=" << chunkPtr->getTsn() << " and length " << chunkPtr->getByteLength() << " added\n";
                     sctpMsg->addChunk(chunkPtr);
+
                     if (datVar->numberOfTransmissions>1)  {
                         CounterMap::iterator tq = qCounter.roomTransQ.find(path->remoteAddress);
                         if (tq->second > 0)  {
@@ -1486,6 +1562,11 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                         if (nextChunkFitsIntoPacket(path, path->pmtu - sctpMsg->getByteLength() - 20) == false) {
                             packetFull = true;
                         }
+// FIXME Merge delelte
+//                    if (nextChunkFitsIntoPacket(path->pmtu - sctpMsg->getByteLength() - 20) == false) {
+//                        // ???? Robin: Ist diese Annahme so richtig?
+//                        packetFull = true;
+
                     }
 
                     state->peerRwnd -= (datVar->booksize + state->bytesToAddPerPeerChunk);
@@ -1507,6 +1588,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                             sendOneMorePacket = true;
                             bytes.packet = true;
                             sctpEV3 << assocId << ": sendAll: one more packet allowed\n";
+
                         }
                         else {
                             if (state->nagleEnabled && (outstandingBytes > 0) &&
@@ -1516,7 +1598,9 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                                 storePacket(path, sctpMsg, chunksAdded, dataChunksAdded, authAdded);
                                 sctpMsg = NULL;
                                 chunksAdded = 0;
+
                                 packetFull = true;   // chunksAdded==0, packetFull==true => leave inner while loop
+
                             }
                             else {
                                 packetFull = true;
@@ -1525,6 +1609,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                         bytesToSend = 0;
                     }
                     else if ((qCounter.roomSumSendStreams == 0) && (tq->second == 0)) {
+
                         packetFull = true;
                         sctpEV3 << "sendAll: no data in send and transQ: packet full\n";
                     }
@@ -1574,7 +1659,9 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                             sendOneMorePacket = false;
                             bytesToSend = 0;
                             bytes.packet = false;
+
                             chunkPtr->setIBit(sctpMain->sackNow);
+
                         }
 
 #ifdef PRIVATE
@@ -1616,10 +1703,16 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
 #endif
 
                         // ------ Reset status ------------------------------------
-                        firstTime = false;
+                        if (state->sctpMsg == sctpMsg)
+                        {
+                            state->sctpMsg = NULL;
+                            path->outstandingBytes += packetBytes;
+                            packetBytes = 0;
+                        }
                         headerCreated = false;
                         chunksAdded = 0;
                         dataChunksAdded = 0;
+                        firstTime = false;
                         authAdded = false;
 
                         sctpEV3 << "sendAll: sending Packet to path " << path->remoteAddress

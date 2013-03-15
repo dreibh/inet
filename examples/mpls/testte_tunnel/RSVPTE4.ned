@@ -14,26 +14,21 @@
 
 package inet.examples.mpls.testte_tunnel;
 
+import inet.base.UnimplementedModule;
 import inet.networklayer.extras.FailureManager;
 import inet.nodes.inet.StandardHost;
 import inet.nodes.mpls.RSVP_LSR;
-import inet.world.NAMTrace;
-import inet.world.ScenarioManager;
+import inet.world.scenario.ScenarioManager;
 
 
 //
-// Example network to demonstrate \RSVP-TE.
+// Example network to demonstrate RSVP-TE.
 //
 // See the README file in the model directory for scenario description.
 //
 network RSVPTE4
 {
     submodules:
-        nam: NAMTrace {
-            parameters:
-                @display("p=152,280");
-
-        }
         LSR1: RSVP_LSR {
             parameters:
                 peers = "ppp0 ppp1";
@@ -111,6 +106,7 @@ network RSVPTE4
             parameters:
                 @display("p=500,50");
         }
+        configurator: UnimplementedModule;
     connections:
         LSR1.pppg[0] <--> {  delay = 15ms; datarate = 600kbps; } <--> LSR2.pppg[0];
         LSR1.pppg[1] <--> {  delay = 5ms; datarate = 600kbps; } <--> LSR3.pppg[0];

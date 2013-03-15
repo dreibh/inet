@@ -24,7 +24,6 @@
 #include <platdep/sockets.h>
 #include <platdep/timeutil.h>
 #include "INETDefs.h"
-#include <omnetpp.h>
 
 // prevent pcap.h to redefine int8_t,... types on Windows
 #include "bsdint.h"
@@ -84,10 +83,22 @@ class cSocketRTScheduler : public cScheduler
          */
         void setInterfaceModule(cModule *mod, const char *dev, const char *filter);
 
+#if OMNETPP_VERSION >= 0x0500
+        /**
+         * Returns the first event in the Future Event Set.
+         */
+        virtual cEvent *guessNextEvent();
+
+        /**
+         * Scheduler function -- it comes from the cScheduler interface.
+         */
+        virtual cEvent *takeNextEvent();
+#else
         /**
          * Scheduler function -- it comes from cScheduler interface.
          */
         virtual cMessage *getNextEvent();
+#endif
 
         /**
          * Send on the currently open connection

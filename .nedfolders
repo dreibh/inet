@@ -1,3 +1,7 @@
 examples
 simulations
 src
+-inet.applications.voipstream
+-inet.transport.tcp_lwip
+-inet.transport.tcp_nsc
+-inet.examples.voipstream

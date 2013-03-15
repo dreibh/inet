@@ -63,14 +63,24 @@ uint32 SCTPReceiveStream::reassemble(SCTPQueue* queue, const uint32 tsn)
         if (queue->getChunk(endTSN)) {
             sctpEV3 << "All fragments found, now reassembling..." << endl;
 
+
             SCTPDataVariables* firstVar = queue->getChunk(beginTSN);
+// FIXME Merge del
+//            SCTPDataVariables *firstVar = orderedQ->getChunk(begintsn), *processVar;
+//
             SCTPSimpleMessage* firstSimple = check_and_cast<SCTPSimpleMessage*>(firstVar->userData);
 
             sctpEV3 << "First fragment has " << firstVar->len / 8 << " bytes." << endl;
 
+
             assert(firstVar->fragments == 1);
             while (++beginTSN <= endTSN) {
                 SCTPDataVariables* processVar = queue->getAndExtractChunk(beginTSN);
+// FIXME Merge del
+//            while (++begintsn <= endtsn)
+//            {
+//                processVar = orderedQ->getAndExtractChunk(begintsn);
+
                 SCTPSimpleMessage* processSimple = check_and_cast<SCTPSimpleMessage*>(processVar->userData);
 
                 sctpEV3 << "Adding fragment with " << processVar->len / 8 << " bytes." << endl;

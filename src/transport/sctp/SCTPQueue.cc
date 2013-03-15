@@ -69,6 +69,7 @@ SCTPDataVariables* SCTPQueue::getAndExtractChunk(const uint32 tsn)
 {
     if (!payloadQueue.empty()) {
         PayloadQueue::iterator iterator = payloadQueue.find(tsn);
+
         SCTPDataVariables*     chunk = iterator->second;
         payloadQueue.erase(iterator);
         return chunk;
@@ -80,8 +81,10 @@ void SCTPQueue::printQueue() const
 {
     sctpEV3 << "Queue contents:\n";
     for (PayloadQueue::const_iterator iterator = payloadQueue.begin();
+
             iterator != payloadQueue.end(); ++iterator) {
         const uint32             key = iterator->first;
+
         const SCTPDataVariables* chunk = iterator->second;
         sctpEV3 << key << ":\t"
                 << "lastDestination=" << chunk->getLastDestination()
