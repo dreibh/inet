@@ -1,5 +1,6 @@
 //
-// Copyright (C) 2005 Christian Dankbar, Irene Ruengeler, Michael Tuexen
+// Copyright (C) 2005-2009 Christian Dankbar, Irene Ruengeler, Michael Tuexen
+// Copyright (C) 2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -42,7 +43,15 @@ class SCTPSerializer
         void parse(const uint8 *buf, uint32 bufsize, SCTPMessage *dest);
 
         static uint32 checksum(const uint8 *buf, register uint32 len);
+        void calculateSharedKey();
+        bool compareRandom();
+
+    private:
+        static unsigned char keyVector[512];
+        static unsigned int  sizeKeyVector;
+        static unsigned char peerKeyVector[512];
+        static unsigned int  sizePeerKeyVector;
+        static unsigned char sharedKey[512];
 };
 
 #endif
-

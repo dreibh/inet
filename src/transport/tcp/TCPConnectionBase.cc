@@ -1,6 +1,8 @@
 //
 // Copyright (C) 2004 Andras Varga
 // Copyright (C) 2009-2010 Thomas Reschka
+// Copyright (C) 2010 Robin Seggelmann
+// Copyright (C) 2010-2011 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -78,7 +80,7 @@ TCPStateVariables::TCPStateVariables()
     snd_ws = false;
     rcv_ws = false;
     rcv_wnd_scale = 0;        // will be set from configureStateVariables()
-    snd_wnd_scale = 0;      
+    snd_wnd_scale = 0;
 
     ts_support = false;       // will be set from configureStateVariables()
     ts_enabled = false;
@@ -458,6 +460,7 @@ bool TCPConnection::processAppCommand(cMessage *msg)
         default:
         	opp_error("wrong event code");
         	break;	// MBe; add because of warning
+
     }
 
     // then state transitions
@@ -478,6 +481,7 @@ TCPEventCode TCPConnection::preanalyseAppCommandEvent(int commandCode)
         case TCP_C_CLOSE:        return TCP_E_CLOSE;
         case TCP_C_ABORT:        return TCP_E_ABORT;
         case TCP_C_STATUS:       return TCP_E_STATUS;
+
         case TCP_C_QUEUE_BYTES_LIMIT: return TCP_E_QUEUE_BYTES_LIMIT;
         default: opp_error("Unknown message kind in app command");
                  return (TCPEventCode)0; // to satisfy compiler

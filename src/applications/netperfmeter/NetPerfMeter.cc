@@ -448,11 +448,6 @@ void NetPerfMeter::handleMessage(cMessage* msg)
             if(SocketTCP != NULL) {   // T.D. 16.11.2011: Ensure that there is still a TCP socket!
                SendingAllowed = true;
                sendDataOfSaturatedStreams(tcpCommand->getUserId(), NULL);
-#ifdef PRIVATE // DEBUG
-               static int cnt = 0;
-               static int bytes_sent = 0;
-               bytes_sent += tcpCommand->getUserId();
-#endif
             }
            }
           break;
@@ -1046,18 +1041,15 @@ void NetPerfMeter::sendDataOfNonSaturatedStreams(const unsigned long long bytesA
 // ###### Receive data ######################################################
 void NetPerfMeter::receiveMessage(cMessage* msg)
 {
-    const cPacket* dataMessage =
-                  dynamic_cast<const cPacket*>(msg);
-
+   const NetPerfMeterDataMessage* dataMessage =
+      dynamic_cast<const NetPerfMeterDataMessage*>(msg);
    if(dataMessage != NULL) {
       unsigned int    streamID = 0;
       const simtime_t delay    = simTime() - dataMessage->getCreationTime();
 
       if(TransportProtocol == SCTP) {
-          const NetPerfMeterDataMessage* sctp_dataMessage =
-              dynamic_cast<const NetPerfMeterDataMessage*>(msg);
          const SCTPRcvCommand* receiveCommand =
-            check_and_cast<const SCTPRcvCommand*>(sctp_dataMessage->getControlInfo());
+            check_and_cast<const SCTPRcvCommand*>(dataMessage->getControlInfo());
          streamID = receiveCommand->getSid();
       }
 

@@ -1,0 +1,3 @@
+#!/bin/sh
+../../../src/inet  -n ../..:../../../src  -u Cmdenv  -c multiPathTransfer  $@  >x 2>&1   && \
+grep "Total Reception Bit" scalars.sca

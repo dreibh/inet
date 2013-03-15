@@ -1,7 +1,6 @@
 //
 // Copyright (C) 2005 Michael Tuexen
-//               2008 Irene Ruengeler
-//               2009 Thomas Dreibholz
+//               2009-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -10,7 +9,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
@@ -24,6 +23,8 @@ package inet.util;
 //
 simple TCPDump {
     parameters:
+        double countStart @unit(s) = default(0s);
+        double countStop @unit(s) = default(0s);
         string dumpFile = default("");
         bool threadEnable = default(false);
         int snaplen = default(65535);

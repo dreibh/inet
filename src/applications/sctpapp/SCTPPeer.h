@@ -50,6 +50,7 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
     int32 lastStream;
     bool sendAllowed;
     int32 numPacketsToReceive;
+    int32 chunksAbandoned;
     typedef std::map<int32,long> RcvdPacketsPerAssoc;
     RcvdPacketsPerAssoc rcvdPacketsPerAssoc;
     typedef std::map<int32,long> SentPacketsPerAssoc;
@@ -67,9 +68,9 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
     int32 ssn;
   public:
     struct pathStatus {
-        bool active;
-        bool primaryPath;
-        IPAddress  pid;
+       bool active;
+       bool primaryPath;
+       IPAddress  pid;
     };
     typedef std::map<IPvXAddress,pathStatus> SCTPPathStatus;
     SCTPPathStatus sctpPathStatus;
@@ -102,6 +103,8 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
     /** Redefine to handle incoming SCTPStatusInfo. */
     void socketStatusArrived(int32 connId, void *yourPtr, SCTPStatusInfo *status);
     //@}
+    void msgAbandonedArrived(int32 assocId);
+    void sendStreamResetNotification();
     void setPrimaryPath();
     void sendRequestArrived();
     void sendQueueRequest();

@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2008 Irene Ruengeler
-// Copyright (C) 2010 Thomas Dreibholz
+// Copyright (C) 2010-2012 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -21,35 +21,81 @@
 #define __SCTPSENDSTREAM_H
 
 #include <omnetpp.h>
-#include <list>
-#include "SCTPAssociation.h"
+#include <assert.h>
 #include "SCTPQueue.h"
+#include "SCTPAssociation.h"
+#ifdef PRIVATE
+#include "QoSStatsCollector.h"
+#endif
+#include "SCTPMessage_m.h"
 
 class SCTPMessage;
 class SCTPCommand;
 class SCTPDataVariables;
 
 
+class SIM_API SCTPDataMsgQueue : public cQueue
+{
+  public:
+    SCTPDataMsgQueue(const char *name = NULL, CompareFunc cmp = NULL);
+    SCTPDataMsgQueue(const SCTPDataMsgQueue& queue);
+    SCTPDataMsgQueue& operator=(const SCTPDataMsgQueue& queue);
+    virtual SCTPDataMsgQueue *dup() const  { return new SCTPDataMsgQueue(*this); }
+    virtual std::string info() const;
+    virtual void insert(SCTPDataMsg* pkt);
+    virtual void insertBefore(SCTPDataMsg* where, SCTPDataMsg* pkt);
+    virtual void insertAfter(SCTPDataMsg* where, SCTPDataMsg* pkt);
+    virtual SCTPDataMsg* remove(SCTPDataMsg* pkt);
+    virtual SCTPDataMsg* pop();
+    uint64 getBitLength() const         { return (8 * totalLength);             }
+    uint64 getByteLength() const        { return (totalLength);                 }
+    virtual SCTPDataMsg* front() const  { return (SCTPDataMsg*)cQueue::front(); }
+    virtual SCTPDataMsg* back() const   { return (SCTPDataMsg*)cQueue::back();  }
+    SCTPDataMsg* get(const int i) const { return (SCTPDataMsg*)cQueue::get(i);  }
+    void addLen(const uint32 length);
+    void subLen(const uint32 length);
+
+  private:
+    void addLen(const SCTPDataMsg* pkt);
+    void subLen(const SCTPDataMsg* pkt);
+
+    uint64 totalLength;
+};
+
+
 class INET_API SCTPSendStream : public cPolymorphic
 {
   protected:
-    uint16  streamId;
-    uint16  nextStreamSeqNum;
-    cQueue* streamQ;
-    cQueue* uStreamQ;
-    int32     ssn;
-  public:
+    uint16            streamId;
+    uint16            nextStreamSeqNum;
+    SCTPDataMsgQueue* streamQ;
+    SCTPDataMsgQueue* uStreamQ;
+    int32             ssn;
 
+  public:
     SCTPSendStream(const uint16 id);
     ~SCTPSendStream();
 
-    inline cQueue* getStreamQ() const { return streamQ; };
-    inline cQueue* getUnorderedStreamQ() const { return uStreamQ; };
-    inline uint32 getNextStreamSeqNum() const { return nextStreamSeqNum; };
-    inline void setNextStreamSeqNum(const uint16 num) { nextStreamSeqNum = num; };
-    inline uint16 getStreamId() const { return streamId; };
-    inline void setStreamId(const uint16 id) { streamId = id; };
-    void deleteQueue();
+    inline SCTPDataMsgQueue* getStreamQ() const          { return streamQ; };
+    inline SCTPDataMsgQueue* getUnorderedStreamQ() const { return uStreamQ; };
+    inline uint32 getNextStreamSeqNum() const            { return nextStreamSeqNum; };
+    inline void setNextStreamSeqNum(const uint16 num)    { nextStreamSeqNum = num; };
+    inline uint16 getStreamId() const                    { return streamId; };
+    inline void setStreamId(const uint16 id)             { streamId = id; };
+
+    inline unsigned int getQueuedMsgs() const {
+       return (streamQ->getLength() + uStreamQ->getLength());
+    }
+    inline unsigned long long getQueuedBytes() const {
+       return (streamQ->getByteLength() + uStreamQ->getByteLength());
+    }
+
+#ifdef PRIVATE
+  public:
+    // ====== QoS-SCTP ======================================================
+    QoSStatsCollector  OrderedQoS;                     // T.D. 11.08.2010
+    QoSStatsCollector  UnorderedQoS;                   // T.D. 11.08.2010
+#endif
 };
 
 #endif

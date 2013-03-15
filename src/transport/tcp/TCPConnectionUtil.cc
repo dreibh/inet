@@ -953,6 +953,13 @@ void TCPConnection::sendSegment(uint32 bytes)
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
               state->queueUpdate = true;  // TODO was true;
       }
+//    const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
+//    const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
+//    if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
+//        (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
+        // Tell upper layer readiness to accept more data
+//        sendIndicationToApp(TCP_I_SEND_MSG, abated);
+//        state->queueUpdate = true;
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
@@ -1042,6 +1049,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
             const ulong b0 = sendQueue->getBytesAvailable(state->snd_nxt);
             sendSegment(state->snd_mss);
             const ulong b1 = sendQueue->getBytesAvailable(state->snd_nxt);
+
             if(b0 - state->sentBytes != b1) {
                 // FIXME: This happens sometimes when SACKs are enabled. Is this a bug?
                 break;

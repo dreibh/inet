@@ -1,5 +1,7 @@
 //
 // Copyright (C) 2004 Andras Varga
+// Copyright (C) 2010 Robin Seggelmann
+// Copyright (C) 2010-2011 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -217,6 +219,10 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
         state->queueUpdate = false;
     }
 
+    if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) > state->sendQueueLimit)) {
+       state->queueUpdate = false;
+    }
+
     delete sendCommand; // msg itself has been taken by the sendQueue
 }
 
@@ -377,4 +383,3 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
     delete msg;
     delete tcpCommand;
 }
-
