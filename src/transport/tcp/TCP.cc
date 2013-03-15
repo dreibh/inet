@@ -93,18 +93,21 @@ TCP::~TCP()
 		TcpAppConnMap::iterator i = tcpAppConnMap.begin();
 		if((*i).second!= NULL){
 #ifdef PRIVATE
-			if((*i).second->isSubflow){
-				tcpAppConnMap.erase(i);
-				continue;
-			}
+
+        if((*i).second->isSubflow){
+            tcpAppConnMap.erase(i);
+            continue;
+        }
+
 #endif
 			delete (*i).second;
 		}
 		(*i).second= NULL;
 		tcpAppConnMap.erase(i);
 	}
-	delete this->mptcp_pcb;
-
+	if(this->multipath){
+	     delete this->mptcp_pcb;
+	}
 }
 
 void TCP::handleMessage(cMessage *msg)

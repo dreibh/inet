@@ -17,12 +17,13 @@ Next
 
 Open issues:
 =================
-- Handshake.
-- filling sending Queue with netperfmeter (not optimal)
+- Handshake. (there are different variants) 
+	- At the moment implciet version is supported
+
 - Option length handling when it is not an multipath connection and data is enqueued 
 - For Options there is a bug, by shift of 16 bit for the MPTCP Options
 - Messages could only be MTU-Header
-
+- SACK is not working well ... (For my Feeling the Problem is in the retranmission)
 
 Features
 =================
@@ -36,6 +37,7 @@ Nice To have
 - Rename is not early enough, there are still some Vectores with I0-X
 ==> Could be ignored, because they just give the info for the first SYN
 ==> delete all Objects on end
+- filling sending Queue with netperfmeter (not optimal)
 
 What is new
 =================
@@ -46,7 +48,7 @@ Observations
 - Options decrease performance on just one link, this could be a problem for Messages near on MSS. 
 - What happend on a round robin scheduler if it scheduled on base of messages or on base of mss, bit stream
 - We have to check up Handshake and many Connection up and downs ..http request
-- SACK is not working well ... Some Hotfixes included
+
 - Die DSS müssen ja nicht sofort mitgesendet werden, was passiert wenn ich hier optimiere....
 
 

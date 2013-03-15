@@ -1,18 +1,18 @@
-
 ifconfig:
 
-# ethernet card (modelled by point-to-point link)
-name: ppp1  inet_addr: 10.2.3.2 MTU: 1500   Metric: 1  POINTTOPOINT MULTICAST
+# ethernet card (modelled by point-to-point link) -> mptcp 1.1 10.2.3.1
+name: ppp0  inet_addr: 10.2.3.2 MTU: 1500   Metric: 1  POINTTOPOINT MULTICAST
 
-# ethernet card (modelled by point-to-point link)
-name: ppp0  inet_addr: 10.2.4.1 MTU: 1500   Metric: 1  POINTTOPOINT MULTICAST
+# ethernet card (modelled by point-to-point link) -> Router 4.0 10.2.2.2
+name: ppp1  inet_addr: 10.2.2.2 MTU: 1500   Metric: 1  POINTTOPOINT MULTICAST
 
 
 ifconfigend.
 
 route:
-10.2.3.1     	10.2.3.1		255.255.255.255		H	0	ppp0
-0.0.0.0		    10.2.4.2		0.0.0.0			    G	0	ppp1
+10.2.3.0     	10.2.3.1		255.255.255.250		G	0	ppp0
+10.2.4.0     	10.2.3.1		255.255.255.250		G	0	ppp0
+0.0.0.0		    10.2.2.1		0.0.0.0			    G	0	ppp1
 
 routeend.
 
