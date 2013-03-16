@@ -599,7 +599,7 @@ void TCPConnection::sendToApp(cMessage *msg)
 
 void TCPConnection::initConnection(TCPOpenCommand *openCmd)
 {
-    transferMode = (TCPDataTransferMode)(openCmd->getDataTransferMode());
+    transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge (TCPDataTransferMode)(openCmd->getDataTransferMode());
     // create send queue
     sendQueue = tcpMain->createSendQueue(transferMode);
     sendQueue->setConnection(this);
