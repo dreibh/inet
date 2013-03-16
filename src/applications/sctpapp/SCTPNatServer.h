@@ -16,6 +16,7 @@
 
 #include <omnetpp.h>
 #include "SCTPAssociation.h"
+#include "SCTPCommand_m.h"
 #include "SCTPSocket.h"
 
 
@@ -75,7 +76,7 @@ class INET_API SCTPNatServer : public cSimpleModule
     struct pathStatus {
         bool active;
         bool primaryPath;
-        IPAddress  pid;
+        IPvXAddress  pid;
     };
 
     //virtual void socketStatusArrived(int32 assocId, void *yourPtr, SCTPStatusInfo *status);

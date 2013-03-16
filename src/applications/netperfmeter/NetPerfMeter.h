@@ -36,7 +36,10 @@
 #include "TCPSocket.h"
 #include "SCTPSocket.h"
 #include "NetPerfMeter_m.h"
-
+#include "SCTPAssociation.h"
+#include "TCPCommand_m.h"
+#include "SCTPCommand_m.h"
+#include "UDPControlInfo_m.h"
 
 class INET_API NetPerfMeter : public cSimpleModule
 {
@@ -187,6 +190,7 @@ class INET_API NetPerfMeter : public cSimpleModule
    unsigned long getFrameSize(const unsigned int streamID);
    void sendDataOfSaturatedStreams(const unsigned long long   bytesAvailableInQueue,
                                    const SCTPSendQueueAbated* sendQueueAbatedIndication);
+
    void sendDataOfNonSaturatedStreams(const unsigned long long bytesAvailableInQueue,
                                       const unsigned int       streamID);
    unsigned long transmitFrame(const unsigned int frameSize,

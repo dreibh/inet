@@ -30,7 +30,7 @@ TCPSocket::TCPSocket()
     yourPtr = NULL;
 
     gateToTcp = NULL;
-    dataTransferMode = TCP_TRANSFER_UNDEFINED;
+    dataTransferMode = TCP_TRANSFER_OBJECT; // FIXME set dataTransferMode
 }
 
 TCPSocket::TCPSocket(cMessage *msg)
@@ -46,7 +46,8 @@ TCPSocket::TCPSocket(cMessage *msg)
     localPrt = remotePrt = -1;
     cb = NULL;
     yourPtr = NULL;
-    dataTransferMode = TCP_TRANSFER_UNDEFINED;    // FIXME set dataTransferMode
+    // FIXME Merge del
+    dataTransferMode = TCP_TRANSFER_OBJECT;    // FIXME set dataTransferMode
     gateToTcp = NULL;
 
     if (msg->getKind() == TCP_I_ESTABLISHED)
@@ -329,6 +330,7 @@ void TCPSocket::processMessage(cMessage *msg)
                  cb->socketStatusArrived(connId, yourPtr, status);
 
              break;
+
         default:
              throw cRuntimeError("TCPSocket: invalid msg kind %d, one of the TCP_I_xxx constants expected",
                      msg->getKind());

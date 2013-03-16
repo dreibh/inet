@@ -39,7 +39,6 @@
 #include "TCPVirtualDataRcvQueue.h"
 #include "TCPVirtualDataSendQueue.h"
 
-
 #ifdef PRIVATE
 #include "TCPMultipathPCB.h"
 #include "TCPMultipathFlow.h"
@@ -99,7 +98,6 @@ void TCP::initialize()
     if (*q != '\0')
         error("Don't use obsolete receiveQueueClass = \"%s\" parameter", q);
 
-
     lastEphemeralPort = EPHEMERAL_PORTRANGE_START;
     WATCH(lastEphemeralPort);
 
@@ -132,9 +130,11 @@ TCP::~TCP()
 		(*i).second= NULL;
 		tcpAppConnMap.erase(i);
 	}
+#ifdef PRIVATE
 	if(this->multipath){
 	     delete this->mptcp_pcb;
 	}
+#endif
 }
 
 void TCP::handleMessage(cMessage *msg)
@@ -397,6 +397,7 @@ void TCP::updateDisplayString()
     if (numTIME_WAIT > 0)  sprintf(buf2+strlen(buf2), "time_wait:%d ", numTIME_WAIT);
 
     getDisplayString().setTagArg("t", 0, buf2);
+
 }
 
 #ifdef PRIVATE

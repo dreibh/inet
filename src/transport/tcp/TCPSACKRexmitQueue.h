@@ -93,6 +93,7 @@ class INET_API TCPSACKRexmitQueue
      */
     virtual uint32 getBufferEndSeq() const { return end; }
 
+    virtual uint32 getEndOfRegion(uint32 fromSeqNum);
     /**
      * Tells the queue that bytes up to (but NOT including) seqNum have been
      * transmitted and ACKed, so they can be removed from the queue.
@@ -103,8 +104,6 @@ class INET_API TCPSACKRexmitQueue
      * Inserts sent data to the rexmit queue.
      */
     virtual void enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum);
-
-    virtual uint32 getEndOfRegion(uint32 fromSeqNum);
 
     /**
      * Called when data sender received selective acknowledgments.

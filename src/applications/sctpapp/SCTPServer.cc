@@ -28,7 +28,6 @@
 #include "SCTPSocket.h"
 #include "IPvXAddressResolver.h"
 
-
 #define MSGKIND_CONNECT  0
 #define MSGKIND_SEND     1
 #define MSGKIND_    2
@@ -37,10 +36,6 @@ Define_Module(SCTPServer);
 
 void SCTPServer::initialize()
 {
-
-    char * token;
-    cPar *delT;
-    AddressVector addresses;
     socket = NULL;
 
     sctpEV3 << "initialize SCTP Server\n";
@@ -54,20 +49,26 @@ void SCTPServer::initialize()
     // parameters
     finishEndsSimulation = (bool)par("finishEndsSimulation");
 
-    const char* address = par("address");
-    token = strtok((char*)address, ",");
-    while (token != NULL)
-    {
-        addresses.push_back(IPvXAddress(token));
-        token = strtok(NULL, ",");
-    }
-    int32 port = par("port");
-    echoFactor = par("echoFactor");
+//    const char* address = par("address");
+//    token = strtok((char*)address, ",");
+//    while (token != NULL)
+//    {
+//        addresses.push_back(IPvXAddress(token));
+//        token = strtok(NULL, ",");
+//    }
+//    int32 port = par("port");
+//    echoFactor = par("echoFactor");
 // FIXME Merge delete
 //    const char *addressesString = par("localAddress");
 //    AddressVector addresses = IPvXAddressResolver().resolve(cStringTokenizer(addressesString).asVector());
 //    int32 port = par("localPort");
 //    echo = par("echo");
+
+
+    const char *addressesString = par("localAddress");
+    AddressVector addresses = IPvXAddressResolver().resolve(cStringTokenizer(addressesString).asVector());
+    int32 port = par("localPort");
+    uint16 echo = par("echo");
 
     delay = par("echoDelay");
     delayFirstRead = par("delayFirstRead");
@@ -96,7 +97,6 @@ void SCTPServer::initialize()
     socket->setOutboundStreams(outboundStreams);
 
     if (addresses.size() == 0)
-
         socket->bind(port);
     else
         socket->bindx(addresses, port);
@@ -106,6 +106,8 @@ void SCTPServer::initialize()
 
 // FIXME Merge delete
 //    socket->listen(true, par("numPacketsToSendPerClient").longValue(), messagesToPush);
+    // socket->listen(true, par("numPacketsToSendPerClient").longValue(), messagesToPush);
+
     sctpEV3 << "SCTPServer::initialized listen port=" << port << "\n";
     schedule = false;
     shutdownReceived = false;
@@ -130,7 +132,6 @@ void SCTPServer::sendOrSchedule(cPacket *msg)
 
 void SCTPServer::generateAndSend()
 {
-    uint32 numBytes;
     cPacket* cmsg = new cPacket("CMSG");
     SCTPSimpleMessage* msg = new SCTPSimpleMessage("Server");
     int numBytes = (int)par("requestLength");
@@ -144,9 +145,7 @@ void SCTPServer::generateAndSend()
     cmsg->encapsulate(msg);
     SCTPSendCommand *cmd = new SCTPSendCommand("Send1");
     cmd->setAssocId(assocId);
-
     cmd->setSendUnordered(ordered ? COMPLETE_MESG_ORDERED : COMPLETE_MESG_UNORDERED);
-
     lastStream = (lastStream+1)%outboundStreams;
     cmd->setSid(lastStream);
     cmd->setPrValue(par("prValue"));
@@ -233,8 +232,9 @@ void SCTPServer::handleMessage(cMessage *msg)
                 }
                 else
                 {
-                    if (serverAssocStatMap[assocId].rcvdPackets==(unsigned long) par("numPacketsToReceivePerClient") &&
-                            serverAssocStatMap[assocId].abortSent==false)
+                    if (serverAssocStatMap[assocId].rcvdPackets==(unsigned long) par("numPacketsToReceivePerClient")
+                            && serverAssocStatMap[assocId].abortSent == false)
+
                     {
                         sendOrSchedule(makeAbortNotification(command->dup()));
                         serverAssocStatMap[assocId].abortSent = true;
@@ -244,12 +244,8 @@ void SCTPServer::handleMessage(cMessage *msg)
                     cancelEvent(delayTimer);
                 if (delayFirstReadTimer->isScheduled())
                     cancelEvent(delayFirstReadTimer);
-
-                // delete command;
-
-// FIXME Merge delete
-//                delete command;
-
+                // FIXME Merge delete
+                delete command;
                 delete msg;
                 break;
             }
@@ -271,7 +267,6 @@ void SCTPServer::handleMessage(cMessage *msg)
                 serverAssocStatMap[assocId].peerClosed = false;
 
                 char text[50];
-
                 sprintf(text, "App: Received Bytes of assoc %d", assocId);
                 bytesPerAssoc[assocId] = new cOutVector(text);
                 sprintf(text, "App: EndToEndDelay of assoc %d", assocId);
@@ -355,6 +350,79 @@ void SCTPServer::handleMessage(cMessage *msg)
                 }
                 break;
             }
+//            case SCTP_I_DATA_NOTIFICATION:
+//            {
+//                notifications++;
+//
+//                if (schedule==false)
+//                {
+//                    if (delayFirstRead>0 && !delayFirstReadTimer->isScheduled())
+//                    {
+//                        cmsg = makeReceiveRequest(PK(msg));
+//                        scheduleAt(simulation.getSimTime()+delayFirstRead, cmsg);
+//                        scheduleAt(simulation.getSimTime()+delayFirstRead, delayFirstReadTimer);
+//                    }
+//                    else if (readInt && firstData)
+//                    {
+//                        firstData = false;
+//                        cmsg = makeReceiveRequest(PK(msg));
+//                        scheduleAt(simulation.getSimTime()+(simtime_t)par("readingInterval"), delayTimer);
+//                        sendOrSchedule(cmsg);
+//                    }
+//                    else if (delayFirstRead==0 && readInt==false)
+//                    {
+//                        cmsg = makeReceiveRequest(PK(msg));
+//                        sendOrSchedule(cmsg);
+//                    }
+//                }
+//// FIXME Merge del
+////                        {
+////                            while (numRequestsToSend > 0)
+////                            {
+////                                generateAndSend();
+////                                numRequestsToSend--;
+////                                i->second.sentPackets = numRequestsToSend;
+////                            }
+////                        }
+////                        else if (queueSize>0)
+////                        {
+////                            while (numRequestsToSend > 0 && count++ < queueSize*2)
+////                            {
+////                                generateAndSend();
+////                                numRequestsToSend--;
+////                                i->second.sentPackets = numRequestsToSend;
+////                            }
+////
+////                            cPacket* cmsg = new cPacket("Queue");
+////                            SCTPInfo* qinfo = new SCTPInfo("Info1");
+////                            qinfo->setText(queueSize);
+////                            cmsg->setKind(SCTP_C_QUEUE_MSGS_LIMIT);
+////                            qinfo->setAssocId(id);
+////                            cmsg->setControlInfo(qinfo);
+////                            sendOrSchedule(cmsg);
+////                        }
+////                        ServerAssocStatMap::iterator j = serverAssocStatMap.find(assocId);
+////                        if (j->second.rcvdPackets == 0 && (simtime_t)par("waitToClose") > 0)
+////                        {
+////                            char as[5];
+////                            sprintf(as, "%d", assocId);
+////                            cPacket* abortMsg = new cPacket(as);
+////                            abortMsg->setKind(SCTP_I_ABORT);
+////                            scheduleAt(simulation.getSimTime()+(simtime_t)par("waitToClose"), abortMsg);
+////                        }
+////                        else
+////                        {
+////                            sctpEV3 << "no more packets to send, call shutdown for assoc " << assocId << "\n";
+////                            cPacket* cmsg = new cPacket("ShutdownRequest");
+////                            SCTPCommand* cmd = new SCTPCommand("Send5");
+////                            cmsg->setKind(SCTP_C_SHUTDOWN);
+////                            cmd->setAssocId(assocId);
+////                            cmsg->setControlInfo(cmd);
+////                            sendOrSchedule(cmsg);
+////                        }
+////                    }
+//
+//                break;
             case SCTP_I_DATA_NOTIFICATION:
             {
                 notifications++;
@@ -380,6 +448,7 @@ void SCTPServer::handleMessage(cMessage *msg)
                         sendOrSchedule(cmsg);
                     }
                 }
+
                 else
                 {
                     sctpEV3 << simulation.getSimTime() << " makeReceiveRequest\n";
@@ -404,9 +473,13 @@ void SCTPServer::handleMessage(cMessage *msg)
                 j->second.rcvdBytes += PK(msg)->getByteLength();
                 k->second->record(j->second.rcvdBytes);
 
-                if (echoFactor==0)
+// FIXMI Merge delete
+//  if (echoFactor==0)
 // FIXMI Merge delete
 //                if (!echo)
+
+                if (!echo)
+
                 {
                     if ((uint32)par("numPacketsToReceivePerClient")>0)
                     {
@@ -452,9 +525,7 @@ void SCTPServer::handleMessage(cMessage *msg)
                     bytesSent += smsg->getBitLength()/8;
                     cmd->setSendUnordered(cmd->getSendUnordered());
                     lastStream = (lastStream+1)%outboundStreams;
-
                     cmd->setPrValue(0);
-
                     cmd->setSid(lastStream);
                     cmd->setLast(true);
                     cmsg->encapsulate(smsg);
@@ -489,12 +560,11 @@ void SCTPServer::handleMessage(cMessage *msg)
                 delete msg;
                 break;
             }
-
             case SCTP_I_SEND_STREAMS_RESETTED:
             case SCTP_I_RCV_STREAMS_RESETTED:
             {
                 ev << "Streams have been resetted\n";
-                ASSERT(false && "Is this implemented?"):
+                ASSERT(false && "Is this implemented?");
                 delete msg;
                 break;
             }
@@ -509,7 +579,6 @@ void SCTPServer::handleMessage(cMessage *msg)
             default:
                 delete msg;
                 break;
-
         }
     }
 }
@@ -543,6 +612,7 @@ void SCTPServer::handleTimer(cMessage *msg)
 
     switch (msg->getKind())
     {
+
         case SCTP_C_SEND:
             if (numRequestsToSend>0)
             {
@@ -603,6 +673,36 @@ void SCTPServer::handleTimer(cMessage *msg)
 //    default:
 //        sctpEV3 << "MsgKind =" << msg->getKind() << " unknown\n";
 //        break;
+//=======
+//    case SCTP_C_SEND:
+//        if (numRequestsToSend > 0)
+//        {
+//            generateAndSend();
+//            if ((simtime_t)par("thinkTime") > 0)
+//                scheduleAt(simulation.getSimTime()+(simtime_t)par("thinkTime"), timeoutMsg);
+//            numRequestsToSend--;
+//        }
+//        break;
+//    case SCTP_I_ABORT:
+//        cmsg = new cPacket("CLOSE", SCTP_C_CLOSE);
+//        cmd = new SCTPCommand("Send6");
+//        id = atoi(msg->getName());
+//              cmd->setAssocId(id);
+//        cmsg->setControlInfo(cmd);
+//        sendOrSchedule(cmsg);
+//        break;
+//    case SCTP_C_RECEIVE:
+//        sctpEV3 << simulation.getSimTime() << " SCTPServer:SCTP_C_RECEIVE\n";
+//        if (readInt || delayFirstRead > 0)
+//            schedule = false;
+//        else
+//            schedule = true;
+//        sendOrSchedule(PK(msg));
+//        break;
+//    default:
+//        sctpEV3 << "MsgKind =" << msg->getKind() << " unknown\n";
+//        break;
+//>>>>>>> origin/master
     }
 }
 

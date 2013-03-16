@@ -22,8 +22,6 @@
 
 #include <omnetpp.h>
 #include <assert.h>
-#include <list>
-#include "INETDefs.h"
 #include "SCTPQueue.h"
 #include "SCTPAssociation.h"
 #ifdef PRIVATE
@@ -34,7 +32,6 @@
 class SCTPMessage;
 class SCTPCommand;
 class SCTPDataVariables;
-
 
 
 class SIM_API SCTPDataMsgQueue : public cQueue
@@ -67,9 +64,6 @@ class SIM_API SCTPDataMsgQueue : public cQueue
 
 
 class INET_API SCTPSendStream : public cPolymorphic
-// FIXME Merge del
-//class INET_API SCTPSendStream : public cObject
-
 {
   protected:
     uint16            streamId;

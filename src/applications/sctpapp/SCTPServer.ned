@@ -1,3 +1,4 @@
+package inet.applications.sctpapp;
 //
 // Copyright (C) 2008 Irene Ruengeler
 // Copyright (C) 2009-2012 Thomas Dreibholz
@@ -16,9 +17,6 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 //
-
-package inet.applications.sctpapp;
-
 import inet.applications.ISCTPApp;
 
 

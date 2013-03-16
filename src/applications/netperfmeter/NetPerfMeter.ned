@@ -26,8 +26,9 @@
 // *   Contact: dreibh@iem.uni-due.de
 
 package inet.applications.netperfmeter;
+import inet.applications.INetPerfMeterApp;
 
-simple NetPerfMeter
+simple NetPerfMeter like INetPerfMeterApp
 {
     parameters:
         bool            activeMode               = default(true);      // Server (false) or client (true)

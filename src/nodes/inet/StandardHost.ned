@@ -18,7 +18,7 @@
 //
 
 package inet.nodes.inet;
-
+import inet.applications.INetPerfMeterApp;
 import inet.applications.IPingApp;
 import inet.applications.ISCTPApp;
 import inet.applications.ITCPApp;
@@ -27,7 +27,7 @@ import inet.transport.ISCTP;
 import inet.transport.ITCP;
 import inet.transport.IUDP;
 
-
+import inet.util.TCPDump;   //I.R.
 //
 // IPv4 host with SCTP, TCP, UDP layers and applications.
 // IP forwarding is disabled by default (see IPForward).
@@ -50,23 +50,29 @@ module StandardHost extends NodeBase
 {
     parameters:
         @display("i=device/pc2");
-        int numNetPerfMeters = default(0);   // T.D. 17.11.09
+        int numNetPerfMetersApps = default(0);   // T.D. 17.11.09
         int numTcpApps = default(0);  // no of TCP apps. Specify the app types in INI file with tcpApp[0..1].typename="TCPEchoApp" syntax
         int numUdpApps = default(0);  // no of UDP apps. Specify the app types in INI file with udpApp[0..1].typename="UDPVideoStreamCli" syntax
         int numSctpApps = default(0); // no of SCTP apps. Specify the app types in INI file with sctpApp[0..1].typename="SCTPServer" syntax
         int numPingApps = default(0);  // no of PING apps. Specify the app types in INI file with pingApp[0..1].typename="PingApp" syntax
-        bool hasTcp = default(numTcpApps>0);
-        bool hasUdp = default(numUdpApps>0);
-        bool hasSctp = default(numSctpApps>0);
+        bool hasTcp = default(numTcpApps+numNetPerfMetersApps>0);
+        bool hasUdp = default(numUdpApps+numNetPerfMetersApps>0);
+        bool hasSctp = default(numSctpApps+numNetPerfMetersApps>0);
         string tcpType = default(firstAvailable("TCP", "TCP_lwIP", "TCP_NSC", "TCP_None"));  // tcp implementation (e.g. ~TCP, ~TCP_lwIP, ~TCP_NSC) or ~TCPSpoof
         string udpType = default(firstAvailable("UDP","UDP_None"));
         string sctpType = default(firstAvailable("SCTP","SCTP_None"));
         IPForward = default(false);  // disable routing by default
         networkLayer.proxyARP = default(false);
+    gates:
+        inout extg[];
     submodules:
+        netPerfMeterApp[numNetPerfMetersApps]: <default("NetPerfMeter")> like INetPerfMeterApp {  // T.D. 17.11.09
+            parameters:
+                @display("p=262,36");
+        }
         tcpApp[numTcpApps]: <> like ITCPApp {
             parameters:
-                @display("p=147,54,row,60");
+                @display("p=84,47,row,60");
         }
         tcp: <tcpType> like ITCP if hasTcp {
             parameters:
@@ -74,8 +80,7 @@ module StandardHost extends NodeBase
         }
         udpApp[numUdpApps]: <> like IUDPApp {
             parameters:
-                @display("p=329,54,row,60");
-
+                @display("p=413,36,row,60");
         }
         udp: <udpType> like IUDP if hasUdp {
             parameters:
@@ -83,22 +88,6 @@ module StandardHost extends NodeBase
         }
         sctpApp[numSctpApps]: <> like ISCTPApp {
             parameters:
-//<<<<<<< HEAD
-//                @display("p=335,360,row,90;q=txQueue;i=block/ifcard");
-//        }
-//        ext[sizeof(extg)]: ExtInterface {   //I.R.
-//            parameters:
-//                @display("p=400,390,row,90;q=txQueue;i=block/ifcard");
-//        }
-//        tcpdump: TCPDump {  //I.R.
-//            parameters:
-//                @display("p=280,310;i=abstract/cache_s");
-//            gates:
-//                ifIn[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
-//                in2[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
-//                ifOut[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
-//                out2[sizeof(pppg)+sizeof(ethg)+sizeof(extg)];
-//=======
                 @display("p=527,54,row,60");
         }
         sctp: <sctpType> like ISCTP if hasSctp {
@@ -107,16 +96,17 @@ module StandardHost extends NodeBase
         pingApp[numPingApps]: <default("PingApp")> like IPingApp {
             parameters:
                 @display("p=635,141,row,60");
-
         }
+
     connections allowunconnected:
-        for i=0..numNetPerfMeters-1 {
-            netPerfMeter[i].tcpOut --> tcp.appIn++;
-            netPerfMeter[i].tcpIn <-- tcp.appOut++;
-            netPerfMeter[i].sctpOut --> sctp.from_appl++;
-            netPerfMeter[i].sctpIn <-- sctp.to_appl++;
-            netPerfMeter[i].udpOut --> udp.appIn++;
-            netPerfMeter[i].udpIn <-- udp.appOut++;
+
+        for i=0..numNetPerfMetersApps-1 {
+            netPerfMeterApp[i].tcpOut --> tcp.appIn++;
+            netPerfMeterApp[i].tcpIn <-- tcp.appOut++;
+            netPerfMeterApp[i].sctpOut --> sctp.from_appl++;
+            netPerfMeterApp[i].sctpIn <-- sctp.to_appl++;
+            netPerfMeterApp[i].udpOut --> udp.appIn++;
+            netPerfMeterApp[i].udpIn <-- udp.appOut++;
         }
 
         for i=0..numTcpApps-1 {
@@ -135,41 +125,10 @@ module StandardHost extends NodeBase
         udp.ipOut --> networkLayer.udpIn if hasUdp;
         udp.ipIn <-- networkLayer.udpOut if hasUdp;
 
-        for i=0..numSctpApps-1 {    //I.R.
+        for i=0..numSctpApps-1 {
             sctpApp[i].sctpOut --> sctp.from_appl++;
             sctp.to_appl++ --> sctpApp[i].sctpIn;
         }
-//<<<<<<< HEAD
-//
-//        sctp.to_ip --> networkLayer.sctpIn;
-//        networkLayer.sctpOut --> sctp.from_ip;
-//
-//        networkLayer.pingOut --> pingApp.pingIn;
-//        networkLayer.pingIn <-- pingApp.pingOut;
-//
-//        // connections to network outside
-//        for i=0..sizeof(pppg)-1 {
-//            pppg[i] <--> ppp[i].phys;
-//            ppp[i].netwOut --> tcpdump.ifIn[i];
-//            tcpdump.out2[i] --> networkLayer.ifIn[i];
-//            ppp[i].netwIn <-- tcpdump.ifOut[i];
-//            tcpdump.in2[i] <-- networkLayer.ifOut[i];
-//        }
-//
-//        for i=0..sizeof(ethg)-1 {
-//            ethg[i] <--> eth[i].phys;
-//            eth[i].netwOut --> tcpdump.ifIn[sizeof(pppg)+i];
-//            tcpdump.out2[sizeof(pppg)+i] --> networkLayer.ifIn[sizeof(pppg)+i];
-//            eth[i].netwIn <-- tcpdump.ifOut[sizeof(pppg)+i];
-//            tcpdump.in2[sizeof(pppg)+i] <-- networkLayer.ifOut[sizeof(pppg)+i];
-//        }
-//
-//        for i=0..sizeof(extg)-1 {
-//            ext[i].netwOut --> tcpdump.ifIn[sizeof(pppg)+sizeof(ethg)+i];
-//            tcpdump.out2[sizeof(pppg)+sizeof(ethg)+i] --> networkLayer.ifIn[sizeof(pppg)+sizeof(ethg)+i];
-//            ext[i].netwIn <-- tcpdump.ifOut[sizeof(pppg)+sizeof(ethg)+i];
-//            tcpdump.in2[sizeof(pppg)+sizeof(ethg)+i] <-- networkLayer.ifOut[sizeof(pppg)+sizeof(ethg)+i];
-//=======
         sctp.to_ip --> networkLayer.sctpIn if hasSctp;
         networkLayer.sctpOut --> sctp.from_ip if hasSctp;
 

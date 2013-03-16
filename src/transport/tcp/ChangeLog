@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-2011-06-04  Thomas Reschka
-
-    * added check for lost FIN (without user data) in retransmitOneSegment() to fix bug #212.
-=======
 2013-01-30  ------ inet-2.1.0 released ------
 
 2012-11-14  Zoltan Bojthe
@@ -172,7 +167,6 @@
 	- extended condition in processSegment1stThru8th() to avoid D-SACK generation at reception of ooo segments without payload
 	- moved up truncateSegment() call
 	- added ASSERT in truncateSegment()
->>>>>>> origin/master
 
 2010-07-12  Thomas Reschka
 

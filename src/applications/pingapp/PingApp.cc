@@ -73,7 +73,6 @@ void PingApp::initialize(int stage)
 
     lossCount = outOfOrderArrivalCount = numPongs = 0;
     WATCH(lossCount);
-
     WATCH(outOfOrderArrivalCount);
     WATCH(numPongs);
 
@@ -224,7 +223,6 @@ void PingApp::countPingResponse(int bytes, long seqNo, simtime_t rtt)
         emit(rttSignal, rtt);
     }
 
-
     if (seqNo == expectedReplySeqNo)
     {
         // expected ping reply arrived; expect next sequence number
@@ -260,7 +258,6 @@ void PingApp::finish()
     {
         if (printPing)
             EV << getFullPath() << ": No pings sent, skipping recording statistics and printing results.\n";
-
         return;
     }
 
@@ -273,7 +270,6 @@ void PingApp::finish()
     // print it to stdout as well
     if (printPing)
     {
-
         cout << "--------------------------------------------------------" << endl;
         cout << "\t" << getFullPath() << endl;
         cout << "--------------------------------------------------------" << endl;

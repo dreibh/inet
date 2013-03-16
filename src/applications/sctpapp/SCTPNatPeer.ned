@@ -1,4 +1,4 @@
-//
+package inet.applications.sctpapp;
 // Copyright (C) 2008 Irene Ruengeler
 //
 // This program is free software; you can redistribute it and/or
@@ -33,10 +33,9 @@
 // app sent a single 100 MB message, it will be echoed only when all
 // 100 megabytes have arrived.
 //
+import inet.applications.ISCTPApp;
 
-package inet.applications.sctpapp;
-
-simple SCTPNatPeer like SCTPApp
+simple SCTPNatPeer like ISCTPApp
 {
     parameters:
         string address = default(""); // may be left empty ("")

@@ -66,7 +66,6 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             if (remoteAddr.isUnspecified() || remotePort==-1)
                throw cRuntimeError(tcpMain, "Error processing command OPEN_ACTIVE: remote address and port must be specified");
 
-
             if (localPort == -1)
             {
                 localPort = tcpMain->getEphemeralPort();
@@ -97,7 +96,6 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             break;
 
         default:
-
 #ifdef PRIVATE
             if(!tcpMain->par("multipath"))
 #endif
@@ -152,8 +150,7 @@ void TCPConnection::process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpComman
 
     if(this->isSubflow){
         // easy scheduler for testing
-        TCPConnection* scheduledConn = this->flow->schedule(this, msg);
-        //scheduledConn->process_SEND(event,tcpCommand,msg);
+        this->flow->schedule(this, msg);
     }
     else
         this->process_SEND(event,tcpCommand,msg);
@@ -179,10 +176,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
     switch (fsm.getState())
     {
         case TCP_S_INIT:
-
             throw cRuntimeError(tcpMain, "Error processing command SEND: connection not open");
-
-
         case TCP_S_LISTEN:
             tcpEV << "SEND command turns passive open into active open, sending initial SYN\n";
             state->active = true;
@@ -239,6 +233,7 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
     switch (fsm.getState())
     {
         case TCP_S_INIT:
+            throw cRuntimeError(tcpMain, "Error processing command CLOSE: connection not open");
 
 #ifdef PRIVATE
         	{bool multipath =  tcpMain->par("multipath");
@@ -322,7 +317,6 @@ void TCPConnection::process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, c
         case TCP_S_INIT:
             throw cRuntimeError("Error processing command ABORT: connection not open");
 
-
         case TCP_S_SYN_RCVD:
         case TCP_S_ESTABLISHED:
         case TCP_S_FIN_WAIT_1:
@@ -392,4 +386,3 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
     delete msg;
     delete tcpCommand;
 }
-

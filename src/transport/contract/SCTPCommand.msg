@@ -17,12 +17,9 @@
 
 
 cplusplus {{
-#include <vector>
-
 #include "IPvXAddress.h"
+#include "SCTPAssociation.h"
 #include "SCTPCommand.h"
-
-typedef std::vector<IPvXAddress> AddressVector;
 }}
 
 
@@ -42,15 +39,15 @@ enum SCTPErrorCode
 
 //
 // Control info for SCTP connections. This class is to be set as control info
-// (see cMessage::setControlInfo()) on all messages exchanged between ~SCTP and
+// (see cMessage::setControlInfo()) on all messages exchanged between SCTP and
 // application, in both directions. Some commands and indications
 // (SCTP_C_OPEN_xxx, SCTP_I_STATUS) use subclasses.
 //
 // connId identifies the connection locally within the application (internally,
-// ~SCTP uses the (app gate index, connId) pair to identify the socket).
+// SCTP uses the (app gate index, connId) pair to identify the socket).
 // connId is to be chosen by the application in the open command.
 //
-// @see ~TcpCommandCode, ~TcpStatusInd, ~SCTPOpenCommand, ~SCTPStatusInfo, SCTPMain
+// @see TcpCommandCode, TcpStatusInd, SCTPOpenCommand, SCTPStatusInfo, SCTPMain
 //
 class SCTPCommand extends cPacket
 {
@@ -76,15 +73,15 @@ class SCTPErrorInfo extends SCTPCommand
 
 
 //
-// Control info to be used for active or passive ~SCTP open.
+// Control info to be used for active or passive SCTP open.
 //
 // localAddr, remoteAddr, localPort, remotePort should be self-explanatory.
-// localAddr is optional because ~SCTP can learn it from IP when a packet
-// is received from the peer; localPort is optional because ~SCTP supports
+// localAddr is optional because SCTP can learn it from IP when a packet
+// is received from the peer; localPort is optional because SCTP supports
 // ephemeral ports.
 //
 // The sendQueueClass, receiveQueueClass and sctpAlgorithmClass fields
-// allow per-connection ~SCTP configuration. These fields may contain
+// allow per-connection SCTP configuration. These fields may contain
 // names of classes subclassed from SCTPSendQueue, SCTPReceiveQueue
 // and SCTPAlgorithm, respectively. If not set, module parameters with
 // similar names are used.
@@ -92,13 +89,13 @@ class SCTPErrorInfo extends SCTPCommand
 // The fork parameter is used with passive open, and controls what happens
 // when an incoming connection is received. With fork=true, it emulates
 // the Unix accept(2) syscall semantics: a new connection structure
-// is created for the connection (with a new connId, see in ~SCTPCommand),
+// is created for the connection (with a new connId, see in SCTPCommand),
 // and the connection structure with the old connId remains listening.
 // With fork=false, all the above does not happen: the first connection
 // is accepted (with the original connId), and further incoming connections
-// will be refused by ~SCTP by sending an RST segment.
+// will be refused by SCTP by sending an RST segment.
 //
-// @see ~TcpCommandCode, ~SCTP
+// @see TcpCommandCode, SCTPMain
 //
 class SCTPOpenCommand extends SCTPCommand
 {
@@ -123,7 +120,7 @@ class SCTPOpenCommand extends SCTPCommand
 //
 // Control info to be used with the SEND command.
 //
-// @see ~TcpCommandCode, ~SCTP
+// @see TcpCommandCode, SCTPMain
 //
 class SCTPSendCommand extends SCTPCommand
 {
@@ -139,7 +136,7 @@ class SCTPSendCommand extends SCTPCommand
 // Sent with message kind SCTP_I_ESTABLISHED, to let the app know
 // about the local and remote IP address and port.
 //
-// @see ~TcpCommandCode, ~SCTP
+// @see TcpCommandCode, SCTPMain
 //
 class SCTPConnectInfo extends SCTPCommand
 {
@@ -159,7 +156,7 @@ class SCTPConnectInfo extends SCTPCommand
 // For explanation of variables, see RFC 793 or SCTPStateVariables in
 // SCTPConnection.h.
 //
-// @see ~TcpStatusInd, ~TcpCommandCode, ~SCTP
+// @see TcpStatusInd, TcpCommandCode, SCTPMain
 //
 class SCTPStatusInfo extends SCTPCommand
 {

@@ -377,6 +377,7 @@ class INET_API TCPConnection
 
     TCPMultipathDSSStatus dss_dataMapofSubflow;
     DSS_BASE_INFO         base_una_dss_info;
+    uint32 nextSeg();
 #endif
 
   protected:
@@ -402,7 +403,6 @@ class INET_API TCPConnection
 
 
   protected:
-
     // TCP behavior in data transfer state
     TCPAlgorithm *tcpAlgorithm;
 

@@ -151,9 +151,9 @@ class INET_API SCTPClient : public cSimpleModule, public SCTPSocket::CallbackInt
 //        uint32 inStreams;
 //        uint32 outStreams;
 //
-//        static simsignal_t sentPkSignal;
-//        static simsignal_t rcvdPkSignal;
-//        static simsignal_t echoedPkSignal;
+        static simsignal_t sentPkSignal;
+        static simsignal_t rcvdPkSignal;
+        static simsignal_t echoedPkSignal;
 //
 //        bool ordered;
 //        bool sendAllowed;
@@ -249,7 +249,7 @@ class INET_API SCTPClient : public cSimpleModule, public SCTPSocket::CallbackInt
 //        void sendqueueFullArrived(int32 connId);
 //        void sendqueueAbatedArrived(int32 connId, uint64 buffer);
 //        void addressAddedArrived(int32 assocId, IPvXAddress remoteAddr);
->>>>>>> origin/master
+
 };
 
 #endif

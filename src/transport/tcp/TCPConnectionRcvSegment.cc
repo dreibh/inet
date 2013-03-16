@@ -260,7 +260,6 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 
             default: ASSERT(0);
                 break;
-
         }
     }
 
@@ -601,7 +600,6 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                         state->ack_now = true; // although not mentioned in [Stevens, W.R.: TCP/IP Illustrated, Volume 2, page 861] seems like we have to set ack_now
                         tcpEV << "All segments arrived up to the FIN segment, advancing rcv_nxt over the FIN\n";
                         state->rcv_nxt = state->rcv_fin_seq + 1;
-
                         // state transitions will be done in the state machine, here we just set
                         // the proper event code (TCP_E_RCV_FIN or TCP_E_RCV_FIN_ACK)
                         event = TCP_E_RCV_FIN;
@@ -1300,7 +1298,6 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
         uint32 old_snd_una = state->snd_una;
         state->snd_una = tcpseg->getAckNo();
 
-
         if (unackedVector)
             unackedVector->record(state->snd_max - state->snd_una);
 
@@ -1332,6 +1329,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 
         // acked data no longer needed in send queue
         sendQueue->discardUpTo(discardUpToSeq);
+
 
 #ifdef PRIVATE
         if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) < state->sendQueueLimit)) {
@@ -1397,7 +1395,6 @@ void TCPConnection::process_TIMEOUT_CONN_ESTAB()
             // We should not receive this timeout in this state.
             throw cRuntimeError(tcpMain, "Internal error: received CONN_ESTAB timeout in state %s",
                     stateName(fsm.getState()));
-
     }
 }
 
@@ -1421,7 +1418,6 @@ void TCPConnection::process_TIMEOUT_2MSL()
             throw cRuntimeError(tcpMain,
                     "Internal error: received time-wait (2MSL) timeout in state %s",
                     stateName(fsm.getState()));
-
     }
 }
 
@@ -1438,7 +1434,6 @@ void TCPConnection::process_TIMEOUT_FIN_WAIT_2()
             // We should not receive this timeout in this state.
             throw cRuntimeError(tcpMain, "Internal error: received FIN_WAIT_2 timeout in state %s",
                     stateName(fsm.getState()));
-
     }
 }
 
@@ -1473,7 +1468,6 @@ void TCPConnection::process_TIMEOUT_SYN_REXMIT(TCPEventCode& event)
         default:
             throw cRuntimeError(tcpMain, "Internal error: SYN-REXMIT timer expired while in state %s",
                     stateName(fsm.getState()));
-
     }
 
     // reschedule timer

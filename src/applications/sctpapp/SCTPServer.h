@@ -87,7 +87,7 @@ class INET_API SCTPServer : public cSimpleModule
     struct pathStatus {
         bool active;
         bool primaryPath;
-        IPAddress  pid;
+        IPvXAddress  pid;
     };
 
     void initialize();
@@ -106,7 +106,7 @@ class INET_API SCTPServer : public cSimpleModule
 //        bool schedule;
 //        bool firstData;
 //        bool shutdownReceived;
-//        bool echo;
+        bool echo;
 //        bool finishEndsSimulation;
 //        bool ordered;
 //        bool abortSent;

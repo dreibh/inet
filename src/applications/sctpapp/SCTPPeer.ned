@@ -1,3 +1,4 @@
+package inet.applications.sctpapp;
 //
 // Copyright (C) 2008 Irene Ruengeler
 //
@@ -14,8 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
-
-package inet.applications.sctpapp;
 
 import inet.applications.ISCTPApp;
 
@@ -54,7 +53,6 @@ simple SCTPPeer like ISCTPApp
         @statistic[rcvdPk](title="packets received"; source=rcvdPk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[sentPk](title="packets sent"; source=sentPk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[echoedPk](title="packets echoed"; source=echoedPk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
-
     gates:
         input sctpIn;
         output sctpOut;

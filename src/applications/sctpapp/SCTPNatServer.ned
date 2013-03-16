@@ -1,4 +1,4 @@
-//
+package inet.applications.sctpapp;//
 // Copyright (C) 2008 Irene Ruengeler
 //
 // This program is free software; you can redistribute it and/or
@@ -16,9 +16,9 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
-package inet.applications.sctpapp;
+import inet.applications.ISCTPApp;
 
-simple SCTPNatServer like SCTPApp
+simple SCTPNatServer like ISCTPApp
 {
     parameters:
         string address = default(""); // may be left empty ("")

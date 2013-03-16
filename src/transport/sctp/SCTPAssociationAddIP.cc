@@ -16,7 +16,7 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "IPAddressResolver.h"
+#include "IPvXAddressResolver.h"
 #include "SCTPAssociation.h"
 
 void SCTPAssociation::sendAsconf(const char* type, const bool remote)
@@ -38,7 +38,8 @@ void SCTPAssociation::sendAsconf(const char* type, const bool remote)
         asconfChunk->setSerialNumber(state->asconfSn);
         chunkLength = SCTP_ADD_IP_CHUNK_LENGTH;
         sctpEV3 << "localAddr=" << localAddr << ", remoteAddr=" << remoteAddr << "\n";
-        if (getLevel(localAddr)==3 && getLevel(remoteAddr)==4 && (bool)sctpMain->par("natFriendly")) {
+        // IT MUS BE LEVEL 4 getLevel(localAddr)==3 && getLevel(remoteAddr)==4
+        if ((bool)sctpMain->par("natFriendly")) {
             asconfChunk->setAddressParam(IPvXAddress("0.0.0.0"));
             asconfChunk->setPeerVTag(peerVTag);
             nat = true;
@@ -67,15 +68,15 @@ void SCTPAssociation::sendAsconf(const char* type, const bool remote)
                     ipParam->setRequestCorrelationId(++state->corrIdNum);
                     if (nat) {
                         ipParam->setAddressParam(IPvXAddress("0.0.0.0"));
-                        sctpMain->addLocalAddressToAllRemoteAddresses(this, IPAddressResolver().resolve(sctpMain->par("addAddress"), 1), (std::vector<IPvXAddress>) remoteAddressList);
-                        state->localAddresses.push_back(IPAddressResolver().resolve(sctpMain->par("addAddress"), 1));
+                        sctpMain->addLocalAddressToAllRemoteAddresses(this, IPvXAddressResolver().resolve(sctpMain->par("addAddress"), 1), (std::vector<IPvXAddress>) remoteAddressList);
+                        state->localAddresses.push_back(IPvXAddressResolver().resolve(sctpMain->par("addAddress"), 1));
                         if (remote)
                             targetAddr = remoteAddr;
                         else
                             targetAddr = getNextAddress(getPath(remoteAddr));
                     }
                     else {
-                        ipParam->setAddressParam(IPAddressResolver().resolve(sctpMain->par("addAddress"), 1));
+                        ipParam->setAddressParam(IPvXAddressResolver().resolve(sctpMain->par("addAddress"), 1));
                     }
                     if (ipParam->getAddressParam().isIPv6()) {
                         chunkLength += 20;
@@ -95,7 +96,7 @@ void SCTPAssociation::sendAsconf(const char* type, const bool remote)
                     chunkLength += SCTP_ADD_IP_PARAMETER_LENGTH;
                     delParam->setParameterType(DELETE_IP_ADDRESS);
                     delParam->setRequestCorrelationId(++state->corrIdNum);
-                    delParam->setAddressParam(IPAddressResolver().resolve(sctpMain->par("addAddress"), 1));
+                    delParam->setAddressParam(IPvXAddressResolver().resolve(sctpMain->par("addAddress"), 1));
                     if (delParam->getAddressParam().isIPv6()) {
                         chunkLength += 20;
                         delParam->setBitLength((SCTP_ADD_IP_PARAMETER_LENGTH+20)*8);
@@ -114,7 +115,7 @@ void SCTPAssociation::sendAsconf(const char* type, const bool remote)
                     chunkLength += SCTP_ADD_IP_PARAMETER_LENGTH;
                     priParam->setParameterType(SET_PRIMARY_ADDRESS);
                     priParam->setRequestCorrelationId(++state->corrIdNum);
-                    priParam->setAddressParam(IPAddressResolver().resolve(sctpMain->par("addAddress"), 1));
+                    priParam->setAddressParam(IPvXAddressResolver().resolve(sctpMain->par("addAddress"), 1));
                     if (nat) {
                         priParam->setAddressParam(IPvXAddress("0.0.0.0"));
                     }
@@ -287,28 +288,32 @@ void SCTPAssociation::makeRoutingEntry(const char* route)
     RoutingTableAccess routingTableAccess;
     IInterfaceTable *ift = interfaceTableAccess.get();
     if (strcmp(route, "")!=0) {
-        IPRoute* e = new IPRoute();
+        IPv4Route* e = new IPv4Route();
         char*    str = strtok((char*)route, " ");
 
         if (str != NULL) {
-            e->setHost(IPAddress(str));
+        	// FIX MERGE
+            e->setDestination(IPv4Address(str));
             str = strtok(NULL, " ");
         }
         if (str != NULL) {
-            e->setGateway(IPAddress(str));
+        	// FIX MERGE
+            e->setGateway(IPv4Address(str));
             str = strtok(NULL, " ");
         }
         if (str != NULL) {
-            e->setNetmask(IPAddress(str));
+        	// FIX MERGE
+            e->setNetmask(IPv4Address(str));
             str = strtok(NULL, " ");
         }
-        if (str != NULL) {
-            if (str[0] == 'H') {
-                e->setType(IPRoute::DIRECT);
-            } else if (str[0] == 'G')
-                e->setType(IPRoute::REMOTE);
-            str = strtok(NULL, " ");
-        }
+// FIXME Merge del
+//        if (str != NULL) {
+//            if (str[0] == 'H') {
+//                e->setType(IPvXRoute::F_DESTINATION);
+//            } else if (str[0] == 'G')
+//                e->setType(IPv4Route::F_GATEWAY);
+//            str = strtok(NULL, " ");
+//        }
         if (str != NULL) {
             e->setMetric(0);
             str = strtok(NULL, " ");

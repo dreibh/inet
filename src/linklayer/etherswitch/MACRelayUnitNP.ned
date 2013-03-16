@@ -18,7 +18,7 @@
 
 
 package inet.linklayer.etherswitch;
-
+import inet.linklayer.IMACRelayUnit;
 //
 // A MACRelayUnit implementation which models one or more CPUs
 // with shared memory, working from a single shared queue.
@@ -33,7 +33,7 @@ package inet.linklayer.etherswitch;
 // The watermark and the pause time is configurable; use zero
 // values to disable the PAUSE feature.
 //
-simple MACRelayUnitNP like MACRelayUnit
+simple MACRelayUnitNP like IMACRelayUnit
 {
     parameters:
         string addressTableFile = default("");  // see MACRelayUnit

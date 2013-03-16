@@ -164,14 +164,13 @@ class TCPOpenCommand extends TCPCommand
     bool fork = false;        // used only for passive open
 
 // FIXME Merge delete
-//    string sendQueueClass;    // may be left empty
-//    string receiveQueueClass; // may be left empty
+    string sendQueueClass;    // may be left empty
+    string receiveQueueClass; // may be left empty
 //    string tcpAlgorithmClass; // may be left empty
-//	int subFlowNumber = 0;
+	int subFlowNumber = 0;
 
     int dataTransferMode enum(TCPDataTransferMode); // whether to transmit C++ objects, real bytes or just byte counts. See ~TCPDataTransferMode.
     string tcpAlgorithmClass; // TCP congestion control algorithm; leave empty for default
-
 }
 
 

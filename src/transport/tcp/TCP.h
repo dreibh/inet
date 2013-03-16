@@ -22,7 +22,6 @@
 #include <map>
 #include <set>
 
-
 #ifdef PRIVATE
 class MPTCP_PCB;
 #endif
@@ -33,12 +32,16 @@ class MPTCP_PCB;
 #include "TCPCommand_m.h"
 
 
+#include "INETDefs.h"
+
+#include "IPvXAddress.h"
+#include "TCPCommand_m.h"
+
 // Forward declarations:
 class TCPConnection;
 class TCPSegment;
 class TCPSendQueue;
 class TCPReceiveQueue;
-
 
 // macro for normal ev<< logging (Note: deliberately no parens in macro def)
 #define tcpEV (ev.isDisabled()||TCP::testing)?ev:ev

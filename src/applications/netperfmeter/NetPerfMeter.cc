@@ -27,9 +27,8 @@
 
 #include "NetPerfMeter.h"
 #include "NetPerfMeter_m.h"
-#include "TCPCommand_m.h"
-#include "SCTPCommand_m.h"
-#include "IPAddressResolver.h"
+
+#include "IPvXAddressResolver.h"
 
 
 Define_Module(NetPerfMeter);
@@ -491,20 +490,20 @@ void NetPerfMeter::establishConnection()
       const int   remotePort    = par("remotePort");
       const char* primaryPath   = par("primaryPath");
       PrimaryPath = (primaryPath[0] != 0x00) ?
-                       IPAddressResolver().resolve(primaryPath) : IPvXAddress();
+                       IPvXAddressResolver().resolve(primaryPath) : IPvXAddress();
 
       setStatusString("Connecting");
       if(TransportProtocol == SCTP) {
          AddressVector remoteAddressList;
-         remoteAddressList.push_back(IPAddressResolver().resolve(remoteAddress));
+         remoteAddressList.push_back(IPvXAddressResolver().resolve(remoteAddress));
          SocketSCTP->connectx(remoteAddressList, remotePort);
       }
       else if(TransportProtocol == TCP) {
          SocketTCP->renewSocket();
-         SocketTCP->connect(IPAddressResolver().resolve(remoteAddress), remotePort);
+         SocketTCP->connect(IPvXAddressResolver().resolve(remoteAddress), remotePort);
       }
       else if(TransportProtocol == UDP) {
-         SocketUDP->connect(IPAddressResolver().resolve(remoteAddress), remotePort);
+         SocketUDP->connect(IPvXAddressResolver().resolve(remoteAddress), remotePort);
          // Just start sending, since UDP is connection-less
          successfullyEstablishedConnection(NULL, 0);
       }

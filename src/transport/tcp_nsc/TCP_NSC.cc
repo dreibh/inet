@@ -208,107 +208,11 @@ IPvXAddress const & TCP_NSC::mapNsc2Remote(uint32_t nscAddrP)
 
 void TCP_NSC::initialize()
 {
-<<<<<<< HEAD
-    struct tcphdr const *tcp = (struct tcphdr const*)packet_data;
-    char buf[4096];
-
-    sprintf(buf, "Src port:%hu Dst port:%hu Seq:%u Ack:%u Off:%hhu %s\n",
-            ntohs(tcp->th_sport), ntohs(tcp->th_dport), ntohl(tcp->th_seq),
-            ntohl(tcp->th_ack), (unsigned char)tcp->th_offs,
-            flags2str(tcp->th_flags)
-          );
-    tcpEV << this << ": " << buf;
-    sprintf(buf, "Win:%hu Sum:%hu Urg:%hu\n",
-            ntohs(tcp->th_win), ntohs(tcp->th_sum), ntohs(tcp->th_urp));
-    tcpEV << this << ": " << buf;
-
-    if(hdr_len > 20)
-    {
-        unsigned char const *opt = (unsigned char const*)packet_data + sizeof(struct tcphdr);
-        unsigned int optlen = tcp->th_offs*4 - 20;
-        unsigned int optoffs = 0;
-
-        tcpEV << this << ": " << ("Options: ");
-        while(
-                (opt[optoffs] != 0) &&
-                (optoffs < optlen)
-             )
-        {
-            unsigned char len = opt[optoffs+1];
-            if(len == 0 && opt[optoffs] != 1)
-            {
-                sprintf(buf, "0-length option(%u)\n", opt[optoffs]);
-                tcpEV << this << ": " << buf;
-                break;
-            }
-=======
     tcpEV << this << ": initialize\n";
->>>>>>> origin/master
 
     const char *q;
     q = par("sendQueueClass");
 
-<<<<<<< HEAD
-            switch(opt[optoffs])
-            {
-                case 1: tcpEV << ("No-Op "); optoffs++; break;
-                case 2: {       unsigned short mss = 0;
-                            //assert(len == 2);
-                            if(len == 2) {
-                                mss = (opt[optoffs+2] << 8) + (opt[optoffs+3]);
-                                sprintf(buf, "MSS(%u) ", mss);
-                                tcpEV << buf;
-                            } else {
-                                sprintf(buf, "MSS:l:%u ", len);
-                                tcpEV << buf;
-                            }
-                            optoffs += opt[optoffs+1];
-                            break;
-                        }
-                case 3: {
-                            unsigned char ws = 0;
-                            ASSERT(len == 1);
-                            ws = opt[optoffs+2];
-                            sprintf(buf, "WS(%u) ", ws);
-                            tcpEV << buf;
-                            optoffs += opt[optoffs+1];
-                            break;
-                        }
-                case 4: {
-                            sprintf(buf, "SACK-Permitted ");
-                            tcpEV << buf;
-                            optoffs += opt[optoffs+1];
-                            break;
-                        }
-                case 5: {
-                            tcpEV << ("SACK ");
-                            optoffs += opt[optoffs+1];
-                            break;
-                        }
-                case 8: {
-                            int i;
-                            tcpEV << ("Timestamp(");
-                            for(i = 0; i < len; i++) {
-                                sprintf(buf, "%02x", opt[optoffs+2+i]);
-                                tcpEV << buf;
-                            }
-                            tcpEV << (") ");
-                            optoffs += opt[optoffs+1];
-                            break;
-                        }
-                default:{
-                            sprintf(buf, "%u:%u ", opt[0], opt[1]);
-                            tcpEV << buf;
-                            optoffs += opt[optoffs+1];
-                            break;
-                        }
-            };
-
-        }
-        tcpEV << ("\n");
-    }
-}
-=======
     if (*q != '\0')
         error("Don't use obsolete sendQueueClass = \"%s\" parameter", q);
 
@@ -316,7 +220,6 @@ void TCP_NSC::initialize()
 
     if (*q != '\0')
         error("Don't use obsolete receiveQueueClass = \"%s\" parameter", q);
->>>>>>> origin/master
 
     WATCH_MAP(tcpAppConnMapM);
 

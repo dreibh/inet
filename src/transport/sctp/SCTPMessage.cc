@@ -24,7 +24,6 @@ Register_Class(SCTPMessage);
 
 SCTPMessage& SCTPMessage::operator=(const SCTPMessage& other)
 {
-
     SCTPMessage_Base::operator=(other);
 
     this->setBitLength(SCTP_COMMON_HEADER*8);
@@ -33,45 +32,18 @@ SCTPMessage& SCTPMessage::operator=(const SCTPMessage& other)
         addChunk((cPacket *)(*i)->dup());
 
     return *this;
-// FIXME Merge del
-//     if (this == &other) return *this;
-//     clean();
-//     SCTPMessage_Base::operator=(other);
-//     copy(other);
-//     return *this;
-//}
-//
-//void SCTPMessage::copy(const SCTPMessage& other)
-//{
-//     this->setTag(other.getTag());
-//     for (std::list<cPacket*>::const_iterator i=other.chunkList.begin(); i!=other.chunkList.end(); ++i)
-//          addChunk((cPacket *)(*i)->dup());
-
 }
 
 SCTPMessage::~SCTPMessage()
 {
-    clean();
-}
-
-void SCTPMessage::clean()
-{
     SCTPChunk* chunk;
     if (this->getChunksArraySize()>0)
-
         for (uint32 i=0; i < this->getChunksArraySize(); i++)
         {
             chunk = (SCTPChunk*)this->getChunks(i);
             drop(chunk);
             delete chunk;
         }
-
-//    for (uint32 i=0; i < this->getChunksArraySize(); i++)
-//    {
-//        chunk = (SCTPChunk*)this->getChunks(i);
-//        dropAndDelete(chunk);
-//    }
-
 }
 
 void SCTPMessage::setChunksArraySize(const uint32 size)
@@ -341,7 +313,6 @@ Register_Class(SCTPErrorChunk);
 
 SCTPErrorChunk& SCTPErrorChunk::operator=(const SCTPErrorChunk& other)
 {
-
     SCTPErrorChunk_Base::operator=(other);
 
     this->setBitLength(4*8);
@@ -349,19 +320,6 @@ SCTPErrorChunk& SCTPErrorChunk::operator=(const SCTPErrorChunk& other)
         addParameters((cPacket *)(*i)->dup());
 
     return *this;
-// FIXME Merge del
-//     if (this == &other) return *this;
-//     clean();
-//     SCTPErrorChunk_Base::operator=(other);
-//     copy(other);
-//     return *this;
-//}
-//
-//void SCTPErrorChunk::copy(const SCTPErrorChunk& other)
-//{
-//     for (std::list<cPacket*>::const_iterator i=other.parameterList.begin(); i!=other.parameterList.end(); ++i)
-//          addParameters((cPacket *)(*i)->dup());
-
 }
 
 void SCTPErrorChunk::setParametersArraySize(const uint32 size)
@@ -406,19 +364,3 @@ cPacket *SCTPErrorChunk::removeParameter()
     this->setBitLength(this->getBitLength()-ADD_PADDING(msg->getBitLength()/8)*8);
     return msg;
 }
-
-SCTPErrorChunk::~SCTPErrorChunk()
-{
-    clean();
-}
-
-void SCTPErrorChunk::clean()
-{
-    while (!parameterList.empty())
-    {
-        cPacket *msg = parameterList.front();
-        parameterList.pop_front();
-        dropAndDelete(msg);
-    }
-}
-

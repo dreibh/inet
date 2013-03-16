@@ -54,8 +54,6 @@ void SCTPAssociation::initStreams(uint32 inStreams, uint32 outStreams)
         for (i=0; i<outStreams; i++)
         {
             SCTPSendStream* sendStream = new SCTPSendStream(i);
-            this->sendStreams[i] = sendStream;
-            // FIXME Merge ??
             sendStream->setStreamId(i);
 #ifdef PRIVATE
             char str[128];

@@ -30,14 +30,13 @@ class SCTPConnectInfo;
  */
 class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInterface
 {
-<<<<<<< HEAD
   protected:
     int32 notifications;
     int32 serverAssocId;
     int32 clientAssocId;
     SCTPSocket clientSocket;
     double delay;
-    double echoFactor;
+    double echo;
     bool schedule;
     bool shutdownReceived;
     long bytesSent;
@@ -76,43 +75,14 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
     struct pathStatus {
        bool active;
        bool primaryPath;
-       IPAddress  pid;
+       IPvXAddress  pid;
     };
     typedef std::map<IPvXAddress,pathStatus> SCTPPathStatus;
     SCTPPathStatus sctpPathStatus;
-    void initialize();
-    void handleMessage(cMessage *msg);
-    void finish();
-    void handleTimer(cMessage *msg);
-    void generateAndSend(SCTPConnectInfo *connectInfo);
-    void connect();
+
 
 // FIXME Merge delete
-//    protected:
-//        int32 notifications;
-//        int32 serverAssocId;
-//        int32 clientAssocId;
-//        SCTPSocket clientSocket;
-//        double delay;
-//        bool echo;
-//        bool schedule;
-//        bool shutdownReceived;
-//        bool ordered;
-//        bool sendAllowed;
-//        long bytesSent;
-//        int32 packetsSent;
-//        int32 packetsRcvd;
-//        int32 numSessions;
-//        int32 numRequestsToSend; // requests to send in this session
-//        int32 queueSize;
-//        cMessage *timeoutMsg;
-//        int32 outboundStreams;
-//        cMessage *timeMsg;
-//        cMessage *connectTimer;
-//        int32 bytesRcvd;
-//        int32 echoedBytesSent;
-//        int32 lastStream;
-//        int32 numPacketsToReceive;
+    protected:
 //
 //        // statistics
 //        typedef std::map<int32,long> RcvdPacketsPerAssoc;
@@ -137,9 +107,9 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
 //        void sendOrSchedule(cPacket *msg);
 //        void sendRequest(bool last = true);
 //        int32 ssn;
-//        static simsignal_t sentPkSignal;
-//        static simsignal_t echoedPkSignal;
-//        static simsignal_t rcvdPkSignal;
+        static simsignal_t sentPkSignal;
+        static simsignal_t echoedPkSignal;
+        static simsignal_t rcvdPkSignal;
 //
 //    public:
 //        struct pathStatus {
@@ -150,17 +120,18 @@ class INET_API SCTPPeer : public cSimpleModule, public SCTPSocket::CallbackInter
 //        typedef std::map<IPvXAddress,pathStatus> SCTPPathStatus;
 //        SCTPPathStatus sctpPathStatus;
 //
-//    public:
-//        SCTPPeer();
-//        ~SCTPPeer();
-//
-//    protected:
-//        void initialize();
-//        void handleMessage(cMessage *msg);
-//        void finish();
-//        void handleTimer(cMessage *msg);
-//        void generateAndSend(SCTPConnectInfo *connectInfo);
-//        void connect();
+   public:
+        SCTPPeer();
+        ~SCTPPeer();
+
+    protected:
+        void initialize();
+        void handleMessage(cMessage *msg);
+        void finish();
+        void handleTimer(cMessage *msg);
+        void generateAndSend(SCTPConnectInfo *connectInfo);
+        void connect();
+
 
     /** Does nothing but update statistics/status. Redefine to perform or schedule first sending. */
     void socketEstablished(int32 connId, void *yourPtr);

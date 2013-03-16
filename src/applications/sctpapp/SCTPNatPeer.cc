@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "SCTPAssociation.h"
-#include "IPAddressResolver.h"
+#include "IPvXAddressResolver.h"
 
 #define MSGKIND_CONNECT  0
 #define MSGKIND_SEND     1
@@ -142,7 +142,7 @@ void SCTPNatPeer::connectx(AddressVector connectAddressList, int32 connectPort)
 
     sctpEV3 << "issuing OPEN command\n";
     //setStatusString("connecting");
-    //socket.connect(IPAddressResolver().resolve(connectAddress), connectPort);
+    //socket.connect(IPvXAddressResolver().resolve(connectAddress), connectPort);
     sctpEV3 << "Assoc " << clientSocket.getConnectionId() << "::connect to  port " << connectPort << "\n";
     bool streamReset = par("streamReset");
     clientSocket.connectx(connectAddressList, connectPort, streamReset, (int32)par("prMethod"), (uint32)par("numRequestsPerSession"));
@@ -177,7 +177,7 @@ void SCTPNatPeer::connect(IPvXAddress connectAddress, int32 connectPort)
 
     sctpEV3 << "issuing OPEN command\n";
     //setStatusString("connecting");
-    //socket.connect(IPAddressResolver().resolve(connectAddress), connectPort);
+    //socket.connect(IPvXAddressResolver().resolve(connectAddress), connectPort);
     sctpEV3 << "Assoc " << clientSocket.getConnectionId() << "::connect to address " << connectAddress << ", port " << connectPort << "\n";
     bool streamReset = par("streamReset");
     clientSocket.connect(connectAddress, connectPort, streamReset, (int32)par("prMethod"), (uint32)par("numRequestsPerSession"));
@@ -520,7 +520,7 @@ void SCTPNatPeer::handleTimer(cMessage *msg)
     {
         case MSGKIND_CONNECT:
             sctpEV3 << "starting session call connect\n";
-            connect(IPAddressResolver().resolve(par("connectAddress"), 1), par("connectPort"));
+            connect(IPvXAddressResolver().resolve(par("connectAddress"), 1), par("connectPort"));
             delete msg;
             break;
         case SCTP_C_SEND:
@@ -841,7 +841,8 @@ void SCTPNatPeer::socketDataArrived(int32, void *, cPacket *msg, bool)
             cmsg->setKind(SCTP_C_SEND_ORDERED);
         packetsSent++;
         delete msg;
-        clientSocket.send(cmsg, 0, 0, 1);
+        // FIXME Merge del
+        clientSocket.send(cmsg);
         //socket.send(cmsg);
     }
     if ((int64)(long)par("numPacketsToReceive")>0)

@@ -15,6 +15,7 @@
 #define __SCTPNATPEER_H_
 #include <omnetpp.h>
 #include "SCTPAssociation.h"
+#include "SCTPCommand_m.h"
 #include "SCTPSocket.h"
 
 
@@ -79,7 +80,7 @@ class INET_API SCTPNatPeer : public cSimpleModule, public SCTPSocket::CallbackIn
     struct pathStatus {
         bool active;
         bool primaryPath;
-        IPAddress  pid;
+        IPvXAddress  pid;
     };
     typedef std::map<IPvXAddress,pathStatus> SCTPPathStatus;
     SCTPPathStatus sctpPathStatus;

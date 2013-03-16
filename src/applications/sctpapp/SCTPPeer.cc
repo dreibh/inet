@@ -77,15 +77,15 @@ void SCTPPeer::initialize()
     WATCH(bytesSent);
     WATCH(numRequestsToSend);
 
-
-    token = strtok((char*)address, ",");
-    while (token != NULL)
-    {
-        addresses.push_back(IPvXAddress(token));
-        token = strtok(NULL, ",");
-    }
-    int32 port = par("port");
-    echoFactor = par("echoFactor");
+// FIXME Merge delete
+//    token = strtok((char*)address, ",");
+//    while (token != NULL)
+//    {
+//        addresses.push_back(IPvXAddress(token));
+//        token = strtok(NULL, ",");
+//    }
+//    int32 port = par("port");
+//    echoFactor = par("echoFactor");
 
 // FIXME Merge delete
 //    sentPkSignal = registerSignal("sentPk");
@@ -98,15 +98,25 @@ void SCTPPeer::initialize()
 //    int port = par("localPort");
 //    echo = par("echo");
 
-    delay = par("echoDelay");
-    outboundStreams = par("outboundStreams");
-    ordered = (bool)par("ordered");
-    queueSize = par("queueSize");
-    lastStream = 0;
-    timeoutMsg = new cMessage("SrvAppTimer");
-    SCTPSocket* socket = new SCTPSocket();
-    socket->setOutputGate(gate("sctpOut"));
-    socket->setOutboundStreams(outboundStreams);
+
+    sentPkSignal = registerSignal("sentPk");
+    echoedPkSignal = registerSignal("echoedPk");
+    rcvdPkSignal = registerSignal("rcvdPk");
+
+    // parameters
+    const char *addressesString = par("localAddress");
+	AddressVector addresses = IPvXAddressResolver().resolve(cStringTokenizer(addressesString).asVector());
+	int port = par("localPort");
+	echo = par("echo");
+	delay = par("echoDelay");
+	outboundStreams = par("outboundStreams");
+	ordered = (bool)par("ordered");
+	queueSize = par("queueSize");
+	lastStream = 0;
+	timeoutMsg = new cMessage("SrvAppTimer");
+	SCTPSocket* socket = new SCTPSocket();
+	socket->setOutputGate(gate("sctpOut"));
+	socket->setOutboundStreams(outboundStreams);
 
     if (addresses.size() == 0)
     {
@@ -118,9 +128,11 @@ void SCTPPeer::initialize()
         socket->bindx(addresses, port);
         clientSocket.bindx(addresses, port);
     }
-    socket->listen(true, (bool)par("streamReset"), par("numPacketsToSendPerClient"));
+//    socket->listen(true, (bool)par("streamReset"), par("numPacketsToSendPerClient"));
 // FIXME Merge delete
 //    socket->listen(true, par("numPacketsToSendPerClient").longValue());
+
+    socket->listen(true, par("numPacketsToSendPerClient").longValue());
 
     sctpEV3 << "SCTPPeer::initialized listen port=" << port << "\n";
     clientSocket.setCallbackObject(this);
@@ -151,8 +163,6 @@ void SCTPPeer::sendOrSchedule(cPacket *msg)
 
 void SCTPPeer::generateAndSend(SCTPConnectInfo *connectInfo)
 {
-    uint32 numBytes;
-
     cPacket* cmsg = new cPacket("CMSG");
     SCTPSimpleMessage* msg = new SCTPSimpleMessage("Server");
     int numBytes = par("requestLength");
@@ -190,15 +200,18 @@ void SCTPPeer::generateAndSend(SCTPConnectInfo *connectInfo)
 void SCTPPeer::connect()
 {
     const char *connectAddress = par("connectAddress");
-    int connectPort = par("connectPort");
-    int outStreams = par("outboundStreams");
+    int32 connectPort = par("connectPort");
+    uint32 outStreams = par("outboundStreams");
     clientSocket.setOutboundStreams(outStreams);
 
     sctpEV3 << "issuing OPEN command\n";
-    sctpEV3 << "Assoc " << clientSocket.getConnectionId() << "::connect to address " << connectAddress << ", port " << connectPort << "\n";
-    numSessions++;
+    //setStatusString("connecting");
+    //socket.connect(IPAddressResolver().resolve(connectAddress), connectPort);
+    sctpEV3 << "Assoc " << clientSocket.getConnectionId() << "::connect to address " << IPvXAddressResolver().resolve(connectAddress, 1) << ", port " << connectPort << "\n";
     bool streamReset = par("streamReset");
-    clientSocket.connect(IPAddressResolver().resolve(connectAddress, 1), connectPort, streamReset, (int32)par("prMethod"), (uint32)par("numRequestsPerSession"));
+    clientSocket.connect(IPvXAddressResolver().resolve(connectAddress, 1), connectPort, streamReset, (int32)par("prMethod"), (uint32)par("numRequestsPerSession"));
+    numSessions++;
+
     if (!streamReset)
         streamReset = false;
     else if (streamReset == true)
@@ -214,10 +227,6 @@ void SCTPPeer::connect()
     {
         const char *token = tokenizer.nextToken();
         clientSocket.setStreamPriority(streamNum, (uint32) atoi(token));
-
-// FIXME Merge delete
-//    clientSocket.connect(IPvXAddressResolver().resolve(connectAddress, 1), connectPort, (uint32)par("numRequestsPerSession"));
-
 
         streamNum++;
     }
@@ -258,7 +267,6 @@ void SCTPPeer::handleMessage(cMessage *msg)
                 clientSocket.processMessage(PK(msg));
             else
             {
-                int32 count = 0;
                 SCTPConnectInfo *connectInfo = dynamic_cast<SCTPConnectInfo *>(msg->removeControlInfo());
                 numSessions++;
                 serverAssocId = connectInfo->getAssocId();
@@ -413,6 +421,8 @@ void SCTPPeer::handleMessage(cMessage *msg)
                     SCTPSendCommand *cmd = new SCTPSendCommand();
                     cmd->setAssocId(id);
 
+                    //FIXME: why do it: msg->dup(); ... ; delete msg;
+
                     SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage*>(msg->dup());
                     EndToEndDelay::iterator j = endToEndDelay.find(id);
                     j->second->record(simulation.getSimTime()-smsg->getCreationTime());
@@ -466,7 +476,6 @@ void SCTPPeer::handleMessage(cMessage *msg)
             delete msg;
             break;
         }
-
         case SCTP_I_SEND_STREAMS_RESETTED:
         case SCTP_I_RCV_STREAMS_RESETTED:
         {
@@ -627,19 +636,31 @@ void SCTPPeer::sendRequest(bool last)
     cmsg->setKind(ordered ? SCTP_C_SEND_ORDERED : SCTP_C_SEND_UNORDERED);
 
     // send SCTPMessage with SCTPSimpleMessage enclosed
-    clientSocket.send(cmsg, (int32)par("prMethod"), (double)par("prValue"), last);
-
-// FIXME Merge delete
-//    emit(sentPkSignal, msg);
-//    clientSocket.send(cmsg, last);
-
+// FIXME Merge del
+//    clientSocket.send(cmsg, (int32)par("prMethod"), (double)par("prValue"), last);
+//
+//// FIXME Merge delete
+////    emit(sentPkSignal, msg);
+////    clientSocket.send(cmsg, last);
+//
+//    bytesSent += numBytes;
+//}
+//
+//void SCTPPeer::socketEstablished(int32, void *)
+//{
+//    int32 count = 0;
+//    // *redefine* to perform or schedule first sending
+//
+//=======
+    emit(sentPkSignal, msg);
+    clientSocket.send(cmsg, last);
     bytesSent += numBytes;
 }
 
 void SCTPPeer::socketEstablished(int32, void *)
 {
     int32 count = 0;
-    // *redefine* to perform or schedule first sending
+     // *redefine* to perform or schedule first sending
 
     ev << "SCTPClient: connected\n";
     setStatusString("connected");
@@ -718,6 +739,7 @@ void SCTPPeer::sendRequestArrived()
     int32 count = 0;
 
     sctpEV3 << "sendRequestArrived numRequestsToSend=" << numRequestsToSend << "\n";
+
     while (numRequestsToSend > 0 && count++ < queueSize && sendAllowed)
     {
         numRequestsToSend--;
@@ -740,29 +762,39 @@ void SCTPPeer::socketDataArrived(int32, void *, cPacket *msg, bool)
     SCTPCommand* ind = check_and_cast<SCTPCommand*>(msg->getControlInfo());
 
     emit(rcvdPkSignal, msg);
-
+// FIXME MERGE DEL
+//
+//    bytesRcvd += msg->getByteLength();
+//
+//    if (echo)
+//    {
+//        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage*>(msg->dup());
+//        cPacket* cmsg = new cPacket("SVData");
+//        echoedBytesSent += smsg->getBitLength()/8;
+//// FIXME Merge delete
+////        //FIXME why do it: msg->dup(); ... ; delete msg;
+////        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage*>(msg->dup());
+////        cPacket* cmsg = new cPacket("SVData");
+////        echoedBytesSent += smsg->getByteLength();
+////        emit(echoedPkSignal, smsg);
+//
+//=======
     bytesRcvd += msg->getByteLength();
 
     if (echo)
     {
+        //FIXME why do it: msg->dup(); ... ; delete msg;
         SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage*>(msg->dup());
         cPacket* cmsg = new cPacket("SVData");
-        echoedBytesSent += smsg->getBitLength()/8;
-// FIXME Merge delete
-//        //FIXME why do it: msg->dup(); ... ; delete msg;
-//        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage*>(msg->dup());
-//        cPacket* cmsg = new cPacket("SVData");
-//        echoedBytesSent += smsg->getByteLength();
-//        emit(echoedPkSignal, smsg);
-
+        echoedBytesSent += smsg->getByteLength();
+        emit(echoedPkSignal, smsg);
         cmsg->encapsulate(smsg);
         cmsg->setKind(ind->getSendUnordered() ? SCTP_C_SEND_UNORDERED : SCTP_C_SEND_ORDERED);
         packetsSent++;
         delete msg;
-        clientSocket.send(cmsg, 0, 0, 1);
-// FIXME Merge delete
-//        clientSocket.send(cmsg, 1);
-
+        // FIXME Merge delete
+        // clientSocket.send(cmsg, 0, 0, 1);
+        clientSocket.send(cmsg, 1);
     }
 
     if ((long)par("numPacketsToReceive")>0)
@@ -776,7 +808,6 @@ void SCTPPeer::socketDataArrived(int32, void *, cPacket *msg, bool)
     }
 }
 
-
 void SCTPPeer::shutdownReceivedArrived(int32 connId)
 {
     if (numRequestsToSend==0)
@@ -789,6 +820,7 @@ void SCTPPeer::shutdownReceivedArrived(int32 connId)
         clientSocket.sendNotification(cmsg);
     }
 }
+
 
 void SCTPPeer::msgAbandonedArrived(int32 assocId)
 {

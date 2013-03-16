@@ -1,3 +1,4 @@
+package inet.linklayer.etherswitch;
 //
 // Copyright (C) 2003 Andras Varga; CTIE, Monash University, Australia
 //
@@ -14,11 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
-
-
-
-package inet.linklayer.etherswitch;
-
+import inet.linklayer.IMACRelayUnit;
 //
 // A MACRelayUnit implementation which models one CPU assigned to each
 // incoming port, working with shared memory but separate queues.
@@ -33,7 +30,7 @@ package inet.linklayer.etherswitch;
 // The watermark and the pause time is configurable; use zero
 // values to disable the PAUSE feature.
 //
-simple MACRelayUnitPP like MACRelayUnit
+simple MACRelayUnitPP like IMACRelayUnit
 {
     parameters:
         string addressTableFile = default("");  // see MACRelayUnit

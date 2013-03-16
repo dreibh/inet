@@ -40,7 +40,6 @@ simsignal_t SCTPClient::echoedPkSignal = SIMSIGNAL_NULL;
 
 void SCTPClient::initialize()
 {
-
     const char * address;
     char* token;
     AddressVector addresses;
@@ -70,8 +69,7 @@ void SCTPClient::initialize()
     if (!echoFactor) echoFactor = false;
     ordered = (bool)par("ordered");
     finishEndsSimulation = (bool)par("finishEndsSimulation");
-    if (strcmp(address, "")==0)
-    {
+
 
 // FIXME Merge delete if not needed
 //    sentPkSignal = registerSignal("sentPk");
@@ -86,8 +84,7 @@ void SCTPClient::initialize()
 //    ordered = par("ordered").boolValue();
 //    finishEndsSimulation = (bool)par("finishEndsSimulation");
 //
-//    if (addresses.size() == 0)
-
+    if (addresses.size() == 0)
         socket.bind(port);
     else
         socket.bindx(addresses, port);
@@ -156,8 +153,9 @@ void SCTPClient::connect()
     setStatusString("connecting");
     ev << "connect to address " << connectAddress << "\n";
 
-    bool streamReset = par("streamReset");
-    socket.connect(IPAddressResolver().resolve(connectAddress, 1), connectPort, streamReset, (int32)par("prMethod"), (uint32)par("numRequestsPerSession"));
+
+		bool streamReset = par("streamReset");
+		socket.connect(IPvXAddressResolver().resolve(connectAddress, 1), connectPort, streamReset, (int32)par("prMethod"), (uint32)par("numRequestsPerSession"));
 
     if (!streamReset)
         streamReset = false;
@@ -177,16 +175,6 @@ void SCTPClient::connect()
     }
 
     uint32 streamNum = 0;
-    cStringTokenizer requestTokenizer(par("streamRequestLengths").stringValue());
-    while (requestTokenizer.hasMoreTokens())
-    {
-        const char *token = requestTokenizer.nextToken();
-        streamRequestLengthMap[streamNum] = (uint32) atoi(token);
-
-        streamNum++;
-    }
-
-    streamNum = 0;
     cStringTokenizer ratioTokenizer(par("streamRequestRatio").stringValue());
     while (ratioTokenizer.hasMoreTokens())
     {
@@ -196,18 +184,11 @@ void SCTPClient::connect()
 
         streamNum++;
     }
-
-    streamNum = 0;
-    cStringTokenizer prioTokenizer(par("streamPriorities").stringValue());
-    while (prioTokenizer.hasMoreTokens())
-    {
-        const char *token = prioTokenizer.nextToken();
-        socket.setStreamPriority(streamNum, (uint32) atoi(token));
-
-        streamNum++;
-    }
 	// FIXME Merge delete
     //socket.connect(IPvXAddressResolver().resolve(connectAddress, 1), connectPort, (uint32)par("numRequestsPerSession"));
+// FIXME Merge del
+//    socket.connect(IPvXAddressResolver().resolve(connectAddress, 1), connectPort, (uint32)par("numRequestsPerSession"));
+
     numSessions++;
 }
 
@@ -356,6 +337,7 @@ void SCTPClient::socketDataArrived(int32, void *, cPacket *msg, bool)
 
     sctpEV3 << "Client received packet Nr " << packetsRcvd << " from SCTP\n";
     SCTPCommand* ind = check_and_cast<SCTPCommand*>(msg->removeControlInfo());
+
     bytesRcvd += msg->getByteLength();
     if (echoFactor > 0)
     {
@@ -383,7 +365,7 @@ void SCTPClient::socketDataArrived(int32, void *, cPacket *msg, bool)
         packetsSent++;
 
         delete msg;
-        socket.send(cmsg, 0, 0, 1);
+        //socket.send(cmsg, 0, 0, 1);
 
 		// FIXME Merge Delete if not needed
         socket.send(cmsg, 1);
@@ -405,7 +387,6 @@ void SCTPClient::sendRequest(bool last)
     uint32 i, sendBytes;
 
     sendBytes = par("requestLength");
-
 
     // find next stream
     uint16 nextStream = 0;
@@ -434,6 +415,7 @@ void SCTPClient::sendRequest(bool last)
     sendBytes = streamRequestLengthMap[nextStream];
     streamRequestRatioSendMap[nextStream]--;
 
+
     if (sendBytes < 1)
         sendBytes = 1;
 
@@ -459,7 +441,8 @@ void SCTPClient::sendRequest(bool last)
     if (bufferSize < 0)
         last = true;
 
-    socket.send(cmsg, (int32)par("prMethod"), (double)par("prValue"), last, nextStream);
+    // FIXME Merge del
+    //socket.send(cmsg, (int32)par("prMethod"), (double)par("prValue"), last, nextStream);
 
     // FIXME Merge delete if not needed
     // emit(sentPkSignal, msg);
@@ -506,9 +489,9 @@ void SCTPClient::handleTimer(cMessage *msg)
                 socket.shutdown();
                 if (timeMsg->isScheduled())
                     cancelEvent(timeMsg);
+
                 if (finishEndsSimulation)
                 {
-
                     endSimulation();
                 }
             }
@@ -685,6 +668,7 @@ void SCTPClient::msgAbandonedArrived(int32 assocId)
     chunksAbandoned++;
 }
 
+
 void SCTPClient::sendqueueFullArrived(int32 assocId)
 {
     sendAllowed = false;
@@ -702,7 +686,6 @@ void SCTPClient::sendqueueAbatedArrived(int32 assocId, uint64 buffer)
             sendRequest(true);
         else
             sendRequest(false);
-
 
         if (!timer && (--numRequestsToSend == 0))
             sendAllowed = false;
@@ -752,7 +735,6 @@ void SCTPClient::finish()
     ev << getFullPath() << ": received " << bytesRcvd << " bytes in " << packetsRcvd << " packets\n";
     // FIXME Delete if not needed
     // ev << getFullPath() << ": chunks abandoned " << chunksAbandoned << " \n";
-
     sctpEV3 << "Client finished\n";
 }
 

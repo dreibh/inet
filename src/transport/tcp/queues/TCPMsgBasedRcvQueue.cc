@@ -89,16 +89,6 @@ uint32 TCPMsgBasedRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg)
 
 cPacket *TCPMsgBasedRcvQueue::extractBytesUpTo(uint32 seq)
 {
-// FIXME Merge del
-//    extractTo(seq);
-//    uint32 first_seq = payloadList.begin()->first;
-//    // pass up payload messages, in sequence number order
-//    if (payloadList.empty() || seqGreater(first_seq, seq))
-//        return NULL;
-//
-//    cPacket *msg = payloadList.begin()->second;
-//    payloadList.erase(payloadList.begin());
-//=======
     cPacket *msg = NULL;
     if (!payloadList.empty() && seqLess(payloadList.begin()->seqNo, seq))
         seq = payloadList.begin()->seqNo;
@@ -113,6 +103,5 @@ cPacket *TCPMsgBasedRcvQueue::extractBytesUpTo(uint32 seq)
         }
         delete reg;
     }
-
     return msg;
 }

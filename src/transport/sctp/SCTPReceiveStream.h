@@ -19,12 +19,11 @@
 #ifndef __SCTPRECEIVESTREAM_H
 #define __SCTPRECEIVESTREAM_H
 
-#include "INETDefs.h"
-
+#include <omnetpp.h>
 #include "SCTPQueue.h"
 
 
-class INET_API SCTPReceiveStream : public cObject
+class INET_API SCTPReceiveStream : public cPolymorphic
 {
   protected:
     uint16 streamId;

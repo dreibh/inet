@@ -23,13 +23,8 @@
 #include "SCTPCommand_m.h"
 #include "IPv4ControlInfo.h"
 #include "IPv6ControlInfo.h"
-
-#ifdef WITH_IPv4
 #include "IPv4Datagram.h"
-#endif
-
 #include "UDPControlInfo_m.h"
-#include "UDPSocket.h"
 
 Define_Module(SCTP);
 
@@ -81,20 +76,14 @@ void SCTP::printVTagMap()
 
 void SCTP::bindPortForUDP()
 {
-// FIXME Merge delete
-//    sctpEV3 << "Binding to UDP port " << SCTP_OVER_UDP_UDPPORT << endl;
-//
-//    cMessage *msg = new cMessage("UDP_C_BIND", UDP_C_BIND);
-//    UDPControlInfo *ctrl = new UDPControlInfo();
-//    ctrl->setSrcPort(SCTP_OVER_UDP_UDPPORT);
-//    ctrl->setSockId(UDPSocket::generateSocketId());
-//    msg->setControlInfo(ctrl);
-//    send(msg, "to_ip");
-//=======
-    EV << "Binding to UDP port " << SCTP_UDP_PORT << endl;
-    udpSocket.setOutputGate(gate("to_ip"));
-    udpSocket.bind(SCTP_UDP_PORT);
+    sctpEV3 << "Binding to UDP port " << SCTP_OVER_UDP_UDPPORT << endl;
 
+    cMessage *msg = new cMessage("UDP_C_BIND", UDP_C_BIND);
+    UDPDataIndication *ctrl = new UDPDataIndication();
+    ctrl->setSrcPort(SCTP_OVER_UDP_UDPPORT);
+    ctrl->setSockId(UDPSocket::generateSocketId());
+    msg->setControlInfo(ctrl);
+    send(msg, "to_ip");
 }
 
 void SCTP::initialize()
@@ -116,12 +105,8 @@ void SCTP::initialize()
     numPktDropReports = 0;
     numPacketsReceived = 0;
     numPacketsDropped = 0;
-// FIXME Merge delete
-//    sizeAssocMap = 0;
-//    if ((bool)par("udpEncapsEnabled")) {
-//=======
-    sizeConnMap = 0;
-    if ((bool)par("udpEncapsEnabled"))
+    sizeAssocMap = 0;
+    if ((bool)par("udpEncapsEnabled")) {
         bindPortForUDP();
     }
 #ifdef HAVE_GETTIMEOFDAY
@@ -145,15 +130,10 @@ SCTP::~SCTP()
 
 void SCTP::handleMessage(cMessage *msg)
 {
-// FIXME Merge delete
-//    IPvXAddress      destAddr;
-//    IPvXAddress      srcAddr;
-//    IPControlInfo*   controlInfo = NULL;
-//    IPv6ControlInfo* controlInfoV6 = NULL;
-//=======
-    IPvXAddress destAddr;
-    IPvXAddress srcAddr;
-
+    IPvXAddress      destAddr;
+    IPvXAddress      srcAddr;
+    IPv4ControlInfo*   controlInfo = NULL;
+    IPv6ControlInfo* controlInfoV6 = NULL;
     bool findListen = false;
     bool bitError = false;
 
@@ -185,29 +165,15 @@ void SCTP::handleMessage(cMessage *msg)
             delete msg;
             return;
         }
-// FIXME Merge delete
-//        if (msg->arrivedOn("from_ip")) {
-//            if (par("udpEncapsEnabled")) {
-//                UDPControlInfo* ctrl = check_and_cast<UDPControlInfo *>(msg->removeControlInfo());
-//=======
-        if (msg->arrivedOn("from_ip"))
-        {
-            if (par("udpEncapsEnabled"))
-            {
-                std::cout<<"Size of SCTPMSG="<<sctpmsg->getByteLength()<<"\n";
-                UDPDataIndication *ctrl = check_and_cast<UDPDataIndication *>(msg->removeControlInfo());
+        if (msg->arrivedOn("from_ip")) {
+            if (par("udpEncapsEnabled")) {
+            	UDPDataIndication* ctrl = check_and_cast<UDPDataIndication *>(msg->removeControlInfo());
                 srcAddr = ctrl->getSrcAddr();
                 destAddr = ctrl->getDestAddr();
             }
-// FIXME Merge delete
-//            else {
-//                controlInfo = check_and_cast<IPControlInfo *>(msg->removeControlInfo());
-//                IPDatagram* datagram = controlInfo->removeOrigDatagram();
-//=======
-            else
-            {
-                IPv4ControlInfo *controlInfo = check_and_cast<IPv4ControlInfo *>(msg->removeControlInfo());
-                IPv4Datagram *datagram = controlInfo->removeOrigDatagram();
+            else {
+                controlInfo = check_and_cast<IPv4ControlInfo *>(msg->removeControlInfo());
+                IPv4Datagram* datagram = controlInfo->removeOrigDatagram();
                 delete datagram;
                 srcAddr = controlInfo->getSrcAddr();
                 destAddr = controlInfo->getDestAddr();
@@ -215,7 +181,7 @@ void SCTP::handleMessage(cMessage *msg)
         }
         else
         {
-            IPv6ControlInfo *controlInfoV6 = check_and_cast<IPv6ControlInfo *>(msg->removeControlInfo());
+            controlInfoV6 = check_and_cast<IPv6ControlInfo *>(msg->removeControlInfo());
             srcAddr = controlInfoV6->getSrcAddr();
             destAddr = controlInfoV6->getDestAddr();
         }
@@ -227,32 +193,19 @@ void SCTP::handleMessage(cMessage *msg)
                 findListen = true;
             }
 
-// FIXME Merge delete
-//            SCTPAssociation* assoc = findAssocForMessage(srcAddr, destAddr, sctpmsg->getSrcPort(), sctpmsg->getDestPort(), findListen);
-//            if (!assoc && sctpAssocMap.size()>0)
-//                assoc = findAssocWithVTag(sctpmsg->getTag(), sctpmsg->getSrcPort(), sctpmsg->getDestPort());
-//            if (!assoc) {
-//                if (bitError) {
-//=======
-            SCTPAssociation *assoc = findAssocForMessage(srcAddr, destAddr, sctpmsg->getSrcPort(), sctpmsg->getDestPort(), findListen);
-            if (!assoc && sctpConnMap.size()>0)
+            SCTPAssociation* assoc = findAssocForMessage(srcAddr, destAddr, sctpmsg->getSrcPort(), sctpmsg->getDestPort(), findListen);
+            if (!assoc && sctpAssocMap.size()>0)
                 assoc = findAssocWithVTag(sctpmsg->getTag(), sctpmsg->getSrcPort(), sctpmsg->getDestPort());
-            if (!assoc)
-            {
-                sctpEV3<<"no assoc found msg="<<sctpmsg->getName()<<"\n";
-                if (bitError)
-                {
+            if (!assoc) {
+                if (bitError) {
                     delete sctpmsg;
                     return;
                 }
                 if (((SCTPChunk*)(sctpmsg->getChunks(0)))->getChunkType()==SHUTDOWN_ACK) {
                     sendShutdownCompleteFromMain(sctpmsg, destAddr, srcAddr);
-
                 }
                 else if (((SCTPChunk*)(sctpmsg->getChunks(0)))->getChunkType()!=ABORT &&
-                    ((SCTPChunk*)(sctpmsg->getChunks(0)))->getChunkType()!=SHUTDOWN_COMPLETE)
-                {
-
+                        ((SCTPChunk*)(sctpmsg->getChunks(0)))->getChunkType()!=SHUTDOWN_COMPLETE) {
                     sendAbortFromMain(sctpmsg, destAddr, srcAddr);
                 }
                 delete sctpmsg;
@@ -292,11 +245,9 @@ void SCTP::handleMessage(cMessage *msg)
             sctpEV3 << "no assoc found. msg=" << msg->getName()
                          << " number of assocs = " << assocList.size() << endl;
 
-
-            if (strcmp(msg->getName(), "PassiveOPEN")==0 || strcmp(msg->getName(), "Associate")==0)
-            {
-                if (assocList.size()>0)
-                {
+            if ((strcmp(msg->getName(), "PassiveOPEN")==0) ||
+                    (strcmp(msg->getName(), "Associate")==0)) {
+                if (assocList.size() > 0) {
                     assoc = NULL;
                     SCTPOpenCommand* open = check_and_cast<SCTPOpenCommand*>(controlInfo);
                     sctpEV3 << "Looking for assoc with remoteAddr=" << open->getRemoteAddr() << ", remotePort=" << open->getRemotePort() << ", localPort=" << open->getLocalPort() << endl;
@@ -370,36 +321,23 @@ void SCTP::sendAbortFromMain(SCTPMessage*       sctpmsg,
     }
     abortChunk->setBitLength(SCTP_ABORT_CHUNK_LENGTH*8);
     msg->addChunk(abortChunk);
-// FIXME Merge delete
-//    if ((bool)par("udpEncapsEnabled")) {
-//        msg->setKind(UDP_C_DATA);
-//        std::cout << "VTag=" << msg->getTag() << endl;
-//        UDPControlInfo *ctrl = new UDPControlInfo();
-//        ctrl->setSrcPort(SCTP_OVER_UDP_UDPPORT);
-//        ctrl->setDestAddr(destAddr.get4());
-//        ctrl->setDestPort(SCTP_OVER_UDP_UDPPORT);
-//        msg->setControlInfo(ctrl);
-//    }
-//    else {
-//        IPControlInfo *controlInfo = new IPControlInfo();
-//=======
-    if ((bool)par("udpEncapsEnabled"))
-    {
-        std::cout<<"VTag="<<msg->getTag()<<"\n";
-        udpSocket.sendTo(msg, destAddr, SCTP_UDP_PORT);
+    if ((bool)par("udpEncapsEnabled")) {
+        msg->setKind(UDP_C_DATA);
+        std::cout << "VTag=" << msg->getTag() << endl;
+        UDPDataIndication *ctrl = new UDPDataIndication();
+        ctrl->setSrcPort(SCTP_OVER_UDP_UDPPORT);
+        ctrl->setDestAddr(destAddr.get4());
+        ctrl->setDestPort(SCTP_OVER_UDP_UDPPORT);
+        msg->setControlInfo(ctrl);
     }
-    else
-    {
+    else {
         IPv4ControlInfo *controlInfo = new IPv4ControlInfo();
-
         controlInfo->setProtocol(IP_PROT_SCTP);
         controlInfo->setSrcAddr(srcAddr.get4());
         controlInfo->setDestAddr(destAddr.get4());
         msg->setControlInfo(controlInfo);
-        send(msg, "to_ip");
     }
-// FIXME Merge delete
-//    send(msg, "to_ip");
+    send(msg, "to_ip");
 }
 
 void SCTP::sendShutdownCompleteFromMain(SCTPMessage*       sctpmsg,
@@ -427,13 +365,13 @@ void SCTP::sendShutdownCompleteFromMain(SCTPMessage*       sctpmsg,
     controlInfo->setSrcAddr(srcAddr.get4());
     controlInfo->setDestAddr(destAddr.get4());
     msg->setControlInfo(controlInfo);
+
     send(msg, "to_ip");
 }
 
 
 void SCTP::updateDisplayString()
 {
-#if 0
     if (ev.disable_tracing)
     {
         // in express mode, we don't bother to update the display
@@ -442,45 +380,6 @@ void SCTP::updateDisplayString()
         return;
     }
 
-    //char buf[40];
-    //sprintf(buf,"%d conns", sctpAppConnMap.size());
-    //displayString().setTagArg("t",0,buf);
-
-    int32 numCLOSED=0, numLISTEN=0, numSYN_SENT=0, numSYN_RCVD=0,
-       numESTABLISHED=0, numCLOSE_WAIT=0, numLAST_ACK=0, numFIN_WAIT_1=0,
-       numFIN_WAIT_2=0, numCLOSING=0, numTIME_WAIT=0;
-
-    for (SctpAppConnMap::iterator i=sctpAppConnMap.begin(); i!=sctpAppConnMap.end(); ++i)
-    {
-       int32 state = (*i).second->getFsmState();
-       switch(state)
-       {
-           // case SCTP_S_INIT:           numINIT++; break;
-           case SCTP_S_CLOSED:            numCLOSED++; break;
-           case SCTP_S_COOKIE_WAIT:       numLISTEN++; break;
-           case SCTP_S_COOKIE_ECHOED:     numSYN_SENT++; break;
-           case SCTP_S_ESTABLISHED:       numESTABLISHED++; break;
-           case SCTP_S_SHUTDOWN_PENDING:  numCLOSE_WAIT++; break;
-           case SCTP_S_SHUTDOWN_SENT:     numLAST_ACK++; break;
-           case SCTP_S_SHUTDOWN_RECEIVED: numFIN_WAIT_1++; break;
-           case SCTP_S_SHUTDOWN_ACK_SENT: numFIN_WAIT_2++; break;
-       }
-    }
-    char buf2[300];
-    buf2[0] = '\0';
-    if (numCLOSED>0)     sprintf(buf2+strlen(buf2), "closed:%d ", numCLOSED);
-    if (numLISTEN>0)     sprintf(buf2+strlen(buf2), "listen:%d ", numLISTEN);
-    if (numSYN_SENT>0)   sprintf(buf2+strlen(buf2), "syn_sent:%d ", numSYN_SENT);
-    if (numSYN_RCVD>0)   sprintf(buf2+strlen(buf2), "syn_rcvd:%d ", numSYN_RCVD);
-    if (numESTABLISHED>0) sprintf(buf2+strlen(buf2),"estab:%d ", numESTABLISHED);
-    if (numCLOSE_WAIT>0) sprintf(buf2+strlen(buf2), "close_wait:%d ", numCLOSE_WAIT);
-    if (numLAST_ACK>0)   sprintf(buf2+strlen(buf2), "last_ack:%d ", numLAST_ACK);
-    if (numFIN_WAIT_1>0) sprintf(buf2+strlen(buf2), "fin_wait_1:%d ", numFIN_WAIT_1);
-    if (numFIN_WAIT_2>0) sprintf(buf2+strlen(buf2), "fin_wait_2:%d ", numFIN_WAIT_2);
-    if (numCLOSING>0)    sprintf(buf2+strlen(buf2), "closing:%d ", numCLOSING);
-    if (numTIME_WAIT>0)  sprintf(buf2+strlen(buf2), "time_wait:%d ", numTIME_WAIT);
-    getDisplayString().setTagArg("t", 0, buf2);
-#endif
 }
 
 SCTPAssociation* SCTP::findAssocWithVTag(const uint32 peerVTag,
@@ -494,8 +393,7 @@ SCTPAssociation* SCTP::findAssocWithVTag(const uint32 peerVTag,
     printInfoAssocMap();
 
     // try with fully qualified SockPair
-    for (SctpVTagMap::iterator i=sctpVTagMap.begin(); i!=sctpVTagMap.end(); i++)
-    {
+    for (SctpVTagMap::iterator i=sctpVTagMap.begin(); i!=sctpVTagMap.end(); i++) {
         if ((i->second.peerVTag==peerVTag && i->second.localPort==localPort
                 && i->second.remotePort==remotePort)
                 || (i->second.localVTag==peerVTag && i->second.localPort==localPort
@@ -772,10 +670,9 @@ void SCTP::addForkedAssociation(SCTPAssociation*   assoc,
 
 void SCTP::removeAssociation(SCTPAssociation* assoc)
 {
-    bool            ok = false;
-    bool            find = false;
-    const int32 id = conn->assocId;
-
+    bool        ok = false;
+    bool        find = false;
+    const int32 id = assoc->assocId;
 
     sctpEV3 << "removeAssociation assocId= " << id << endl;
 
@@ -869,41 +766,24 @@ void SCTP::removeAssociation(SCTPAssociation* assoc)
     assoc->deleteStreams();
 
     // TD 20.11.09: Chunks may be in the transmission and retransmission queues simultaneously.
-// FIXME Merge delete
-//    //              Remove entry from transmission queue if it is already in the retransmission queue.
-//    for (SCTPQueue::PayloadQueue::iterator i = assoc->getRetransmissionQueue()->payloadQueue.begin();
-//            i != assoc->getRetransmissionQueue()->payloadQueue.end(); i++) {
-//        SCTPQueue::PayloadQueue::iterator j = assoc->getTransmissionQueue()->payloadQueue.find(i->second->tsn);
-//        if (j != assoc->getTransmissionQueue()->payloadQueue.end()) {
-//            assoc->getTransmissionQueue()->payloadQueue.erase(j);
-//=======
-    //                   Remove entry from transmission queue if it is already in the retransmission queue.
-    for (SCTPQueue::PayloadQueue::iterator i = conn->getRetransmissionQueue()->payloadQueue.begin();
-          i != conn->getRetransmissionQueue()->payloadQueue.end(); i++) {
-        SCTPQueue::PayloadQueue::iterator j = conn->getTransmissionQueue()->payloadQueue.find(i->second->tsn);
-        if (j != conn->getTransmissionQueue()->payloadQueue.end()) {
-            conn->getTransmissionQueue()->payloadQueue.erase(j);
-
+    //              Remove entry from transmission queue if it is already in the retransmission queue.
+    for (SCTPQueue::PayloadQueue::iterator i = assoc->getRetransmissionQueue()->payloadQueue.begin();
+            i != assoc->getRetransmissionQueue()->payloadQueue.end(); i++) {
+        SCTPQueue::PayloadQueue::iterator j = assoc->getTransmissionQueue()->payloadQueue.find(i->second->tsn);
+        if (j != assoc->getTransmissionQueue()->payloadQueue.end()) {
+            assoc->getTransmissionQueue()->payloadQueue.erase(j);
         }
     }
     // TD 20.11.09: Now, both queues can be safely deleted.
     delete assoc->getRetransmissionQueue();
     delete assoc->getTransmissionQueue();
 
-// FIXME Merge delete
-//    AppAssocKey key;
-//    key.appGateIndex = assoc->appGateIndex;
-//    key.assocId = assoc->assocId;
-//    sctpAppAssocMap.erase(key);
-//    assocList.remove(assoc);
-//    delete assoc;
-//=======
-    AppConnKey key;
-    key.appGateIndex = conn->appGateIndex;
-    key.assocId = conn->assocId;
-    sctpAppConnMap.erase(key);
-    assocList.remove(conn);
-    delete conn;
+    AppAssocKey key;
+    key.appGateIndex = assoc->appGateIndex;
+    key.assocId = assoc->assocId;
+    sctpAppAssocMap.erase(key);
+    assocList.remove(assoc);
+    delete assoc;
 }
 
 SCTPAssociation* SCTP::getAssoc(const int32 assocId)

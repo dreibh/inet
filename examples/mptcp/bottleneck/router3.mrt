@@ -1,0 +1,22 @@
+ifconfig:
+
+
+# ethernet card (modelled by point-to-point link) -> Router 1.1  10.2.4.2
+name: ppp0  inet_addr: 10.2.5.1 MTU: 1500   Metric: 1  POINTTOPOINT MULTICAST
+
+# ethernet card (modelled by point-to-point link)  -> Server 1.0 10.1.2.2
+name: ppp1  inet_addr: 10.2.2.1 MTU: 1500   Metric: 1  POINTTOPOINT MULTICAST
+
+
+# ethernet card (modelled by point-to-point link) -> Server  2.0 10.200.0.2
+name: ppp2  inet_addr: 10.200.0.1 MTU: 1500   Metric: 1  POINTTOPOINT MULTICAST
+
+
+ifconfigend.
+
+route:
+10.1.2.2     	10.1.2.2		255.255.255.255		H	0	ppp1
+10.200.0.2    	10.200.0.2		255.255.255.255		H	0	ppp2
+0.0.0.0		    10.2.5.2		0.0.0.0			    G	0	ppp0
+
+routeend.
