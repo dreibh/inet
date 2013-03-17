@@ -428,7 +428,8 @@ void NetPerfMeter::handleMessage(cMessage* msg)
 
    // ====== TCP ============================================================
    else if(TransportProtocol == TCP) {
-      switch(msg->getKind()) {
+      short kind = msg->getKind();
+      switch(kind) {
          // ------ Data -----------------------------------------------------
          case TCP_I_DATA:
          case TCP_I_URGENT_DATA:
@@ -916,6 +917,9 @@ unsigned long NetPerfMeter::getFrameSize(const unsigned int streamID)
    unsigned long frameSize;
    if(FrameSizeExpressionVector.size() == 0) {
       frameSize = par("frameSize");
+      // FIXME Merge
+      if(!frameSize)
+          frameSize = 1424;
    }
    else {
       frameSize =

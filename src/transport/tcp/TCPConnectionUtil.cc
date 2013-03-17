@@ -282,7 +282,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn->getState()->dupacks = 0;
 		conn->getState()->sackedBytes = 0;
 		conn->getState()->sendQueueLimit = this->getState()->sendQueueLimit;
-
+		conn->transferMode = this->transferMode;
 		return conn;
     }
     else return NULL;
@@ -438,6 +438,7 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 		// Clean up stuff
 		conn->removeVectors();
 		conn->renameMPTCPVectors(cnt);
+		conn->transferMode = this->transferMode;
     }
 #endif
 
@@ -541,7 +542,7 @@ void TCPConnection::sendIndicationToApp(int code, const int id)
     tcpEV << "Notifying app: " << indicationName(code) << "\n";
     cMessage *msg = new cMessage(indicationName(code));
     msg->setKind(code);
-    TCPCommand *ind = new TCPCommand();
+    TCPConnectInfo *ind = new TCPConnectInfo();
     ind->setConnId(connId);
     ind->setUserId(id);
     msg->setControlInfo(ind);
@@ -553,21 +554,20 @@ void TCPConnection::sendEstabIndicationToApp()
 #ifdef PRIVATE
     // The application only need one notification, otherwise he work on more than one connection
     isQueueAble = true;
-    state->queueUpdate = false;
+    uint32 torequest = (getState()->sendQueueLimit > this->getState()->snd_mss)?(getState()->sendQueueLimit)-this->getState()->snd_mss:0;
+
     if(tcpMain->multipath){
+        getState()->queueUpdate = false;
+        (!torequest)?torequest =  3 * state->snd_mss:0;
         if(this->flow->sendEstablished){
-            sendIndicationToApp(TCP_I_SEND_MSG, state->snd_mss);
+            sendIndicationToApp(TCP_I_DATA, torequest);
             return; // we need no notification message
         }
+
         this->flow->sendEstablished = true;
-    }
-    else{
-        uint32 torequest = (getState()->sendQueueLimit > this->getState()->snd_mss)?(getState()->sendQueueLimit)-this->getState()->snd_mss:0;
-        if(torequest){
-            sendIndicationToApp(TCP_I_SEND_MSG, - this->getState()->snd_mss);
-            getState()->queueUpdate = true;
-        }
-    }
+    }else
+        getState()->queueUpdate = true;
+
 #endif
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
     cMessage *msg = new cMessage(indicationName(TCP_I_ESTABLISHED));
@@ -582,6 +582,7 @@ void TCPConnection::sendEstabIndicationToApp()
 
     msg->setControlInfo(ind);
     sendToApp(msg);
+    sendIndicationToApp(TCP_I_SEND_MSG, torequest);
 }
 
 void TCPConnection::sendToApp(cMessage *msg)

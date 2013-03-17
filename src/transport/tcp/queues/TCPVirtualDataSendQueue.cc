@@ -83,4 +83,13 @@ void TCPVirtualDataSendQueue::discardUpTo(uint32 seqNum)
     ASSERT(seqLE(begin, seqNum) && seqLE(seqNum, end));
 
     begin = seqNum;
+
+#ifdef PRIVATE
+    // To be sure I have allways enough data
+    if((end - begin) && conn->getState()->sendQueueLimit){
+       // I have to do it, when all data were on the wire and discard now at once
+       // -> otherwise there are no data to proceed
+       this->conn->sendIndicationToApp(TCP_I_SEND_MSG, conn->getState()->sendQueueLimit);
+    }
+#endif
 }
