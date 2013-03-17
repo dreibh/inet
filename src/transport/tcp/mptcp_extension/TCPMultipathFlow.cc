@@ -413,11 +413,12 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
         ASSERT(false && "State not supported");
         break;
     }
-    if (this->state == ESTABLISHED && (!tcpseg->getSynBit())) {
+    if (this->state == ESTABLISHED && (!tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
         // FIXME Perhaps we need a switch for also handshake from passive side
         //
 #define BOTH_SIDE_HANDSHAKE true
-        if (BOTH_SIDE_HANDSHAKE || !isPassive) {
+
+        if (BOTH_SIDE_HANDSHAKE || (!isPassive)) {
             // 3.2. Starting a New Subflow
             // It is permitted for
             // either host in a connection to initiate the creation of a new

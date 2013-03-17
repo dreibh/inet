@@ -937,7 +937,10 @@ unsigned long NetPerfMeter::getFrameSize(const unsigned int streamID)
 void NetPerfMeter::sendDataOfSaturatedStreams(const unsigned long long   bytesAvailableInQueue,
                                               const SCTPSendQueueAbated* sendQueueAbatedIndication)
 {
-   // ====== SCTP tells current queue occupation for each stream ============
+   if(!ActiveMode)
+       return;
+
+    // ====== SCTP tells current queue occupation for each stream ============
    unsigned long long contingent;
    unsigned long long queued[ActualOutboundStreams];
    if(sendQueueAbatedIndication == NULL)  {
@@ -996,6 +999,8 @@ void NetPerfMeter::sendDataOfSaturatedStreams(const unsigned long long   bytesAv
 void NetPerfMeter::sendDataOfNonSaturatedStreams(const unsigned long long bytesAvailableInQueue,
                                                  const unsigned int       streamID)
 {
+   if(!ActiveMode)
+        return;
    // ====== Is there something to send? =================================
    const double frameRate = getFrameRate(streamID);
    if(frameRate <= 0.0) {

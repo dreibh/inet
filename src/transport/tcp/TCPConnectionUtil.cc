@@ -554,20 +554,21 @@ void TCPConnection::sendEstabIndicationToApp()
 #ifdef PRIVATE
     // The application only need one notification, otherwise he work on more than one connection
     isQueueAble = true;
-    uint32 torequest = (getState()->sendQueueLimit > this->getState()->snd_mss)?(getState()->sendQueueLimit)-this->getState()->snd_mss:0;
-
+    state->queueUpdate = false;
     if(tcpMain->multipath){
-        getState()->queueUpdate = false;
-        (!torequest)?torequest =  3 * state->snd_mss:0;
         if(this->flow->sendEstablished){
-            sendIndicationToApp(TCP_I_DATA, torequest);
+            sendIndicationToApp(TCP_I_SEND_MSG, state->snd_mss);
             return; // we need no notification message
         }
-
         this->flow->sendEstablished = true;
-    }else
-        getState()->queueUpdate = true;
-
+    }
+    else{
+        uint32 torequest = (getState()->sendQueueLimit > this->getState()->snd_mss)?(getState()->sendQueueLimit)-this->getState()->snd_mss:0;
+        if(torequest){
+            sendIndicationToApp(TCP_I_SEND_MSG, - this->getState()->snd_mss);
+            getState()->queueUpdate = true;
+        }
+    }
 #endif
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
     cMessage *msg = new cMessage(indicationName(TCP_I_ESTABLISHED));
@@ -581,8 +582,7 @@ void TCPConnection::sendEstabIndicationToApp()
     ind->setRemotePort(remotePort);
 
     msg->setControlInfo(ind);
-    sendToApp(msg);
-    sendIndicationToApp(TCP_I_SEND_MSG, torequest);
+    tcpMain->send(msg, "appOut", appGateIndex);
 }
 
 void TCPConnection::sendToApp(cMessage *msg)
