@@ -557,16 +557,9 @@ void TCPConnection::sendEstabIndicationToApp()
     state->queueUpdate = true;
     if(tcpMain->multipath){
         if(this->flow->sendEstablished){
-            sendIndicationToApp(TCP_I_SEND_MSG, state->snd_mss);
             return; // we need no notification message
         }
         this->flow->sendEstablished = true;
-    }
-    else{
-        uint32 torequest = (getState()->sendQueueLimit > this->getState()->snd_mss)?(getState()->sendQueueLimit)-this->getState()->snd_mss:0;
-        if(torequest){
-            sendIndicationToApp(TCP_I_SEND_MSG, torequest - this->getState()->snd_mss);
-        }
     }
 #endif
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
@@ -985,7 +978,7 @@ void TCPConnection::sendSegment(uint32 bytes)
 
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath){
-        int msg_cnt = ((abated * 0.8)/ (state->snd_mss-options_len));
+        int msg_cnt = ((abated * 0.5)/ (state->snd_mss-options_len));
         (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
 
         // FIXME Test we work with bigger steps, because it needs a long simulation time to create it for posssibe every message

@@ -1192,6 +1192,7 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
            }
 
     	   delete msg; // this message is not needed anymore
+    	   // Correction parameter
 		   while ((msg=mptcp_receiveQueue->extractBytesUpTo(mptcp_rcv_nxt))!=NULL)
 		   {
 				// 4) Send Data to Connection
