@@ -581,7 +581,6 @@ class INET_API TCPConnection
 
     /** Utility: adds control info to segment and sends it to IP */
     virtual void sendToIP(TCPSegment *tcpseg);
-
     /**
      * Utility: This factory method gets invoked throughout the TCP model to
      * create a TCPSegment. Override it if you need to subclass TCPSegment.

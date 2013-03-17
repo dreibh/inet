@@ -32,7 +32,7 @@ import inet.nodes.inet.Router;
 import ned.DatarateChannel;
 import ned.DelayChannel;
 import ned.IdealChannel;
-import inet.networklayer.autorouting.FlatNetworkConfigurator;
+import inet.networklayer.autorouting.ipv4.FlatNetworkConfigurator;
 
 
 channel coreChannel extends DatarateChannel
