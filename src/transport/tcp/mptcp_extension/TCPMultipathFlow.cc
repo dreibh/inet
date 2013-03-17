@@ -1186,6 +1186,11 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
        // 3) OK we got a valid connection to an app, check if there data
        TCP_SubFlowVector_t::iterator i = subflow_list.begin();
        if(ordered){	// Ordered is just for debugging, makes things more easy
+           if(!(msg->getKind()&TCP_I_DATA)){
+               (*i)->subflow->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
+               return;
+           }
+
     	   delete msg; // this message is not needed anymore
 		   while ((msg=mptcp_receiveQueue->extractBytesUpTo(mptcp_rcv_nxt))!=NULL)
 		   {

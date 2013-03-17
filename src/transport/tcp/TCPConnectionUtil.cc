@@ -554,7 +554,7 @@ void TCPConnection::sendEstabIndicationToApp()
 #ifdef PRIVATE
     // The application only need one notification, otherwise he work on more than one connection
     isQueueAble = true;
-    state->queueUpdate = false;
+    state->queueUpdate = true;
     if(tcpMain->multipath){
         if(this->flow->sendEstablished){
             sendIndicationToApp(TCP_I_SEND_MSG, state->snd_mss);
@@ -565,8 +565,7 @@ void TCPConnection::sendEstabIndicationToApp()
     else{
         uint32 torequest = (getState()->sendQueueLimit > this->getState()->snd_mss)?(getState()->sendQueueLimit)-this->getState()->snd_mss:0;
         if(torequest){
-            sendIndicationToApp(TCP_I_SEND_MSG, - this->getState()->snd_mss);
-            getState()->queueUpdate = true;
+            sendIndicationToApp(TCP_I_SEND_MSG, torequest - this->getState()->snd_mss);
         }
     }
 #endif
