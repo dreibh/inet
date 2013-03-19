@@ -28,11 +28,14 @@ class MPTCP_PCB;
 
 #include "INETDefs.h"
 
+#include "TCPCommand_m.h"
+
+#include "INETDefs.h"
+
 #include "IPvXAddress.h"
 #include "TCPCommand_m.h"
 
-
-#include "INETDefs.h"
+// Forward declarations:
 
 #include "IPvXAddress.h"
 #include "TCPCommand_m.h"

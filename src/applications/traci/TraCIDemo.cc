@@ -18,7 +18,7 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
-#include "TraCIDemo.h"
+#include "applications/traci/TraCIDemo.h"
 
 #include "NotificationBoard.h"
 #include "UDPSocket.h"

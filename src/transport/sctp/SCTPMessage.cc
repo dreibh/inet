@@ -24,49 +24,57 @@ Register_Class(SCTPMessage);
 
 SCTPMessage& SCTPMessage::operator=(const SCTPMessage& other)
 {
-    SCTPMessage_Base::operator=(other);
+     if (this == &other) return *this;
+     clean();
+     SCTPMessage_Base::operator=(other);
+     copy(other);
+     return *this;
+}
 
-    this->setBitLength(SCTP_COMMON_HEADER*8);
-    this->setTag(other.getTag());
-    for (std::list<cPacket*>::const_iterator i=other.chunkList.begin(); i!=other.chunkList.end(); ++i)
-        addChunk((cPacket *)(*i)->dup());
-
-    return *this;
+void SCTPMessage::copy(const SCTPMessage& other)
+{
+     this->setTag(other.getTag());
+     for (std::list<cPacket*>::const_iterator i=other.chunkList.begin(); i!=other.chunkList.end(); ++i)
+          addChunk((cPacket *)(*i)->dup());
 }
 
 SCTPMessage::~SCTPMessage()
 {
+    clean();
+}
+
+void SCTPMessage::clean()
+{
     SCTPChunk* chunk;
     if (this->getChunksArraySize()>0)
-        for (uint32 i=0; i < this->getChunksArraySize(); i++)
-        {
-            chunk = (SCTPChunk*)this->getChunks(i);
-            drop(chunk);
-            delete chunk;
-        }
+    for (uint32 i=0; i < this->getChunksArraySize(); i++)
+    {
+        chunk = (SCTPChunk*)this->getChunks(i);
+        dropAndDelete(chunk);
+    }
 }
 
 void SCTPMessage::setChunksArraySize(const uint32 size)
 {
-    throw new cException(this, "setChunkArraySize() not supported, use addChunk()");
+     throw new cException(this, "setChunkArraySize() not supported, use addChunk()");
 }
 
 uint32 SCTPMessage::getChunksArraySize() const
 {
-    return chunkList.size();
+     return chunkList.size();
 }
 
 cPacketPtr& SCTPMessage::getChunks(uint32 k)
 {
-    std::list<cPacket*>::iterator i = chunkList.begin();
-    while (k>0 && i!=chunkList.end())
-        (++i, --k);
-    return *i;
+     std::list<cPacket*>::iterator i = chunkList.begin();
+     while (k>0 && i!=chunkList.end())
+          (++i, --k);
+     return *i;
 }
 
 void SCTPMessage::setChunks(const uint32 k, const cPacketPtr& chunks_var)
 {
-    throw new cException(this, "setChunks() not supported, use addChunk()");
+     throw new cException(this, "setChunks() not supported, use addChunk()");
 }
 
 void SCTPMessage::addChunk(cPacket* msg)
@@ -313,44 +321,48 @@ Register_Class(SCTPErrorChunk);
 
 SCTPErrorChunk& SCTPErrorChunk::operator=(const SCTPErrorChunk& other)
 {
-    SCTPErrorChunk_Base::operator=(other);
+     if (this == &other) return *this;
+     clean();
+     SCTPErrorChunk_Base::operator=(other);
+     copy(other);
+     return *this;
+}
 
-    this->setBitLength(4*8);
-    for (std::list<cPacket*>::const_iterator i=other.parameterList.begin(); i!=other.parameterList.end(); ++i)
-        addParameters((cPacket *)(*i)->dup());
-
-    return *this;
+void SCTPErrorChunk::copy(const SCTPErrorChunk& other)
+{
+     for (std::list<cPacket*>::const_iterator i=other.parameterList.begin(); i!=other.parameterList.end(); ++i)
+          addParameters((cPacket *)(*i)->dup());
 }
 
 void SCTPErrorChunk::setParametersArraySize(const uint32 size)
 {
-    throw new cException(this, "setParametersArraySize() not supported, use addParameter()");
+     throw new cException(this, "setParametersArraySize() not supported, use addParameter()");
 }
 
 uint32 SCTPErrorChunk::getParametersArraySize() const
 {
-    return parameterList.size();
+     return parameterList.size();
 }
 
 cPacketPtr& SCTPErrorChunk::getParameters(uint32 k)
 {
-    std::list<cPacket*>::iterator i = parameterList.begin();
-    while (k>0 && i!=parameterList.end())
-        (++i, --k);
-    return *i;
+     std::list<cPacket*>::iterator i = parameterList.begin();
+     while (k>0 && i!=parameterList.end())
+          (++i, --k);
+     return *i;
 }
 
 void SCTPErrorChunk::setParameters(const uint32 k, const cPacketPtr& chunks_var)
 {
-    throw new cException(this, "setParameter() not supported, use addParameter()");
+     throw new cException(this, "setParameter() not supported, use addParameter()");
 }
 
 void SCTPErrorChunk::addParameters(cPacket* msg)
 {
-    take(msg);
+     take(msg);
 
-    this->setBitLength(this->getBitLength()+ADD_PADDING(msg->getBitLength()));
-    parameterList.push_back(msg);
+     this->setBitLength(this->getBitLength()+ADD_PADDING(msg->getBitLength()));
+     parameterList.push_back(msg);
 }
 
 cPacket *SCTPErrorChunk::removeParameter()
@@ -364,3 +376,19 @@ cPacket *SCTPErrorChunk::removeParameter()
     this->setBitLength(this->getBitLength()-ADD_PADDING(msg->getBitLength()/8)*8);
     return msg;
 }
+
+SCTPErrorChunk::~SCTPErrorChunk()
+{
+    clean();
+}
+
+void SCTPErrorChunk::clean()
+{
+    while (!parameterList.empty())
+    {
+        cPacket *msg = parameterList.front();
+        parameterList.pop_front();
+        dropAndDelete(msg);
+    }
+}
+

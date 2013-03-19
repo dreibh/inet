@@ -63,7 +63,7 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             }
             if(!skip){
 #endif
-            if (remoteAddr.isUnspecified() || remotePort==-1)
+            if (remoteAddr.isUnspecified() || remotePort == -1)
                throw cRuntimeError(tcpMain, "Error processing command OPEN_ACTIVE: remote address and port must be specified");
 
             if (localPort == -1)
@@ -99,7 +99,6 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 #ifdef PRIVATE
             if(!tcpMain->par("multipath"))
 #endif
-            opp_error("Error processing command OPEN_ACTIVE: connection already exists");
             throw cRuntimeError(tcpMain, "Error processing command OPEN_ACTIVE: connection already exists");
             break; // MBe add because of Warning
     }
@@ -381,7 +380,6 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
     else
 #endif
     state->sendQueueLimit = tcpCommand->getUserId();
-
     tcpEV<<"state->sendQueueLimit set to "<<state->sendQueueLimit<<"\n";
     delete msg;
     delete tcpCommand;

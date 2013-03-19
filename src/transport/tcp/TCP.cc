@@ -85,6 +85,8 @@ void TCP::initialize()
 
 		multipath_DSSDataACK8 = par("multipath_DSSDataACK8");
 		multipath_DSSSeqNo8 = par("multipath_DSSSeqNo8");
+    
+
 	}
 	mptcp_pcb = NULL;
 #endif
@@ -224,9 +226,7 @@ void TCP::handleMessage(cMessage *msg)
             if (dynamic_cast<IPv4ControlInfo *>(tcpseg->getControlInfo()) != NULL)
             {
 // FIXME Merge del
-//
-//                IPControlInfo *controlInfo = (IPControlInfo *)tcpseg->removeControlInfo();
-//=======
+
                 IPv4ControlInfo *controlInfo = (IPv4ControlInfo *)tcpseg->removeControlInfo();
 
                 srcAddr = controlInfo->getSrcAddr();

@@ -193,6 +193,7 @@ void TCPConnection::setPipe()
     for (uint32 s1 = state->snd_una; seqLess(s1, state->snd_max); s1 += length)
     {
         rexmitQueue->checkSackBlock(s1, length, sacked, rexmitted);
+
 // FIXME Merge del
 //#ifdef PRIVATE
 //    if(this->isSubflow){ // FIXME
