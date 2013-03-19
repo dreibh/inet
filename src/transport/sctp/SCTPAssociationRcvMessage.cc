@@ -561,14 +561,11 @@ bool SCTPAssociation::processInitArrived(SCTPInitChunk* initchunk, int32 srcPort
             {
                 adv = localAddressList;
             }
-            ASSERT(false && "Solve this merge before continue...mbe");
-            // FIXME Merge
-            int rlevel = 4;// FIXME Merge getLevel(remoteAddr);; // should be wor onlz for 4-6getLevel(remoteAddr);
+            int rlevel =  getLevel(remoteAddr);;
             if (rlevel>0)
                 for (AddressVector::iterator i=adv.begin(); i!=adv.end(); ++i)
                 {
-
- // FIXME Merge                   if (getAddressLevel((*i))>=rlevel)
+                    if (getLevel((*i))>=rlevel)
                     {
                         sctpMain->addLocalAddress(this, (*i));
                         state->localAddresses.push_back((*i));

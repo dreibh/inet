@@ -18,6 +18,7 @@
 
 #include "IPvXAddressResolver.h"
 #include "SCTPAssociation.h"
+#include "common.h"
 
 void SCTPAssociation::sendAsconf(const char* type, const bool remote)
 {
@@ -38,8 +39,7 @@ void SCTPAssociation::sendAsconf(const char* type, const bool remote)
         asconfChunk->setSerialNumber(state->asconfSn);
         chunkLength = SCTP_ADD_IP_CHUNK_LENGTH;
         sctpEV3 << "localAddr=" << localAddr << ", remoteAddr=" << remoteAddr << "\n";
-        // IT MUS BE LEVEL 4 getLevel(localAddr)==3 && getLevel(remoteAddr)==4
-        if ((bool)sctpMain->par("natFriendly")) {
+        if (getLevel(localAddr)==3 && getLevel(remoteAddr)==4 && (bool)sctpMain->par("natFriendly")) {
             asconfChunk->setAddressParam(IPvXAddress("0.0.0.0"));
             asconfChunk->setPeerVTag(peerVTag);
             nat = true;
