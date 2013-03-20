@@ -1834,129 +1834,129 @@ void TCPConnection::updateWndInfo(TCPSegment *tcpseg, bool doAlways)
     }
 }
 
-uint32 TCPConnection::nextSeg()
-{
-    ASSERT (state->sack_enabled);
-    // RFC 3517, page 5: "This routine uses the scoreboard data structure maintained by the
-    // Update() function to determine what to transmit based on the SACK
-    // information that has arrived from the data receiver (and hence
-    // been marked in the scoreboard).  NextSeg () MUST return the
-    // sequence number range of the next segment that is to be
-    // transmitted, per the following rules:"
-
-    state->highRxt = rexmitQueue->getHighestRexmittedSeqNum();
-    uint32 seqNum = 0;
-    bool found = false;
-    uint32 shift = state->snd_mss;
-    if (state->ts_enabled)
-        shift -= TCP_OPTION_TS_SIZE;
-#ifdef PRIVATE
-    if(this->isSubflow){ // FIXME
-        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
-        if(this->getTcpMain()->multipath_DSSSeqNo8)
-          dss_option_offset += 4;
-        if(this->getTcpMain()->multipath_DSSDataACK8)
-          dss_option_offset += 4;
-       shift -=  dss_option_offset;
-    }
-#endif
-    // RFC 3517, page 5: "(1) If there exists a smallest unSACKed sequence number 'S2' that
-    // meets the following three criteria for determining loss, the
-    // sequence range of one segment of up to SMSS octets starting
-    // with S2 MUST be returned.
-    //
-    // (1.a) S2 is greater than HighRxt.
-    //
-    // (1.b) S2 is less than the highest octet covered by any
-    //       received SACK.
-    //
-    // (1.c) IsLost (S2) returns true."
-    for (uint32 s2=state->snd_una; s2<state->snd_max; s2=s2+shift)
-    {
-        if (rexmitQueue->getSackedBit(s2)==false)
-        {
-            if (seqGE(s2,state->highRxt) &&
-                seqLE(s2,(rexmitQueue->getHighestSackedSeqNum())) &&
-                isLost(s2))
-            {
-                seqNum = s2;
-                found = true;
-                return seqNum;
-            }
-        }
-    }
-
-    // RFC 3517, page 5: "(2) If no sequence number 'S2' per rule (1) exists but there
-    // exists available unsent data and the receiver's advertised
-    // window allows, the sequence range of one segment of up to SMSS
-    // octets of previously unsent data starting with sequence number
-    // HighData+1 MUST be returned."
-    if (!found)
-    {
-        // check how many unsent bytes we have
-        ulong buffered = sendQueue->getBytesAvailable(state->snd_max);
-        ulong maxWindow = state->snd_wnd;
-        // effectiveWindow: number of bytes we're allowed to send now
-        ulong effectiveWin = maxWindow - state->pipe;
-        if (buffered > 0 && effectiveWin >= state->snd_mss)
-        {
-            seqNum = state->snd_max; // HighData = snd_max
-            found = true;
-            return seqNum;
-        }
-    }
-
-    // RFC 3517, pages 5 and 6: "(3) If the conditions for rules (1) and (2) fail, but there exists
-    // an unSACKed sequence number 'S3' that meets the criteria for
-    // detecting loss given in steps (1.a) and (1.b) above
-    // (specifically excluding step (1.c)) then one segment of up to
-    // SMSS octets starting with S3 MAY be returned.
-    //
-    // Note that rule (3) is a sort of retransmission "last resort".
-    // It allows for retransmission of sequence numbers even when the
-    // sender has less certainty a segment has been lost than as with
-    // rule (1).  Retransmitting segments via rule (3) will help
-    // sustain TCP's ACK clock and therefore can potentially help
-    // avoid retransmission timeouts.  However, in sending these
-    // segments the sender has two copies of the same data considered
-    // to be in the network (and also in the Pipe estimate).  When an
-    // ACK or SACK arrives covering this retransmitted segment, the
-    // sender cannot be sure exactly how much data left the network
-    // (one of the two transmissions of the packet or both
-    // transmissions of the packet).  Therefore the sender may
-    // underestimate Pipe by considering both segments to have left
-    // the network when it is possible that only one of the two has.
-    //
-    // We believe that the triggering of rule (3) will be rare and
-    // that the implications are likely limited to corner cases
-    // relative to the entire recovery algorithm.  Therefore we leave
-    // the decision of whether or not to use rule (3) to
-    // implementors."
-    if (!found)
-    {
-        for (uint32 s3=state->snd_una; s3<state->snd_max; s3=s3+shift)
-        {
-            if (rexmitQueue->getSackedBit(s3)==false)
-            {
-                if (seqGE(s3,state->highRxt) &&
-                    seqLE(s3,(rexmitQueue->getHighestSackedSeqNum())))
-                {
-                    seqNum = s3;
-                    found = true;
-                    return seqNum;
-                }
-            }
-        }
-    }
-
-    // RFC 3517, page 6: "(4) If the conditions for each of (1), (2), and (3) are not met,
-    // then NextSeg () MUST indicate failure, and no segment is
-    // returned."
-    if (!found)
-        seqNum = 0;
-
-    return seqNum;
-}
+//uint32 TCPConnection::nextSeg()
+//{
+//    ASSERT (state->sack_enabled);
+//    // RFC 3517, page 5: "This routine uses the scoreboard data structure maintained by the
+//    // Update() function to determine what to transmit based on the SACK
+//    // information that has arrived from the data receiver (and hence
+//    // been marked in the scoreboard).  NextSeg () MUST return the
+//    // sequence number range of the next segment that is to be
+//    // transmitted, per the following rules:"
+//
+//    state->highRxt = rexmitQueue->getHighestRexmittedSeqNum();
+//    uint32 seqNum = 0;
+//    bool found = false;
+//    uint32 shift = state->snd_mss;
+//    if (state->ts_enabled)
+//        shift -= TCP_OPTION_TS_SIZE;
+//#ifdef PRIVATE
+//    if(this->isSubflow){ // FIXME
+//        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
+//        if(this->getTcpMain()->multipath_DSSSeqNo8)
+//          dss_option_offset += 4;
+//        if(this->getTcpMain()->multipath_DSSDataACK8)
+//          dss_option_offset += 4;
+//       shift -=  dss_option_offset;
+//    }
+//#endif
+//    // RFC 3517, page 5: "(1) If there exists a smallest unSACKed sequence number 'S2' that
+//    // meets the following three criteria for determining loss, the
+//    // sequence range of one segment of up to SMSS octets starting
+//    // with S2 MUST be returned.
+//    //
+//    // (1.a) S2 is greater than HighRxt.
+//    //
+//    // (1.b) S2 is less than the highest octet covered by any
+//    //       received SACK.
+//    //
+//    // (1.c) IsLost (S2) returns true."
+//    for (uint32 s2=state->snd_una; s2<state->snd_max; s2=s2+shift)
+//    {
+//        if (rexmitQueue->getSackedBit(s2)==false)
+//        {
+//            if (seqGE(s2,state->highRxt) &&
+//                seqLE(s2,(rexmitQueue->getHighestSackedSeqNum())) &&
+//                isLost(s2))
+//            {
+//                seqNum = s2;
+//                found = true;
+//                return seqNum;
+//            }
+//        }
+//    }
+//
+//    // RFC 3517, page 5: "(2) If no sequence number 'S2' per rule (1) exists but there
+//    // exists available unsent data and the receiver's advertised
+//    // window allows, the sequence range of one segment of up to SMSS
+//    // octets of previously unsent data starting with sequence number
+//    // HighData+1 MUST be returned."
+//    if (!found)
+//    {
+//        // check how many unsent bytes we have
+//        ulong buffered = sendQueue->getBytesAvailable(state->snd_max);
+//        ulong maxWindow = state->snd_wnd;
+//        // effectiveWindow: number of bytes we're allowed to send now
+//        ulong effectiveWin = maxWindow - state->pipe;
+//        if (buffered > 0 && effectiveWin >= state->snd_mss)
+//        {
+//            seqNum = state->snd_max; // HighData = snd_max
+//            found = true;
+//            return seqNum;
+//        }
+//    }
+//
+//    // RFC 3517, pages 5 and 6: "(3) If the conditions for rules (1) and (2) fail, but there exists
+//    // an unSACKed sequence number 'S3' that meets the criteria for
+//    // detecting loss given in steps (1.a) and (1.b) above
+//    // (specifically excluding step (1.c)) then one segment of up to
+//    // SMSS octets starting with S3 MAY be returned.
+//    //
+//    // Note that rule (3) is a sort of retransmission "last resort".
+//    // It allows for retransmission of sequence numbers even when the
+//    // sender has less certainty a segment has been lost than as with
+//    // rule (1).  Retransmitting segments via rule (3) will help
+//    // sustain TCP's ACK clock and therefore can potentially help
+//    // avoid retransmission timeouts.  However, in sending these
+//    // segments the sender has two copies of the same data considered
+//    // to be in the network (and also in the Pipe estimate).  When an
+//    // ACK or SACK arrives covering this retransmitted segment, the
+//    // sender cannot be sure exactly how much data left the network
+//    // (one of the two transmissions of the packet or both
+//    // transmissions of the packet).  Therefore the sender may
+//    // underestimate Pipe by considering both segments to have left
+//    // the network when it is possible that only one of the two has.
+//    //
+//    // We believe that the triggering of rule (3) will be rare and
+//    // that the implications are likely limited to corner cases
+//    // relative to the entire recovery algorithm.  Therefore we leave
+//    // the decision of whether or not to use rule (3) to
+//    // implementors."
+//    if (!found)
+//    {
+//        for (uint32 s3=state->snd_una; s3<state->snd_max; s3=s3+shift)
+//        {
+//            if (rexmitQueue->getSackedBit(s3)==false)
+//            {
+//                if (seqGE(s3,state->highRxt) &&
+//                    seqLE(s3,(rexmitQueue->getHighestSackedSeqNum())))
+//                {
+//                    seqNum = s3;
+//                    found = true;
+//                    return seqNum;
+//                }
+//            }
+//        }
+//    }
+//
+//    // RFC 3517, page 6: "(4) If the conditions for each of (1), (2), and (3) are not met,
+//    // then NextSeg () MUST indicate failure, and no segment is
+//    // returned."
+//    if (!found)
+//        seqNum = 0;
+//
+//    return seqNum;
+//}
 
 void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWindow)
 {
