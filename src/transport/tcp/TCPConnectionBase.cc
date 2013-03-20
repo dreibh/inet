@@ -181,7 +181,7 @@ TCPConnection::TCPConnection()
 #endif
     // Note: this ctor is NOT used to create live connections, only
     // temporary ones to invoke segmentArrivalWhileClosed() on
-    transferMode = TCP_TRANSFER_BYTECOUNT;
+    transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge
     sendQueue = NULL;
     rexmitQueue = NULL;
     receiveQueue = NULL;
@@ -220,7 +220,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     fsm.setName(fsmname);
     fsm.setState(TCP_S_INIT);
 
-    transferMode = TCP_TRANSFER_UNDEFINED;
+    transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge
     // queues and algorithm will be created on active or passive open
     sendQueue = NULL;
     rexmitQueue = NULL;
