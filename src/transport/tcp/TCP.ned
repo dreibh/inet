@@ -221,9 +221,7 @@ simple TCP like ITCP
         string multipath_Scheduler = default("MPTCP_RoundRobinScheduler");	// Set scheduler for the subflows of multipath
         string multipath_receiveQueueClass = default("TCPMultipathVirtualDataRcvQueue");	// Set scheduler for the subflows of multipath
         bool multipath_ordered = default(true); // endable and disable ordered multipath transmission -> just for testing
-        
-        string sendQueueClass = default("");    // Obsolete!!!
-        string receiveQueueClass = default(""); // Obsolete!!!
+
 
         @display("i=block/wheelbarrow");
     gates:

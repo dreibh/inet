@@ -1694,7 +1694,7 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 		tcpEV << "Connection with disabled MPTCP" << "\n";
 	}
 #endif
-    if (tcpseg->getOptionsArraySize() != 0)
+    if (tcpseg->getOptionsArraySize() != 0){
         uint options_len = tcpseg->getOptionsArrayLength();
         if (options_len <= TCP_OPTIONS_MAX_SIZE) // Options length allowed? - maximum: 40 Bytes
             tcpseg->setHeaderLength(TCP_HEADER_OCTETS + options_len); // TCP_HEADER_OCTETS = 20
@@ -1833,16 +1833,18 @@ void TCPConnection::updateWndInfo(TCPSegment *tcpseg, bool doAlways)
     }
 }
 
-#ifdef PRIVATE
-    if(this->isSubflow){ // FIXME
-        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
-        if(this->getTcpMain()->multipath_DSSSeqNo8)
-          dss_option_offset += 4;
-        if(this->getTcpMain()->multipath_DSSDataACK8)
-          dss_option_offset += 4;
-       shift -=  dss_option_offset;
-    }
-#endif
+//#ifdef PRIVATE
+//    if(this->isSubflow){ // FIXME
+//        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
+//        if(this->getTcpMain()->multipath_DSSSeqNo8)
+//          dss_option_offset += 4;
+//        if(this->getTcpMain()->multipath_DSSDataACK8)
+//          dss_option_offset += 4;
+//       shift -=  dss_option_offset;
+//    }
+//#endif
+
+
 void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWindow)
 {
     ASSERT(state->limited_transmit_enabled);
