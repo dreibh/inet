@@ -68,6 +68,8 @@ class INET_API SCTPMessage : public SCTPMessage_Base
     virtual cPacket* removeLastChunk();
     virtual cPacket* peekFirstChunk();
     virtual cPacket* peekLastChunk();
+    void clean();
+    void copy(const SCTPMessage& other);
 };
 
 class INET_API SCTPStreamResetChunk : public SCTPStreamResetChunk_Base

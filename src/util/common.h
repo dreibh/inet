@@ -19,13 +19,11 @@
 #define __INET_INETCOMMON_H
 
 #include "INETDefs.h"
-
-#include <string>
+#include "IPvXAddress.h"
 #include <stdint.h>
 
 
-#include "IntServ.h" // IPAddressVector, EroVector
-#include "IPvXAddress.h"
+#include <string>
 
 std::string intToString(int i);
 uint32 getLevel(IPvXAddress addr);

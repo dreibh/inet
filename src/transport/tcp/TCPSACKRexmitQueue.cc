@@ -77,6 +77,12 @@ void TCPSACKRexmitQueue::discardUpTo(uint32 seqNum)
             ASSERT(seqLE(i->beginSeqNum, seqNum) && seqLess(seqNum, i->endSeqNum));
             i->beginSeqNum = seqNum;
         }
+
+
+    begin = seqNum;
+
+    // TESTING queue:
+    ASSERT(checkQueue());
     }
 
     begin = seqNum;
@@ -151,6 +157,8 @@ void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
                 i->beginSeqNum = toSeqNum;
         }
     }
+
+    ASSERT(fromSeqNum == toSeqNum);
 
     ASSERT(fromSeqNum == toSeqNum);
 
@@ -409,7 +417,7 @@ void TCPSACKRexmitQueue::checkSackBlock(uint32 fromSeqNum, uint32 &length, bool 
 
 uint32 TCPSACKRexmitQueue::getEndOfRegion(uint32 fromSeqNum){
     RexmitQueue::iterator i = rexmitQueue.begin();
-       while (i!=rexmitQueue.end())
+      while (i!=rexmitQueue.end())
        {
            if (i->beginSeqNum == fromSeqNum)
                return i->endSeqNum;

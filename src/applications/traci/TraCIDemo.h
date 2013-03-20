@@ -24,9 +24,8 @@
 #include <omnetpp.h>
 #include "UDPSocket.h"
 
-#include "TraCIMobility.h"
+#include "mobility/models/TraCIMobility.h"
 
-class TraCIMobility;
 /**
  * Small IVC Demo
  */

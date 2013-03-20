@@ -181,7 +181,7 @@ TCPConnection::TCPConnection()
 #endif
     // Note: this ctor is NOT used to create live connections, only
     // temporary ones to invoke segmentArrivalWhileClosed() on
-    transferMode = TCP_TRANSFER_BYTECOUNT;
+    transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge
     sendQueue = NULL;
     rexmitQueue = NULL;
     receiveQueue = NULL;
@@ -220,7 +220,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     fsm.setName(fsmname);
     fsm.setState(TCP_S_INIT);
 
-    transferMode = TCP_TRANSFER_UNDEFINED;
+    transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge
     // queues and algorithm will be created on active or passive open
     sendQueue = NULL;
     rexmitQueue = NULL;
@@ -528,8 +528,8 @@ bool TCPConnection::performStateTransition(const TCPEventCode& event)
                 case TCP_E_SEND:        FSM_Goto(fsm, TCP_S_SYN_SENT); break;
                 case TCP_E_CLOSE:       FSM_Goto(fsm, TCP_S_CLOSED); break;
                 case TCP_E_ABORT:       FSM_Goto(fsm, TCP_S_CLOSED); break;
-                case TCP_E_RCV_SYN:     FSM_Goto(fsm, TCP_S_SYN_RCVD);break;
-                default:break; // MBe add because of Warning
+                case TCP_E_RCV_SYN:     FSM_Goto(fsm, TCP_S_SYN_RCVD); break;
+                default: break;
             }
             break;
 
@@ -568,7 +568,7 @@ bool TCPConnection::performStateTransition(const TCPEventCode& event)
                 case TCP_E_RCV_FIN:     FSM_Goto(fsm, TCP_S_CLOSE_WAIT); break;
                 case TCP_E_RCV_RST:     FSM_Goto(fsm, TCP_S_CLOSED); break;
                 case TCP_E_RCV_UNEXP_SYN: FSM_Goto(fsm, TCP_S_CLOSED); break;
-                default:break; // MBe add because of Warning
+                default: break;
             }
             break;
 

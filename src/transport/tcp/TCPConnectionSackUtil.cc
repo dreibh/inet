@@ -193,6 +193,7 @@ void TCPConnection::setPipe()
     for (uint32 s1 = state->snd_una; seqLess(s1, state->snd_max); s1 += length)
     {
         rexmitQueue->checkSackBlock(s1, length, sacked, rexmitted);
+
 // FIXME Merge del
 //#ifdef PRIVATE
 //    if(this->isSubflow){ // FIXME
@@ -256,7 +257,16 @@ bool TCPConnection::nextSeg(uint32 &seqNum)
 
     if (state->ts_enabled)
         shift -= TCP_OPTION_TS_SIZE;
-
+//#ifdef PRIVATE
+//    if(this->isSubflow){ // FIXME
+//        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
+//        if(this->getTcpMain()->multipath_DSSSeqNo8)
+//          dss_option_offset += 4;
+//        if(this->getTcpMain()->multipath_DSSDataACK8)
+//          dss_option_offset += 4;
+//       shift -=  dss_option_offset;
+//    }
+//#endif
     // RFC 3517, page 5: "(1) If there exists a smallest unSACKed sequence number 'S2' that
     // meets the following three criteria for determining loss, the
     // sequence range of one segment of up to SMSS octets starting
