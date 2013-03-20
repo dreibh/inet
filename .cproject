@@ -3,18 +3,18 @@
 
 <cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage2">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
-		<cconfiguration id="org.omnetpp.cdt.gnu.toolchain.debug.2110477040">
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.toolchain.debug.2110477040_org.eclipse.cdt.core.settings" id="org.omnetpp.cdt.gnu.toolchain.debug.2110477040" name="gcc-debug"/>
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.toolchain.debug.2110477040_cdtBuildSystem" version="4.0.0"/>
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.toolchain.debug.2110477040_org.eclipse.cdt.core.externalSettings"/>
+		<cconfiguration id="org.omnetpp.cdt.gnu.toolchain.debug.1986924455">
+			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.toolchain.debug.1986924455_org.eclipse.cdt.core.settings" id="org.omnetpp.cdt.gnu.toolchain.debug.1986924455" name="gcc-debug"/>
+			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.toolchain.debug.1986924455_cdtBuildSystem" version="4.0.0"/>
+			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.toolchain.debug.1986924455_org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="inet.null.932074623" name="inet"/>
+		<project id="inet.null.1591313579" name="inet"/>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="org.omnetpp.cdt.gnu.toolchain.debug.2110477040">
+		<scannerConfigBuildInfo instanceId="org.omnetpp.cdt.gnu.toolchain.debug.1986924455">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.omnetpp.cdt.OmnetppGCCPerProjectProfile"/>
 		</scannerConfigBuildInfo>
 	</storageModule>

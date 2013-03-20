@@ -21,9 +21,14 @@
 #include "INETDefs.h"
 
 #include <string>
+#include <stdint.h>
+
+
+#include "IntServ.h" // IPAddressVector, EroVector
+#include "IPvXAddress.h"
 
 std::string intToString(int i);
-
+uint32 getLevel(IPvXAddress addr);
 #endif
 
 

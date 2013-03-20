@@ -46,3 +46,9 @@ xxx
 .oppbuildspec
 .project
 /locale_notizen.txt
+
+
+*.orig
+*.log
+*.sca
+.merge_file_*

@@ -33,6 +33,7 @@
 #include "IPv6InterfaceData.h"
 #include "IPv6Address.h"
 #include "UDPControlInfo_m.h"
+#include "common.h"
 
 
 void SCTPAssociation::calculateRcvBuffer()
@@ -535,14 +536,13 @@ void SCTPAssociation::sendInit()
     }
     else
     {
-    	ASSERT(false && "Fixme merge");
-        uint32 rlevel = 4; // FIXME Merge getLevel(remoteAddr);
+
+        uint32 rlevel =   getLevel(remoteAddr);
         sctpEV3 << "level of remote address=" << rlevel << "\n";
         for (AddressVector::iterator i=adv.begin(); i!=adv.end(); ++i)
         {
-// FIXME Merge             sctpEV3 << "level of address " << (*i) << " = " << getLevel((*i)) << "\n";
-            ASSERT(false && "Fixme merge");
-// FIXME Merge            if (getLevel((*i))>=rlevel)
+            sctpEV3 << "level of address " << (*i) << " = " << getLevel((*i)) << "\n";
+            if (getLevel((*i))>=rlevel)
             {
                 initChunk->setAddressesArraySize(addrNum+1);
                 initChunk->setAddresses(addrNum++, (*i));
@@ -552,8 +552,7 @@ void SCTPAssociation::sendInit()
                 if (localAddr.get4().getInt()==0)
                     localAddr = (*i);
             }
-            ASSERT(false && "Fixme merge");
-// FIXME Merge             else if (rlevel==4 && getLevel((*i))==3 && friendly)
+            else if (rlevel==4 && getLevel((*i))==3 && friendly)
             {
                 sctpMain->addLocalAddress(this, (*i));
                 state->localAddresses.push_back((*i));
