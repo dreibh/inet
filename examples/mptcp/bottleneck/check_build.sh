@@ -23,6 +23,7 @@ then
 		echo $RUNS
 		exit 0
 	else
+		RUNS = ""
 		for i in $* 
 		do
 		echo "Set parameter" $i
