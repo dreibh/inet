@@ -23,11 +23,17 @@ then
 		echo $RUNS
 		exit 0
 	else
-		RUNS = ""
+		let j=0
 		for i in $* 
 		do
-		echo "Set parameter" $i
-		RUNS="$RUNS $i"
+			let j=j+1
+			if [ $j == 1 ];
+			then
+				RUNS="$i"
+			else
+			echo "Set parameter" $i
+				RUNS="$RUNS $i"
+			fi
 		done
 	fi
 fi
