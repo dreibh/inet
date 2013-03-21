@@ -10,7 +10,7 @@ DURATION_CLIENT="300 s"
 DURATION_SERVER="400 s"
 BIGFILES="NO" # YES
 ####################### Prepare Runs ######################
-echo "Get Parameter" $1
+echo "Get Parameter"
 if [ $1 != "" ];
 then
 	tmp=$RUNS
@@ -23,8 +23,11 @@ then
 		echo $RUNS
 		exit 0
 	else
-		echo "Set parameter"
-		RUNS="$1"
+		for i in $* 
+		do
+		echo "Set parameter" $i
+		RUNS="$i"
+		done
 	fi
 fi
 	
