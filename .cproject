@@ -3,31 +3,100 @@
 
 <cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
-		<cconfiguration id="org.omnetpp.cdt.gnu.config.debug.1590007136">
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.config.debug.1590007136_org.eclipse.cdt.core.settings" id="org.omnetpp.cdt.gnu.config.debug.1590007136" name="gcc-debug"/>
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.config.debug.1590007136_cdtBuildSystem" version="4.0.0"/>
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.config.debug.1590007136_org.eclipse.cdt.core.externalSettings"/>
-		</cconfiguration>
-		<cconfiguration id="org.omnetpp.cdt.gnu.config.release.960890479">
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.config.release.960890479_org.eclipse.cdt.core.settings" id="org.omnetpp.cdt.gnu.config.release.960890479" name="gcc-release"/>
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.config.release.960890479_cdtBuildSystem" version="4.0.0"/>
-			<storageModule externalCElementFile="org.omnetpp.cdt.gnu.config.release.960890479_org.eclipse.cdt.core.externalSettings"/>
+		<cconfiguration id="org.omnetpp.cdt.gnu.toolchain.debug.60894072">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.omnetpp.cdt.gnu.toolchain.debug.60894072" moduleId="org.eclipse.cdt.core.settings" name="gcc-debug">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.MachO64" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.PE" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildProperties="" description="" id="org.omnetpp.cdt.gnu.toolchain.debug.60894072" name="gcc-debug" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="org.omnetpp.cdt.gnu.toolchain.debug.60894072.300193824" name="/" resourcePath="">
+						<toolChain id="org.omnetpp.cdt.gnu.toolchain.debug.1951283598" name="org.omnetpp.cdt.gnu.toolchain.debug" superClass="org.omnetpp.cdt.gnu.toolchain.debug">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF;org.eclipse.cdt.core.MachO64;org.eclipse.cdt.core.PE" id="org.omnetpp.cdt.targetPlatform.899245700" isAbstract="false" name="Windows, Linux, Mac" osList="win32,linux,macosx" superClass="org.omnetpp.cdt.targetPlatform"/>
+							<builder id="org.omnetpp.cdt.gnu.builder.debug.933481465" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="OMNeT++ Make Builder (opp_makemake)" superClass="org.omnetpp.cdt.gnu.builder.debug"/>
+							<tool id="cdt.managedbuild.tool.gnu.archiver.base.212581369" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.1707097387" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
+								<option id="gnu.cpp.compiler.option.preprocessor.def.152275209" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="WITH_TCP_COMMON"/>
+									<listOptionValue builtIn="false" value="WITH_TCP_INET"/>
+									<listOptionValue builtIn="false" value="WITH_TCP_LWIP"/>
+									<listOptionValue builtIn="false" value="WITH_TCP_NSC"/>
+									<listOptionValue builtIn="false" value="WITH_IPv4"/>
+									<listOptionValue builtIn="false" value="WITH_IPv6"/>
+									<listOptionValue builtIn="false" value="WITH_xMIPv6"/>
+									<listOptionValue builtIn="false" value="WITH_UDP"/>
+									<listOptionValue builtIn="false" value="WITH_RTP"/>
+									<listOptionValue builtIn="false" value="WITH_SCTP"/>
+									<listOptionValue builtIn="false" value="WITH_DHCP"/>
+									<listOptionValue builtIn="false" value="WITH_ETHERNET"/>
+									<listOptionValue builtIn="false" value="WITH_PPP"/>
+									<listOptionValue builtIn="false" value="WITH_EXT_IF"/>
+									<listOptionValue builtIn="false" value="WITH_MPLS"/>
+									<listOptionValue builtIn="false" value="WITH_OSPFv2"/>
+									<listOptionValue builtIn="false" value="WITH_BGPv4"/>
+									<listOptionValue builtIn="false" value="WITH_MANET"/>
+									<listOptionValue builtIn="false" value="WITH_TRACI"/>
+									<listOptionValue builtIn="false" value="WITH_VOIPSTREAM"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1240000944" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1723460519" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1519468237" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="WITH_TCP_COMMON"/>
+									<listOptionValue builtIn="false" value="WITH_TCP_INET"/>
+									<listOptionValue builtIn="false" value="WITH_TCP_LWIP"/>
+									<listOptionValue builtIn="false" value="WITH_TCP_NSC"/>
+									<listOptionValue builtIn="false" value="WITH_IPv4"/>
+									<listOptionValue builtIn="false" value="WITH_IPv6"/>
+									<listOptionValue builtIn="false" value="WITH_xMIPv6"/>
+									<listOptionValue builtIn="false" value="WITH_UDP"/>
+									<listOptionValue builtIn="false" value="WITH_RTP"/>
+									<listOptionValue builtIn="false" value="WITH_SCTP"/>
+									<listOptionValue builtIn="false" value="WITH_DHCP"/>
+									<listOptionValue builtIn="false" value="WITH_ETHERNET"/>
+									<listOptionValue builtIn="false" value="WITH_PPP"/>
+									<listOptionValue builtIn="false" value="WITH_EXT_IF"/>
+									<listOptionValue builtIn="false" value="WITH_MPLS"/>
+									<listOptionValue builtIn="false" value="WITH_OSPFv2"/>
+									<listOptionValue builtIn="false" value="WITH_BGPv4"/>
+									<listOptionValue builtIn="false" value="WITH_MANET"/>
+									<listOptionValue builtIn="false" value="WITH_TRACI"/>
+									<listOptionValue builtIn="false" value="WITH_VOIPSTREAM"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.898532281" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.base.767993829" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.base.1126693353" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.base">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.282862721" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.assembler.base.2100250799" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.base">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.2092174082" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-		<project id="inet.null.1591313579" name="inet"/>
+		<project id="inet.null.1531047390" name="inet"/>
 	</storageModule>
-	<storageModule moduleId="refreshScope"/>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="org.omnetpp.cdt.gnu.config.release.960890479">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.omnetpp.cdt.OmnetppGCCPerProjectProfile"/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="org.omnetpp.cdt.gnu.config.debug.1590007136">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.omnetpp.cdt.OmnetppGCCPerProjectProfile"/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="org.omnetpp.cdt.gnu.toolchain.debug.1986924455">
+		<scannerConfigBuildInfo instanceId="org.omnetpp.cdt.gnu.toolchain.debug.60894072">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.omnetpp.cdt.OmnetppGCCPerProjectProfile"/>
 		</scannerConfigBuildInfo>
 	</storageModule>

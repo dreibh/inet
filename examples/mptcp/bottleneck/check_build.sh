@@ -5,11 +5,30 @@
 
 ####################### Config  Runs ##################### 
 
-RUNS="SCTP_Netperfmeter TCP_Netperfmeter CMT_Netperfmeter MPTCP_Netperfmeter Experiment_Bottleneck_TCP Experiment_Bottleneck_SCTP Experiment_Bottleneck_SCTP_TCP Experiment_Bottleneck_MPTCP_TCP Experiment_Bottleneck_CMT_SCTP"
+RUNS="SCTP_Netperfmeter TCP_Netperfmeter CMT_Netperfmeter_Single CMT_Netperfmeter_Multi MPTCP_Netperfmeter_Single MPTCP_Netperfmeter_Multi Experiment_Bottleneck_TCP Experiment_Bottleneck_SCTP Experiment_Bottleneck_SCTP_TCP Experiment_Bottleneck_MPTCP_TCP Experiment_Bottleneck_CMT_SCTP"
 DURATION_CLIENT="300 s"
 DURATION_SERVER="400 s"
-
+BIGFILES="NO" # YES
 ####################### Prepare Runs ######################
+echo "Get Parameter" $1
+if [ $1 != "" ];
+then
+	tmp=$RUNS
+	if [ $1 == "ALL" ];
+	then
+		echo "Do ALL"
+	fi
+	if [ $1 == "help" ];
+	then
+		echo $RUNS
+		exit 0
+	else
+		echo "Set parameter"
+		RUNS="$1"
+	fi
+fi
+	
+echo "Work on " $RUNS
 DELETE_FIRST="test_vectors.vec test_scalars.sca results.log abort.log"
 for FILE in $DELETE_FIRST
 do
@@ -26,6 +45,8 @@ do
 	[ -f Archive/$JOB_vectors.vec ] && mv Archive/$JOB_vectors.vec Archive/old.$JOB_vectors.vec
 	[ -f Archive/$JOB_scalars.sca ] && mv Archive/$JOB_scalars.sca Archive/old.$JOB_scalars.sca
 done
+
+
 echo "Write build.ini" 
 ###################### Write ini    ######################
 echo "## Test build ##" 										> build.ini
@@ -55,10 +76,14 @@ do
 	echo "run Szenario " $JOB
 	time ../../../src/inet -r 0 -u Cmdenv -c $JOB -n ../..:../../../simulations:../../../src  build.ini >> dat.log 2>> err.log 
 	sleep 5
+	if [ $BIGFILES == "yes" ];
+	then
 	cat vectors.vec >> Archive/test_vectors.vec
 	cat scalars.sca >> Archive/test_scalars.sca
+	fi
 	cp vectors.vec Archive/vector_$JOB.vec
 	cp scalars.sca Archive/scalars_$JOB.sca
+	
    echo $JOB
 done
 ###################### Do the Rest #######################
@@ -71,7 +96,7 @@ cat dat.log | grep "No more events -- simulation ended at event" >> results.log
 for JOB in $RUNS
 do  
 	echo $JOB  >> results.log
-	cat Archive/scalars_$JOB.sca | grep "Total Received Bytes" 	 >> results.log
+	cat Archive/scalars_$JOB.sca | grep "Total Received Bytes" 	     >> results.log
 	cat Archive/scalars_$JOB.sca | grep "Total Reception Bit Rate"       >> results.log
 done
 cat results.log
