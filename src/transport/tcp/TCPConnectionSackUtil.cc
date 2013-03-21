@@ -184,6 +184,12 @@ void TCPConnection::setPipe()
     bool sacked;       // required for rexmitQueue->checkSackBlock()
     bool rexmitted;    // required for rexmitQueue->checkSackBlock()
 
+#ifdef PRIVATE
+    int32 offset = 0;
+    // There are errors if we handle also send_fin
+    if(state->send_fin)
+        offset = 1; // One for the FIN
+#endif
     // RFC 3517, page 3: "This routine traverses the sequence space from HighACK to HighData
     // and MUST set the "pipe" variable to an estimate of the number of
     // octets that are currently in transit between the TCP sender and
@@ -192,19 +198,11 @@ void TCPConnection::setPipe()
     // HighACK and HighData that has not been SACKed:"
     for (uint32 s1 = state->snd_una; seqLess(s1, state->snd_max); s1 += length)
     {
-        rexmitQueue->checkSackBlock(s1, length, sacked, rexmitted);
+        rexmitQueue->checkSackBlock((s1+offset), length, sacked, rexmitted);
+#ifdef PRIVATE
+       offset = 0;
+#endif
 
-// FIXME Merge del
-//#ifdef PRIVATE
-//    if(this->isSubflow){ // FIXME
-//        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
-//        if(this->getTcpMain()->multipath_DSSSeqNo8)
-//          dss_option_offset += 4;
-//        if(this->getTcpMain()->multipath_DSSDataACK8)
-//          dss_option_offset += 4;
-//       shift -=  dss_option_offset;
-//    }
-//#endif
         if (!sacked)
         {
             // RFC 3517, page 3: "(a) If IsLost (S1) returns false:

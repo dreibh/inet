@@ -400,17 +400,23 @@ uint32 TCPSACKRexmitQueue::getNumOfDiscontiguousSacks(uint32 fromSeqNum) const
 
 void TCPSACKRexmitQueue::checkSackBlock(uint32 fromSeqNum, uint32 &length, bool &sacked, bool &rexmitted) const
 {
-    ASSERT(seqLE(begin, fromSeqNum) && seqLess(fromSeqNum, end));
-
+    int32 offset = 0;
+#ifdef PRIVATE
+    if(this->conn->getState()->send_fin)
+          offset = 1; // One for the FIN
+#endif
+    if(!(seqLE(begin, fromSeqNum) && seqLess(fromSeqNum - offset, end))){
+        ASSERT(seqLE(begin, fromSeqNum) && seqLess(fromSeqNum - offset, end));
+    }
     RexmitQueue::const_iterator i = rexmitQueue.begin();
 
-    while (i != rexmitQueue.end() && seqLE(i->endSeqNum, fromSeqNum)) // search for seqNum
+    while (i != rexmitQueue.end() && seqLE(i->endSeqNum, fromSeqNum-offset)) // search for seqNum
         i++;
 
     ASSERT(i != rexmitQueue.end());
-    ASSERT(seqLE(i->beginSeqNum, fromSeqNum) && seqLess(fromSeqNum, i->endSeqNum));
+    ASSERT(seqLE(i->beginSeqNum, fromSeqNum) && seqLess(fromSeqNum - offset, i->endSeqNum));
 
-    length = (i->endSeqNum - fromSeqNum);
+    length = (i->endSeqNum - (fromSeqNum - offset));
     sacked = i->sacked;
     rexmitted = i->rexmitted;
 }

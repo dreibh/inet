@@ -104,9 +104,16 @@ MPTCP_Flow::~MPTCP_Flow() {
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                i != subflow_list.end(); i++) {
            TCP_subflow_t* entry = (*i);
-           if(entry->subflow != NULL)
-               delete entry->subflow;
-           entry->subflow = NULL;
+           if(entry!=NULL){
+               // delete tmp subflows
+               if((entry->subflow != NULL) && (entry->subflow->todelete)){
+                   delete entry->subflow ;
+                   entry->subflow = NULL;
+               }
+               delete entry;
+               entry = NULL;
+           }
+
     }
     subflow_list.clear();
     TCPSchedulerManager::destroyMPTCPScheduler();
@@ -201,6 +208,9 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
     t->active = true;
     t->subflow = subflow;
     t->subflow->flow = this;
+    static int sub_cnt = 0; // TODO DEBUG
+    sub_cnt++;              // TODO DEBUG
+    t->cnt = sub_cnt;       // TODO DEBUG
     DEBUGPRINT(
                     "[FLOW][SUBFLOW][STATUS] add subflow from  %s:%d to %s:%d",
                     subflow->localAddr.str().c_str(), subflow->localPort, subflow->remoteAddr.str().c_str(), subflow->remotePort);

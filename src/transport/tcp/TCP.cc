@@ -118,14 +118,10 @@ TCP::~TCP()
 	while (!tcpAppConnMap.empty())
 	{
 		TcpAppConnMap::iterator i = tcpAppConnMap.begin();
+#ifndef PRIVATE
 		if((*i).second!= NULL){
-#ifdef PRIVATE
-
-        if((*i).second->isSubflow){
-            tcpAppConnMap.erase(i);
-            continue;
-        }
-
+#else
+		if((*i).second!= NULL && (!(*i).second->todelete)){
 #endif
 			delete (*i).second;
 		}
@@ -133,9 +129,9 @@ TCP::~TCP()
 		tcpAppConnMap.erase(i);
 	}
 #ifdef PRIVATE
-	if(this->multipath){
-	     delete this->mptcp_pcb;
-	}
+    if(this->multipath){
+         delete this->mptcp_pcb;
+    }
 #endif
 }
 
@@ -177,8 +173,10 @@ void TCP::handleMessage(cMessage *msg)
         		if(subflow!=NULL){
 
 					subflow->isSubflow = true;
-					if (!(subflow->processAppCommand(msg)))
+					if (!(subflow->processAppCommand(msg))){
 						removeConnection(subflow);
+						subflow = NULL;
+					}
 					// TODO Should I add a subflow after a MP_JOIN SYN
         		}
         		else{
@@ -192,8 +190,10 @@ void TCP::handleMessage(cMessage *msg)
         }
 #endif
         bool ret = conn->processTimer(msg);
-        if (!ret)
+        if (!ret){
             removeConnection(conn);
+            conn = NULL;
+        }
     }
     else if (msg->arrivedOn("ipIn") || msg->arrivedOn("ipv6In"))
     {
@@ -256,8 +256,10 @@ void TCP::handleMessage(cMessage *msg)
 
 #endif
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
-                if (!ret)
+                if (!ret){
                     removeConnection(conn);
+                    conn = NULL;
+                }
             }
             else
             {
@@ -320,8 +322,10 @@ void TCP::handleMessage(cMessage *msg)
         }
 
         bool ret = conn->processAppCommand(msg);
-        if (!ret)
+        if (!ret){
             removeConnection(conn);
+            conn = NULL;
+        }
     }
 
     if (ev.isGUI())
@@ -629,6 +633,9 @@ void TCP::removeConnection(TCPConnection *conn)
         usedEphemeralPorts.erase(it);
 
     delete conn;
+#ifdef PRIVATE
+     conn = NULL;
+#endif
 }
 
 void TCP::finish()

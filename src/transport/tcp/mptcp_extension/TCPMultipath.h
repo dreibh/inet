@@ -81,6 +81,7 @@ enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
 typedef struct _subflow{
   TCPConnection* subflow;
   bool active;
+  int cnt;
 } TCP_subflow_t;
 typedef vector <TCP_subflow_t*>         TCP_SubFlowVector_t;
 //#include "TCPMultipath.h"

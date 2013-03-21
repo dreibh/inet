@@ -178,6 +178,7 @@ TCPConnection::TCPConnection()
 	flow = NULL;
 	randomA = 0;
 	randomB = 0;
+	todelete = false;
 #endif
     // Note: this ctor is NOT used to create live connections, only
     // temporary ones to invoke segmentArrivalWhileClosed() on
@@ -208,6 +209,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 	flow = NULL;
 	randomA = 0;
 	randomB = 0;
+	todelete = false;
 #endif
     tcpMain = _mod;
     appGateIndex = _appGateIndex;

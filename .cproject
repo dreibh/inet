@@ -25,7 +25,7 @@
 							<builder id="org.omnetpp.cdt.gnu.builder.debug.933481465" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="OMNeT++ Make Builder (opp_makemake)" superClass="org.omnetpp.cdt.gnu.builder.debug"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.212581369" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.base.1707097387" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.base">
-								<option id="gnu.cpp.compiler.option.preprocessor.def.152275209" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
+								<option id="gnu.cpp.compiler.option.preprocessor.def.152275209" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="WITH_TCP_COMMON"/>
 									<listOptionValue builtIn="false" value="WITH_TCP_INET"/>
 									<listOptionValue builtIn="false" value="WITH_TCP_LWIP"/>
@@ -46,11 +46,12 @@
 									<listOptionValue builtIn="false" value="WITH_MANET"/>
 									<listOptionValue builtIn="false" value="WITH_TRACI"/>
 									<listOptionValue builtIn="false" value="WITH_VOIPSTREAM"/>
+									<listOptionValue builtIn="false" value="PRIVATE=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1240000944" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.base.1723460519" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">
-								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1519468237" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1519468237" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="WITH_TCP_COMMON"/>
 									<listOptionValue builtIn="false" value="WITH_TCP_INET"/>
 									<listOptionValue builtIn="false" value="WITH_TCP_LWIP"/>
@@ -71,6 +72,7 @@
 									<listOptionValue builtIn="false" value="WITH_MANET"/>
 									<listOptionValue builtIn="false" value="WITH_TRACI"/>
 									<listOptionValue builtIn="false" value="WITH_VOIPSTREAM"/>
+									<listOptionValue builtIn="false" value="PRIVATE=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.898532281" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

@@ -283,7 +283,9 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn->getState()->sackedBytes = 0;
 		conn->getState()->sendQueueLimit = this->getState()->sendQueueLimit;
 		conn->transferMode = this->transferMode;
+		conn->todelete = true;
 		return conn;
+
     }
     else return NULL;
 }
@@ -439,6 +441,7 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 		conn->removeVectors();
 		conn->renameMPTCPVectors(cnt);
 		conn->transferMode = this->transferMode;
+		conn->todelete = true;
     }
 #endif
 
