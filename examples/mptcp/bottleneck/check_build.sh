@@ -26,7 +26,7 @@ then
 		for i in $* 
 		do
 		echo "Set parameter" $i
-		RUNS="$i"
+		RUNS="$RUNS $i"
 		done
 	fi
 fi
