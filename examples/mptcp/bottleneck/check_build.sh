@@ -7,7 +7,7 @@
 
 RUNS="SCTP_Netperfmeter TCP_Netperfmeter CMT_Netperfmeter_Single CMT_Netperfmeter_Multi MPTCP_Netperfmeter_Single MPTCP_Netperfmeter_Multi Experiment_Bottleneck_TCP Experiment_Bottleneck_SCTP Experiment_Bottleneck_SCTP_TCP Experiment_Bottleneck_MPTCP_TCP Experiment_Bottleneck_CMT_SCTP"
 DURATION_CLIENT="300 s"
-DURATION_SERVER="400 s"
+DURATION_SERVER="360 s"
 BIGFILES="NO" # YES
 ####################### Prepare Runs ######################
 echo "Get Parameter"
