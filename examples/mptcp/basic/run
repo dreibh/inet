@@ -1,0 +1,47 @@
+#!/bin/bash
+echo "Run Script"
+## DEFAULT MPTCP SETUP
+# time ../../../src/inet -r 0 -u Cmdenv -c Default_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
+## Bottleneck Setup
+rm  Archive/vectors.vec
+rm  Archive/scalars.vec
+echo "Szenario Bottleneck MPTCP vs TCP"
+time ../../../src/inet -r 0 -u Cmdenv -c Experiment_Bottleneck -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
+cat vectors.vec >> Archive/vectors.vec
+cat scalars.sca >> Archive/scalars.sca
+cp vectors.vec Archive/vector_sctp_MPTCPvsTCP.vec
+cp scalars.sca Archive/scalars_sctp_MPTCPvsTCP.sca
+## ONLY SINGE PATH TCP
+echo "Szenario Single-Path TCP"
+time ../../../src/inet -r 0 -u Cmdenv -c TCP_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
+cat vectors.vec >> Archive/vectors.vec
+cat scalars.sca >> Archive/scalars.sca
+cp vectors.vec Archive/vector_tcp_singlePath.vec
+cp scalars.sca Archive/scalars_tcp_singlePath.sca
+echo "Szenario Single-Path SCPT"
+time ../../../src/inet -r 0 -u Cmdenv -c SCTP_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
+cat vectors.vec >> Archive/vectors.vec
+cat scalars.sca >> Archive/scalars.sca
+cp vectors.vec Archive/vector_sctp_singlePath.vec
+cp scalars.sca Archive/scalars_sctp_singlePath.sca
+
+echo "==================== RESULT =========================" > abort.log
+cat dat.log | grep "ASSERT:" >> abort.log 
+cat dat.log | grep "No more events -- simulation ended at event" >> abort.log  
+echo "==================== Do Log Files =========================" 
+echo "Grep DSS RCV Status > dss_rcv_status.log" 
+cat err.log | grep "\[FLOW\]\[RCV\]\[DSS\]\[STATUS\]"  		 > dss_rcv_status.log 
+cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[RCV\]"   		>> dss_rcv_status.log
+echo "Grep DSS SND Status > dss_snd_status.log" 
+cat err.log | grep "\[FLOW\]\[SND\]\[DSS\]\[STATUS\]"  		 > dss_snd_status.log
+cat err.log | grep "\[FLOW\]\[DSS\]\[INFO\]\[SND\]"   		>> dss_snd_status.log  
+echo "Grep Data Names > seq.log"
+cat err.log | grep "\[MPTCP\]\[RCV QUEUE\]\[OUT IN SEQUENCE\]" 	 > seq.log
+echo "Grep Out of Order Data > out_of_order.log"
+cat err.log | grep "\[MPTCP\]\[SEND TO APP\]\[NOT IN ORDER\]" 	 > out_of_order.log
+echo "Grep Queue Info > queue.log"
+cat err.log | grep "\[MPTCP\]\[RCV QUEUE\]" 	 > queue.log
+cat err.log | grep "\[MPTCP\]\[RCV QUEUE\]\[RECORD\]" > queue_record.log 
+
+# Don t touch
+cat abort.log 
