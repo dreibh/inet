@@ -52,8 +52,8 @@ done
 # Delete job files
 for JOB in $RUNS
 do
-	[ -f Archive/$JOB_vectors.vec ] && mv Archive/$JOB_vectors.vec Archive/old.$JOB_vectors.vec
-	[ -f Archive/$JOB_scalars.sca ] && mv Archive/$JOB_scalars.sca Archive/old.$JOB_scalars.sca
+	[ -f Archive/vectors_$JOB.vec ] && mv Archive/vectors_$JOB.vec Archive/old.vectors_$JOB.vec
+	[ -f Archive/scalars_$JOB.sca ] && mv Archive/scalars_$JOB.sca Archive/old.scalars_$JOB.sca
 done
 
 
@@ -91,7 +91,7 @@ do
 	cat vectors.vec >> Archive/test_vectors.vec
 	cat scalars.sca >> Archive/test_scalars.sca
 	fi
-	cp vectors.vec Archive/vector_$JOB.vec
+	cp vectors.vec Archive/vectors_$JOB.vec
 	cp scalars.sca Archive/scalars_$JOB.sca
 	
    echo $JOB

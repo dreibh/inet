@@ -22,7 +22,11 @@
 
 TCPTahoeRenoFamilyStateVariables::TCPTahoeRenoFamilyStateVariables()
 {
+#ifndef PRIVATE
     ssthresh = 65535;
+#else
+    ssthresh = 500000;
+#endif
 }
 
 std::string TCPTahoeRenoFamilyStateVariables::info() const
