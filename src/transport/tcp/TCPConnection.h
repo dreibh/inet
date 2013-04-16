@@ -27,11 +27,6 @@
 #include "IPvXAddress.h"
 #include "TCP.h"
 #include "TCPSegment.h"
-
-#ifdef PRIVATE
-#include "TCPMultipath.h"
-#include "TCPMultipathPCB.h"
-#include "TCPMultipathFlow.h"
 class TCPSegment;
 class TCPCommand;
 class TCPOpenCommand;
@@ -39,6 +34,12 @@ class TCPSendQueue;
 class TCPSACKRexmitQueue;
 class TCPReceiveQueue;
 class TCPAlgorithm;
+
+#ifdef PRIVATE
+#include "TCPMultipath.h"
+#include "TCPMultipathPCB.h"
+#include "TCPMultipathFlow.h"
+
 class MPTCP_PCB;
 class MPTCP_Flow;
 
