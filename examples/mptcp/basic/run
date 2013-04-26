@@ -1,17 +1,8 @@
 #!/bin/bash
 echo "Run Script"
-## DEFAULT MPTCP SETUP
-# time ../../../src/inet -r 0 -u Cmdenv -c Default_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
-## Bottleneck Setup
-rm  Archive/vectors.vec
-rm  Archive/scalars.vec
-echo "Szenario Bottleneck MPTCP vs TCP"
-time ../../../src/inet -r 0 -u Cmdenv -c Experiment_Bottleneck -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
-cat vectors.vec >> Archive/vectors.vec
-cat scalars.sca >> Archive/scalars.sca
-cp vectors.vec Archive/vector_sctp_MPTCPvsTCP.vec
-cp scalars.sca Archive/scalars_sctp_MPTCPvsTCP.sca
+
 ## ONLY SINGE PATH TCP
+
 echo "Szenario Single-Path TCP"
 time ../../../src/inet -r 0 -u Cmdenv -c TCP_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
 cat vectors.vec >> Archive/vectors.vec
@@ -19,6 +10,7 @@ cat scalars.sca >> Archive/scalars.sca
 cp vectors.vec Archive/vector_tcp_singlePath.vec
 cp scalars.sca Archive/scalars_tcp_singlePath.sca
 echo "Szenario Single-Path SCPT"
+
 time ../../../src/inet -r 0 -u Cmdenv -c SCTP_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
 cat vectors.vec >> Archive/vectors.vec
 cat scalars.sca >> Archive/scalars.sca
