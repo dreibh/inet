@@ -26,7 +26,7 @@
 // *   Contact: dreibh@iem.uni-due.de
 
 
-package inet.networklayer.autorouting;
+package inet.networklayer.autorouting.ipv4;
 
 
 simple MultihomedFlatNetworkConfigurator
