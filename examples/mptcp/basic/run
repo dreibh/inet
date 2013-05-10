@@ -2,7 +2,8 @@
 echo "Run Script"
 
 ## ONLY SINGE PATH TCP
-
+rm Archive/scalars.sca
+rm Archive/vectors.vec
 echo "Szenario Single-Path TCP"
 time ../../../src/inet -r 0 -u Cmdenv -c TCP_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
 cat vectors.vec >> Archive/vectors.vec
