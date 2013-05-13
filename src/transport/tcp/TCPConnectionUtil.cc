@@ -617,7 +617,42 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
     tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
 
 #ifdef PRIVATE
-        bool multipath =  tcpMain->par("multipath");
+        bool multipath = false;
+
+        if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
+             multipath     = false;
+         }
+         else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
+              multipath     = true;
+         }
+      // TODO add new Congestion Control�
+      //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
+      //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
+      //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
+      //            state->allowCMT     = true;
+      //         }
+      //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
+      //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
+      //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
+      //            state->allowCMT     = true;
+      //         }
+      //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
+      //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
+      //            state->allowCMT     = true;
+      //         }
+      //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
+      //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
+      //            state->allowCMT     = true;
+      //         }
+      //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
+      //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
+      //            state->allowCMT     = true;
+      //         }
+         else {
+            throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
+                     (const char*)tcpMain->par("cmtCCVariant"));
+         }
+
         if(multipath){
         	openCmd->getSubFlowNumber();
         	joinToAck = false;

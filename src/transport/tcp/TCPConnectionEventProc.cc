@@ -52,7 +52,40 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 
 #ifdef PRIVATE
             { // create own contex
-            bool multipath =  tcpMain->par("multipath");
+            bool multipath = false;
+            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
+                   multipath     = false;
+               }
+               else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
+                    multipath     = true;
+               }
+          // TODO add new Congestion Control�
+          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
+          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
+          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
+          //            state->allowCMT     = true;
+          //         }
+               else {
+                  throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
+                           (const char*)tcpMain->par("cmtCCVariant"));
+               };
             bool skip = false;
             if(multipath){
                 tcpEV << "MPTCP: We do not proof ports in case of a multpath link" << endl;
@@ -80,7 +113,40 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 
 #ifdef PRIVATE
             { // MPTCP Context
-            bool multipath =  tcpMain->par("multipath");
+            bool multipath = false;
+            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
+                   multipath     = false;
+               }
+               else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
+                    multipath     = true;
+               }
+          // TODO add new Congestion Control�
+          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
+          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
+          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
+          //            state->allowCMT     = true;
+          //         }
+               else {
+                  throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
+                           (const char*)tcpMain->par("cmtCCVariant"));
+               }
         	// TODO Overwrok, which variable do we need
             if(multipath){
         		tcpMain->multipath_subflow_id = openCmd->getSubFlowNumber();
@@ -97,7 +163,41 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 
         default:
 #ifdef PRIVATE
-            if(!tcpMain->par("multipath"))
+            bool multipath = false;
+            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
+                   multipath     = false;
+               }
+               else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
+                    multipath     = true;
+               }
+            // TODO add new Congestion Control�
+            //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
+            //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
+            //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
+            //            state->allowCMT     = true;
+            //         }
+            //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
+            //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
+            //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
+            //            state->allowCMT     = true;
+            //         }
+            //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
+            //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
+            //            state->allowCMT     = true;
+            //         }
+            //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
+            //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
+            //            state->allowCMT     = true;
+            //         }
+            //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
+            //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
+            //            state->allowCMT     = true;
+            //         }
+               else {
+                  throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
+                           (const char*)tcpMain->par("cmtCCVariant"));
+               }
+            if(multipath)
 #endif
             throw cRuntimeError(tcpMain, "Error processing command OPEN_ACTIVE: connection already exists");
             break; // MBe add because of Warning
@@ -235,7 +335,41 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             throw cRuntimeError(tcpMain, "Error processing command CLOSE: connection not open");
 
 #ifdef PRIVATE
-        	{bool multipath =  tcpMain->par("multipath");
+        	{
+            bool multipath =  false;
+            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
+                 multipath     = false;
+             }
+             else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
+                  multipath     = true;
+             }
+          // TODO add new Congestion Control�
+          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
+          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
+          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
+          //            state->allowCMT     = true;
+          //         }
+             else {
+                throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
+                         (const char*)tcpMain->par("cmtCCVariant"));
+             }
             if(multipath){
             	//TODO
             }
