@@ -85,7 +85,7 @@ void TCP::initialize()
      else if(strcmp((const char*)par("cmtCCVariant"), "cmt") == 0) {
           multipath     = true;
      }
-// TODO add new Congestion Control§
+// TODO add new Congestion Controlï¿½
 //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
 //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
 //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
@@ -110,7 +110,7 @@ void TCP::initialize()
 //         }
      else {
         throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
-                 (const char*)sctpMain->par("cmtCCVariant"));
+                 (const char*)par("cmtCCVariant"));
      }
 
 	if(multipath){
