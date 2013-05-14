@@ -34,6 +34,14 @@ typedef TCPTahoeRenoFamilyStateVariables TCPNewRenoStateVariables;
  */
 class INET_API TCPNewReno : public TCPTahoeRenoFamily
 {
+  private:
+    void increaseCWND(uint32 increase);
+    void decreaseCWND(uint32 decrease);
+    void setCWND(uint32 newCWND);
+    void initializeTCPNewReno();
+    void initilazeCWND();
+    uint32 bytesInFlight();
+
   protected:
     TCPNewRenoStateVariables *&state; // alias to TCPAlgorithm's 'state'
 
@@ -57,6 +65,9 @@ class INET_API TCPNewReno : public TCPTahoeRenoFamily
 
     /** Redefine what should happen when dupAck was received, to add congestion window management */
     virtual void receivedDuplicateAck();
+
+    /* redefine initialize*/
+    virtual void initialize();
 };
 
 #endif

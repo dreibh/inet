@@ -14,7 +14,7 @@ network basic
         {
             datarate = 10 Mbps;
             delay = 1 ms;
-            per = 0.05;
+            per = 0.01;
         }
      
     submodules:

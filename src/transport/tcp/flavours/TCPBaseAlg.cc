@@ -633,10 +633,12 @@ void TCPBaseAlg::receivedDuplicateAck()
     tcpEV << "Duplicate ACK #" << state->dupacks << "\n";
 
     bool fullSegmentsOnly = state->nagle_enabled && state->snd_una != state->snd_max;
-    if (state->dupacks < DUPTHRESH && state->limited_transmit_enabled) // DUPTRESH = 3
+    if (state->dupacks < DUPTHRESH && state->limited_transmit_enabled){ // DUPTRESH = 3
+        // Note MBe only enter if dupacks < 3
         conn->sendOneNewSegment(fullSegmentsOnly, state->snd_cwnd); // RFC 3042
-
+    }
     //
+
     // Leave to subclasses (e.g. TCPTahoe, TCPReno) whatever they want to do
     // on duplicate Acks.
     //

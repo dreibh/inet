@@ -616,7 +616,15 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
 
     tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
 
+    tcpAlgorithm->setConnection(this);
+
+    // create state block
+    state = tcpAlgorithm->getStateVariables();
+    configureStateVariables();
+    tcpAlgorithm->initialize();
+
 #ifdef PRIVATE
+        // the block before must run first
         bool multipath = false;
 
         if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
@@ -660,12 +668,7 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
         }
 #endif
 
-    tcpAlgorithm->setConnection(this);
 
-    // create state block
-    state = tcpAlgorithm->getStateVariables();
-    configureStateVariables();
-    tcpAlgorithm->initialize();
 }
 
 void TCPConnection::configureStateVariables()
@@ -1015,17 +1018,17 @@ void TCPConnection::sendSegment(uint32 bytes)
     uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
 
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath){
+//    if(this->getTcpMain()->multipath){
         int msg_cnt = ((abated * 0.5)/ (state->snd_mss-options_len));
         (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
 
         // FIXME Test we work with bigger steps, because it needs a long simulation time to create it for posssibe every message
         if((state->sendQueueLimit > 0) && (abated < (state->sendQueueLimit * 0.05)))
                 abated = 0;
-    }else{
-        state->queueUpdate = false;
-        abated +=  (state->snd_mss - options_len);
-    }
+//    }else{
+//        state->queueUpdate = false;
+//        abated +=  (state->snd_mss - options_len);
+//    }
     if(isQueueAble && abated)
 #endif
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
@@ -1216,10 +1219,14 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     // retransmit one segment at snd_una, and set snd_nxt accordingly (if not called at RTO)
     state->snd_nxt = state->snd_una;
 
-    // When FIN sent the snd_max - snd_nxt larger than bytes available in queue
+#ifndef PRIVATE
+   // When FIN sent the snd_max - snd_nxt larger than bytes available in queue
     ulong bytes = std::min((ulong)std::min(state->snd_mss, state->snd_max - state->snd_nxt),
             sendQueue->getBytesAvailable(state->snd_nxt));
+#else
+    ulong bytes = std::min((ulong)state->snd_mss,sendQueue->getBytesAvailable(state->snd_una));
 
+#endif
     // FIN (without user data) needs to be resent
     if (bytes == 0 && state->send_fin && state->snd_fin_seq == sendQueue->getBufferEndSeq())
     {
@@ -1234,6 +1241,10 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     }
     else
     {
+        if(0==bytes){
+            tcpEV << "No signal and no data for retransmission...something went wrong" << endl;
+       //     throw cRuntimeError("No signal and no data for retransmission...something went wrong");
+        }
         ASSERT(bytes != 0);
 #ifdef PRIVATE
         // Not every packet has the same length

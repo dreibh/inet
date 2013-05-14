@@ -1,6 +1,5 @@
 #!/bin/bash
 echo "Run Script"
-
 ## ONLY SINGE PATH TCP
 rm Archive/scalars.sca
 rm Archive/vectors.vec

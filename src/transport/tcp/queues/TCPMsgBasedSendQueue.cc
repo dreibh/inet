@@ -50,9 +50,10 @@ void TCPMsgBasedSendQueue::enqueueAppData(cPacket *msg)
 {
     //tcpEV << "sendQ: " << info() << " enqueueAppData(bytes=" << msg->getByteLength() << ")\n";
     end += msg->getByteLength();
-    if (seqLess(end, begin))
+    if (seqLess(end, begin)){
+        end -= msg->getByteLength();
         throw cRuntimeError("Send queue is full");
-
+    }
     Payload payload;
     payload.endSequenceNo = end;
     payload.msg = msg;
