@@ -1,0 +1,7 @@
+The TCP module is not running 
+
+- by active delayed acks -> avoid **.*.tcp.delayedAcksEnabled = false in the current status
+
+Open issues
+- TCP New Reno just sendData with true, to avoid partial pakets. Only full packets will send
+- Packet error rates above 0.4 % shows crazy results
