@@ -143,8 +143,8 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             setCWND(std::min(state->ssthresh, bytesInFlight() + state->snd_mss));
             state->lossRecovery = false;
             state->firstPartialACK = false;
-            if (rexmitTimer->isScheduled())
-                 cancelEvent(rexmitTimer);   // Todo ...is here the best point
+//            if (rexmitTimer->isScheduled())
+//                 cancelEvent(rexmitTimer);   // Todo ...is here the best point
             tcpEV << "End Loss Recovery\n";
         }
         else{
@@ -174,7 +174,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
     {
         restartRexmitTimer();
     }
-    sendData(false);
+    sendData(true);
 }
 
 
@@ -189,7 +189,7 @@ void TCPNewReno::receivedDuplicateAck()
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
         //conn->sendOneNewSegment(false, state->snd_cwnd);
         //conn->sendData(false, state->snd_cwnd);
-        sendData(false); // is this pending data?
+        sendData(true); // is this pending data?
     }
     else if (state->dupacks == DUPTHRESH && (!state->lossRecovery)) // DUPTHRESH = 3
     {

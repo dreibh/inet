@@ -564,6 +564,7 @@ void TCPConnection::sendEstabIndicationToApp()
         }
         this->flow->sendEstablished = true;
     }
+    sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
 #endif
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
     cMessage *msg = new cMessage(indicationName(TCP_I_ESTABLISHED));
@@ -934,6 +935,8 @@ void TCPConnection::sendSegment(uint32 bytes)
 
     if (bytes > buffered) // last segment?
         bytes = buffered;
+    if(bytes < 1444)
+           tcpEV << "Let me know why" << endl;
 
 #ifdef PRIVATE
         DEBUGPRINT("send less bytes as possible [possible: %u], because there are less data enqueued [enqueued: %u]",bytes,buffered);
@@ -967,11 +970,16 @@ void TCPConnection::sendSegment(uint32 bytes)
 #endif
 
     ASSERT(options_len < state->snd_mss);
+    if(bytes < 1444)
+            tcpEV << "Let me know why" << endl;
 
     if (bytes + options_len > state->snd_mss)
         bytes = state->snd_mss - options_len;
 
     state->sentBytes = bytes;
+
+    if(state->sentBytes < 1444)
+        tcpEV << "Let me know why" << endl;
 
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
     TCPSegment *tcpseg = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
@@ -1176,7 +1184,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     }
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
-    state->queueUpdate = true;
+
     return true;
 }
 

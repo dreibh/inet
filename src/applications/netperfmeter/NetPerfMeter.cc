@@ -917,7 +917,7 @@ unsigned long NetPerfMeter::getFrameSize(const unsigned int streamID)
    unsigned long frameSize;
    if(FrameSizeExpressionVector.size() == 0) {
       frameSize = par("frameSize");
-      // FIXME Merge
+      // FIXME Merge (Perhaps it is nice to get it somewhere from the config
       if(!frameSize)
           frameSize = 1424;
    }
