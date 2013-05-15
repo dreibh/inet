@@ -236,7 +236,7 @@ void TCPConnection::setPipe()
 
 bool TCPConnection::nextSeg(uint32 &seqNum)
 {
-    ASSERT(state->sack_enabled);
+    // ASSERT(state->sack_enabled); // FIXME -> Dor New Reno , this Assert makes trouble
 
     // RFC 3517, page 5: "This routine uses the scoreboard data structure maintained by the
     // Update() function to determine what to transmit based on the SACK
@@ -372,7 +372,7 @@ bool TCPConnection::nextSeg(uint32 &seqNum)
 
 void TCPConnection::sendDataDuringLossRecoveryPhase(uint32 congestionWindow)
 {
-    ASSERT(state->sack_enabled && state->lossRecovery);
+    // ASSERT(state->sack_enabled && state->lossRecovery); // FIXME -> Dor New Reno , this Assert makes trouble
 
     // RFC 3517 pages 7 and 8: "(5) In order to take advantage of potential additional available
     // cwnd, proceed to step (C) below.
@@ -404,7 +404,7 @@ void TCPConnection::sendDataDuringLossRecoveryPhase(uint32 congestionWindow)
 
 void TCPConnection::sendSegmentDuringLossRecoveryPhase(uint32 seqNum)
 {
-    ASSERT(state->sack_enabled && state->lossRecovery);
+    // ASSERT(state->sack_enabled && state->lossRecovery); // FIXME -> Dor New Reno , this Assert makes trouble
 
     // start sending from seqNum
     state->snd_nxt = seqNum;

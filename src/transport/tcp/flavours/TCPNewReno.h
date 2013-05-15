@@ -40,6 +40,7 @@ class INET_API TCPNewReno : public TCPTahoeRenoFamily
     void setCWND(uint32 newCWND);
     void initializeTCPNewReno();
     void initilazeCWND();
+    void updateCWND(uint32 firstSeqAcked);
     uint32 bytesInFlight();
 
   protected:

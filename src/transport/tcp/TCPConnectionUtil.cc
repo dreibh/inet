@@ -1018,17 +1018,17 @@ void TCPConnection::sendSegment(uint32 bytes)
     uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
 
 #ifdef PRIVATE
-//    if(this->getTcpMain()->multipath){
+    if(this->getTcpMain()->multipath){
         int msg_cnt = ((abated * 0.5)/ (state->snd_mss-options_len));
         (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
 
         // FIXME Test we work with bigger steps, because it needs a long simulation time to create it for posssibe every message
         if((state->sendQueueLimit > 0) && (abated < (state->sendQueueLimit * 0.05)))
                 abated = 0;
-//    }else{
-//        state->queueUpdate = false;
-//        abated +=  (state->snd_mss - options_len);
-//    }
+    }else{
+        state->queueUpdate = false;
+        abated +=  (state->snd_mss - options_len);
+    }
     if(isQueueAble && abated)
 #endif
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
@@ -1176,7 +1176,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     }
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
-
+    state->queueUpdate = true;
     return true;
 }
 
