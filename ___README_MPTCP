@@ -9,3 +9,10 @@ Häufiges Problem bei der ersten Übersetzung ist die Projekteinstellung bei bei
 Die Makemakefiles wird von Omnetpp sowohl für das Root als auch das SRC Verzeichnis gesetzt. 
 Wenn Crypto gebraucht wird ist dies immer auf Costum Makefile zu ändern. 
  
+ 
+ 
+ 
+ 
+ TEST Mit Valgrind
+ 
+ valgrind --tool=memcheck --log-file="valgrind.log"  ../../../src/inet -r 0 -u Cmdenv -n ../..:../../../simulations:../../../src  fehler.ini
