@@ -15,3 +15,13 @@ Resume:
 
 - Schedule established path with full window
 - schedlue established path   
+
+
+
+Question of usable paths:
+- Only established paths are useful. (Subconnection)
+- Weighted scheduling on counted bytes
+- Only scheduling on Path established by sender (First SYN by Sender)
+- Group Paths	
+	- Group over CWND and outgoing address 
+ 
