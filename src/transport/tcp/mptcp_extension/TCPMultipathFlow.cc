@@ -99,8 +99,6 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
  * Destructor
  */
 MPTCP_Flow::~MPTCP_Flow() {
-    // TODO(MBe) -> De-Constructor of Flow
-
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                i != subflow_list.end(); i++) {
            TCP_subflow_t* entry = (*i);

@@ -64,56 +64,31 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
 }
 
 void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
-    bool foundLast = false;
+
     TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)lastUsed->flow->getSubflows();
     ASSERT(lastUsed);
-
-    TCP_subflow_t* entry = NULL;
-    TCP_SubFlowVector_t::iterator it = subflow_list->begin();
-    uint32_t max_counter = 0;
-
-    while (true) {
-       entry = (*it);
-       ASSERT(flow);
-       // First organize the send queue limit
-       if(!lastUsed->getState()->sendQueueLimit )
-           lastUsed->getState()->sendQueueLimit = flow->flow_send_queue_limit;
-       // go to the nextwith free space
-       if(foundLast){
-           lastUsed = entry->subflow;
-           uint32 seq_tmp = 0;
-           if(NULL != lastUsed->getSendQueue())
-               seq_tmp = lastUsed->getSendQueue()->getBufferStartSeq();
-           else
-               throw cRuntimeError("Send Queue NULL??");
-
-           const uint32 free = lastUsed->getState()->sendQueueLimit - lastUsed->getSendQueue()->getBytesAvailable(seq_tmp);
-           if(bytes < free && lastUsed->isQueueAble){
-               //DEBUGPRINT("[SCHEDLUER][ROUND ROBIN][QUEUE] fill %d! Send queue local %s:%d remote %s:%d [left: %d]",
-               //                   max_counter, lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort, free - bytes);
-               break;
-           }
-           //DEBUGPRINT("[SCHEDLUER][ROUND ROBIN][QUEUE] Next %d! Send queue of local %s:%d remote %s:%d is full [left: %d]",
-           //        max_counter, lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort, free);
-
-#ifdef PRIVATE  // for debug
-           if(!(max_counter < subflow_list->size())){
-               // FIXME -> MSG Data Queues (something is wrong in their behaivior)
-               lastUsed = NULL;
-               break;
-           }
-           // Assert not reached because, we work here wit warnings...
-#endif
-           ASSERT(max_counter < subflow_list->size() && "Ups...The Application send more Data as I can handle..");
-           max_counter++;
-       }
-       // first we have to check if buffer is empty
-       else if(entry->subflow == lastUsed){
-           foundLast = true;
-       }
-       it++;
-       if(it == subflow_list->end())
-           it = subflow_list->begin();
+    TCPConnection* tmp = NULL;
+    bool firstrun = true;
+    bool found = false;
+    for(;;){
+        for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
+            TCP_subflow_t*  entry = (*it);
+            tmp = entry->subflow;
+            if(tmp == lastUsed && firstrun){
+                firstrun = !firstrun;
+            }
+            else if(tmp == lastUsed && (!firstrun)){
+                found = true;
+            }
+            else if(tmp->getTcpMain() == lastUsed->getTcpMain()){
+                found = true;
+                break;
+            }
+        }
+        if(found){
+            lastUsed = tmp;
+            break;
+        }
     }
 }
 
