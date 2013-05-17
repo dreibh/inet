@@ -1,3 +1,6 @@
+
+
+
 - Round Robin
 -> make it a different on which moment the scheduling process is done. 
 -> the TCPMultipathRoundRobinScheduler works like that
@@ -5,4 +8,10 @@
 		  Possible Alternatives:
 		  		- Use a Pseudo Queue -> enqueue everything in a pseudo queue, if a connection is scheduled for sending, take as much data as the window allows
 		  		- Use a Pseudo Queue -> enqueue everything in a pseudo queue, if a connection is scheduled for sending, take one packet and go to next
-		  		- ...  
+		  		- ...
+Resume:
+- Schedule all data over established paths
+- Schedule all data over established path depending their CC window (Buffer Splitting/Buffer Blocking)
+
+- Schedule established path with full window
+- schedlue established path   
