@@ -53,7 +53,7 @@ simple NetPerfMeter like INetPerfMeterApp
         string          primaryPath              = default("");        // primary path (may be symbolic; SCTP only)
 
         volatile double frameRate      @unit(Hz) = default(1 Hz);      // Outgoing frame rate
-        volatile double frameSize      @unit(B)  = default(1452 B);    // Outgoing frame size
+        volatile double frameSize      @unit(B)  = default(1444 B);    // Outgoing frame size
         string          frameRateString          = default("");        // Outgoing frame rate per stream, separated by ";"
         string          frameSizeString          = default("");        // Outgoing frame size per stream, separated by ";"
         double          maxMsgSize     @unit(B)  = default(1000 B);    // Maximum message size

@@ -981,9 +981,18 @@ void TCPConnection::sendSegment(uint32 bytes)
     if(state->sentBytes < 1444)
         tcpEV << "Let me know why" << endl;
 
+#ifndef PRIVATE
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
-    TCPSegment *tcpseg = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
-    
+    TCPSegment *tcpseg  = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
+#else // FIXME Something goes wrong here
+
+    TCPSegment* tcpseg  = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
+    cMessage*   msg_tmp = check_and_cast<cMessage*> (tcpseg);
+        // OK if we send it over another module, we have to dup this message
+    if(msg_tmp->getOwner() != this->getTcpMain())
+        throw cRuntimeError("Why we are not Owner?");
+#endif
+
     // if sack_enabled copy region of tcpseg to rexmitQueue
 
     if (state->sack_enabled)

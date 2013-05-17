@@ -775,7 +775,7 @@ int MPTCP_PCB::_clearAll() {
 void MPTCP_PCB::DEBUGprintFlowOverview(int type){
 #ifdef PRIVATE
    DEBUGPRINT("[MPTCP][OVERVIEW][PCB] =======================================%s","\0");
-    static uint64_t rcv_cnt = 0;
+   // static uint64_t rcv_cnt = 0;
 
     AllMultipathTCPVector_t::const_iterator it;
 

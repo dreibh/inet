@@ -46,7 +46,7 @@ class MPTCP_Flow;
 
 typedef struct _DSS_INFO{
 	uint64 dss_seq;
-	uint32 seq_offset;
+	uint64 seq_offset;
 	int re_scheduled;
 	bool delivered;
 	bool section_end;
@@ -54,7 +54,7 @@ typedef struct _DSS_INFO{
 
 typedef struct _DSS_BASE_INFO{
     uint64 dss_seq;
-    uint32 subflow_seq;
+    uint64 subflow_seq;
 } DSS_BASE_INFO;
 
 typedef std::map<uint32,DSS_INFO*> TCPMultipathDSSStatus;

@@ -23,6 +23,7 @@
 #include <set>
 
 #ifdef PRIVATE
+class MPTCP_SchedulerI;
 class MPTCP_PCB;
 #endif
 
@@ -175,6 +176,7 @@ class INET_API TCP : public cSimpleModule
 
 #ifdef PRIVATE
     MPTCP_PCB* mptcp_pcb;
+    MPTCP_SchedulerI* scheduler;
     bool multipath;
     bool multipath_DSSDataACK8;
     bool multipath_DSSSeqNo8;

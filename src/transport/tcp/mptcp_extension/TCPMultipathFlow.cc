@@ -952,7 +952,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 break;
             }
             else{
-                DSS_INFO* dss_info = (DSS_INFO*) malloc(sizeof(DSS_INFO));
+                DSS_INFO* dss_info = new DSS_INFO;// (DSS_INFO*) malloc(sizeof(DSS_INFO));
                 dss_info->dss_seq = this->mptcp_snd_nxt;
                 dss_info->seq_offset = bytes_tmp;
                 dss_info->section_end = false;
@@ -1151,7 +1151,7 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 		else
 		    bytes = conn->getState()->snd_una - start;
 
-		uint32 cum = 0;
+		uint64 cum = 0;
 		for(; cum < bytes; this->mptcp_snd_una++){
 		    TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.find(start+cum);
 		    if(it==conn->dss_dataMapofSubflow.end()){
@@ -1169,13 +1169,15 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 		    if(dss_info->seq_offset > bytes){
 		        dss_info->seq_offset =   dss_info->seq_offset - bytes;
 		        conn->dss_dataMapofSubflow[start] = dss_info; //because of split add dss_info
+
+		        cum += (dss_info->seq_offset);
+                conn->base_una_dss_info.subflow_seq += dss_info->seq_offset;
+                conn->base_una_dss_info.dss_seq += dss_info->seq_offset;
 		    }
 		    else{
 		        delete dss_info;
 		    }
-		    cum += (dss_info->seq_offset);
-		    conn->base_una_dss_info.subflow_seq += dss_info->seq_offset;
-		    conn->base_una_dss_info.dss_seq += dss_info->seq_offset;
+
 		}
 		if(conn->base_una_dss_info.dss_seq >  this->mptcp_snd_una)
 		    this->mptcp_snd_una = conn->base_una_dss_info.dss_seq;
@@ -1214,10 +1216,8 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
 				(*i)->subflow->getTcpMain()->send(msg, "appOut", (*i)->subflow->appGateIndex);
 
 			}
-		   size_t queue_len = mptcp_receiveQueue->getQueueLength();
 		   if (mptcpRcvBufferSize)
 			   mptcpRcvBufferSize->record(mptcp_receiveQueue->getAmountOfBufferedBytes());
-		   DEBUGPRINT("[MPTCP][RCV QUEUE][RECORD] size %lu with bytes. %ld",queue_len, mptcp_receiveQueue->getAmountOfBufferedBytes());
     	}
        else{
            (*i)->subflow->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
@@ -1239,14 +1239,7 @@ void MPTCP_Flow::setSendQueueLimit(int limit){
 }
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
     // easy scheduler
-    static int cnt = 0;
-
-    char name[255];
-
     MPTCP_SchedulerI* scheduler = TCPSchedulerManager::getMPTCPScheduler(save->getTcpMain(),this);
-
-    sprintf(name,"Test-%i",cnt++);
-    msg->setName(name);
     scheduler->schedule(save, msg);
     return save;
 }

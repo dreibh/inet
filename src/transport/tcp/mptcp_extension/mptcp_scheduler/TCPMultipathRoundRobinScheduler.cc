@@ -30,6 +30,7 @@ Register_Class(MPTCP_RoundRobinScheduler);
 TCPConnection* MPTCP_RoundRobinScheduler::lastUsed = NULL;
 
 MPTCP_RoundRobinScheduler::MPTCP_RoundRobinScheduler(){
+    lastUsed = NULL;
 }
 
 MPTCP_RoundRobinScheduler::~MPTCP_RoundRobinScheduler(){
@@ -37,40 +38,26 @@ MPTCP_RoundRobinScheduler::~MPTCP_RoundRobinScheduler(){
 }
 
 void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
-
-    TCPConnection tmp_last;
+    static TCP* test = NULL;
     if(lastUsed==NULL){
           lastUsed = origin;
+          test = origin->getTcpMain();
     }
+    if(lastUsed->getTcpMain() != test){
+        throw cRuntimeError("Trouble");
+    }
+    ASSERT(lastUsed);
+
     // We have to split data on mss size
     cPacket* pkt = check_and_cast<cPacket*> (msg);
 
     if(lastUsed->getState()->sendQueueLimit)
         ASSERT(lastUsed->getState()->sendQueueLimit > pkt->getByteLength() && "What is the application doing...? Too much data!");
 
-//  FIXME is this what we need? TODO pipe the netperfmeter information
-//     while(pkt->getByteLength() > lastUsed->getState()->snd_mss){
-//
-//        if(pkt->getByteLength() > lastUsed->getState()->snd_mss){
-//            cPacket* msg_tmp = new cPacket(*pkt);
-//            msg_tmp->setByteLength(lastUsed->getState()->snd_mss);
-//            _next(msg_tmp->getByteLength());
-//            if(lastUsed==NULL) {
-//                delete msg;
-//                return; // NO SUBFLOW FOR DATA
-//            }
-//            _createMSGforProcess(msg_tmp);
-//            pkt->setByteLength(pkt->getByteLength()- lastUsed->getState()->snd_mss); // FIXME What is about the options
-//            if(lastUsed->scheduledBytesVector)
-//                lastUsed->scheduledBytesVector->record(msg_tmp->getByteLength());
-//        }
-//    }
+    int64 cond = pkt->getByteLength();
+    _next(cond);
+    ASSERT(lastUsed);
 
-    _next(pkt->getByteLength());
-    if(lastUsed==NULL) {
-        delete msg;
-        return; // NO SUBFLOW FOR DATA
-    }
     _createMSGforProcess(msg);
     if(lastUsed->scheduledBytesVector)
         lastUsed->scheduledBytesVector->record(pkt->getByteLength());
@@ -79,20 +66,28 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
 void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
     bool foundLast = false;
     TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)lastUsed->flow->getSubflows();
+    ASSERT(lastUsed);
 
     TCP_subflow_t* entry = NULL;
     TCP_SubFlowVector_t::iterator it = subflow_list->begin();
     uint32_t max_counter = 0;
+
     while (true) {
        entry = (*it);
-
+       ASSERT(flow);
        // First organize the send queue limit
        if(!lastUsed->getState()->sendQueueLimit )
            lastUsed->getState()->sendQueueLimit = flow->flow_send_queue_limit;
        // go to the nextwith free space
        if(foundLast){
            lastUsed = entry->subflow;
-           const uint32 free = lastUsed->getState()->sendQueueLimit - lastUsed->getSendQueue()->getBytesAvailable(lastUsed->getSendQueue()->getBufferStartSeq());
+           uint32 seq_tmp = 0;
+           if(NULL != lastUsed->getSendQueue())
+               seq_tmp = lastUsed->getSendQueue()->getBufferStartSeq();
+           else
+               throw cRuntimeError("Send Queue NULL??");
+
+           const uint32 free = lastUsed->getState()->sendQueueLimit - lastUsed->getSendQueue()->getBytesAvailable(seq_tmp);
            if(bytes < free && lastUsed->isQueueAble){
                //DEBUGPRINT("[SCHEDLUER][ROUND ROBIN][QUEUE] fill %d! Send queue local %s:%d remote %s:%d [left: %d]",
                //                   max_counter, lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort, free - bytes);
@@ -104,8 +99,6 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
 #ifdef PRIVATE  // for debug
            if(!(max_counter < subflow_list->size())){
                // FIXME -> MSG Data Queues (something is wrong in their behaivior)
-               fprintf(stderr,"[SCHEDLUER][ROUND ROBIN][QUEUE][WARNING] too much data for buffer %d [free %d]\n",bytes, free);
-               tcpEV << "[SCHEDLUER][ROUND ROBIN][QUEUE][WARNING] too much data for buffer " << bytes << endl;
                lastUsed = NULL;
                break;
            }
@@ -141,16 +134,12 @@ uint32_t MPTCP_RoundRobinScheduler::getFreeSendBuffer(){
 }
 
 void MPTCP_RoundRobinScheduler::_createMSGforProcess(cMessage *msg) {
-    if(lastUsed==NULL)
-          return;
+    ASSERT(lastUsed);
     msg->setKind(TCP_C_MPTCP_SEND);
-//    DEBUGPRINT(
-//            "[SCHEDULER][ROUND ROBIN][OUT] Send via  %s:%d to %s:%d",
-//            lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort);
-
     TCPSendCommand *cmd = new TCPSendCommand();
     cmd->setConnId(lastUsed->connId);
     msg->setControlInfo(cmd);
+
     lastUsed->processAppCommand(msg);
 
     //sc->getTcpMain()->scheduleAt(simTime() + 0.0001, msg);

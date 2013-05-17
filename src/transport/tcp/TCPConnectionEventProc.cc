@@ -264,7 +264,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             static uint64 cnt = 0;
             static int number = 0;
             number++;
-            char message_name[255];
+//            char message_name[255];
             cPacket* test = check_and_cast<cPacket *> (msg);
             cnt += test->getByteLength();
 //            fprintf(stderr, "[FLOW][SUBFLOW][STATUS] Send Bytes %lu Name: %s - %i\n",cnt,test->getName(),number);
