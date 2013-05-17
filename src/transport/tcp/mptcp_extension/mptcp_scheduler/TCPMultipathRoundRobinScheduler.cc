@@ -74,15 +74,24 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
         for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
             TCP_subflow_t*  entry = (*it);
             tmp = entry->subflow;
+            // First organize the send queue limit
+            if(!tmp->getState()->sendQueueLimit )
+               tmp->getState()->sendQueueLimit = flow->flow_send_queue_limit;
+
+
             if(tmp == lastUsed && firstrun){
                 firstrun = !firstrun;
             }
             else if(tmp == lastUsed && (!firstrun)){
                 found = true;
+                break;
             }
             else if(tmp->getTcpMain() == lastUsed->getTcpMain()){
-                found = true;
-                break;
+                const uint32 free = tmp->getState()->sendQueueLimit - tmp->getSendQueue()->getBytesAvailable(tmp->getSendQueue()->getBufferStartSeq());
+                if(bytes < free && tmp->isQueueAble){
+                    found = true;
+                    break;
+                }
             }
         }
         if(found){
