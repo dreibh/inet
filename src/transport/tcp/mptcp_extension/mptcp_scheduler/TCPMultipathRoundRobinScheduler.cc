@@ -56,7 +56,7 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
 
     int64 cond = pkt->getByteLength();
     _next(cond);
-    ASSERT(lastUsed);
+    if(!lastUsed) return;
 
     _createMSGforProcess(msg);
     if(lastUsed->scheduledBytesVector)
