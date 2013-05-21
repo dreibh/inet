@@ -323,7 +323,36 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 
     delete sendCommand; // msg itself has been taken by the sendQueue
 }
+void TCPConnection::process_CLOSE(){
+#ifdef PRIVATE
+    //
+    // SYN_RCVD processing (ESTABLISHED and CLOSE_WAIT are similar):
+    //"
+    // If no SENDs have been issued and there is no pending data to send,
+    // then form a FIN segment and send it, and enter FIN-WAIT-1 state;
+    // otherwise queue for processing after entering ESTABLISHED state.
+    //"
+    if (state->snd_max == sendQueue->getBufferEndSeq())
+    {
+        tcpEV << "No outstanding SENDs, sending FIN right away, advancing snd_nxt over the FIN\n";
+        state->snd_nxt = state->snd_max;
+        sendFin();
+        tcpAlgorithm->restartRexmitTimer();
+        state->snd_max = ++state->snd_nxt;
 
+        if (unackedVector)
+            unackedVector->record(state->snd_max - state->snd_una);
+
+        // state transition will automatically take us to FIN_WAIT_1 (or LAST_ACK)
+    }
+    else
+    {
+        // FIXME - do we need an event?
+    }
+    state->send_fin = true;
+    state->snd_fin_seq = sendQueue->getBufferEndSeq();
+#endif
+}
 void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)
 {
     delete tcpCommand;
@@ -372,6 +401,9 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
              }
             if(multipath){
             	//TODO
+                if(this->isSubflow){
+
+                }
             }
             else{
 #endif
@@ -421,6 +453,53 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             }
             state->send_fin = true;
             state->snd_fin_seq = sendQueue->getBufferEndSeq();
+
+
+
+#ifdef PRIVATE
+            { // context
+            bool multipath =  false;
+            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
+                 multipath     = false;
+             }
+             else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
+                  multipath     = true;
+             }
+          // TODO add new Congestion Control�
+          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
+          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
+          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
+          //            state->allowCMT     = true;
+          //         }
+          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
+          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
+          //            state->allowCMT     = true;
+          //         }
+            else {
+            throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
+                     (const char*)tcpMain->par("cmtCCVariant"));
+            }
+            if(multipath){
+                //TODO
+                if(this->isSubflow){
+                    this->flow->close(this, tcpCommand, msg);
+                }
+            }
+            }// end context
+#endif
             break;
 
         case TCP_S_FIN_WAIT_1:

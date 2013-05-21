@@ -455,8 +455,9 @@ class INET_API TCPConnection
 #ifdef PRIVATE
     virtual void process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
 
-#endif
+#else
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
+#endif
     virtual void process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
@@ -618,6 +619,8 @@ class INET_API TCPConnection
 #ifdef PRIVATE
     /** Utility: sends status indication (TCP_I_xxx) to application */
     virtual void sendIndicationToApp(int code, const int id = 0);
+    virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
+    virtual void process_CLOSE();
 #endif
     /** Utility: prints local/remote addr/port and app gate index/connId */
     virtual void printConnBrief() const;

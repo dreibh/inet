@@ -14,6 +14,7 @@
 #include <map>
 #include <set>
 
+#include "TCPConnection.h"
 #include "TCPMultipath.h"
 #include "TCPMultipathReceiveQueue.h"
 
@@ -68,6 +69,7 @@ class INET_API MPTCP_Flow
     uint32_t getRemoteToken();              // unique per PCB
     uint32_t getLocalToken();               // unique per PCB
 
+    bool close(TCPConnection* subflow, TCPCommand *tcpCommand, cMessage *msg);
     //######################################################
     // SQN and buffer
     uint64_t getHighestCumSQN();

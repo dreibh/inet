@@ -379,6 +379,8 @@ TCPConnection::~TCPConnection()
     delete sackedBytesVector;
 #ifdef PRIVATE
     delete scheduledBytesVector;
+    todelete = false;
+    isSubflow = false;
 #endif
 }
 

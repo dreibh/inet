@@ -156,7 +156,7 @@ TCP::~TCP()
 #ifndef PRIVATE
 		if((*i).second!= NULL){
 #else
-		if((*i).second!= NULL && (!(*i).second->todelete)){
+		if((*i).second!= NULL && (!(*i).second->todelete) && ((*i).second->isSubflow) ){
 #endif
 			delete (*i).second;
 		}
@@ -166,7 +166,7 @@ TCP::~TCP()
 #ifdef PRIVATE
     if(this->multipath){
          delete this->mptcp_pcb;
-         delete this->scheduler;
+         delete this->scheduler;    // FIXME
     }
 #endif
 

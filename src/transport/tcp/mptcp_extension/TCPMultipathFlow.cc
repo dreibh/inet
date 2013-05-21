@@ -16,6 +16,7 @@
 
 #ifdef PRIVATE
 
+#include "TCP.h"
 #include "TCPConnection.h"
 #include "TCPMultipathFlow.h"
 #include "TCPSACKRexmitQueue.h"
@@ -31,7 +32,6 @@
 #include <inttypes.h>
 #endif
 
-#include "TCP.h"
 
 // some defines for maximum sizes
 #define COMMON_MPTCP_OPTION_HEADER_SIZE 16
@@ -346,9 +346,22 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
         c->remote.port = r->port;
         tried_join.push_back(c);
     }
-    if(this->getPCB()->isFIN)
+    if(this->getPCB()->isFIN){
         tcpseg->setFinBit(true);
 
+        subflow->sendFin();
+        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                   i != subflow_list.end(); ++i) {
+               TCP_subflow_t* entry = (*i);
+               if (entry->subflow->getTcpMain() == subflow->getTcpMain()){
+
+                   uint32 ackNo = tcpseg->getSequenceNo() + tcpseg->getSegLen();
+                   subflow->sendFin();
+                   subflow->sendRst(ackNo);
+               }
+           }
+        return 0;
+    }
     /**********************************************************************************
      *  we have to send different TCP Options for handshake, depending on the states
      *  SYN(A->B):      A's KEY             -> MPTCP STATE IDLE/PRE_ESTABLISHED
@@ -439,6 +452,19 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
     }DEBUGPRINT(
             "End Preparing Outgoing Segment <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%c",'\0');
     return t;
+}
+
+bool  MPTCP_Flow::close(TCPConnection* subflow,TCPCommand *tcpCommand, cMessage *msg){
+    this->getPCB()->isFIN = true;
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+              i != subflow_list.end(); ++i) {
+          TCP_subflow_t* entry = (*i);
+
+          if (entry->subflow->getTcpMain() == subflow->getTcpMain()){
+                    entry->subflow->process_CLOSE();
+          }
+      }
+    return true;
 }
 
 /*

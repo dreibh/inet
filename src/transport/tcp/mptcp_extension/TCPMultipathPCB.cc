@@ -157,6 +157,10 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
         DEBUGPRINT("TCP FIN SEND%s","\0");
         isFIN = true;
     }
+    if (tcpseg->getRstBit()){
+        DEBUGPRINT("TCP RST SEND%s","\0");
+        isFIN = true;
+    }
     /**
      * CASE "NEW MPTCP FLOW" or "NO MPTCP FLOW"
      */
