@@ -8,6 +8,7 @@
 		  Possible Alternatives:
 		  		- Use a Pseudo Queue -> enqueue everything in a pseudo queue, if a connection is scheduled for sending, take as much data as the window allows
 		  		- Use a Pseudo Queue -> enqueue everything in a pseudo queue, if a connection is scheduled for sending, take one packet and go to next
+		  			- What happends with special features like dealyed ACK (TODO Delayed ACK)
 		  		- ...
 Resume:
 - Schedule all data over established paths
