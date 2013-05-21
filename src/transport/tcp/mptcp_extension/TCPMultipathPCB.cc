@@ -36,6 +36,7 @@ MPTCP_PCB::MPTCP_PCB(){
 MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
 
     subflow->flow = NULL;
+    isFIN = false;
     // Static helper elements for organization
     AllMultipathTCPVector_t::const_iterator it;
     for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
@@ -154,6 +155,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
 
     if (tcpseg->getFinBit()){
         DEBUGPRINT("TCP FIN SEND%s","\0");
+        isFIN = true;
     }
     /**
      * CASE "NEW MPTCP FLOW" or "NO MPTCP FLOW"

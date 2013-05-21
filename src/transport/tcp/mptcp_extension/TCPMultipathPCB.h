@@ -48,6 +48,7 @@ class INET_API MPTCP_PCB
 
 
 
+        bool isFIN; // FIXME should use setter and getter
 
         void DEBUGprintFlowOverview(int);
 
@@ -75,6 +76,7 @@ class INET_API MPTCP_PCB
         static MPTCP_PCB* _lookupMPTCP_PCB(int connid, int aAppGateIndex, TCPConnection *subflow);
         static MPTCP_PCB* _lookupMPTCPbySubflow_PCB(int connId, int aAppGateIndex, TCPSegment *tcpseg,  TCPConnection* subflow);
         static MPTCP_PCB* _lookupMPTCP_PCBbyMP_Option(TCPSegment* tcpseg, TCPConnection* subflow);
+
 
 
         // debug

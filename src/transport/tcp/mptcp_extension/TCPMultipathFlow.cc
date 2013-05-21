@@ -346,6 +346,8 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
         c->remote.port = r->port;
         tried_join.push_back(c);
     }
+    if(this->getPCB()->isFIN)
+        tcpseg->setFinBit(true);
 
     /**********************************************************************************
      *  we have to send different TCP Options for handshake, depending on the states
