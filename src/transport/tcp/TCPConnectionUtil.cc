@@ -990,8 +990,9 @@ void TCPConnection::sendSegment(uint32 bytes)
     TCPSegment* tcpseg  = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
     cMessage*   msg_tmp = check_and_cast<cMessage*> (tcpseg);
         // OK if we send it over another module, we have to dup this message
-    if(msg_tmp->getOwner() != this->getTcpMain())
-        throw cRuntimeError("Why we are not Owner?");
+    if(msg_tmp->getOwner() != this->getTcpMain()){
+        throw cRuntimeError("Why we are not Owner? - something goes wrong here");
+    }
 #endif
 
     // if sack_enabled copy region of tcpseg to rexmitQueue
