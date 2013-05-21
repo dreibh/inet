@@ -370,6 +370,7 @@ class INET_API TCPConnection
 
     bool isQueueAble;
     bool todelete;
+    bool inlist;
     MPTCP_Flow* flow;
     uint32 randomA;				// used to store randam of MPTCP MP_JOIN
     uint32 randomB; 			// used to store randam of MPTCP MP_JOIN

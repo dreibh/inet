@@ -348,39 +348,108 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 
 TCPConnection::~TCPConnection()
 {
-    delete sendQueue;
-    delete rexmitQueue;
-    delete receiveQueue;
-    delete tcpAlgorithm;
-    delete state;
 
     if (the2MSLTimer)   delete cancelEvent(the2MSLTimer);
     if (connEstabTimer) delete cancelEvent(connEstabTimer);
     if (finWait2Timer)  delete cancelEvent(finWait2Timer);
     if (synRexmitTimer) delete cancelEvent(synRexmitTimer);
 
+    if(sendQueue){
+        delete sendQueue;
+        sendQueue = NULL;
+    }
+    if(rexmitQueue){
+        delete rexmitQueue;
+        rexmitQueue = NULL;
+    }
+    if(receiveQueue){
+        delete receiveQueue;
+        receiveQueue = NULL;
+    }
+    if(tcpAlgorithm){
+        delete tcpAlgorithm;
+        tcpAlgorithm = NULL;
+    }
+    if(state){
+        delete state;
+        state = NULL;
+    }
+
     // statistics
-    delete sndWndVector;
-    delete rcvWndVector;
-    delete rcvAdvVector;
-    delete sndNxtVector;
-    delete sndAckVector;
-    delete rcvSeqVector;
-    delete rcvAckVector;
-    delete unackedVector;
-    delete dupAcksVector;
-    delete sndSacksVector;
-    delete rcvSacksVector;
-    delete rcvOooSegVector;
-    delete rcvNASegVector;
-    delete tcpRcvQueueBytesVector;
-    delete tcpRcvQueueDropsVector;
-    delete pipeVector;
-    delete sackedBytesVector;
+    if(sndWndVector){
+        delete sndWndVector;
+        sndWndVector= NULL;
+    }
+    if(rcvWndVector){
+        delete rcvWndVector;
+        rcvWndVector = NULL;
+    }
+    if(rcvAdvVector){
+        delete rcvAdvVector;
+        rcvAdvVector = NULL;
+    }
+    if(sndNxtVector){
+        delete sndNxtVector;
+        sndNxtVector = NULL;
+    }
+    if(sndAckVector){
+        delete sndAckVector;
+        sndAckVector = NULL;
+    }
+    if(rcvSeqVector){
+        delete rcvSeqVector;
+        rcvSeqVector = NULL;
+    }
+    if(rcvAckVector){
+        delete rcvAckVector;
+        rcvAckVector = NULL;
+    }
+    if(unackedVector){
+        delete unackedVector;
+        unackedVector = NULL;
+    }
+    if(dupAcksVector){
+        delete dupAcksVector;
+        dupAcksVector = NULL;
+    }
+    if(sndSacksVector){
+        delete sndSacksVector;
+        sndSacksVector = NULL;
+    }
+    if(rcvSacksVector){
+        delete rcvSacksVector;
+        rcvSacksVector = NULL;
+    }
+    if(rcvOooSegVector){
+        delete rcvOooSegVector;
+        rcvOooSegVector = NULL;
+    }
+    if(rcvNASegVector){
+        delete rcvNASegVector;
+        rcvNASegVector = NULL;
+    }
+    if(tcpRcvQueueBytesVector){
+        delete tcpRcvQueueBytesVector;
+        tcpRcvQueueBytesVector = NULL;
+    }
+    if(tcpRcvQueueDropsVector){
+        delete tcpRcvQueueDropsVector;
+        tcpRcvQueueDropsVector = NULL;
+    }
+    if(pipeVector){
+        delete pipeVector;
+        pipeVector = NULL;
+    }
+    if(sackedBytesVector){
+        delete sackedBytesVector;
+        sackedBytesVector = NULL;
+    }
+
 #ifdef PRIVATE
     delete scheduledBytesVector;
     todelete = false;
     isSubflow = false;
+    inlist = false;
 #endif
 }
 

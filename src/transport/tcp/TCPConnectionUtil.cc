@@ -208,6 +208,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		 openCmd->setIsMptcpSubflow(true);
 		 conn->isSubflow = true;
 		 conn->flow = flow;
+		 conn->inlist = false;
 		if(!active){
 			_count_passiv_a++;
 			cMessage *msg = new cMessage("PassiveOPEN", TCP_E_OPEN_PASSIVE); // Passive Server Side
@@ -284,6 +285,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn->getState()->sendQueueLimit = this->getState()->sendQueueLimit;
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
+		conn->inlist = false;
 		return conn;
 
     }
@@ -442,6 +444,7 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 		conn->renameMPTCPVectors(cnt);
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
+		conn->inlist = false;
     }
 #endif
 

@@ -104,7 +104,7 @@ MPTCP_Flow::~MPTCP_Flow() {
            TCP_subflow_t* entry = (*i);
            if(entry!=NULL){
                // delete tmp subflows
-               if((entry->subflow != NULL) && (entry->subflow->todelete)){
+               if((entry->subflow != NULL) && (entry->subflow->isSubflow)){
                    delete entry->subflow ;
                    entry->subflow = NULL;
                }
@@ -213,8 +213,10 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
                     "[FLOW][SUBFLOW][STATUS] add subflow from  %s:%d to %s:%d",
                     subflow->localAddr.str().c_str(), subflow->localPort, subflow->remoteAddr.str().c_str(), subflow->remotePort);
     // add to list
-    subflow_list.push_back(t);
-
+    if(!t->subflow->inlist){
+        t->subflow->inlist = true;
+        subflow_list.push_back(t);
+    }
     // ###################################
     // Check for further possible subflows
     // add the adresses of this subflow to the known address list for a MP_JOIN or add
@@ -462,6 +464,7 @@ bool  MPTCP_Flow::close(TCPConnection* subflow,TCPCommand *tcpCommand, cMessage 
 
           if (entry->subflow->getTcpMain() == subflow->getTcpMain()){
                     entry->subflow->process_CLOSE();
+ //              entry->subflow->getState()->snd_fin_seq = entry->subflow->getSendQueue()->getBufferEndSeq();
           }
       }
     return true;

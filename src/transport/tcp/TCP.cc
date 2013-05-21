@@ -150,25 +150,27 @@ void TCP::initialize()
 
 TCP::~TCP()
 {
+
+#ifdef PRIVATE
+    if(this->multipath){
+         delete this->mptcp_pcb;
+         // delete this->scheduler;    // FIXME
+    }
+#endif
 	while (!tcpAppConnMap.empty())
 	{
 		TcpAppConnMap::iterator i = tcpAppConnMap.begin();
 #ifndef PRIVATE
 		if((*i).second!= NULL){
 #else
-		if((*i).second!= NULL && (!(*i).second->todelete) && ((*i).second->isSubflow) ){
+		if((*i).second!= NULL && ((*i).second->todelete)){
 #endif
 			delete (*i).second;
 		}
 		(*i).second= NULL;
 		tcpAppConnMap.erase(i);
 	}
-#ifdef PRIVATE
-    if(this->multipath){
-         delete this->mptcp_pcb;
-         delete this->scheduler;    // FIXME
-    }
-#endif
+
 
 }
 
