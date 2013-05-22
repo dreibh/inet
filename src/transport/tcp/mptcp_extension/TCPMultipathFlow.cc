@@ -99,26 +99,30 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
  * Destructor
  */
 MPTCP_Flow::~MPTCP_Flow() {
-    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-               i != subflow_list.end(); i++) {
-           TCP_subflow_t* entry = (*i);
-           if(entry!=NULL){
-               // delete tmp subflows
-               if((entry->subflow != NULL) && (entry->subflow->isSubflow)){
-                   delete entry->subflow ;
-                   entry->subflow = NULL;
-               }
-               delete entry;
-               entry = NULL;
-           }
 
+    for(TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++){
+       TCPConnection *conn =  (*i)->subflow;
+    //   delete conn;
     }
+
     subflow_list.clear();
     TCPSchedulerManager::destroyMPTCPScheduler();
     if(mptcp_receiveQueue!=NULL)
     	delete mptcp_receiveQueue;
 
     delete mptcpRcvBufferSize;
+}
+
+void MPTCP_Flow::removeSubflow(TCPConnection* subflow){
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+            i != subflow_list.end(); i++) {
+        TCP_subflow_t* entry = (*i);
+        if ((entry->subflow == subflow) ){
+            subflow_list.erase(i);
+            delete entry;
+            break;
+        }
+    }
 }
 
 /**
@@ -187,17 +191,17 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
     TCP_subflow_t *t = new TCP_subflow_t();
     subflow->isSubflow = true;
 
-    // FIXME perhaps it is a good idea to add the PCB to the subflow !!!!
-    // subflow-multi_pcb = pcb
+    if((subflow->localPort == -1) || (subflow->remotePort == -1) )
+        return 0;
 
     // If we know this subflow already something goes wrong
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
             i != subflow_list.end(); i++) {
         TCP_subflow_t* entry = (*i);
-        if ((entry->subflow->remoteAddr == subflow->remoteAddr)
+        if (((entry->subflow->remoteAddr == subflow->remoteAddr)
                 && (entry->subflow->remotePort == subflow->remotePort)
                 && (entry->subflow->localAddr == subflow->localAddr)
-                && (entry->subflow->localPort == subflow->localPort))
+                && (entry->subflow->localPort == subflow->localPort)) )
 
             return 0;
     }
@@ -621,9 +625,16 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
                 }
             }
 
-            if(!skip)   // we don have to set it in general server mode (passiv = false)
-                subflow->cloneMPTCPConnection(false,getLocalToken(),subflow->localAddr,subflow->remoteAddr );
+            if(!skip){   // we don have to set it in general server mode (passiv = false)
 
+                TCPConnection *conn_tmp = subflow->cloneMPTCPConnection(false,getLocalToken(),subflow->localAddr,subflow->remoteAddr );
+                TCP_subflow_t *t = new TCP_subflow_t();
+                t->active = true;
+                t->subflow = conn_tmp;
+                t->subflow->flow = this;
+                // subflow_list.push_back(t);
+
+            }
             DEBUGPRINT(
                     "[MPTCP][HANDSHAKE][MP_CAPABLE] ESTABLISHED after enqueue a ACK%s",
                     "\0");
@@ -871,10 +882,17 @@ bool MPTCP_Flow::_prepareJoinConnection() {
                 DEBUGPRINT(
                         "Try to add Subflow: %s:%d to %s:%d",
                         c->local.addr.str().c_str(), c->local.port, c->remote.addr.str().c_str(), c->remote.port);
+                // create a new active connection
+                int old =  tmp->remotePort;
+                tmp->remotePort = c->remote.port;
+                TCPConnection *conn_tmp = tmp->cloneMPTCPConnection(true,getLocalToken(),IPvXAddress(c->local.addr),IPvXAddress(c->remote.addr)); //    new TCPConnection(tmp->getTcpMain(),tmp->appGateIndex, tmp->connId); //
+                tmp->remotePort = old;
+                TCP_subflow_t *t = new TCP_subflow_t();
+                t->active = true;
+                t->subflow = conn_tmp;
 
-                // create a internal message for another active open connection
-
-                tmp->cloneMPTCPConnection(true,getLocalToken(),IPvXAddress(c->local.addr),IPvXAddress(c->remote.addr)); //    new TCPConnection(tmp->getTcpMain(),tmp->appGateIndex, tmp->connId); //
+                t->subflow->flow = this;
+                //subflow_list.push_back(t);
 
                 goto freeAndfinish;
             }

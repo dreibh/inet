@@ -32,6 +32,7 @@ class INET_API MPTCP_RoundRobinScheduler : public MPTCP_SchedulerI , public cPol
     virtual uint32_t getFreeSendBuffer();
   private:
     // Message handlign -> TODO SCHEDULER
+    size_t last;
     void _createMSGforProcess(cMessage *msg);
     void _next(uint32 bytes);
     static TCPConnection* lastUsed;

@@ -151,26 +151,25 @@ void TCP::initialize()
 TCP::~TCP()
 {
 
-#ifdef PRIVATE
-    if(this->multipath){
-         delete this->mptcp_pcb;
-         // delete this->scheduler;    // FIXME
-    }
-#endif
+
 	while (!tcpAppConnMap.empty())
 	{
 		TcpAppConnMap::iterator i = tcpAppConnMap.begin();
 #ifndef PRIVATE
 		if((*i).second!= NULL){
 #else
-		if((*i).second!= NULL && ((*i).second->todelete)){
+		if((*i).second!= NULL && (!(*i).second->isSubflow)){
 #endif
 			delete (*i).second;
 		}
 		(*i).second= NULL;
 		tcpAppConnMap.erase(i);
 	}
-
+#ifdef PRIVATE
+    if(this->multipath){
+         delete this->mptcp_pcb;
+    }
+#endif
 
 }
 
@@ -290,8 +289,8 @@ void TCP::handleMessage(cMessage *msg)
             {
 #ifdef PRIVATE
                // We have to be realy sure, if the connection is the connection we look for
-//                fprintf(stderr,"\n[TCP][NEW SEG] from  %s:%d to %s:%d\n", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(),tcpseg->getDestPort());
-//                fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
+//              fprintf(stderr,"\n[TCP][NEW SEG] from  %s:%d to %s:%d\n", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(),tcpseg->getDestPort());
+//              fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
 
 #endif
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
@@ -503,7 +502,9 @@ TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, 
 
     if (i != tcpConnMap.end())
         return i->second;
-
+#ifdef PRIVATE
+    if(tcpseg->getSynBit()){
+#endif
     // try fully qualified local socket + blank remote socket (for incoming SYN)
     key = save;
     key.remoteAddr = IPvXAddress();
@@ -519,7 +520,9 @@ TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, 
 
     if (i != tcpConnMap.end())
         return i->second;
-
+#ifdef PRIVATE
+    }
+#endif
     // given up
     return NULL;
 }
@@ -577,7 +580,6 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
         }else{
 #ifdef PRIVATE
             if(this->multipath){
-//                fprintf(stderr,"\n We know it is duplicated, it is multipath\n");
                 return;
             }
             else
@@ -586,9 +588,9 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
                   localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
         }
     }
-#ifdef PRIVATE
-    // fprintf(stderr,"\[TCP][NEW CONNECTION]nAdd Address in tcpConnMap:  %s:%d to %s:%d\n", localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
-#endif
+    if(key.remotePort != conn->remotePort)
+        error("Key and Connection is different connection %s:%d to %s:%d",
+                          localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
     // then insert it into tcpConnMap
     tcpConnMap[key] = conn;
 
@@ -616,10 +618,17 @@ void TCP::updateSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress
     tcpConnMap.erase(it);
 
     // then update addresses/ports, and re-insert it with new key into tcpConnMap
-    key.localAddr = conn->localAddr = localAddr;
-    key.remoteAddr = conn->remoteAddr = remoteAddr;
+    conn->localAddr = localAddr;
+    key.localAddr = localAddr;
+    conn->remoteAddr = remoteAddr;
+    key.remoteAddr =  remoteAddr;
     ASSERT(conn->localPort == localPort);
-    key.remotePort = conn->remotePort = remotePort;
+    conn->remotePort = remotePort;
+    key.remotePort = remotePort;
+
+    if(key.remotePort != conn->remotePort)
+          error("Key and Connection is different connection %s:%d to %s:%d",
+                            localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
     tcpConnMap[key] = conn;
 
     // localPort doesn't change (see ASSERT above), so there's no need to update usedEphemeralPorts[].

@@ -212,8 +212,9 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		if(!active){
 			_count_passiv_a++;
 			cMessage *msg = new cMessage("PassiveOPEN", TCP_E_OPEN_PASSIVE); // Passive Server Side
-			conn->localAddr = laddr;
-			conn->localPort = localPort;
+
+		    conn->localAddr = localAddr;
+		    conn->localPort = localPort;
 
 			// openCmd->setLocalAddr(subflow->localAddr);
 			openCmd->setLocalAddr(IPvXAddress("0.0.0.0"));
@@ -225,15 +226,17 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 			FSM_Goto(conn->fsm, TCP_S_INIT);
 
 			conn->processAppCommand(msg);
+
 			// newSubflow->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
 			FSM_Goto(conn->fsm, TCP_S_LISTEN);
 		}
 		else{
 			_count_active_a++;
 			cMessage *msg = new cMessage("ActiveOPEN", TCP_C_OPEN_ACTIVE); // Client Side Connection
-
-			conn->localAddr =  IPvXAddress();
-			conn->localPort = -1;
+			//conn->localAddr  = localAddr;
+			//conn->localPort  = localPort;
+			//conn->remoteAddr = remoteAddr;
+			//conn->remotePort = remotePort;
 
 			// setup the subflow
 			openCmd->setLocalAddr(laddr);
@@ -1041,7 +1044,7 @@ void TCPConnection::sendSegment(uint32 bytes)
 
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath){
-        int msg_cnt = ((abated * 0.9)/ (state->snd_mss-options_len));
+        int msg_cnt = ((abated * 0.8)/ (state->snd_mss-options_len));
         (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
 
         // FIXME Test we work with bigger steps, because it needs a long simulation time to create it for posssibe every message

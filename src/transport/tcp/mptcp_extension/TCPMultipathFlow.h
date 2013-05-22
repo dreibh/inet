@@ -85,6 +85,7 @@ class INET_API MPTCP_Flow
     //######################################################
     // subflow organisation
     int addSubflow(int id, TCPConnection*);
+    void removeSubflow(TCPConnection*);
     bool isSubflowOf(TCPConnection* subflow);
     const TCP_SubFlowVector_t* getSubflows();
     bool sendEstablished;

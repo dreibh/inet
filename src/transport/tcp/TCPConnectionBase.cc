@@ -349,6 +349,18 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 TCPConnection::~TCPConnection()
 {
 
+#ifdef PRIVATE
+    // Fixme if Multipath
+    if(this->getTcpMain()->multipath){
+        if(this->isSubflow){
+            this->flow->removeSubflow(this);
+        }
+        else{
+            fprintf(stderr,"Not a Multipath");
+        }
+    }
+#endif
+
     if (the2MSLTimer)   delete cancelEvent(the2MSLTimer);
     if (connEstabTimer) delete cancelEvent(connEstabTimer);
     if (finWait2Timer)  delete cancelEvent(finWait2Timer);
