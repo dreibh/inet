@@ -153,6 +153,7 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
 
     if (tcpseg->getFinBit()){
         DEBUGPRINT("TCP FIN SEND%s","\0");
+        subflow->flow->close();
         isFIN = true;
     }
     if (tcpseg->getRstBit()){

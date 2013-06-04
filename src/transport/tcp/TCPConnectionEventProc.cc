@@ -299,7 +299,7 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
 #ifdef PRIVATE
             if(getTcpMain()->multipath){
                 if(this->isSubflow){
-                    this->flow->close(this, tcpCommand, msg);
+                    this->flow->close();
                 }
             }
 #endif // PRIVATE

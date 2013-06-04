@@ -453,17 +453,15 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
     return t;
 }
 
-bool  MPTCP_Flow::close(TCPConnection* subflow,TCPCommand *tcpCommand, cMessage *msg){
+bool  MPTCP_Flow::close(){
     this->getPCB()->isFIN = true;
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
               i != subflow_list.end(); ++i) {
           TCP_subflow_t* entry = (*i);
-
-          if (entry->subflow->getTcpMain() == subflow->getTcpMain()){
-              if(!subflow->getState()->send_fin)
-                    entry->subflow->process_CLOSE();
- //              entry->subflow->getState()->snd_fin_seq = entry->subflow->getSendQueue()->getBufferEndSeq();
-          }
+              if(!entry->subflow->getState()->send_fin){
+                  entry->subflow->process_CLOSE();
+              entry->subflow->sendRst(entry->subflow->getState()->snd_nxt);
+              }
       }
     return true;
 }
