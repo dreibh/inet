@@ -92,5 +92,5 @@ void TCPVirtualDataSendQueue::discardUpTo(uint32 seqNum)
        this->conn->sendIndicationToApp(TCP_I_SEND_MSG, (conn->getState()->sendQueueLimit)?(conn->getState()->sendQueueLimit*0.5):conn->getState()->snd_mss);
        conn->getState()->queueUpdate = true;
     }
-#endif
+#endif // PRIVATE
 }
