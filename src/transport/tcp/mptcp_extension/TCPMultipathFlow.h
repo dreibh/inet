@@ -173,7 +173,7 @@ class INET_API MPTCP_Flow
 
 
 
-
+public:
     // common Omnetpp identifier
     int  appID;                             // The application ID of this Flow
     int  appGateIndex;

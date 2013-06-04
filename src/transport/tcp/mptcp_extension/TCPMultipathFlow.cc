@@ -102,7 +102,7 @@ MPTCP_Flow::~MPTCP_Flow() {
 
     for(TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++){
        TCPConnection *conn =  (*i)->subflow;
-    //   delete conn;
+       delete conn;
     }
 
     subflow_list.clear();
@@ -219,6 +219,11 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
     // add to list
     if(!t->subflow->inlist){
         t->subflow->inlist = true;
+        if(t->subflow->connId != this->appID){
+             DEBUGPRINT("FLOW connID %i "   ,this->appID);
+             return 0;
+        }
+        DEBUGPRINT("SUBFLOW connID %i ",t->subflow->connId);
         subflow_list.push_back(t);
     }
     // ###################################
@@ -334,9 +339,9 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
     // Only work on MPTCP Options!!
     // (Note: If this is a design problem to do it here, we could move this to TCP...)
     option.setKind(TCPOPTION_MPTCP); // FIXME depending on IANA request
-    DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] STATE (%i)", state);
-    DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] Support of MPTCP Kind: %u",
-            TCPOPTION_MPTCP);
+//    DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] STATE (%i)", state);
+//    DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] Support of MPTCP Kind: %u",
+//            TCPOPTION_MPTCP);
 
     // If SYN remark this combination as tried
     if ((tcpseg->getSynBit()) && (!tcpseg->getAckBit())) {

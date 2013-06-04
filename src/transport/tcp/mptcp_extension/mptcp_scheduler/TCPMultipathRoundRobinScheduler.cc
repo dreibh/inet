@@ -57,6 +57,8 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
     int64 cond = pkt->getByteLength();
     _next(cond);
     if(!lastUsed) return;
+    DEBUGPRINT("appGate %i connID %i QueueAble %s TCPMain %x",lastUsed->appGateIndex, lastUsed->connId, (lastUsed->isQueueAble?"true":"false"),lastUsed->getTcpMain());
+    DEBUGPRINT("FLOW appGate %i connID %i ",lastUsed->flow->appID,lastUsed->flow->appGateIndex);
 
     _createMSGforProcess(msg);
     if(lastUsed->scheduledBytesVector)
@@ -134,7 +136,6 @@ void MPTCP_RoundRobinScheduler::_createMSGforProcess(cMessage *msg) {
     DEBUGPRINT(
                          "[Scheduler][STATUS] USE Connections  %s:%d to %s:%d",
                                lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort);
-    DEBUGPRINT("appGate %i connID %i QueueAble %s TCPMain %x",lastUsed->appGateIndex, lastUsed->connId, (lastUsed->isQueueAble?"true":"false"),lastUsed->getTcpMain());
     //sc->getTcpMain()->scheduleAt(simTime() + 0.0001, msg);
 }
 #endif
