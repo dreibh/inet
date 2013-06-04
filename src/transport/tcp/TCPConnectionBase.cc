@@ -31,7 +31,7 @@
 #include "TCPSACKRexmitQueue.h"
 #ifdef PRIVATE
 #include "TCPMultipath.h"
-#endif
+#endif // PRIVATE
 
 TCPStateVariables::TCPStateVariables()
 {
@@ -173,13 +173,21 @@ std::string TCPStateVariables::detailedInfo() const
 TCPConnection::TCPConnection()
 {
 #ifdef PRIVATE
+    // MBe: set everything for startup
 	isSubflow = false;
+	joinToAck = false;
+	joinToSynAck = false;
 	isQueueAble = false;
+    todelete = false;
+    inlist = false;
 	flow = NULL;
 	randomA = 0;
 	randomB = 0;
-	todelete = false;
-#endif
+	bzero(MAC64,64);
+	bzero(MAC160,160);
+	dss_dataMapofSubflow.clear();
+	bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
+#endif // PRIVATE
     // Note: this ctor is NOT used to create live connections, only
     // temporary ones to invoke segmentArrivalWhileClosed() on
     transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge
@@ -194,7 +202,7 @@ TCPConnection::TCPConnection()
     tcpRcvQueueBytesVector = tcpRcvQueueDropsVector = pipeVector = sackedBytesVector = NULL;
 #ifdef PRIVATE
     scheduledBytesVector = NULL;
-#endif
+#endif // PRIVATE
 }
 
 //
@@ -204,12 +212,20 @@ TCPConnection::TCPConnection()
 TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 {
 #ifdef PRIVATE
-	isSubflow = false;
+    // MBe: set everything for startup
+    isSubflow = false;
+    joinToAck = false;
+    joinToSynAck = false;
     isQueueAble = false;
-	flow = NULL;
-	randomA = 0;
-	randomB = 0;
-	todelete = false;
+    todelete = false;
+    inlist = false;
+    flow = NULL;
+    randomA = 0;
+    randomB = 0;
+    bzero(MAC64,64);
+    bzero(MAC160,160);
+    dss_dataMapofSubflow.clear();
+    bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
 #endif
     tcpMain = _mod;
     appGateIndex = _appGateIndex;
@@ -284,10 +300,10 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
         tcpRcvQueueBytesVector = new cOutVector("tcpRcvQueueBytes");
         tcpRcvQueueDropsVector = new cOutVector("tcpRcvQueueDrops");
 #else
-        char name[255];
+        // MBe: For MPTCP we need more different vectors
+        char name[255];   // In cOutVector opp_strdup is called - make a copy of char array (no problem)
         static int cnt = 0;
         cnt++;
-
         sprintf(name,"[subflow][I0-%i] send window",cnt);
         sndWndVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
@@ -335,13 +351,10 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
         memset(name,'\0',sizeof(name));
         sprintf(name,"[subflow][I0-%i] tcpRcvQueueDrops",cnt);
         tcpRcvQueueDropsVector = new cOutVector(name);
-
-
         // MPTCP Vector
         memset(name,'\0',sizeof(name));
         sprintf(name,"[subflow][I0-%i] scheduledBytes",cnt);
         scheduledBytesVector = new cOutVector(name);
-
 #endif
     }
 }
@@ -350,16 +363,18 @@ TCPConnection::~TCPConnection()
 {
 
 #ifdef PRIVATE
-    // Fixme if Multipath
-    if(this->getTcpMain()->multipath){
-        if(this->isSubflow){
-            this->flow->removeSubflow(this);
-        }
-        else{
-            fprintf(stderr,"Not a Multipath");
+    // MBe: remove this (sub-)connection from the MPTCP list
+    if(getTcpMain()->multipath){
+        if(isSubflow){
+            flow->removeSubflow(this);
+            if(flow->getSubflows()->size() == 0){
+                // MBe: this was the last subflow of this flow, could the flow exist without subflow?
+                delete flow;
+                flow = NULL;
+            }
         }
     }
-#endif
+#endif // PRIVATE
 
     if (the2MSLTimer)   delete cancelEvent(the2MSLTimer);
     if (connEstabTimer) delete cancelEvent(connEstabTimer);
@@ -459,10 +474,16 @@ TCPConnection::~TCPConnection()
 
 #ifdef PRIVATE
     delete scheduledBytesVector;
-    todelete = false;
+    scheduledBytesVector = NULL;
     isSubflow = false;
+    joinToAck = false;
+    joinToSynAck = false;
+    isQueueAble = false;
+    todelete = false;
     inlist = false;
-#endif
+    randomA = 0;
+    randomB = 0;
+#endif // PRIVATE
 }
 
 bool TCPConnection::processTimer(cMessage *msg)
@@ -543,10 +564,10 @@ bool TCPConnection::processAppCommand(cMessage *msg)
         case TCP_E_OPEN_PASSIVE: process_OPEN_PASSIVE(event, tcpCommand, msg); break;
 #ifndef PRIVATE
         case TCP_E_SEND: process_SEND(event, tcpCommand, msg); break;
-#else
+#else   // MBe:redirect the sending to MPTCP SEND
         case TCP_E_SEND: process_MPTCPSEND(event, tcpCommand, msg); break;
         case TCP_E_MPTCP_SEND: process_SEND(event, tcpCommand, msg); break;
-#endif
+#endif  // PRIVATE
         case TCP_E_CLOSE: process_CLOSE(event, tcpCommand, msg); break;
         case TCP_E_ABORT: process_ABORT(event, tcpCommand, msg); break;
         case TCP_E_STATUS: process_STATUS(event, tcpCommand, msg); break;
@@ -567,9 +588,9 @@ TCPEventCode TCPConnection::preanalyseAppCommandEvent(int commandCode)
         case TCP_C_OPEN_ACTIVE:  return TCP_E_OPEN_ACTIVE;
         case TCP_C_OPEN_PASSIVE: return TCP_E_OPEN_PASSIVE;
         case TCP_C_SEND:         return TCP_E_SEND;
-#ifdef PRIVATE
+#ifdef PRIVATE  // MBe: Why need we this command translation?
         case TCP_C_MPTCP_SEND:   return TCP_E_MPTCP_SEND;
-#endif
+#endif  // PRIVATE
         case TCP_C_CLOSE:        return TCP_E_CLOSE;
         case TCP_C_ABORT:        return TCP_E_ABORT;
         case TCP_C_STATUS:       return TCP_E_STATUS;

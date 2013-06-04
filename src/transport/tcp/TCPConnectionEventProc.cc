@@ -51,51 +51,17 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             remotePort = openCmd->getRemotePort();
 
 #ifdef PRIVATE
-            { // create own contex
-            bool multipath = false;
-            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
-                   multipath     = false;
-               }
-               else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
-                    multipath     = true;
-               }
-          // TODO add new Congestion Control�
-          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
-          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
-          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
-          //            state->allowCMT     = true;
-          //         }
-               else {
-                  throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
-                           (const char*)tcpMain->par("cmtCCVariant"));
-               };
+            { // MBe: {} create context
             bool skip = false;
-            if(multipath){
-                tcpEV << "MPTCP: We do not proof ports in case of a multpath link" << endl;
+            if(getTcpMain()->multipath){
+                tcpEV << "MPTCP: We do not proof ports in case of a MPTCP links" << endl;
                 if(this->isSubflow){
                     tcpEV << "We know this subflow as MPTCP flow" << endl;
                     skip=true;
                 }
             }
             if(!skip){
-#endif
+#endif  // PRIVATE
             if (remoteAddr.isUnspecified() || remotePort == -1)
                throw cRuntimeError(tcpMain, "Error processing command OPEN_ACTIVE: remote address and port must be specified");
 
@@ -107,53 +73,15 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 
             tcpEV << "OPEN: " << localAddr << ":" << localPort << " --> " << remoteAddr << ":" << remotePort << "\n";
 #ifdef PRIVATE
-            }} // End Multipath contex
-#endif
+            }} // End skip and MPTCP contex
+#endif // PRIVATE
             tcpMain->addSockPair(this, localAddr, remoteAddr, localPort, remotePort);
 
 #ifdef PRIVATE
-            { // MPTCP Context
-            bool multipath = false;
-            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
-                   multipath     = false;
-               }
-               else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
-                    multipath     = true;
-               }
-          // TODO add new Congestion Control�
-          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
-          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
-          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
-          //            state->allowCMT     = true;
-          //         }
-               else {
-                  throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
-                           (const char*)tcpMain->par("cmtCCVariant"));
-               }
-        	// TODO Overwrok, which variable do we need
-            if(multipath){
-        		tcpMain->multipath_subflow_id = openCmd->getSubFlowNumber();
+            if(getTcpMain()->multipath){
+                getTcpMain()->multipath_subflow_id = openCmd->getSubFlowNumber();
         	}
-            } // END MPTCP Context
-
-#endif
+#endif // PRIVATE
             // send initial SYN
             selectInitialSeqNum();
             sendSyn();
@@ -163,51 +91,14 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
 
         default:
 #ifdef PRIVATE
-            bool multipath = false;
-            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
-                   multipath     = false;
-               }
-               else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
-                    multipath     = true;
-               }
-            // TODO add new Congestion Control�
-            //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
-            //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
-            //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
-            //            state->allowCMT     = true;
-            //         }
-            //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
-            //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
-            //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
-            //            state->allowCMT     = true;
-            //         }
-            //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
-            //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
-            //            state->allowCMT     = true;
-            //         }
-            //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
-            //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
-            //            state->allowCMT     = true;
-            //         }
-            //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
-            //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
-            //            state->allowCMT     = true;
-            //         }
-               else {
-                  throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
-                           (const char*)tcpMain->par("cmtCCVariant"));
-               }
-            if(multipath)
-#endif
+            if(!getTcpMain()->multipath)
+#endif // PRIVATE
             throw cRuntimeError(tcpMain, "Error processing command OPEN_ACTIVE: connection already exists");
             break; // MBe add because of Warning
     }
 
     delete openCmd;
     delete msg;
-#ifdef PRIVATE
-    msg = NULL;
-#endif
 }
 
 void TCPConnection::process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)
@@ -243,33 +134,34 @@ void TCPConnection::process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCom
     delete openCmd;
     delete msg;
 }
+
 #ifdef PRIVATE
 void TCPConnection::process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg){
-
-
-    if(this->isSubflow){
-        // easy scheduler for testing
-        this->flow->schedule(this, msg);
+    if(isSubflow){
+#warning "Experiment SETUP for scheduling experiments -> should find the best..."
+        // MBe: OK here we got data -> we are able to schedule now, but at least we could enqueue this data and schedule it later
+        // depends on the scheduler and queue size
+        flow->schedule(this, msg);
     }
     else
-        this->process_SEND(event,tcpCommand,msg);
+        process_SEND(event,tcpCommand,msg);
 }
-#endif
+#endif // PRIVATE
+
 void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)
 {
 
     TCPSendCommand *sendCommand = check_and_cast<TCPSendCommand *>(tcpCommand);
 #ifdef PRIVATE
-            {
-            static uint64 cnt = 0;
-            static int number = 0;
-            number++;
-//            char message_name[255];
-            cPacket* test = check_and_cast<cPacket *> (msg);
-            cnt += test->getByteLength();
-//            fprintf(stderr, "[FLOW][SUBFLOW][STATUS] Send Bytes %lu Name: %s - %i\n",cnt,test->getName(),number);
-            }
-#endif
+    {
+    static uint64 cnt = 0;
+    static int number = 0;
+    number++;
+    cPacket* test = check_and_cast<cPacket *> (msg);
+    cnt += test->getByteLength();
+    // TODO Statistic vector
+    }
+#endif // PRIVATE
     // FIXME how to support PUSH? One option is to treat each SEND as a unit of data,
     // and set PSH at SEND boundaries
     switch (fsm.getState())
@@ -309,12 +201,6 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
         case TCP_S_TIME_WAIT:
             throw cRuntimeError(tcpMain, "Error processing command SEND: connection closing");
             /* no break */
-    }
-#ifdef PRIVATE
-    if(!this->tcpMain->multipath)
-#endif
-    if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) > state->sendQueueLimit)) {
-        state->queueUpdate = false;
     }
 
     if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) > state->sendQueueLimit)) {
@@ -364,55 +250,11 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             throw cRuntimeError(tcpMain, "Error processing command CLOSE: connection not open");
 
 #ifdef PRIVATE
-        	{
-            bool multipath =  false;
-            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
-                 multipath     = false;
-             }
-             else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
-                  multipath     = true;
-             }
-          // TODO add new Congestion Control�
-          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
-          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
-          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
-          //            state->allowCMT     = true;
-          //         }
-             else {
-                throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
-                         (const char*)tcpMain->par("cmtCCVariant"));
-             }
-            if(multipath){
-            	//TODO
-                if(this->isSubflow){
-
-                }
-            }
-            else{
-#endif
+            if(!getTcpMain()->multipath)
+            	if(!this->isSubflow)
+#endif // PRIVATE !! NEED NEXT LINE !!!
                 throw cRuntimeError(tcpMain, "Error processing command CLOSE: connection not open");
             /* no break */
-#ifdef PRIVATE
-        	}}
-        	/* no break */
-#endif
         case TCP_S_LISTEN:
             // Nothing to do here
             break;
@@ -454,52 +296,13 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             state->send_fin = true;
             state->snd_fin_seq = sendQueue->getBufferEndSeq();
 
-
-
 #ifdef PRIVATE
-            { // context
-            bool multipath =  false;
-            if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
-                 multipath     = false;
-             }
-             else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
-                  multipath     = true;
-             }
-          // TODO add new Congestion Control�
-          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
-          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
-          //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
-          //            state->allowCMT     = true;
-          //         }
-          //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
-          //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
-          //            state->allowCMT     = true;
-          //         }
-            else {
-            throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
-                     (const char*)tcpMain->par("cmtCCVariant"));
-            }
-            if(multipath){
-                //TODO
+            if(getTcpMain()->multipath){
                 if(this->isSubflow){
                     this->flow->close(this, tcpCommand, msg);
                 }
             }
-            }// end context
-#endif
+#endif // PRIVATE
             break;
 
         case TCP_S_FIN_WAIT_1:
@@ -591,7 +394,7 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
     if(this->isSubflow)
         this->flow->setSendQueueLimit(tcpCommand->getUserId());
     else
-#endif
+#endif // PRIVATE !! NEED NEXT LINE !!!!
     state->sendQueueLimit = tcpCommand->getUserId();
     tcpEV<<"state->sendQueueLimit set to "<<state->sendQueueLimit<<"\n";
     delete msg;

@@ -404,7 +404,7 @@ void TCPSACKRexmitQueue::checkSackBlock(uint32 fromSeqNum, uint32 &length, bool 
 #ifdef PRIVATE
     if(this->conn->getState()->send_fin)
           offset = 1; // One for the FIN
-#endif
+#endif // ENDIF
     if(!(seqLE(begin, fromSeqNum) && seqLess(fromSeqNum - offset, end))){
         ASSERT(seqLE(begin, fromSeqNum) && seqLess(fromSeqNum - offset, end));
     }

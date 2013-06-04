@@ -94,7 +94,6 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 	sprintf(name,"[FLOW-%d][RCV-QUEUE] size",ID);
 	mptcpRcvBufferSize = new cOutVector(name);
 }
-
 /**
  * Destructor
  */
@@ -102,6 +101,8 @@ MPTCP_Flow::~MPTCP_Flow() {
 
     for(TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++){
        TCPConnection *conn =  (*i)->subflow;
+       // I want everything off
+
        delete conn;
     }
 
@@ -1290,6 +1291,10 @@ void MPTCP_Flow::setSendQueueLimit(int limit){
 }
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
     // easy scheduler
+
+    /**
+     * TODO TEST
+     */
     MPTCP_SchedulerI* scheduler = TCPSchedulerManager::getMPTCPScheduler(save->getTcpMain(),this);
     scheduler->schedule(save, msg);
     return save;

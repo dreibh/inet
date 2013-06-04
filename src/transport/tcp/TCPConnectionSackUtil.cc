@@ -184,12 +184,13 @@ void TCPConnection::setPipe()
     bool sacked;       // required for rexmitQueue->checkSackBlock()
     bool rexmitted;    // required for rexmitQueue->checkSackBlock()
 
-#ifdef PRIVATE
+#ifdef PRIVATE // FIXME Wonder we have not to focus on the fin ????
+    // MBe: a first  try
     int32 offset = 0;
     // There are errors if we handle also send_fin
     if(state->send_fin)
         offset = 1; // One for the FIN
-#endif
+#endif // PRIVATE
     // RFC 3517, page 3: "This routine traverses the sequence space from HighACK to HighData
     // and MUST set the "pipe" variable to an estimate of the number of
     // octets that are currently in transit between the TCP sender and
@@ -199,9 +200,9 @@ void TCPConnection::setPipe()
     for (uint32 s1 = state->snd_una; seqLess(s1, state->snd_max); s1 += length)
     {
         rexmitQueue->checkSackBlock((s1+offset), length, sacked, rexmitted);
-#ifdef PRIVATE
-       offset = 0;
-#endif
+#ifdef PRIVATE // FIXME Wonder we have not to focus on the fin ????
+       offset = 0;  // set it back again
+#endif // PRIVIATE
 
         if (!sacked)
         {
@@ -255,16 +256,7 @@ bool TCPConnection::nextSeg(uint32 &seqNum)
 
     if (state->ts_enabled)
         shift -= TCP_OPTION_TS_SIZE;
-//#ifdef PRIVATE
-//    if(this->isSubflow){ // FIXME
-//        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
-//        if(this->getTcpMain()->multipath_DSSSeqNo8)
-//          dss_option_offset += 4;
-//        if(this->getTcpMain()->multipath_DSSDataACK8)
-//          dss_option_offset += 4;
-//       shift -=  dss_option_offset;
-//    }
-//#endif
+
     // RFC 3517, page 5: "(1) If there exists a smallest unSACKed sequence number 'S2' that
     // meets the following three criteria for determining loss, the
     // sequence range of one segment of up to SMSS octets starting

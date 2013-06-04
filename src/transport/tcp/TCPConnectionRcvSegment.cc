@@ -29,7 +29,7 @@
 
 #ifdef PRIVATE
 #include "TCPMultipathPCB.h"
-#endif
+#endif // PRIVATE
 
 
 bool TCPConnection::tryFastRoute(TCPSegment *tcpseg)
@@ -373,9 +373,10 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
             return TCP_E_IGNORE;  // if acks something not yet sent, drop it
 #ifdef PRIVATE
         if(tcpMain->multipath){
-        	tcpMain->mptcp_pcb = MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
+            // MBE: we must do also our MPTCP stuff
+        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
         }
-#endif
+#endif // PRIVATE
 
     }
 
@@ -881,9 +882,10 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
 
 #ifdef PRIVATE
         if(tcpMain->multipath){
-        	tcpMain->mptcp_pcb = MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
+            // MBE: we must do also our MPTCP stuff
+        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
         }
-#endif
+#endif // PRIVATE
         state->ack_now = true;
         sendSynAck();
         startSynRexmitTimer();
@@ -1014,9 +1016,10 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
     {
 #ifdef PRIVATE
         if(tcpMain->multipath){
-        	tcpMain->mptcp_pcb= MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
+            // MBE: we must do also our MPTCP stuff
+        	MPTCP_PCB::processMPTCPSegment(connId,this->appGateIndex, this, tcpseg);
         }
-#endif
+#endif // PRIVATE
 
     	//
         //   RCV.NXT is set to SEG.SEQ+1, IRS is set to
@@ -1037,12 +1040,6 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
         {
             state->snd_una = tcpseg->getAckNo();
             sendQueue->discardUpTo(state->snd_una);
-
-#ifdef PRIVATE
-            if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) < state->sendQueueLimit)) {
-                state->queueUpdate = false;
-            }
-#endif
 
             if (state->sack_enabled)
                 rexmitQueue->discardUpTo(state->snd_una);
@@ -1110,15 +1107,8 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
             state->ack_now = true;
             tcpAlgorithm->established(true);
 
-#ifdef PRIVATE
-//        if(!isSubflow)	// TODO subflows should not be notfied to the app
-#endif
+            // MBE MPTCP subflows should not be notified to the app, we fix this in the method
             sendEstabIndicationToApp();
-#ifdef PRIVATE
-//        else
-//        	 tcpEV << "SUBFLOW is established by getting SYN+ACK\n"; // TBD
-#endif
-
 
             // This will trigger transition to ESTABLISHED. Timers and notifying
             // app will be taken care of in stateEntered().
@@ -1198,12 +1188,6 @@ TCPEventCode TCPConnection::processRstInSynReceived(TCPSegment *tcpseg)
     //"
 
     sendQueue->discardUpTo(sendQueue->getBufferEndSeq()); // flush send queue
-
-#ifdef PRIVATE
-        if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) < state->sendQueueLimit)) {
-            state->queueUpdate = false;
-        }
-#endif
 
     if (state->sack_enabled)
         rexmitQueue->discardUpTo(rexmitQueue->getBufferEndSeq()); // flush rexmit queue
@@ -1329,13 +1313,6 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 
         // acked data no longer needed in send queue
         sendQueue->discardUpTo(discardUpToSeq);
-
-
-#ifdef PRIVATE
-        if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) < state->sendQueueLimit)) {
-            state->queueUpdate = false;
-        }
-#endif
 
         // acked data no longer needed in rexmit queue
         if (state->sack_enabled)

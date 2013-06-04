@@ -65,7 +65,7 @@ MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
  * De-Constructor
  */
 MPTCP_PCB::~MPTCP_PCB() {
-    // FIXME delete flow
+    // By default no flows should be in the list
     AllMultipathTCPVector_t::iterator i = mptcp_flow_vector.begin();
     while (i != mptcp_flow_vector.end())
     {

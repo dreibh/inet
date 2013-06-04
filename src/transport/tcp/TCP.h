@@ -25,7 +25,7 @@
 #ifdef PRIVATE
 class MPTCP_SchedulerI;
 class MPTCP_PCB;
-#endif
+#endif // PRIVATE
 
 #include "INETDefs.h"
 
@@ -175,14 +175,12 @@ class INET_API TCP : public cSimpleModule
     bool recordStatistics;  // output vectors on/off
 
 #ifdef PRIVATE
-    MPTCP_PCB* mptcp_pcb;
-    MPTCP_SchedulerI* scheduler;
-    bool multipath;
-    bool multipath_DSSDataACK8;
-    bool multipath_DSSSeqNo8;
-    int  multipath_subflow_id;
-
-    bool isKnownConn(IPvXAddress srcAddr, int rPort, IPvXAddress destAddr,  int lPort);
+    MPTCP_SchedulerI* scheduler;    // For scheduler see TCPSchedulerManager::getMPTCPScheduler(...)
+    /* MBe : General multipath settings */
+    bool multipath;                 // turn on/off
+    bool multipath_DSSDataACK8;     // kind of ack length
+    bool multipath_DSSSeqNo8;       // kind of seq no length
+    int  multipath_subflow_id;      // helper for identification
 #endif
 
   public:

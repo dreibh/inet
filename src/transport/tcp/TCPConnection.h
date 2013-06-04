@@ -36,14 +36,16 @@ class TCPReceiveQueue;
 class TCPAlgorithm;
 
 #ifdef PRIVATE
+// MBE: Includes
 #include "TCPMultipath.h"
 #include "TCPMultipathPCB.h"
 #include "TCPMultipathFlow.h"
 
+// MBe: Pre-declaration
 class MPTCP_PCB;
 class MPTCP_Flow;
 
-
+/* MBe: Helper sturcture for DSS to handle the information in a map*/
 typedef struct _DSS_INFO{
 	uint64 dss_seq;
 	uint64 seq_offset;
@@ -52,13 +54,16 @@ typedef struct _DSS_INFO{
 	bool section_end;
 } DSS_INFO;
 
+/* MBE: Helper to organize MPTCP send window*/
 typedef struct _DSS_BASE_INFO{
     uint64 dss_seq;
     uint64 subflow_seq;
 } DSS_BASE_INFO;
 
+/* MBE: Map to organize the DSS information */
 typedef std::map<uint32,DSS_INFO*> TCPMultipathDSSStatus;
-#endif
+#endif //PRIVATE
+
 //
 // TCP FSM states
 //
@@ -110,8 +115,9 @@ enum TCPEventCode
     TCP_E_OPEN_PASSIVE,
     TCP_E_SEND,
 #ifdef PRIVATE
-    TCP_E_MPTCP_SEND,
-#endif
+    // MBe: Another send routine for MPTCP is needed
+    TCP_E_MPTCP_SEND,   // Special event of send with MPTCP; forward later to TCP_E_SEND
+#endif // PRIVATE
     TCP_E_CLOSE,
     TCP_E_ABORT,
     TCP_E_STATUS,
@@ -363,15 +369,17 @@ class INET_API TCPConnection
     int localPort;
     int remotePort;
 
-#ifdef PRIVATE
-    bool isSubflow;
-    bool joinToAck;
-    bool joinToSynAck;
+#ifdef PRIVATE // // MBe: MPTCP private variables
+    bool isSubflow;         // notify if is a subflow.
+    bool joinToAck;         // status marker
+    bool joinToSynAck;      // status marker
 
-    bool isQueueAble;
-    bool todelete;
-    bool inlist;
+    bool isQueueAble;       // queue able for scheduler -> most times we wait for established
+    bool todelete;          // we should delete this
+    bool inlist;            // is in our subflow list enqueued
+    // in case thereit is a subflow it must have a flow container.
     MPTCP_Flow* flow;
+    // security stuff
     uint32 randomA;				// used to store randam of MPTCP MP_JOIN
     uint32 randomB; 			// used to store randam of MPTCP MP_JOIN
     unsigned char MAC64[64];	// Container for truncated MAC
@@ -379,8 +387,7 @@ class INET_API TCPConnection
 
     TCPMultipathDSSStatus dss_dataMapofSubflow;
     DSS_BASE_INFO         base_una_dss_info;
-    uint32 nextSeg();
-#endif
+#endif // PRIVATE
 
   protected:
     TCP *tcpMain; // TCP module
@@ -399,10 +406,9 @@ class INET_API TCPConnection
   public:
     TCPSACKRexmitQueue *rexmitQueue;
 
-#ifdef PRIVATE
+#ifdef PRIVATE // // MBe: MPTCP public variables
     cOutVector *scheduledBytesVector;    // bytes scheduled on subflow
-#endif
-
+#endif // PRIVATE
 
   protected:
     // TCP behavior in data transfer state
@@ -453,12 +459,14 @@ class INET_API TCPConnection
     virtual void process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
-#ifdef PRIVATE
+#ifdef PRIVATE  // // MBe: MPTCP protected methods
     virtual void process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
-
+    virtual TCPSegment writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 bytes);
 #else
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
-#endif
+    /** Utility: writeHeaderOptions (Currently only EOL, NOP, MSS, WS, SACK_PERMITTED, SACK and TS are implemented) */
+    virtual TCPSegment writeHeaderOptions(TCPSegment *tcpseg);
+#endif  // PRIVATE
     virtual void process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
@@ -522,12 +530,6 @@ class INET_API TCPConnection
     /** Utility: readHeaderOptions (Currently only EOL, NOP, MSS, WS, SACK_PERMITTED, SACK and TS are implemented) */
     virtual void readHeaderOptions(TCPSegment *tcpseg);
 
-    /** Utility: writeHeaderOptions (Currently only EOL, NOP, MSS, WS, SACK_PERMITTED, SACK and TS are implemented) */
-#ifdef PRIVATE
-    virtual TCPSegment writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 bytes);
-#else
-    virtual TCPSegment writeHeaderOptions(TCPSegment *tcpseg);
-#endif
     /** Utility: adds SACKs to segments header options field */
     virtual TCPSegment addSacks(TCPSegment *tcpseg);
 
@@ -538,12 +540,11 @@ class INET_API TCPConnection
     virtual uint32 getTSecr(TCPSegment *tcpseg) const;
   public:
 
-#ifdef PRIVATE
+#ifdef PRIVATE // MBe: MPTCP public methods
     virtual TCPConnection *cloneMPTCPConnection(bool active, uint64 token, IPvXAddress laddr, IPvXAddress raddr);
-
     virtual void removeVectors();
     virtual void renameMPTCPVectors(char* cnt);
-#endif
+#endif  // PRIVATE
 
     /** Utility: send ACK */
     virtual void sendAck();
@@ -609,7 +610,7 @@ class INET_API TCPConnection
 
     /** Utility: sends packet to application */
     virtual void sendToApp(cMessage *msg);
-#ifndef PRIVATE
+#ifndef PRIVATE // Shift it to public
     /** Utility: sends status indication (TCP_I_xxx) to application */
     virtual void sendIndicationToApp(int code, const int id = 0);
 #endif
@@ -619,10 +620,10 @@ class INET_API TCPConnection
   public:
 #ifdef PRIVATE
     /** Utility: sends status indication (TCP_I_xxx) to application */
-    virtual void sendIndicationToApp(int code, const int id = 0);
+    virtual void sendIndicationToApp(int code, const int id = 0);   // shifted from protected
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_CLOSE();
-#endif
+#endif // PRIVATE
     /** Utility: prints local/remote addr/port and app gate index/connId */
     virtual void printConnBrief() const;
     /** Utility: prints important header fields */

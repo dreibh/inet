@@ -40,9 +40,10 @@
 #include "TCPVirtualDataSendQueue.h"
 
 #ifdef PRIVATE
+// MBe include Multipath Header
 #include "TCPMultipathPCB.h"
 #include "TCPMultipathFlow.h"
-#endif
+#endif // PRIVATE
 
 Define_Module(TCP);
 
@@ -78,51 +79,28 @@ void TCP::initialize()
 {
 
 #ifdef PRIVATE
-
+    // MBe: setup Multipath and the CC  by CC Variant
      if(strcmp((const char*)par("cmtCCVariant"), "off") == 0) {
          multipath     = false;
      }
      else if(strcmp((const char*)par("cmtCCVariant"), "cmt") == 0) {
-          multipath     = true;
+         multipath     = true;
      }
-// TODO add new Congestion Control�
-//         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
-//                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
-//            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
-//            state->allowCMT     = true;
-//         }
-//         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
-//                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
-//            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
-//            state->allowCMT     = true;
-//         }
-//         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
-//            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
-//            state->allowCMT     = true;
-//         }
-//         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
-//            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
-//            state->allowCMT     = true;
-//         }
-//         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
-//            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
-//            state->allowCMT     = true;
-//         }
+     else if( (strcmp((const char*)par("cmtCCVariant"), "like-mptcp") == 0) ||
+              (strcmp((const char*)par("cmtCCVariant"), "mptcp-like") == 0) ) {
+         // MBe: A dummy up to now
+         throw cRuntimeError("Not Supported yet: %s\n",(const char*)par("cmtCCVariant"));
+     }
      else {
-        throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
+         throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
                  (const char*)par("cmtCCVariant"));
      }
-
+     // MBe: setup the multipath context
 	if(multipath){
-		tcpEV << "Initializing module TCP: Multipath TCP enabled\n";
 		multipath_subflow_id = 0;
-
 		multipath_DSSDataACK8 = par("multipath_DSSDataACK8");
 		multipath_DSSSeqNo8 = par("multipath_DSSSeqNo8");
-    
-
 	}
-	mptcp_pcb = NULL;
 	scheduler = NULL;
 #endif
 
@@ -157,19 +135,22 @@ TCP::~TCP()
 		TcpAppConnMap::iterator i = tcpAppConnMap.begin();
 #ifndef PRIVATE
 		if((*i).second!= NULL){
-#else
+#else // PRIVATE
+		// MBe: The Multipath subflows are not in the main list, except the first,
+		// but even the first we organize in the Multipath section
 		if((*i).second!= NULL && (!(*i).second->isSubflow)){
-#endif
+#endif // PRIVATE
 			delete (*i).second;
 		}
 		(*i).second= NULL;
 		tcpAppConnMap.erase(i);
 	}
 #ifdef PRIVATE
-    if(this->multipath){
-         delete this->mptcp_pcb;
-    }
-#endif
+	// MBe: if we in Multipath we have to free the resources
+//    if(this->multipath){
+//         delete this->mptcp_pcb;
+//    }
+#endif // PRIVATE
 
 }
 
@@ -180,17 +161,14 @@ void TCP::handleMessage(cMessage *msg)
         TCPConnection *conn = (TCPConnection *) msg->getContextPointer();
 
 #ifdef PRIVATE
-        // Selfmessage could only be a timer, or a initiation if a new sublink
+        // MBe: Selfmessage could only be a timer, or a initiation if a new sublink
         if(multipath &&(msg->getControlInfo() != NULL)){
-
         	TCPOpenCommand *controlInfo = check_and_cast<TCPOpenCommand *>(msg->getControlInfo());
         	bool skip = false;
 
-
         	if((controlInfo!=NULL) && (controlInfo->getIsMptcpSubflow())){
-        		tcpEV << "TCP connection is a subflow " << msg << "\n";
 
-        		// make sure connection is unique
+        		// MBe: make sure connection is unique
         		SockPair key;
         		key.localAddr  = controlInfo->getLocalAddr();
         		key.remoteAddr = controlInfo->getRemoteAddr();
@@ -202,12 +180,12 @@ void TCP::handleMessage(cMessage *msg)
 					skip = true;
 				}
 
-        		// Create connection
+        		// MBe: Create connection
         		TCPConnection *subflow = NULL;
         		if(!skip)
         			subflow = createConnection(conn->appGateIndex, conn->connId);
 
-        		// Lets do our job -> establish this subflow
+        		// MBe: Lets do our job -> establish this subflow
         		if(subflow!=NULL){
 
 					subflow->isSubflow = true;
@@ -215,18 +193,16 @@ void TCP::handleMessage(cMessage *msg)
 						removeConnection(subflow);
 						subflow = NULL;
 					}
-					// TODO Should I add a subflow after a MP_JOIN SYN
         		}
         		else{
         			delete msg;
-				//	delete controlInfo;
         		}
 				if (ev.isGUI())
 				        updateDisplayString();
 				return;
         	}
         }
-#endif
+#endif // PRIVATE
         bool ret = conn->processTimer(msg);
         if (!ret){
             removeConnection(conn);
@@ -263,8 +239,7 @@ void TCP::handleMessage(cMessage *msg)
 
             if (dynamic_cast<IPv4ControlInfo *>(tcpseg->getControlInfo()) != NULL)
             {
-// FIXME Merge del
-
+#warning "Open Merge Problem IPv4/Ipv6" // FIXME Mbe
                 IPv4ControlInfo *controlInfo = (IPv4ControlInfo *)tcpseg->removeControlInfo();
 
                 srcAddr = controlInfo->getSrcAddr();
@@ -287,12 +262,12 @@ void TCP::handleMessage(cMessage *msg)
             TCPConnection *conn = findConnForSegment(tcpseg, srcAddr, destAddr);
             if (conn)
             {
-#ifdef PRIVATE
-               // We have to be realy sure, if the connection is the connection we look for
-//              fprintf(stderr,"\n[TCP][NEW SEG] from  %s:%d to %s:%d\n", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(),tcpseg->getDestPort());
-//              fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
-
-#endif
+#undef _PRIVATE // MBe: Just a debugging section
+#ifdef _PRIVATE
+                // MBe: We have to be really sure, if the connection is the connection we look for
+                fprintf(stderr,"\n[TCP][NEW SEG] from  %s:%d to %s:%d\n", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(),tcpseg->getDestPort());
+                fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
+#endif // _PRIVATE
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
                 if (!ret){
                     removeConnection(conn);
@@ -302,14 +277,13 @@ void TCP::handleMessage(cMessage *msg)
             else
             {
 #ifdef PRIVATE
-            	// OK, perhapse we have to join a Multipath Connection
+            	// MBe: OK, perhaps we have to join a Multipath connection
             	if(multipath){
-            		// TODO INCOMING MULTIPATH TCP on closed Socket, when Server side open a connection active
+            		// FIXME INCOMING MULTIPATH TCP on closed Socket, when Server side open a connection active
             	    TCPConnection *mptcp_con=NULL;
 
-            	    // The connection should be created in TCPMultipathFlow.cc for new incomming SYNs from Server side.
+            	    // MBe: The connection should be created in TCPMultipathFlow.cc for new incomming SYNs from Server side.
             	    // Check if we can find it...
-
             	    SockPair key;
             	    key.localAddr = srcAddr;
             	    key.remoteAddr = IPvXAddress();
@@ -317,24 +291,21 @@ void TCP::handleMessage(cMessage *msg)
             	    key.remotePort = -1;
 
 
-            	    // try with fully qualified SockPair
+            	    // MBe: try with fully qualified SockPair
             	    TcpConnMap::iterator i;
             	    i = tcpConnMap.find(key);
             	    if (i!=tcpConnMap.end())
             	            mptcp_con = i->second;
             	    if(mptcp_con!=NULL){
-            	        tcpEV << "Someone is using MPTCP and tries to open a connection server side";
             	        mptcp_con->processTCPSegment(tcpseg, srcAddr, destAddr);
-
             	    }
-            	    tcpEV << "Incomming Packets on closed Port, in default TCP we would send a RST\n";
             	}
-            	else{
-#endif
+            	else{ // MBe: 1 -> closed by (2)
+#endif // PRIVATE
                 segmentArrivalWhileClosed(tcpseg, srcAddr, destAddr);
 #ifdef PRIVATE
-            	}
-#endif
+            	}   // MBe: 2 -> opened by (1)
+#endif // PRIVATE
             }
         }
     }
@@ -442,38 +413,13 @@ void TCP::updateDisplayString()
 
 }
 
-#ifdef PRIVATE
-bool TCP::isKnownConn(IPvXAddress srcAddr, int lPort, IPvXAddress destAddr,  int rPort){
-
-    SockPair key;
-    key.localAddr = destAddr;
-    key.remoteAddr = srcAddr;
-    key.localPort = lPort;
-    key.remotePort =rPort;
-
-    // try with fully qualified SockPair
-    TcpConnMap::iterator i;
-    i = tcpConnMap.find(key);
-    if (i!=tcpConnMap.end())
-        return true;
-
-    key.localAddr = IPvXAddress();
-    i = tcpConnMap.find(key);
-    if (i!=tcpConnMap.end())
-        return true;
-
-    return false;
-}
-
-#endif
 TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, IPvXAddress destAddr)
 {
-
-#ifdef PRIVATE // For Debug -> I want to know which Connection TCP knows
+#undef _PRIVATE
+#ifdef _PRIVATE // MBe: For Debug -> I want to know which Connection TCP knows
         int cnt = 0;
        for (TcpConnMap::iterator it = tcpConnMap.begin();
            it != tcpConnMap.end(); it++, cnt++) {
-           TCPConnection *entry = (it->second);
            DEBUGPRINT(
                    "[GENERAL][TCP][STATUS][SUBFLOW][%i] Connections  %s:%d to %s:%d",
                    cnt, entry->localAddr.str().c_str(), entry->localPort, entry->remoteAddr.str().c_str(), entry->remotePort);
@@ -481,7 +427,8 @@ TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, 
                    "[GENERAL][TCP][STATUS][SUBFLOW][%i]rcv_nxt: %i\t snd_nxt: %i\t snd_una: %i snd_max: %i",
                    cnt, entry->getState()->rcv_nxt, entry->getState()->snd_nxt, entry->getState()->snd_una, entry->getState()->snd_max);
        }
-#endif
+#endif // _PRIVATE
+
     SockPair key;
     key.localAddr = destAddr;
     key.remoteAddr = srcAddr;
@@ -503,8 +450,9 @@ TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, 
     if (i != tcpConnMap.end())
         return i->second;
 #ifdef PRIVATE
-    if(tcpseg->getSynBit()){
-#endif
+    // MBe: In Multipath we should only look for if there is a SYNbit
+    if(tcpseg->getSynBit()){    // 1 -> closed by 2
+#endif // PRIVATE
     // try fully qualified local socket + blank remote socket (for incoming SYN)
     key = save;
     key.remoteAddr = IPvXAddress();
@@ -521,7 +469,7 @@ TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, 
     if (i != tcpConnMap.end())
         return i->second;
 #ifdef PRIVATE
-    }
+    }   // 2 -> closed by 1
 #endif
     // given up
     return NULL;
@@ -579,11 +527,12 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
 
         }else{
 #ifdef PRIVATE
+            // MBe: This is possible in Multipath TCP
             if(this->multipath){
                 return;
             }
             else
-#endif
+#endif // PRIVATE
             error("Address already in use: there is already a connection %s:%d to %s:%d",
                   localAddr.str().c_str(), localPort, remoteAddr.str().c_str(), remotePort);
         }
@@ -658,9 +607,9 @@ void TCP::removeConnection(TCPConnection *conn)
 {
     tcpEV << "Deleting TCP connection\n";
 #ifdef PRIVATE
-    // In case of my tests this vectors are irritating
+    // MBe: In case of my tests this vectors are irritating
     conn->removeVectors();
-#endif
+#endif // PRIVATE
     AppConnKey key;
     key.appGateIndex = conn->appGateIndex;
     key.connId = conn->connId;
@@ -682,8 +631,9 @@ void TCP::removeConnection(TCPConnection *conn)
 
     delete conn;
 #ifdef PRIVATE
-     conn = NULL;
-#endif
+    // MBe: Just to be sure
+    conn = NULL;
+#endif // PRIVATE
 }
 
 void TCP::finish()

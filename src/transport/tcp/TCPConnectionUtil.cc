@@ -36,10 +36,9 @@
 // helper functions
 //
 #ifdef PRIVATE
-#include <assert.h>
 #include "TCPMultipathPCB.h"
 #include "TCPSchedulerManager.h"
-#endif
+#endif // PRIVATE
 
 const char *TCPConnection::stateName(int state)
 {
@@ -178,65 +177,55 @@ void TCPConnection::printSegmentBrief(TCPSegment *tcpseg)
     tcpEV << "\n";
 }
 #ifdef PRIVATE
+/* Clone a connection for MPTCP */
 TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPvXAddress laddr, IPvXAddress raddr){
     TCPConnection *conn = NULL;
     static int _count_active_a = 0;
     static int _count_passiv_a = 0;
     if(tcpMain->multipath){
 
-		if(active){
-			conn = new TCPConnection(tcpMain,appGateIndex,connId);
-		}
-		else
-			conn = new TCPConnection(tcpMain,0,0);
-
+		conn = (active)?(new TCPConnection(tcpMain,appGateIndex,connId)):(new TCPConnection(tcpMain,0,0));
 		conn->remoteAddr = raddr;
 		conn->remotePort = remotePort;
 
-		// in every case in INIT
-		TCPOpenCommand *openCmd = new TCPOpenCommand();
-		 openCmd->setSendQueueClass(
-				 getTcpMain()->par("sendQueueClass"));
-		 openCmd->setReceiveQueueClass(
-				 getTcpMain()->par("receiveQueueClass"));
-		 openCmd->setTcpAlgorithmClass(
-				 getTcpMain()->par("tcpAlgorithmClass"));
-		 openCmd->setSubFlowNumber(token);
-		 openCmd->setFork(true);
-		 openCmd->setConnId(connId);
-		 // initiate handshake for subflow
-		 openCmd->setIsMptcpSubflow(true);
-		 conn->isSubflow = true;
-		 conn->flow = flow;
-		 conn->inlist = false;
+		// MBE: in every case in INIT
+        TCPOpenCommand *openCmd = new TCPOpenCommand();
+        openCmd->setSendQueueClass(
+             getTcpMain()->par("sendQueueClass"));
+        openCmd->setReceiveQueueClass(
+             getTcpMain()->par("receiveQueueClass"));
+        openCmd->setTcpAlgorithmClass(
+             getTcpMain()->par("tcpAlgorithmClass"));
+        openCmd->setSubFlowNumber(token);
+        openCmd->setFork(true);
+        openCmd->setConnId(connId);
+        // MBE: initiate handshake for subflow
+        openCmd->setIsMptcpSubflow(true);
+        conn->isSubflow = true;
+        conn->flow = flow;
+        conn->inlist = false;
 		if(!active){
 			_count_passiv_a++;
 			cMessage *msg = new cMessage("PassiveOPEN", TCP_E_OPEN_PASSIVE); // Passive Server Side
-
 		    conn->localAddr = localAddr;
 		    conn->localPort = localPort;
 
-			// openCmd->setLocalAddr(subflow->localAddr);
-			openCmd->setLocalAddr(IPvXAddress("0.0.0.0"));
+		    openCmd->setLocalAddr(IPvXAddress("0.0.0.0"));
 			openCmd->setLocalPort(localPort);
 
 			msg->setControlInfo(openCmd);
 			msg->setContextPointer(conn);
 
 			FSM_Goto(conn->fsm, TCP_S_INIT);
-
-			conn->processAppCommand(msg);
+			conn->processAppCommand(msg);   // init queues, etc
 
 			// newSubflow->getTcpMain()->scheduleAt(simTime() + 0.00001, msg);
 			FSM_Goto(conn->fsm, TCP_S_LISTEN);
+			// Leave in status LISTEN
 		}
 		else{
 			_count_active_a++;
 			cMessage *msg = new cMessage("ActiveOPEN", TCP_C_OPEN_ACTIVE); // Client Side Connection
-			//conn->localAddr  = localAddr;
-			//conn->localPort  = localPort;
-			//conn->remoteAddr = remoteAddr;
-			//conn->remotePort = remotePort;
 
 			// setup the subflow
 			openCmd->setLocalAddr(laddr);
@@ -247,20 +236,21 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 			msg->setControlInfo(openCmd);
 			msg->setContextPointer(conn);
 			FSM_Goto(conn->fsm, TCP_S_INIT);
-			conn->processAppCommand(msg);
+			conn->processAppCommand(msg);  // init queues, etc
+			// Leave in status INET
 		}
 		// Clean up stuff
 		conn->removeVectors();
 
 		// rename
-		char cnt[255];
+		char name[255];
 		int _cnt = this->flow->getSubflows()->size();
 		if(active)
-			sprintf(cnt,"A%i-%i",_cnt,_count_active_a);
+			sprintf(name,"A%i-%i",_cnt,_count_active_a);
 		else
-			sprintf(cnt,"A%i-%i",_cnt,_count_passiv_a);
+			sprintf(name,"A%i-%i",_cnt,_count_passiv_a);
 
-		conn->renameMPTCPVectors(cnt);
+		conn->renameMPTCPVectors(name);
 
 		// check some configuration stuff
 		conn->getState()->nagle_enabled = this->getState()->nagle_enabled;
@@ -289,8 +279,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
 		conn->inlist = false;
-		return conn;
-
+		return conn;    // this is our new connection
     }
     else return NULL;
 }
@@ -392,7 +381,8 @@ void TCPConnection::renameMPTCPVectors(char* cnt){
 	scheduledBytesVector = new cOutVector(name);
 
 }
-#endif
+#endif // PRIVATE (includes complete methods)
+
 TCPConnection *TCPConnection::cloneListeningConnection()
 {
     TCPConnection *conn = new TCPConnection(tcpMain, appGateIndex, connId);
@@ -428,28 +418,21 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 #ifdef PRIVATE
     // We don t need it, and it is overhead, but rename it when multipath
     if(tcpMain->multipath){
-		static int _count_active_b = 0;
-		static int _count_passiv_b = 0;
-		bool active = false; // FIXME - Is other optien thinkable?
-		(active)?_count_active_b++:_count_passiv_b++;
-
-		char cnt[255];
+		static int _count_passiv_b = 0; // only for identification
+		char name[255];
 		int _cnt = 0;
 		if(flow!= NULL)
 			_cnt = this->flow->getSubflows()->size();
+		sprintf(name,"A%i-%i",_cnt,_count_passiv_b);
 
-		if(active)
-			sprintf(cnt,"A%i-%i",_cnt,_count_active_b);
-		else
-			sprintf(cnt,"A%i-%i",_cnt,_count_passiv_b);
 		// Clean up stuff
 		conn->removeVectors();
-		conn->renameMPTCPVectors(cnt);
+		conn->renameMPTCPVectors(name);
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
 		conn->inlist = false;
     }
-#endif
+#endif // PRIVATE
 
     FSM_Goto(conn->fsm, TCP_S_LISTEN);
 
@@ -544,10 +527,10 @@ void TCPConnection::signalConnectionTimeout()
 void TCPConnection::sendIndicationToApp(int code, const int id)
 {
 #ifdef PRIVATE
-    // check if it is a good idea to request for further messages
+    // MBE: check if it is a good idea to request for further messages
     if(this->getState()->send_fin || this->getState()->fin_rcvd)
-        return;
-#endif
+        return; // I think no
+#endif // PRIVATE
     tcpEV << "Notifying app: " << indicationName(code) << "\n";
     cMessage *msg = new cMessage(indicationName(code));
     msg->setKind(code);
@@ -562,17 +545,17 @@ void TCPConnection::sendEstabIndicationToApp()
 {
 #ifdef PRIVATE
     // The application only need one notification, otherwise he work on more than one connection
-    isQueueAble = true;
     state->queueUpdate = true;
     if(tcpMain->multipath){
-        if(this->flow->sendEstablished){
-            //sendIndicationToApp(TCP_I_SEND_MSG, 300*state->snd_mss);
+        isQueueAble = true;
+        if(flow->sendEstablished){
             return; // we need no notification message
         }
         this->flow->sendEstablished = true;
     }
+    // Request minimum data
     sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
-#endif
+#endif // PRIVATE
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
     cMessage *msg = new cMessage(indicationName(TCP_I_ESTABLISHED));
     msg->setKind(TCP_I_ESTABLISHED);
@@ -591,11 +574,11 @@ void TCPConnection::sendEstabIndicationToApp()
 void TCPConnection::sendToApp(cMessage *msg)
 {
 #ifdef PRIVATE
-    if((this->tcpMain->multipath) && (this->isSubflow)){
-        this->flow->sendToApp(msg);
+    if((tcpMain->multipath) && (isSubflow)){
+        flow->sendToApp(msg);
     }
     else
-#endif
+#endif // PRIVATE
     tcpMain->send(msg, "appOut", appGateIndex);
 }
 
@@ -632,51 +615,12 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
     tcpAlgorithm->initialize();
 
 #ifdef PRIVATE
-        // the block before must run first
-        bool multipath = false;
-
-        if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "off") == 0) {
-             multipath     = false;
-         }
-         else if(strcmp((const char*)tcpMain->par("cmtCCVariant"), "cmt") == 0) {
-              multipath     = true;
-         }
-      // TODO add new Congestion Control�
-      //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
-      //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
-      //            state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
-      //            state->allowCMT     = true;
-      //         }
-      //         else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
-      //                  (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
-      //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
-      //            state->allowCMT     = true;
-      //         }
-      //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv2") == 0) {
-      //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv2;
-      //            state->allowCMT     = true;
-      //         }
-      //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t1") == 0) {
-      //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test1;
-      //            state->allowCMT     = true;
-      //         }
-      //         else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp-t2") == 0) {
-      //            state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRP_Test2;
-      //            state->allowCMT     = true;
-      //         }
-         else {
-            throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
-                     (const char*)tcpMain->par("cmtCCVariant"));
-         }
-
-        if(multipath){
+        if(getTcpMain()->multipath){
         	openCmd->getSubFlowNumber();
         	joinToAck = false;
         	joinToSynAck = false;
         }
-#endif
-
-
+#endif // PRIVATE
 }
 
 void TCPConnection::configureStateVariables()
@@ -804,10 +748,11 @@ void TCPConnection::sendSyn()
 
     // write header options
 #ifdef PRIVATE
+    // Redirect
     writeHeaderOptionsWithMPTCP(tcpseg, 0);
 #else
     writeHeaderOptions(tcpseg);
-#endif
+#endif // PRIVATE
 
     // send it
     sendToIP(tcpseg);
@@ -828,6 +773,7 @@ void TCPConnection::sendSynAck()
 
     // write header options
 #ifdef PRIVATE
+    // Redirect
     writeHeaderOptionsWithMPTCP(tcpseg, 0);
 #else
     writeHeaderOptions(tcpseg);
@@ -890,6 +836,7 @@ void TCPConnection::sendAck()
 
     // write header options
 #ifdef PRIVATE
+    // Redirect
     writeHeaderOptionsWithMPTCP(tcpseg, 0);
 #else
     writeHeaderOptions(tcpseg);
@@ -915,10 +862,6 @@ void TCPConnection::sendFin()
 
     // send it
     sendToIP(tcpseg);
-#ifdef PRIVATE
-    if(this->isSubflow)
-
-#endif
     // notify
     tcpAlgorithm->ackSent();
 }
@@ -944,14 +887,11 @@ void TCPConnection::sendSegment(uint32 bytes)
         bytes = buffered;
 
 #ifdef PRIVATE
-    if(bytes < state->snd_mss)
-        DEBUGPRINT("send less bytes as possible [possible: %u], because there are less data enqueued [enqueued: %u]",bytes,buffered);
     if(!buffered){
         fprintf(stderr,"['TCP][SEND][WARNING] No Data send, because no data available for sending %lu (Send Window too small?)", buffered);
-            // this is inly possible if all data in the queue is on the wire
         return;
      }
-#endif
+#endif // PRIVATE
 
     // if header options will be added, this could reduce the number of data bytes allowed for this segment,
     // because following condition must to be respected:
@@ -960,20 +900,22 @@ void TCPConnection::sendSegment(uint32 bytes)
     tcpseg_temp->setAckBit(true); // needed for TS option, otherwise TSecr will be set to 0
 
 #ifdef PRIVATE
+    // redirect
     writeHeaderOptionsWithMPTCP(tcpseg_temp, bytes);
 #else
     writeHeaderOptions(tcpseg_temp);
-#endif
+#endif // PRIVATE
     uint options_len = tcpseg_temp->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath){
+    if(getTcpMain()->multipath){
+        // MBe: A first try of a fix
 		if (state->sack_enabled){
 			 uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
 			 if(offset > 0)	// we know this segment.... send only segment size
 				 bytes = offset - state->snd_una;	// FIXME: In this case we overwrite for a retransmission the sending window
 		}
     }
-#endif
+#endif // PRIVATE
 
     ASSERT(options_len < state->snd_mss);
 
@@ -986,14 +928,14 @@ void TCPConnection::sendSegment(uint32 bytes)
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
     TCPSegment *tcpseg  = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
 #else // FIXME Something goes wrong here
-
+#warning "HERE THE ERROR COMES UP"
     TCPSegment* tcpseg  = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
     cMessage*   msg_tmp = check_and_cast<cMessage*> (tcpseg);
         // OK if we send it over another module, we have to dup this message
     if(msg_tmp->getOwner() != this->getTcpMain()){
         throw cRuntimeError("Why we are not Owner? - something goes wrong here");
     }
-#endif
+#endif // PRIVATE
 
     // if sack_enabled copy region of tcpseg to rexmitQueue
 
@@ -1037,11 +979,10 @@ void TCPConnection::sendSegment(uint32 bytes)
     uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
 
 #ifdef PRIVATE
+    // Try to setup a saturated sender.....
     if(this->getTcpMain()->multipath){
         int msg_cnt = ((abated * 0.8)/ (state->snd_mss-options_len));
         (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
-
-        // FIXME Test we work with bigger steps, because it needs a long simulation time to create it for posssibe every message
         if((state->sendQueueLimit > 0) && (abated < (state->sendQueueLimit * 0.05)))
                 abated = 0;
     }else{
@@ -1049,21 +990,12 @@ void TCPConnection::sendSegment(uint32 bytes)
         abated +=  (state->snd_mss - options_len);
     }
     if(isQueueAble && abated)
-#endif
+#endif // PRIVATE
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
           (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
-              // Tell upper layer readiness to accept more data
-              // DEBUGPRINT("[TCP][SUBFLOW][QUEUE] Request data from APP %u by data to send per packet(%i) %u", abated, msg_cnt, state->snd_mss-options_len);
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
               state->queueUpdate = true;  // TODO was true;
       }
-//    const uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
-//    const uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
-//    if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
-//        (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
-        // Tell upper layer readiness to accept more data
-//        sendIndicationToApp(TCP_I_SEND_MSG, abated);
-//        state->queueUpdate = true;
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
@@ -1114,7 +1046,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
           dss_option_offset += 4;
         effectiveMaxBytesSend -= dss_option_offset;
     }
-#endif
+#endif // PRIVATE
 
     // last segment could be less than state->snd_mss (or less than snd_mss - TCP_OPTION_TS_SIZE if using TS option)
     if (fullSegmentsOnly && (bytesToSend < (effectiveMaxBytesSend)))
@@ -1243,9 +1175,9 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     ulong bytes = std::min((ulong)std::min(state->snd_mss, state->snd_max - state->snd_nxt),
             sendQueue->getBytesAvailable(state->snd_nxt));
 #else
+    // TODO I use my solution....Perhaps This should switched to the old above
     ulong bytes = std::min((ulong)state->snd_mss,sendQueue->getBytesAvailable(state->snd_una));
-
-#endif
+#endif // PRIVATE
     // FIN (without user data) needs to be resent
     if (bytes == 0 && state->send_fin && state->snd_fin_seq == sendQueue->getBufferEndSeq())
     {
@@ -1268,14 +1200,13 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
 #ifdef PRIVATE
         // Not every packet has the same length
         // we have to figure out what is inside the SACK Queue
-
-        // SACK Fix
+        // TRY SACK Fix
         if (state->sack_enabled){
             uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
             ASSERT(offset != 0);
             bytes = offset - state->snd_una;
         }
-#endif
+#endif // PRIVATE
         sendSegment(bytes);
 
         if (!called_at_rto)
@@ -1546,7 +1477,7 @@ TCPSegment TCPConnection::writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 
 #else
 TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 {
-#endif
+#endif // PRIVATE
     TCPOption option;
     uint t = 0;
 
@@ -1743,25 +1674,9 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 		 * OK, we need signaling for MPTCP, in the draft it is done by options
 		 *
 		 */
-
-		// During IDLE and PRE_ESTABLISHED there exists no persistent MPTCP PCB
-		// so first check
-        uint options_len = tcpseg->getOptionsArrayLength();
-
-        if (options_len <= TCP_OPTIONS_MAX_SIZE) // Options length allowed? - maximum: 40 Bytes
-            tcpseg->setHeaderLength(TCP_HEADER_OCTETS + options_len); // TCP_HEADER_OCTETS = 20
-
-		if (tcpMain->mptcp_pcb == NULL){
-		    tcpEV << "!! OK we should write header information without PCB..." << endl;
-		    tcpMain->mptcp_pcb = new MPTCP_PCB(this->connId, this->appGateIndex,  this);
-		}
-
 		flow->writeMPTCPHeaderOptions(t,state,tcpseg, bytes, this);
 	}
-	else{
-		tcpEV << "Connection with disabled MPTCP" << "\n";
-	}
-#endif
+#endif // PRIVATE
     if (tcpseg->getOptionsArraySize() != 0){
         uint options_len = tcpseg->getOptionsArrayLength();
         if (options_len <= TCP_OPTIONS_MAX_SIZE) // Options length allowed? - maximum: 40 Bytes
@@ -1900,75 +1815,6 @@ void TCPConnection::updateWndInfo(TCPSegment *tcpseg, bool doAlways)
             sndWndVector->record(state->snd_wnd);
     }
 }
-
-//#ifdef PRIVATE
-//    if(this->isSubflow){ // FIXME
-//        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
-//        if(this->getTcpMain()->multipath_DSSSeqNo8)
-//          dss_option_offset += 4;
-//        if(this->getTcpMain()->multipath_DSSDataACK8)
-//          dss_option_offset += 4;
-//       shift -=  dss_option_offset;
-//    }
-//#endif
-//    uint32 seqNum = 0;
-//    bool found = false;
-//    uint32 shift = state->snd_mss;
-//    if (state->ts_enabled)
-//        shift -= TCP_OPTION_TS_SIZE;
-//#ifdef PRIVATE
-//    if(this->isSubflow){ // FIXME
-//        uint32 dss_option_offset = MP_DSS_OPTIONLENGTH_4BYTE;
-//        if(this->getTcpMain()->multipath_DSSSeqNo8)
-//          dss_option_offset += 4;
-//        if(this->getTcpMain()->multipath_DSSDataACK8)
-//          dss_option_offset += 4;
-//       shift -=  dss_option_offset;
-//    }
-//#endif
-//    // RFC 3517, page 5: "(1) If there exists a smallest unSACKed sequence number 'S2' that
-//    // meets the following three criteria for determining loss, the
-//    // sequence range of one segment of up to SMSS octets starting
-//    // with S2 MUST be returned.
-//    //
-//    // (1.a) S2 is greater than HighRxt.
-//    //
-//    // (1.b) S2 is less than the highest octet covered by any
-//    //       received SACK.
-//    //
-//    // (1.c) IsLost (S2) returns true."
-//    for (uint32 s2=state->snd_una; s2<state->snd_max; s2=s2+shift)
-//    {
-//        if (rexmitQueue->getSackedBit(s2)==false)
-//        {
-//            if (seqGE(s2,state->highRxt) &&
-//                seqLE(s2,(rexmitQueue->getHighestSackedSeqNum())) &&
-//                isLost(s2))
-//            {
-//                seqNum = s2;
-//                found = true;
-//                return seqNum;
-//            }
-//        }
-//    }
-//    // window allows, the sequence range of one segment of up to SMSS
-//    // octets of previously unsent data starting with sequence number
-//    // HighData+1 MUST be returned."
-//    if (!found)
-//    {
-//        // check how many unsent bytes we have
-//        ulong buffered = sendQueue->getBytesAvailable(state->snd_max);
-//        ulong maxWindow = state->snd_wnd;
-//        // effectiveWindow: number of bytes we're allowed to send now
-//        ulong effectiveWin = maxWindow - state->pipe;
-//        if (buffered > 0 && effectiveWin >= state->snd_mss)
-//        {
-//            seqNum = state->snd_max; // HighData = snd_max
-//            found = true;
-//            return seqNum;
-//        }
-//    }
-//    }
 
 void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWindow)
 {

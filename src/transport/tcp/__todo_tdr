@@ -5,3 +5,36 @@ The TCP module is not running
 Open issues
 - TCP New Reno just sendData with true, to avoid partial pakets. Only full packets will send
 - Packet error rates above 0.4 % shows crazy results
+
+
+Did Changes in:
+======================================================
+TCP.cc
+TCP.h
+- add some general setup variables
+TCPConnection.h
+- add private, protected, public variables and methods declaration
+TCPConnection Base
+- Constructor
+- Destructor
+- More variants in vector naming
+- Redirect send to MPTCP send
+TCPConnectionEventProc
+- Try to ignore normal TCP behaivior in not expected messages
+- Add scheduling routine 
+TCPConnectionRECVSegm
+- Call process the MPTCP stuff
+TCPConnectionSACKUtil.cc
+- Not usabele
+- found a FIN Problem
+TCPConnectionUtil.cc
+- cloneMPTCPConnection
+- request for saturated sender
+ 
+No Changes in:
+======================================================
+TCPAlgorithm.h
+
+
+
+MPTCP_Flow::schedule -> first Queue
