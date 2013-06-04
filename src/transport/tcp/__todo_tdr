@@ -33,6 +33,8 @@ TCPConnectionUtil.cc
 TCPVirtualDataSendQueue
 - request for saturated sender
 No Changes in:
+TCPNewReno
+- Complete new
 ======================================================
 TCPAlgorithm.h
 TCPReceiveQueue.h
