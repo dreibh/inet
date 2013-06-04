@@ -366,10 +366,8 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
                    i != subflow_list.end(); ++i) {
                TCP_subflow_t* entry = (*i);
                if (entry->subflow->getTcpMain() == subflow->getTcpMain()){
-
-                   uint32 ackNo = tcpseg->getSequenceNo() + tcpseg->getSegLen();
-                   subflow->sendFin();
-                   subflow->sendRst(ackNo);
+                   subflow->process_CLOSE();
+                   //subflow->sendRst(ackNo);
                }
            }
         return 0;
