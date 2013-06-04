@@ -995,7 +995,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     if(abated < (0.3 * state->sendQueueLimit))  // try of a splitt
             state->queueUpdate = true;
 //    }
-    if(isQueueAble && abated)
+    if(isQueueAble && abated && (!getState()->send_fin))
 #endif // PRIVATE
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
           (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
@@ -1100,7 +1100,10 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
                 // FIXME: This happens sometimes when SACKs are enabled. Is this a bug?
                 break;
             }
-            bytesToSend -= state->sentBytes;
+            if(bytesToSend > state->sentBytes)
+                bytesToSend -= state->sentBytes;
+            else
+                bytesToSend = 0;
         }
     }
 

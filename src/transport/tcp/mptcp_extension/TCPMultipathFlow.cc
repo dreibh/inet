@@ -360,17 +360,6 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
     }
     if(this->getPCB()->isFIN){
         tcpseg->setFinBit(true);
-
-        subflow->sendFin();
-        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                   i != subflow_list.end(); ++i) {
-               TCP_subflow_t* entry = (*i);
-               if (entry->subflow->getTcpMain() == subflow->getTcpMain()){
-                   subflow->process_CLOSE();
-                   //subflow->sendRst(ackNo);
-               }
-           }
-        return 0;
     }
     /**********************************************************************************
      *  we have to send different TCP Options for handshake, depending on the states
@@ -471,6 +460,7 @@ bool  MPTCP_Flow::close(TCPConnection* subflow,TCPCommand *tcpCommand, cMessage 
           TCP_subflow_t* entry = (*i);
 
           if (entry->subflow->getTcpMain() == subflow->getTcpMain()){
+              if(!subflow->getState()->send_fin)
                     entry->subflow->process_CLOSE();
  //              entry->subflow->getState()->snd_fin_seq = entry->subflow->getSendQueue()->getBufferEndSeq();
           }

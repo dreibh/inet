@@ -223,7 +223,7 @@ void TCPConnection::process_CLOSE(){
         tcpEV << "No outstanding SENDs, sending FIN right away, advancing snd_nxt over the FIN\n";
         state->snd_nxt = state->snd_max;
         sendFin();
-        tcpAlgorithm->restartRexmitTimer();
+        //tcpAlgorithm->restartRexmitTimer();
         state->snd_max = ++state->snd_nxt;
 
         if (unackedVector)
