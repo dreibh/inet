@@ -473,7 +473,7 @@ TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, IPvXAddress srcAddr, 
         int cnt = 0;
        for (TcpConnMap::iterator it = tcpConnMap.begin();
            it != tcpConnMap.end(); it++, cnt++) {
-           //TCPConnection *entry = (it->second);
+           TCPConnection *entry = (it->second);
            DEBUGPRINT(
                    "[GENERAL][TCP][STATUS][SUBFLOW][%i] Connections  %s:%d to %s:%d",
                    cnt, entry->localAddr.str().c_str(), entry->localPort, entry->remoteAddr.str().c_str(), entry->remotePort);

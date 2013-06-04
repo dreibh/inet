@@ -783,8 +783,6 @@ void MPTCP_PCB::DEBUGprintFlowOverview(int type){
 
     AllMultipathTCPVector_t::const_iterator it;
 
-    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] >>>>>>>>>>>>>>>>>>>>>>>>>>>>>   SYSTEM SUBFLOWS DURING RECEIVE MESSAGE %ld  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",rcv_cnt++);
-
     for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
         TuppleWithStatus_t* tmp = (TuppleWithStatus_t *)(*it);
 
@@ -821,7 +819,6 @@ void MPTCP_PCB::DEBUGprintFlowOverview(int type){
             break;
         }
     }
-    DEBUGPRINT("[MPTCP][OVERVIEW][PCB][FLOW] >>>>>>>>>>>>>>>>>>>>>>>>>>>>>   SYSTEM SUBFLOWS DURING RECEIVE MESSAGE %ld  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<",rcv_cnt++);
 
 #endif
 }

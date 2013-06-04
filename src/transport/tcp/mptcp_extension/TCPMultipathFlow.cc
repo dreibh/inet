@@ -1241,7 +1241,6 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
     // We have to think about what will happen if we delete this
 
     if(found){
-       DEBUGPRINT("[MPTCP][SEND TO APP] Over Conn ID %i App Gate Index %i%s",con->connId, con->appGateIndex,"\0");
        // 3) OK we got a valid connection to an app, check if there data
        TCP_SubFlowVector_t::iterator i = subflow_list.begin();
        if(ordered){	// Ordered is just for debugging, makes things more easy
@@ -1596,7 +1595,7 @@ void MPTCP_Flow::DEBUGprintMPTCPFlowStatus() {
 #endif
 }
 void MPTCP_Flow::DEBUGprintStatus() {
-#ifdef _PRIVATE
+#ifdef PRIVATE
 
     DEBUGPRINT(
             ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> FLOW %u >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",

@@ -70,10 +70,14 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
     TCPConnection* tmp = NULL;
     bool firstrun = true;
     bool found = false;
+    int cnt = 0;
     for(;;){
-        for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
+        for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++, cnt++) {
             TCP_subflow_t*  entry = (*it);
             tmp = entry->subflow;
+            DEBUGPRINT(
+                      "[Scheduler][%i][STATUS] Check Connections  %s:%d to %s:%d",
+                           cnt, entry->subflow->localAddr.str().c_str(), entry->subflow->localPort, entry->subflow->remoteAddr.str().c_str(), entry->subflow->remotePort);
             // First organize the send queue limit
             if(!tmp->getState()->sendQueueLimit )
                tmp->getState()->sendQueueLimit = flow->flow_send_queue_limit;
@@ -96,6 +100,8 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
         }
         if(found){
             lastUsed = tmp;
+            DEBUGPRINT(
+                      "[Scheduler][%i][STATUS]found",cnt);
             break;
         }
     }
@@ -125,6 +131,9 @@ void MPTCP_RoundRobinScheduler::_createMSGforProcess(cMessage *msg) {
     msg->setControlInfo(cmd);
 
     lastUsed->processAppCommand(msg);
+    DEBUGPRINT(
+                         "[Scheduler][STATUS] USE Connections  %s:%d to %s:%d",
+                               lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort);
 
     //sc->getTcpMain()->scheduleAt(simTime() + 0.0001, msg);
 }
