@@ -979,16 +979,22 @@ void TCPConnection::sendSegment(uint32 bytes)
     uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
 
 #ifdef PRIVATE
+#warning "The simulation time needs really long in case of request data every time, perhaps it is better to split"
     // Try to setup a saturated sender.....
-    if(this->getTcpMain()->multipath){
-        int msg_cnt = ((abated * 0.8)/ (state->snd_mss-options_len));
-        (abated > state->snd_mss)?abated=((msg_cnt * (state->snd_mss-options_len))):0;
-        if((state->sendQueueLimit > 0) && (abated < (state->sendQueueLimit * 0.05)))
-                abated = 0;
-    }else{
-        state->queueUpdate = false;
-        abated +=  (state->snd_mss - options_len);
+    state->queueUpdate = false;
+    switch(state->sendQueueLimit){
+    case 0:
+        abated = state->snd_mss-options_len;
+        break;
+    default:
+        if(alreadyQueued < state->sendQueueLimit)
+            abated =  state->sendQueueLimit - (getSendQueue()->getBytesAvailable(getSendQueue()->getBufferStartSeq()));
+        else
+            state->queueUpdate = true;
     }
+    if(abated < (0.3 * state->sendQueueLimit))  // try of a splitt
+            state->queueUpdate = true;
+//    }
     if(isQueueAble && abated)
 #endif // PRIVATE
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
@@ -1674,6 +1680,13 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
 		 * OK, we need signaling for MPTCP, in the draft it is done by options
 		 *
 		 */
+	    if(tcpseg->getSynBit()){
+            if(!flow){
+                // Possible the first SYN, without any PCB
+                new MPTCP_PCB(connId, appGateIndex,this);
+            }
+	    }
+	    ASSERT(flow && "flow should be initialized");
 		flow->writeMPTCPHeaderOptions(t,state,tcpseg, bytes, this);
 	}
 #endif // PRIVATE

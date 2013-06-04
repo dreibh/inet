@@ -365,33 +365,29 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
 // process SYN
     if((tcpseg->getSynBit()) && (!tcpseg->getAckBit()) ) {
         DEBUGPRINT("[MPTCP][IDLE][JOIN] process SYN%s","\0");
-            // First the main flow should be find in the list of flows
+        // First the main flow should be find in the list of flows
 
-            // OK if we are here there exist
-            // - a valid Multipath TCP Control Block
-            // - next step is to send SYN/ACK
-            // ==> add subflow to connection/ multipath flow (For first -> FIXME, handle TCP RST)
-            uint32_t remoteToken = option->getValues(1);
-            DEBUGPRINT("[MPTCP] got Token = %i", remoteToken);
-            // First we should find the flow for this subflow. We must sure that we know it
-            AllMultipathTCPVector_t::const_iterator it;
-            for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
-               TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
-               TCP_SubFlowVector_t::const_iterator it_mpflows;
-               if(t->flow!=NULL){
-                   DEBUGPRINT("[MPTCP] Token = %i", t->flow->getLocalToken());
+        // OK if we are here there exist
+        // - a valid Multipath TCP Control Block
+        // - next step is to send SYN/ACK
+        // ==> add subflow to connection/ multipath flow (For first -> FIXME, handle TCP RST)
+        uint32_t remoteToken = option->getValues(1);
+        DEBUGPRINT("[MPTCP] got Token = %i", remoteToken);
+        // First we should find the flow for this subflow. We must sure that we know it
+        AllMultipathTCPVector_t::const_iterator it;
+        for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
+           TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
+           TCP_SubFlowVector_t::const_iterator it_mpflows;
+           if(t->flow!=NULL){
+               DEBUGPRINT("[MPTCP] Token = %i", t->flow->getLocalToken());
+               subflow->flow = t->flow;
+               if(t->flow->getLocalToken() == remoteToken){
                    subflow->flow = t->flow;
-                   if(t->flow->getLocalToken() == remoteToken){
-                       subflow->flow = t->flow;
-                       t->flow->addSubflow(connId,subflow);
-                       break;
-                   }
+                   t->flow->addSubflow(connId,subflow);
+                   break;
                }
-            }
-
-
-//            subflow->sendSynAck();    /** Utility: send SYN+ACK */
-
+           }
+        }
     }
 // process SYN/ACK
     else if((tcpseg->getSynBit()) && (tcpseg->getAckBit()) ) {
