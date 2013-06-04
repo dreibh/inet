@@ -942,16 +942,15 @@ void TCPConnection::sendSegment(uint32 bytes)
 
     if (bytes > buffered) // last segment?
         bytes = buffered;
-    if(bytes < 1444)
-           tcpEV << "Let me know why" << endl;
 
 #ifdef PRIVATE
+    if(bytes < state->snd_mss)
         DEBUGPRINT("send less bytes as possible [possible: %u], because there are less data enqueued [enqueued: %u]",bytes,buffered);
-        if(!buffered){
-            fprintf(stderr,"['TCP][SEND][WARNING] No Data send, because no data available for sending %lu (Send Window too small?)", buffered);
+    if(!buffered){
+        fprintf(stderr,"['TCP][SEND][WARNING] No Data send, because no data available for sending %lu (Send Window too small?)", buffered);
             // this is inly possible if all data in the queue is on the wire
-            return;
-        }
+        return;
+     }
 #endif
 
     // if header options will be added, this could reduce the number of data bytes allowed for this segment,
@@ -977,16 +976,11 @@ void TCPConnection::sendSegment(uint32 bytes)
 #endif
 
     ASSERT(options_len < state->snd_mss);
-    if(bytes < 1444)
-            tcpEV << "Let me know why" << endl;
 
     if (bytes + options_len > state->snd_mss)
         bytes = state->snd_mss - options_len;
 
     state->sentBytes = bytes;
-
-    if(state->sentBytes < 1444)
-        tcpEV << "Let me know why" << endl;
 
 #ifndef PRIVATE
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
