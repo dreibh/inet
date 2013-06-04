@@ -371,19 +371,24 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
             // - a valid Multipath TCP Control Block
             // - next step is to send SYN/ACK
             // ==> add subflow to connection/ multipath flow (For first -> FIXME, handle TCP RST)
+            uint32_t remoteToken = option->getValues(1);
+            DEBUGPRINT("[MPTCP] got Token = %i", remoteToken);
+            // First we should find the flow for this subflow. We must sure that we know it
+            AllMultipathTCPVector_t::const_iterator it;
+            for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
+               TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
+               TCP_SubFlowVector_t::const_iterator it_mpflows;
+               if(t->flow!=NULL){
+                   DEBUGPRINT("[MPTCP] Token = %i", t->flow->getLocalToken());
+                   subflow->flow = t->flow;
+                   if(t->flow->getLocalToken() == remoteToken){
+                       subflow->flow = t->flow;
+                       t->flow->addSubflow(connId,subflow);
+                       break;
+                   }
+               }
+            }
 
-            subflow->flow->addSubflow(connId,subflow);
-
-            // process the security part
-
-            // get important information of the segment
-            subflow->randomA = option->getValues(2);
-            // It is also a got time to generate Random of B
-            subflow->randomB = 0; // FIXME (uint32) flow->generateKey();
-
-            // Generate truncated
-            subflow->flow->initKeyMaterial(subflow);
-            subflow->joinToSynAck = true;
 
 //            subflow->sendSynAck();    /** Utility: send SYN+ACK */
 

@@ -221,7 +221,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
         t->subflow->inlist = true;
         if(t->subflow->connId != this->appID){
              DEBUGPRINT("FLOW connID %i "   ,this->appID);
-             return 0;
+             //return 0;
         }
         DEBUGPRINT("SUBFLOW connID %i ",t->subflow->connId);
         subflow_list.push_back(t);

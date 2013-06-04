@@ -102,7 +102,7 @@ const uint16_t DSS_FLAG_F = 0x10;	// FIN FLAG
 //                                                  MULTIPATH TCP
 //                                                   DEBUG STUFF
 // ###############################################################################################################
-#ifdef PRIVATE
+#ifndef PRIVATE
 static char DEBUGBUF[255];
 // Defines for debugging (Could be removed)
 #define WHERESTR  "\n[MPTCP][file %s, line %u]: "
