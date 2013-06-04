@@ -134,7 +134,7 @@ void MPTCP_RoundRobinScheduler::_createMSGforProcess(cMessage *msg) {
     DEBUGPRINT(
                          "[Scheduler][STATUS] USE Connections  %s:%d to %s:%d",
                                lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort);
-
+    DEBUGPRINT("appGate %i connID %i QueueAble %s TCPMain %x",lastUsed->appGateIndex, lastUsed->connId, (lastUsed->isQueueAble?"true":"false"),lastUsed->getTcpMain());
     //sc->getTcpMain()->scheduleAt(simTime() + 0.0001, msg);
 }
 #endif
