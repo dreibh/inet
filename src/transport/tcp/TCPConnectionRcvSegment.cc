@@ -419,6 +419,10 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
         {
             tcpEV << "Our FIN acked -- can go to TIME_WAIT now\n";
             event = TCP_E_RCV_ACK;  // will trigger transition to TIME-WAIT
+#ifdef PRIVATE
+            //FIXME
+            if(!this->isSubflow)
+#endif //PRIVATE
             scheduleTimeout(the2MSLTimer, TCP_TIMEOUT_2MSL);  // start timer
 
             // we're entering TIME_WAIT, so we can signal CLOSED the user
