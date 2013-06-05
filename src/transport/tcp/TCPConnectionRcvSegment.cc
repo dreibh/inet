@@ -1391,6 +1391,7 @@ void TCPConnection::process_TIMEOUT_2MSL()
             break;
 
         default:
+            if(!this->isSubflow)  // FIXME MBe.... I should overwork this
             // We should not receive this timeout in this state.
             throw cRuntimeError(tcpMain,
                     "Internal error: received time-wait (2MSL) timeout in state %s",
