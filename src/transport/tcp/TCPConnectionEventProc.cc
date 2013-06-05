@@ -278,7 +278,9 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             state->send_fin = true;
             state->snd_fin_seq = sendQueue->getBufferEndSeq();
 #ifdef PRIVATE
-            flow->isFIN = true;
+            if(this->getTcpMain()->multipath)
+                if(this->isSubflow)
+                    flow->isFIN = true;
 #endif //PRIVATE
             break;
 

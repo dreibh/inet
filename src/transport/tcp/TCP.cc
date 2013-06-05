@@ -140,6 +140,7 @@ TCP::~TCP()
 	}
 #ifdef PRIVATE
 		delete scheduler;
+		delete flow;
 #endif // PRIVATE
 
 }

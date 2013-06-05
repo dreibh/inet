@@ -42,6 +42,7 @@ class MPTCP_PCB;
 #include "TCPCommand_m.h"
 
 // Forward declarations:
+class MPTCP_Flow;
 class TCPConnection;
 class TCPSegment;
 class TCPSendQueue;
@@ -176,6 +177,7 @@ class INET_API TCP : public cSimpleModule
 
 #ifdef PRIVATE
     MPTCP_SchedulerI* scheduler;    // For scheduler see TCPSchedulerManager::getMPTCPScheduler(...)
+    MPTCP_Flow* flow;
     /* MBe : General multipath settings */
     bool multipath;                 // turn on/off
     bool multipath_DSSDataACK8;     // kind of ack length

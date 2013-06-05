@@ -31,6 +31,7 @@ MPTCP_SchedulerI* TCPSchedulerManager::getMPTCPScheduler(TCP* tcpMain, MPTCP_Flo
      if(tcpMain->scheduler==NULL){
          tcpMain->scheduler = check_and_cast<MPTCP_SchedulerI *> (createOne(tcpMain->par("multipath_Scheduler")));
          tcpMain->scheduler->initialize(flow);
+         tcpMain->flow = flow;
      }
      return tcpMain->scheduler;
  }
