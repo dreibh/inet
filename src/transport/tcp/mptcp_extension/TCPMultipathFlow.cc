@@ -106,6 +106,7 @@ MPTCP_Flow::~MPTCP_Flow() {
        // I want everything off
        if(conn != NULL)
            delete conn;
+           conn = NULL;
     }
 
     subflow_list.clear();

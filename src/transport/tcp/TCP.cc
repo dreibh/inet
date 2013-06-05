@@ -129,7 +129,8 @@ void TCP::initialize()
 
 TCP::~TCP()
 {
-	while (!tcpAppConnMap.empty())
+
+    while (!tcpAppConnMap.empty())
 	{
 		TcpAppConnMap::iterator i = tcpAppConnMap.begin();
 		if((*i).second!= NULL){
@@ -139,10 +140,17 @@ TCP::~TCP()
 		tcpAppConnMap.erase(i);
 	}
 #ifdef PRIVATE
-		delete scheduler;
-		delete flow;
-#endif // PRIVATE
-
+    if(this->multipath){
+        if(scheduler!=NULL){
+            delete scheduler;
+            scheduler = NULL;
+        }
+        if(flow!=NULL){
+            delete flow;
+            flow = NULL;
+        }
+    }
+#endif // PRIVAT
 }
 
 void TCP::handleMessage(cMessage *msg)

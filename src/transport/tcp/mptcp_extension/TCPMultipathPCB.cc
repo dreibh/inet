@@ -57,6 +57,7 @@ MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
         t->appGateIndex = appGateIndex;
         t->connID = connId;
         addMPTCPFlow(t);
+        subflow->getTcpMain()->flow = subflow->flow;
     }
     ASSERT(subflow->flow!=NULL && "SUBFLOW SHOULD NEVER BE NULL HERE");
 }
