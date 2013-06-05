@@ -94,6 +94,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     char name[255]; // opp_dup will be called
 	sprintf(name,"[FLOW-%d][RCV-QUEUE] size",ID);
 	mptcpRcvBufferSize = new cOutVector(name);
+	lastused = NULL;
 }
 /**
  * Destructor
@@ -110,9 +111,15 @@ MPTCP_Flow::~MPTCP_Flow() {
     subflow_list.clear();
     TCPSchedulerManager::destroyMPTCPScheduler();
 
-
-    delete mptcp_receiveQueue;
-    delete mptcpRcvBufferSize;
+    if(mptcp_receiveQueue){
+        delete mptcp_receiveQueue;
+        mptcp_receiveQueue = NULL;
+    }
+    if(mptcpRcvBufferSize){
+        delete mptcpRcvBufferSize;
+        mptcpRcvBufferSize = NULL;
+    }
+    lastused = NULL;
 }
 
 void MPTCP_Flow::removeSubflow(TCPConnection* subflow){

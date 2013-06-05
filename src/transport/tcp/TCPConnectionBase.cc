@@ -369,8 +369,10 @@ TCPConnection::~TCPConnection()
             flow->removeSubflow(this);
             if(flow->getSubflows()->size() == 0){
                 // MBe: this was the last subflow of this flow, could the flow exist without subflow?
-                delete flow;
-                flow = NULL;
+                if(flow!=NULL){
+                    delete flow;
+                    flow = NULL;
+                }
             }
         }
     }

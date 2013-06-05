@@ -159,7 +159,6 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
     number++;
     cPacket* test = check_and_cast<cPacket *> (msg);
     cnt += test->getByteLength();
-    // TODO Statistic vector
     }
 #endif // PRIVATE
     // FIXME how to support PUSH? One option is to treat each SEND as a unit of data,

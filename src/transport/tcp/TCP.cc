@@ -79,6 +79,7 @@ void TCP::initialize()
 {
 
 #ifdef PRIVATE
+    static int id;
     // MBe: setup Multipath and the CC  by CC Variant
      if(strcmp((const char*)par("cmtCCVariant"), "off") == 0) {
          multipath     = false;
@@ -128,8 +129,6 @@ void TCP::initialize()
 
 TCP::~TCP()
 {
-
-
 	while (!tcpAppConnMap.empty())
 	{
 		TcpAppConnMap::iterator i = tcpAppConnMap.begin();

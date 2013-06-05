@@ -27,48 +27,44 @@
 
 Register_Class(MPTCP_RoundRobinScheduler);
 
-TCPConnection* MPTCP_RoundRobinScheduler::lastUsed = NULL;
+
 
 MPTCP_RoundRobinScheduler::MPTCP_RoundRobinScheduler(){
-    lastUsed = NULL;
+
 }
 
 MPTCP_RoundRobinScheduler::~MPTCP_RoundRobinScheduler(){
-    lastUsed = NULL;
+
 }
 
-void MPTCP_RoundRobinScheduler::schedule(TCPConnection* origin, cMessage* msg){
+void MPTCP_RoundRobinScheduler::schedule(TCPConnection* conn, cMessage* msg){
     static TCP* test = NULL;
-    if(lastUsed==NULL){
-          lastUsed = origin;
-          test = origin->getTcpMain();
-    }
-    if(lastUsed->getTcpMain() != test){
-        throw cRuntimeError("Trouble");
-    }
-    ASSERT(lastUsed);
 
+    // fist we have to check ownership
     // We have to split data on mss size
+
+    if( conn->flow->lastused==NULL){
+        conn->flow->lastused = conn;
+    }
+
+    ASSERT(conn->flow->lastused);
+
     cPacket* pkt = check_and_cast<cPacket*> (msg);
-
-    if(lastUsed->getState()->sendQueueLimit)
-        ASSERT(lastUsed->getState()->sendQueueLimit > pkt->getByteLength() && "What is the application doing...? Too much data!");
-
     int64 cond = pkt->getByteLength();
-    _next(cond);
-    if(!lastUsed) return;
+    _next(cond, conn);
+    if(!conn->flow->lastused) return;
     DEBUGPRINT("appGate %i connID %i QueueAble %s TCPMain %x",lastUsed->appGateIndex, lastUsed->connId, (lastUsed->isQueueAble?"true":"false"),lastUsed->getTcpMain());
     DEBUGPRINT("FLOW appGate %i connID %i ",lastUsed->flow->appID,lastUsed->flow->appGateIndex);
 
-    _createMSGforProcess(msg);
-    if(lastUsed->scheduledBytesVector)
-        lastUsed->scheduledBytesVector->record(pkt->getByteLength());
+    _createMSGforProcess(msg,conn);
+    if(conn->flow->lastused->scheduledBytesVector)
+        conn->flow->lastused->scheduledBytesVector->record(pkt->getByteLength());
 }
 
-void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
+void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
 
-    TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)lastUsed->flow->getSubflows();
-    ASSERT(lastUsed);
+    TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)conn->flow->lastused->flow->getSubflows();
+    ASSERT(conn->flow->lastused);
     TCPConnection* tmp = NULL;
     bool firstrun = true;
     bool found = false;
@@ -81,18 +77,18 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
                       "[Scheduler][%i][STATUS] Check Connections  %s:%d to %s:%d",
                            cnt, entry->subflow->localAddr.str().c_str(), entry->subflow->localPort, entry->subflow->remoteAddr.str().c_str(), entry->subflow->remotePort);
             // First organize the send queue limit
-            if(!tmp->getState()->sendQueueLimit )
+            if(!tmp->getState()->sendQueueLimit)
                tmp->getState()->sendQueueLimit = flow->flow_send_queue_limit;
 
 
-            if(tmp == lastUsed && firstrun){
+            if(tmp == conn->flow->lastused && firstrun){
                 firstrun = !firstrun;
             }
-            else if(tmp == lastUsed && (!firstrun)){
+            else if(tmp == conn->flow->lastused && (!firstrun)){
                 found = true;
                 break;
             }
-            else if(tmp->getTcpMain() == lastUsed->getTcpMain()){
+            else if(tmp->getTcpMain() == conn->flow->lastused->getTcpMain()){
                 const uint32 free = tmp->getState()->sendQueueLimit - tmp->getSendQueue()->getBytesAvailable(tmp->getSendQueue()->getBufferStartSeq());
                 if(bytes < free && tmp->isQueueAble){
                     found = true;
@@ -101,7 +97,7 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes){
             }
         }
         if(found){
-            lastUsed = tmp;
+            conn->flow->lastused = tmp;
             DEBUGPRINT(
                       "[Scheduler][%i][STATUS]found",cnt);
             break;
@@ -125,17 +121,16 @@ uint32_t MPTCP_RoundRobinScheduler::getFreeSendBuffer(){
     return abated ;
 }
 
-void MPTCP_RoundRobinScheduler::_createMSGforProcess(cMessage *msg) {
-    ASSERT(lastUsed);
+void MPTCP_RoundRobinScheduler::_createMSGforProcess(cMessage *msg, TCPConnection* conn) {
+    ASSERT(conn->flow->lastused);
     msg->setKind(TCP_C_MPTCP_SEND);
     TCPSendCommand *cmd = new TCPSendCommand();
-    cmd->setConnId(lastUsed->connId);
+    cmd->setConnId(conn->flow->lastused->connId);
     msg->setControlInfo(cmd);
 
-    lastUsed->processAppCommand(msg);
+    conn->flow->lastused->processAppCommand(msg);
     DEBUGPRINT(
                          "[Scheduler][STATUS] USE Connections  %s:%d to %s:%d",
                                lastUsed->localAddr.str().c_str(), lastUsed->localPort, lastUsed->remoteAddr.str().c_str(), lastUsed->remotePort);
-    //sc->getTcpMain()->scheduleAt(simTime() + 0.0001, msg);
 }
 #endif
