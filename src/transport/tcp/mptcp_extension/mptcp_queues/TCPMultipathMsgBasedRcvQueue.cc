@@ -28,6 +28,11 @@ TCPMultipathMsgBasedRcvQueue::TCPMultipathMsgBasedRcvQueue() : TCPMultipathVirtu
 
 TCPMultipathMsgBasedRcvQueue::~TCPMultipathMsgBasedRcvQueue()
 {
+    for(PayloadList::iterator i = payloadList.begin();i == payloadList.end();i++){
+        cPacket *msg = i->second;
+        // TODO Documentation
+        delete msg;
+    }
 }
 
 void TCPMultipathMsgBasedRcvQueue::init(uint64 startSeq)

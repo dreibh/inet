@@ -108,9 +108,9 @@ MPTCP_Flow::~MPTCP_Flow() {
 
     subflow_list.clear();
     TCPSchedulerManager::destroyMPTCPScheduler();
-    if(mptcp_receiveQueue!=NULL)
-    	delete mptcp_receiveQueue;
 
+
+    delete mptcp_receiveQueue;
     delete mptcpRcvBufferSize;
 }
 
