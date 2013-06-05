@@ -367,13 +367,6 @@ TCPConnection::~TCPConnection()
     if(getTcpMain()->multipath){
         if(isSubflow){
             flow->removeSubflow(this);
-            if(flow->getSubflows()->size() == 0){
-                // MBe: this was the last subflow of this flow, could the flow exist without subflow?
-                if(flow!=NULL){
-                    delete flow;
-                    flow = NULL;
-                }
-            }
         }
     }
 #endif // PRIVATE
