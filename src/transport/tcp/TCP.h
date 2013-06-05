@@ -211,6 +211,11 @@ class INET_API TCP : public cSimpleModule
      */
     virtual void addForkedConnection(TCPConnection *conn, TCPConnection *newConn, IPvXAddress localAddr, IPvXAddress remoteAddr, int localPort, int remotePort);
 
+#ifdef PRIVATE
+    // TODO Not all Connection are reported yet
+    virtual void addNewMPTCPConnection(TCPConnection *conn, TCPConnection *newConn);
+#endif
+
     /**
      * To be called from TCPConnection: reserves an ephemeral port for the connection.
      */

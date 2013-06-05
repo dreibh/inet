@@ -574,6 +574,16 @@ void TCP::updateSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress
     // localPort doesn't change (see ASSERT above), so there's no need to update usedEphemeralPorts[].
 }
 
+#ifdef PRIVATE
+void TCP::addNewMPTCPConnection(TCPConnection *conn, TCPConnection *newConn){
+      AppConnKey key;
+      key.appGateIndex = conn->appGateIndex;
+      key.connId = newConn->connId = ev.getUniqueNumber();
+      tcpAppConnMap[key] = newConn;// conn;
+
+}
+#endif //PRIVATE
+
 void TCP::addForkedConnection(TCPConnection *conn, TCPConnection *newConn, IPvXAddress localAddr, IPvXAddress remoteAddr, int localPort, int remotePort)
 {
     // update conn's socket pair, and register newConn (which'll keep LISTENing)
@@ -584,6 +594,7 @@ void TCP::addForkedConnection(TCPConnection *conn, TCPConnection *newConn, IPvXA
     AppConnKey key;
     key.appGateIndex = conn->appGateIndex;
     key.connId = conn->connId;
+
     tcpAppConnMap.erase(key);
     key.connId = conn->connId = ev.getUniqueNumber();
     tcpAppConnMap[key] = conn;

@@ -620,6 +620,8 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
             if(!skip){   // we don have to set it in general server mode (passiv = false)
 
                 TCPConnection *conn_tmp = subflow->cloneMPTCPConnection(false,getLocalToken(),subflow->localAddr,subflow->remoteAddr );
+                subflow->getTcpMain()->addNewMPTCPConnection(subflow,conn_tmp);
+                subflow->isSubflow = true;
                 TCP_subflow_t *t = new TCP_subflow_t();
                 t->active = true;
                 t->subflow = conn_tmp;
@@ -878,6 +880,8 @@ bool MPTCP_Flow::_prepareJoinConnection() {
                 int old =  tmp->remotePort;
                 tmp->remotePort = c->remote.port;
                 TCPConnection *conn_tmp = tmp->cloneMPTCPConnection(true,getLocalToken(),IPvXAddress(c->local.addr),IPvXAddress(c->remote.addr)); //    new TCPConnection(tmp->getTcpMain(),tmp->appGateIndex, tmp->connId); //
+                tmp->getTcpMain()->addNewMPTCPConnection(tmp,conn_tmp);
+                tmp->isSubflow = true;
                 tmp->remotePort = old;
                 TCP_subflow_t *t = new TCP_subflow_t();
                 t->active = true;
