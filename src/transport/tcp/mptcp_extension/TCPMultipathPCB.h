@@ -48,14 +48,11 @@ class INET_API MPTCP_PCB
 
 
 
-        bool isFIN; // FIXME should use setter and getter
-
         void DEBUGprintFlowOverview(int);
 
 
     private:
         MPTCP_PCB();
-//        MPTCP_Flow* flow;
 
         // Selforganisation
         TuppleWithStatus_t* t; // includes also the flow

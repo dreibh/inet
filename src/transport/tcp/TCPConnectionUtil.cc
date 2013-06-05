@@ -1208,7 +1208,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     {
         if(0==bytes){
             tcpEV << "No signal and no data for retransmission...something went wrong" << endl;
-            if(state->fin_rcvd || flow->getPCB()->isFIN)
+            if(state->fin_rcvd || flow->isFIN)
                 return;
        //     throw cRuntimeError("No signal and no data for retransmission...something went wrong");
         }

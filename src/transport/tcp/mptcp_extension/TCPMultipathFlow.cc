@@ -78,6 +78,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     mptcp_rcv_nxt = 0;
     mptcp_rcv_wnd = 0;
     isPassive = false;
+    isFIN = false;
     // Init the flow
     if (subflow->localPort > 0)
         _initFlow(subflow->localPort);
@@ -358,7 +359,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
         c->remote.port = r->port;
         tried_join.push_back(c);
     }
-    if(this->getPCB()->isFIN){
+    if(this->isFIN){
         tcpseg->setFinBit(true);
     }
     /**********************************************************************************
@@ -454,7 +455,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
 }
 
 bool  MPTCP_Flow::close(){
-    this->getPCB()->isFIN = true;
+    isFIN = true;
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
               i != subflow_list.end(); ++i) {
           TCP_subflow_t* entry = (*i);

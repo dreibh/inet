@@ -278,7 +278,14 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             }
             state->send_fin = true;
             state->snd_fin_seq = sendQueue->getBufferEndSeq();
+#ifdef PRIVATE
+            flow->isFIN = true;
+#endif //PRIVATE
+            break;
 
+        case TCP_S_FIN_WAIT_1:
+        case TCP_S_FIN_WAIT_2:
+        case TCP_S_CLOSING:
 #ifdef PRIVATE
             if(getTcpMain()->multipath){
                 if(this->isSubflow){
@@ -286,11 +293,6 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
                 }
             }
 #endif // PRIVATE
-            break;
-
-        case TCP_S_FIN_WAIT_1:
-        case TCP_S_FIN_WAIT_2:
-        case TCP_S_CLOSING:
         case TCP_S_LAST_ACK:
         case TCP_S_TIME_WAIT:
             // RFC 793 is not entirely clear on how to handle a duplicate close request.
