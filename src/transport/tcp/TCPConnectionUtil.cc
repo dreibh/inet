@@ -981,26 +981,24 @@ void TCPConnection::sendSegment(uint32 bytes)
 #ifdef PRIVATE
 #warning "The simulation time needs really long in case of request data every time, perhaps it is better to split"
     // Try to setup a saturated sender.....
-    if(this->isSubflow){
-        state->queueUpdate = false;
-        switch(state->sendQueueLimit){
-        case 0:
-            abated = state->snd_mss-options_len;
-            break;
-        default:
-            if(alreadyQueued < state->sendQueueLimit)
-                abated =  state->sendQueueLimit - (getSendQueue()->getBytesAvailable(getSendQueue()->getBufferStartSeq()));
-            else
-                state->queueUpdate = true;
-        }
-        if(abated < (0.3 * state->sendQueueLimit))  // try of a splitt
-                state->queueUpdate = true;
-                abated = 0.8 * abated;
-    //    }
-    }
-    else isQueueAble = true;
 
-    if(isQueueAble && abated && (!getState()->send_fin))
+            state->queueUpdate = false;
+            switch(state->sendQueueLimit){
+            case 0:
+                abated = state->snd_mss-options_len;
+                break;
+            default:
+                if(alreadyQueued < state->sendQueueLimit)
+                    abated =  state->sendQueueLimit - (getSendQueue()->getBytesAvailable(getSendQueue()->getBufferStartSeq()));
+                else
+                    state->queueUpdate = true;
+            }
+            if(abated < (0.3 * state->sendQueueLimit)) { // try of a splitt
+                    state->queueUpdate = true;
+                    abated = 0.8 * abated;
+           }
+
+    if(abated && (!getState()->send_fin))
 #endif // PRIVATE
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
           (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
