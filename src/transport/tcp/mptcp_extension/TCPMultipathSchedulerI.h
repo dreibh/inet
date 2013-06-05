@@ -26,6 +26,7 @@ class INET_API MPTCP_SchedulerI
     virtual void initialize(MPTCP_Flow* flow) = 0;
     virtual void schedule(TCPConnection* origin, cMessage* msg) = 0;
     virtual uint32_t getFreeSendBuffer() = 0;
+    ~MPTCP_SchedulerI(){};
 
 };
 

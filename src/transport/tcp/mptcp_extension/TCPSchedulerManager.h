@@ -20,7 +20,7 @@
 #ifndef TCPSCHEDULERMANAGER_H_
 #define TCPSCHEDULERMANAGER_H_
 
-#include <omnetpp.h>
+
 #include "INETDefs.h"
 #include "TCPMultipathFlow.h"
 #include "TCPMultipathSchedulerI.h"

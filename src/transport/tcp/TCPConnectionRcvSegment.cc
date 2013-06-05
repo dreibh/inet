@@ -367,6 +367,11 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
         //  the last segment used to update SND.WND.  The check here
         //  prevents using old segments to update the window.
         //"
+#ifdef PRIVATE
+        // FIXME
+        if(isSubflow && state->fin_rcvd)
+            return TCP_E_IGNORE;
+#endif // PRIVATE
         bool ok = processAckInEstabEtc(tcpseg);
 
         if (!ok)
@@ -704,6 +709,9 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                 case TCP_S_FIN_WAIT_2:
                     // Start the time-wait timer, turn off the other timers.
                     cancelEvent(finWait2Timer);
+#ifdef PRIVATE
+                    if(!this->isSubflow)
+#endif // PRIVATE
                     scheduleTimeout(the2MSLTimer, TCP_TIMEOUT_2MSL);
 
                     // we're entering TIME_WAIT, so we can signal CLOSED the user
@@ -1310,7 +1318,10 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
             state->fin_ack_rcvd = true;
             discardUpToSeq--; // the FIN sequence number is not real data
         }
-
+#if PRIVATE
+        if((sendQueue->getBufferEndSeq() != sendQueue->getBufferStartSeq()))
+            // FIXME... The Connection could be still closed, even Messages comes in
+#endif   // Private
         // acked data no longer needed in send queue
         sendQueue->discardUpTo(discardUpToSeq);
 

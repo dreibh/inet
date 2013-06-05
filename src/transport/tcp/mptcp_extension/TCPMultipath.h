@@ -142,12 +142,6 @@ const unsigned int MP_DSS_OPTIONLENGTH_4BYTE = 20;
 #define MPTCP_FSM(state) setState(state); // fprintf(stderr,"\n[FSM] CHANGE STATE %u line %u\n",state,__LINE__);
 
 
-
-
-
-
-
-
 #endif // __TCP_MULTIPATH_H
 #endif // Private
 

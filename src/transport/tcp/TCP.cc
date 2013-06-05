@@ -133,23 +133,14 @@ TCP::~TCP()
 	while (!tcpAppConnMap.empty())
 	{
 		TcpAppConnMap::iterator i = tcpAppConnMap.begin();
-#ifndef PRIVATE
 		if((*i).second!= NULL){
-#else // PRIVATE
-		// MBe: The Multipath subflows are not in the main list, except the first,
-		// but even the first we organize in the Multipath section
-		if((*i).second!= NULL && (!(*i).second->isSubflow)){
-#endif // PRIVATE
 			delete (*i).second;
 		}
 		(*i).second= NULL;
 		tcpAppConnMap.erase(i);
 	}
 #ifdef PRIVATE
-	// MBe: if we in Multipath we have to free the resources
-//    if(this->multipath){
-//         delete this->mptcp_pcb;
-//    }
+		delete scheduler;
 #endif // PRIVATE
 
 }

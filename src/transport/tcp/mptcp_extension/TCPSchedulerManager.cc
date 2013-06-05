@@ -27,15 +27,15 @@
 
 
 
-MPTCP_SchedulerI* TCPSchedulerManager::getMPTCPScheduler(TCP* pcb, MPTCP_Flow* flow){
-     if(pcb->scheduler==NULL){
-         pcb->scheduler = check_and_cast<MPTCP_SchedulerI *> (createOne(pcb->par("multipath_Scheduler")));
-         pcb->scheduler->initialize(flow);
+MPTCP_SchedulerI* TCPSchedulerManager::getMPTCPScheduler(TCP* tcpMain, MPTCP_Flow* flow){
+     if(tcpMain->scheduler==NULL){
+         tcpMain->scheduler = check_and_cast<MPTCP_SchedulerI *> (createOne(tcpMain->par("multipath_Scheduler")));
+         tcpMain->scheduler->initialize(flow);
      }
-     return pcb->scheduler;
+     return tcpMain->scheduler;
  }
 
 void TCPSchedulerManager::destroyMPTCPScheduler(){
-   // Should be done in PCB
+   // Should be done by tcp
 }
 #endif //Private

@@ -90,7 +90,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 
     ordered = subflow->getTcpMain()->par("multipath_ordered");
 
-    char name[255];
+    char name[255]; // opp_dup will be called
 	sprintf(name,"[FLOW-%d][RCV-QUEUE] size",ID);
 	mptcpRcvBufferSize = new cOutVector(name);
 }
@@ -102,8 +102,8 @@ MPTCP_Flow::~MPTCP_Flow() {
     for(TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++){
        TCPConnection *conn =  (*i)->subflow;
        // I want everything off
-
-       delete conn;
+       if(conn != NULL)
+           delete conn;
     }
 
     subflow_list.clear();
@@ -460,7 +460,6 @@ bool  MPTCP_Flow::close(){
           TCP_subflow_t* entry = (*i);
               if(!entry->subflow->getState()->send_fin){
                   entry->subflow->process_CLOSE();
-              entry->subflow->sendRst(entry->subflow->getState()->snd_nxt);
               }
       }
     return true;

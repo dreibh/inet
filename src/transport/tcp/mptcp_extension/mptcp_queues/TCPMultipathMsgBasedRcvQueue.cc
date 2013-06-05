@@ -30,6 +30,10 @@ TCPMultipathMsgBasedRcvQueue::~TCPMultipathMsgBasedRcvQueue()
 {
     for(PayloadList::iterator i = payloadList.begin();i == payloadList.end();i++){
         cPacket *msg = i->second;
+        cPacket *tmp = msg->getEncapsulatedMsg();
+        if(tmp!=NULL){
+            delete tmp;
+        }
         // TODO Documentation
         delete msg;
     }

@@ -211,32 +211,15 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 }
 void TCPConnection::process_CLOSE(){
 #ifdef PRIVATE
-    //
-    // SYN_RCVD processing (ESTABLISHED and CLOSE_WAIT are similar):
-    //"
-    // If no SENDs have been issued and there is no pending data to send,
-    // then form a FIN segment and send it, and enter FIN-WAIT-1 state;
-    // otherwise queue for processing after entering ESTABLISHED state.
-    //"
-    if (state->snd_max == sendQueue->getBufferEndSeq())
-    {
-        tcpEV << "No outstanding SENDs, sending FIN right away, advancing snd_nxt over the FIN\n";
+
         state->snd_nxt = state->snd_max;
         sendFin();
-        //tcpAlgorithm->restartRexmitTimer();
+        tcpAlgorithm->restartRexmitTimer();
         state->snd_max = ++state->snd_nxt;
 
         if (unackedVector)
             unackedVector->record(state->snd_max - state->snd_una);
-
-        // state transition will automatically take us to FIN_WAIT_1 (or LAST_ACK)
-    }
-    else
-    {
-        // FIXME - do we need an event?
-    }
-    state->send_fin = true;
-    state->snd_fin_seq = sendQueue->getBufferEndSeq();
+        FSM_Goto(this->fsm, TCP_S_CLOSE_WAIT);
 #endif
 }
 void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)

@@ -1208,6 +1208,8 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     {
         if(0==bytes){
             tcpEV << "No signal and no data for retransmission...something went wrong" << endl;
+            if(state->fin_rcvd)
+                return;
        //     throw cRuntimeError("No signal and no data for retransmission...something went wrong");
         }
         ASSERT(bytes != 0);
