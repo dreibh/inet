@@ -993,7 +993,7 @@ void TCPConnection::sendSegment(uint32 bytes)
                 else
                     state->queueUpdate = true;
             }
-            if(abated < (0.3 * state->sendQueueLimit)) { // try of a splitt
+            if(abated < (0.9 * state->sendQueueLimit)) { // try of a splitt
                     state->queueUpdate = true;
                     abated = 0.8 * abated;
            }
