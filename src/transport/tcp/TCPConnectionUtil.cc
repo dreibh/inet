@@ -1019,6 +1019,7 @@ void TCPConnection::sendSegment(uint32 bytes)
 #endif // PRIVATE
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
           (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
+              fprintf(stderr,"Figure out abated %u\n",abated);
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
               state->queueUpdate = true;  // TODO was true;
       }
