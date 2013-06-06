@@ -143,8 +143,9 @@ void TCPConnection::process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpComman
         // depends on the scheduler and queue size
         flow->schedule(this, msg);
     }
-    else
+    else{
         process_SEND(event,tcpCommand,msg);
+    }
 }
 #endif // PRIVATE
 
@@ -159,6 +160,10 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
     number++;
     cPacket* test = check_and_cast<cPacket *> (msg);
     cnt += test->getByteLength();
+    if(!isSubflow){
+        if(getState()->requested > test->getByteLength())
+         getState()->requested -= test->getByteLength();
+    }
     }
 #endif // PRIVATE
     // FIXME how to support PUSH? One option is to treat each SEND as a unit of data,
@@ -201,11 +206,6 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             throw cRuntimeError(tcpMain, "Error processing command SEND: connection closing");
             /* no break */
     }
-
-    if ((state->sendQueueLimit > 0) && (sendQueue->getBytesAvailable(state->snd_una) > state->sendQueueLimit)) {
-       state->queueUpdate = false;
-    }
-
     delete sendCommand; // msg itself has been taken by the sendQueue
 }
 void TCPConnection::process_CLOSE(){
@@ -377,8 +377,6 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
         opp_error("Called process_QUEUE_BYTES_LIMIT on uninitialized TCPConnection!");
     }
     state->sendQueueLimit = tcpCommand->getUserId();
- //   fprintf(stderr,"Set Send Queue Limit %u\n", state->sendQueueLimit);
-
     delete msg;
     delete tcpCommand;
 }

@@ -290,8 +290,9 @@ class INET_API TCPStateVariables : public cObject
 
     // queue management
     uint32 sendQueueLimit;
-    bool queueUpdate;
-
+#ifdef PRIVATE
+    uint32 requested;
+#endif
     // those counters would logically belong to TCPAlgorithm, but it's a lot easier to manage them here
     uint32 dupacks;          // current number of received consecutive duplicate ACKs
     uint32 snd_sacks;        // number of sent sacks

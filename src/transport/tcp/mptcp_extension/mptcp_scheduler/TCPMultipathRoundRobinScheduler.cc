@@ -51,11 +51,9 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* conn, cMessage* msg){
 
     cPacket* pkt = check_and_cast<cPacket*> (msg);
     int64 cond = pkt->getByteLength();
+
     _next(cond, conn);
     if(!conn->flow->lastused) return;
-    DEBUGPRINT("appGate %i connID %i QueueAble %s TCPMain %x",lastUsed->appGateIndex, lastUsed->connId, (lastUsed->isQueueAble?"true":"false"),lastUsed->getTcpMain());
-    DEBUGPRINT("FLOW appGate %i connID %i ",lastUsed->flow->appID,lastUsed->flow->appGateIndex);
-
     _createMSGforProcess(msg,conn);
     if(conn->flow->lastused->scheduledBytesVector)
         conn->flow->lastused->scheduledBytesVector->record(pkt->getByteLength());
@@ -68,6 +66,7 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
     TCPConnection* tmp = NULL;
     bool firstrun = true;
     bool found = false;
+    static uint32 msg_counter = 0;
     int cnt = 0;
     for(;;){
         for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++, cnt++) {
@@ -90,19 +89,37 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
                 firstrun = !firstrun;
             }
             else if(tmp == conn->flow->lastused && (!firstrun)){
-                found = true;
-                break;
+
+                if((!tmp->getState()->sendQueueLimit) || (tmp->getState()->requested  >= bytes)){
+                    found = true;
+                    break;
+                }
+                else{
+                    if(tmp->getState()->sendQueueLimit){
+                        fprintf(stderr,"Too many bytes for sending... no room...up to now enqueued %i\n",msg_counter);
+                        for (TCP_SubFlowVector_t::iterator si = subflow_list->begin(); si != subflow_list->end(); si++) {
+                            uint32 alreadyQueued_tmp = (*si)->subflow->getSendQueue()->getBytesAvailable((*si)->subflow->getSendQueue()->getBufferStartSeq());
+                            uint32 abated_tmp        = ( (*si)->subflow->getState()->sendQueueLimit > alreadyQueued_tmp) ?  (*si)->subflow->getState()->sendQueueLimit - alreadyQueued_tmp : 0;
+                            fprintf(stderr,"room available: abated %i requested %i\n",abated_tmp,(*si)->subflow->getState()->requested );
+                        }
+                    }
+                    found = true;
+
+                    break;
+                }
             }
             else if(tmp->getTcpMain() == conn->flow->lastused->getTcpMain()){
-                const uint32 free = tmp->getState()->sendQueueLimit - tmp->getSendQueue()->getBytesAvailable(tmp->getSendQueue()->getBufferStartSeq());
-                if(bytes < free && tmp->isQueueAble){
+                if(((!tmp->getState()->sendQueueLimit) || (tmp->getState()->requested  >= bytes)) ){//&& tmp->isQueueAble){
                     found = true;
                     break;
                 }
             }
         }
         if(found){
+            msg_counter+=bytes;
             conn->flow->lastused = tmp;
+            if( tmp->getState()->requested > bytes)
+                tmp->getState()->requested -= bytes;
             DEBUGPRINT(
                       "[Scheduler][%i][STATUS]found",cnt);
             break;

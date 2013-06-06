@@ -561,16 +561,18 @@ void TCPConnection::sendEstabIndicationToApp()
 {
 #ifdef PRIVATE
     // The application only need one notification, otherwise he work on more than one connection
-    state->queueUpdate = true;
+    this->getState()->requested = 3*state->snd_mss;
+    sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
     if(tcpMain->multipath){
         isQueueAble = true;
         if(flow->sendEstablished){
+
+
             return; // we need no notification message
         }
         this->flow->sendEstablished = true;
     }
     // Request minimum data
-    sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
 #endif // PRIVATE
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
     cMessage *msg = new cMessage(indicationName(TCP_I_ESTABLISHED));
@@ -902,13 +904,6 @@ void TCPConnection::sendSegment(uint32 bytes)
     if (bytes > buffered) // last segment?
         bytes = buffered;
 
-#ifdef PRIVATE
-    if(!buffered){
-        fprintf(stderr,"['TCP][SEND][WARNING] No Data send, because no data available for sending %lu (Send Window too small?)", buffered);
-        return;
-     }
-#endif // PRIVATE
-
     // if header options will be added, this could reduce the number of data bytes allowed for this segment,
     // because following condition must to be respected:
     //     bytes + options_len <= snd_mss
@@ -997,29 +992,31 @@ void TCPConnection::sendSegment(uint32 bytes)
 #ifdef PRIVATE
 #warning "The simulation time needs really long in case of request data every time, perhaps it is better to split"
     // Try to setup a saturated sender.....
+//
+//
+//
+//            switch(state->sendQueueLimit){
+//            case 0:
+//                abated = 3*state->snd_wnd;
+//                state->requested = 0;
+//                break;
+//            default:
+//                    break;
+//            }
 
-            state->queueUpdate = false;
+    if(state->requested < state->sendQueueLimit){
+        abated = std::min(state->sendQueueLimit-(state->requested + state->snd_mss),abated);
+        abated = std::min(state->sendQueueLimit, abated);
+    }
+    else
+        abated = 0;
 
-            switch(state->sendQueueLimit){
-            case 0:
-                abated = 3*state->snd_wnd;
-                break;
-            default:
-                    state->queueUpdate = true;
-                    break;
-            }
-            if(abated > (0.5*state->sendQueueLimit)) { // try of a split
-                    state->queueUpdate = false;
-                    abated = std::min(state->sendQueueLimit, abated);
-            }
-    if(abated && (!getState()->send_fin))
+    if((!getState()->send_fin))
 #endif // PRIVATE
-     if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
-          (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
-
-              sendIndicationToApp(TCP_I_SEND_MSG, abated);
-              state->queueUpdate = true;  // TODO was true;
-      }
+    if ((abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
+             state->requested += (abated);
+             sendIndicationToApp(TCP_I_SEND_MSG, abated);
+    }
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)

@@ -117,7 +117,7 @@ TCPStateVariables::TCPStateVariables()
     tcpRcvQueueDrops = 0;
 
     sendQueueLimit = 0;
-    queueUpdate = true;
+    requested = 0;
 }
 
 std::string TCPStateVariables::info() const
@@ -188,6 +188,7 @@ TCPConnection::TCPConnection()
 	dss_dataMapofSubflow.clear();
 	bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
 #endif // PRIVATE
+
     // Note: this ctor is NOT used to create live connections, only
     // temporary ones to invoke segmentArrivalWhileClosed() on
     transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge
@@ -227,6 +228,8 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     dss_dataMapofSubflow.clear();
     bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
 #endif
+
+
     tcpMain = _mod;
     appGateIndex = _appGateIndex;
     connId = _connId;
