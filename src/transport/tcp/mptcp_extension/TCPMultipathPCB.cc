@@ -67,16 +67,16 @@ MPTCP_PCB::MPTCP_PCB(int connId, int appGateIndex, TCPConnection* subflow) {
 MPTCP_PCB::~MPTCP_PCB() {
     // By default no flows should be in the list
     AllMultipathTCPVector_t::iterator i = mptcp_flow_vector.begin();
-    while (i != mptcp_flow_vector.end())
-    {
-        TuppleWithStatus_t* entry = (*i);
-        if(entry->flow!=NULL)
-            delete entry->flow;
-        mptcp_flow_vector.erase(i);
-        delete entry;
-        i = mptcp_flow_vector.begin();
-    }
-    mptcp_flow_vector.clear();
+//    while (i != mptcp_flow_vector.end())
+//    {
+//        TuppleWithStatus_t* entry = (*i);
+//        if(entry->flow!=NULL)
+//            delete entry->flow;
+//        mptcp_flow_vector.erase(i);
+//        delete entry;
+//        i = mptcp_flow_vector.begin();
+//    }
+//    mptcp_flow_vector.clear();
 }
 
 /**
