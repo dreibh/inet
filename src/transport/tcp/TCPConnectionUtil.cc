@@ -1005,18 +1005,13 @@ void TCPConnection::sendSegment(uint32 bytes)
                 abated = 3*state->snd_wnd;
                 break;
             default:
-                if(alreadyQueued < state->sendQueueLimit){
-                    abated =  state->sendQueueLimit - (getSendQueue()->getBytesAvailable(getSendQueue()->getBufferStartSeq()));
-
-                }
-                else{
                     state->queueUpdate = true;
-                }
+                    break;
             }
-            if(abated < state->sendQueueLimit) { // try of a splitt
+            if(abated > (0.5*state->sendQueueLimit)) { // try of a split
                     state->queueUpdate = false;
-                   // abated = std::min(2*state->snd_wnd , abated);
-           }
+                    abated = std::min(state->sendQueueLimit, abated);
+            }
     if(abated && (!getState()->send_fin))
 #endif // PRIVATE
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
