@@ -1283,10 +1283,6 @@ void MPTCP_Flow::enqueueMPTCPData(TCPSegment *mptcp_tcpseg, uint64 dss_start_seq
 	this->mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(mptcp_tcpseg,dss_start_seq,data_len);
 }
 
-void MPTCP_Flow::setSendQueueLimit(int limit){
-    flow_send_queue_limit = limit;
-    return;
-}
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
     // easy scheduler
 

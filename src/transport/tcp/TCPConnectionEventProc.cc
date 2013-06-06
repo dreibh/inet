@@ -376,13 +376,9 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
     if(state == NULL) {
         opp_error("Called process_QUEUE_BYTES_LIMIT on uninitialized TCPConnection!");
     }
-#ifdef PRIVATE
-    if(this->isSubflow)
-        this->flow->setSendQueueLimit(tcpCommand->getUserId());
-    else
-#endif // PRIVATE !! NEED NEXT LINE !!!!
     state->sendQueueLimit = tcpCommand->getUserId();
-    tcpEV<<"state->sendQueueLimit set to "<<state->sendQueueLimit<<"\n";
+    fprintf(stderr,"Set Send Queue Limit %u\n", state->sendQueueLimit);
+
     delete msg;
     delete tcpCommand;
 }

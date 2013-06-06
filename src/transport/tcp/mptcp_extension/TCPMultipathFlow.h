@@ -110,7 +110,7 @@ class INET_API MPTCP_Flow
     uint64_t start_seq;
 
     // helper
-    uint32_t flow_send_queue_limit;
+   // uint32_t flow_send_queue_limit;
   protected:
     bool checksum;
     bool isPassive;

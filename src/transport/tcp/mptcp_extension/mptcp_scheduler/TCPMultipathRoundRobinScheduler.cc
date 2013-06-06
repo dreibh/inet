@@ -77,9 +77,14 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
                       "[Scheduler][%i][STATUS] Check Connections  %s:%d to %s:%d",
                            cnt, entry->subflow->localAddr.str().c_str(), entry->subflow->localPort, entry->subflow->remoteAddr.str().c_str(), entry->subflow->remotePort);
             // First organize the send queue limit
-            if(!tmp->getState()->sendQueueLimit)
-               tmp->getState()->sendQueueLimit = flow->flow_send_queue_limit;
-
+            if(!tmp->getState()->sendQueueLimit){
+                for (TCP_SubFlowVector_t::iterator si = subflow_list->begin(); si != subflow_list->end(); si++) {
+                  if((*si)->subflow->getState()->sendQueueLimit){
+                      tmp->getState()->sendQueueLimit = (*si)->subflow->getState()->sendQueueLimit;
+                      break;
+                  }
+                }
+            }
 
             if(tmp == conn->flow->lastused && firstrun){
                 firstrun = !firstrun;
