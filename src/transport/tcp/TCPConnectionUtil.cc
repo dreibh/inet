@@ -993,7 +993,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     // let application fill queue again, if there is space
     uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
     uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
-
+    fprintf(stderr,"abated first:  %ul\n",abated);
 #ifdef PRIVATE
 #warning "The simulation time needs really long in case of request data every time, perhaps it is better to split"
     // Try to setup a saturated sender.....
@@ -1002,17 +1002,21 @@ void TCPConnection::sendSegment(uint32 bytes)
             switch(state->sendQueueLimit){
             case 0:
                 abated = 3*state->snd_wnd;
+                fprintf(stderr,"abated second:  %ul\n",abated);
                 break;
             default:
-                if(alreadyQueued < state->sendQueueLimit)
+                if(alreadyQueued < state->sendQueueLimit){
                     abated =  state->sendQueueLimit - (getSendQueue()->getBytesAvailable(getSendQueue()->getBufferStartSeq()));
-                else
+                    fprintf(stderr,"abated third:  %u\n",abated);
+                }
+                else{
                     state->queueUpdate = true;
+                }
             }
             if(abated < state->sendQueueLimit) { // try of a splitt
                     state->queueUpdate = false;
-
                     abated = std::min(2*state->snd_wnd , abated);
+                    fprintf(stderr,"abated fourth:  %u\n",abated);
            }
 
     if(abated && (!getState()->send_fin))
