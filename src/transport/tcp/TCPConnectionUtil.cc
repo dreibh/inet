@@ -542,7 +542,7 @@ void TCPConnection::sendIndicationToApp(int code, const int id)
         case(TCP_I_TIMED_OUT): break;
         case(TCP_I_STATUS): break;
         case(TCP_I_SEND_MSG):
-                fprintf(stderr,"Request new Data from app! Report Buffer %i\n",id); break;
+             break;
         default: break;
     }
 
@@ -993,22 +993,21 @@ void TCPConnection::sendSegment(uint32 bytes)
     // let application fill queue again, if there is space
     uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
     uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
-    fprintf(stderr,"abated first:  %ul\n",abated);
+
 #ifdef PRIVATE
 #warning "The simulation time needs really long in case of request data every time, perhaps it is better to split"
     // Try to setup a saturated sender.....
 
             state->queueUpdate = false;
-            fprintf(stderr,"Queue Limi %u\n",state->sendQueueLimit);
+
             switch(state->sendQueueLimit){
             case 0:
                 abated = 3*state->snd_wnd;
-                fprintf(stderr,"abated second:  %u\n",abated);
                 break;
             default:
                 if(alreadyQueued < state->sendQueueLimit){
                     abated =  state->sendQueueLimit - (getSendQueue()->getBytesAvailable(getSendQueue()->getBufferStartSeq()));
-                    fprintf(stderr,"abated third:  %u\n",abated);
+
                 }
                 else{
                     state->queueUpdate = true;
@@ -1017,14 +1016,12 @@ void TCPConnection::sendSegment(uint32 bytes)
             if(abated < state->sendQueueLimit) { // try of a splitt
                     state->queueUpdate = false;
                     abated = std::min(2*state->snd_wnd , abated);
-                    fprintf(stderr,"abated fourth:  %u\n",abated);
            }
-
     if(abated && (!getState()->send_fin))
 #endif // PRIVATE
      if ((state->sendQueueLimit > 0) && (state->queueUpdate == false) &&
           (abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
-              fprintf(stderr,"Figure out abated %u\n",abated);
+
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
               state->queueUpdate = true;  // TODO was true;
       }
