@@ -51,6 +51,7 @@ void MPTCP_RoundRobinScheduler::schedule(TCPConnection* conn, cMessage* msg){
 
     cPacket* pkt = check_and_cast<cPacket*> (msg);
     int64 cond = pkt->getByteLength();
+
     _next(cond, conn);
     if(!conn->flow->lastused) return;
     DEBUGPRINT("appGate %i connID %i QueueAble %s TCPMain %x",lastUsed->appGateIndex, lastUsed->connId, (lastUsed->isQueueAble?"true":"false"),lastUsed->getTcpMain());
@@ -90,12 +91,17 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
                 firstrun = !firstrun;
             }
             else if(tmp == conn->flow->lastused && (!firstrun)){
-                found = true;
-                break;
+                uint32 alreadyQueued = tmp->getSendQueue()->getBytesAvailable(tmp->getSendQueue()->getBufferStartSeq());
+                uint32 abated        = ( tmp->getState()->sendQueueLimit > alreadyQueued) ?  tmp->getState()->sendQueueLimit - alreadyQueued : 0;
+                if((!tmp->getState()->sendQueueLimit) || (abated >= bytes)){
+                    found = true;
+                    break;
+                }
             }
             else if(tmp->getTcpMain() == conn->flow->lastused->getTcpMain()){
-                const uint32 free = tmp->getState()->sendQueueLimit - tmp->getSendQueue()->getBytesAvailable(tmp->getSendQueue()->getBufferStartSeq());
-                if(bytes < free && tmp->isQueueAble){
+                uint32 alreadyQueued = tmp->getSendQueue()->getBytesAvailable(tmp->getSendQueue()->getBufferStartSeq());
+                uint32 abated        = ( tmp->getState()->sendQueueLimit > alreadyQueued) ?  tmp->getState()->sendQueueLimit - alreadyQueued : 0;
+                if((!tmp->getState()->sendQueueLimit) || (abated >= bytes)){
                     found = true;
                     break;
                 }
