@@ -11,7 +11,7 @@ DURATION_SERVER="360 s"
 BIGFILES="NO" # YES
 ####################### Prepare Runs ######################
 echo "Get Parameter"
-if [ $1 != "" ];
+if [ ! -z $1 ];
 then
 	tmp=$RUNS
 	if [ $1 == "ALL" ];
@@ -36,6 +36,9 @@ then
 			fi
 		done
 	fi
+else
+echo "please use parameter .... see help"
+exit 0
 fi
 	
 echo "Work on " $RUNS

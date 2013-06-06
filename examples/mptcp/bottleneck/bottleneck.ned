@@ -12,12 +12,12 @@ network bottleneck
     types:
         channel C1 extends DatarateChannel
         {
-            datarate = 10 Mbps;
+            datarate = 100 Mbps;
             //delay = 1 ms;
         }
         channel C2 extends DatarateChannel
         {
-            datarate = 10 Mbps;
+            datarate = 100 Mbps;
             // delay = 1 ms;
         }
     submodules:
@@ -95,7 +95,7 @@ network bottleneck
 // Router Connection        
 //        router1.pppg[1] <--> C2 {  delay = 1 ms; per = 0.01; } <--> router3.pppg[0];
 //        router2.pppg[1] <--> C2 {  delay = 1 ms; per = 0.01; } <--> router4.pppg[0];
-  		router1.pppg[1] <--> C2 {  delay = 5 ms; per = 0; } <--> router3.pppg[0];
-        router2.pppg[1] <--> C2 {  delay = 5 ms; per = 0; } <--> router4.pppg[0];
+  		router1.pppg[1] <--> C2 {  delay = 1 ms; per = 0; } <--> router3.pppg[0];
+        router2.pppg[1] <--> C2 {  delay = 1 ms; per = 0; } <--> router4.pppg[0];
 }
 

@@ -1015,7 +1015,7 @@ void TCPConnection::sendSegment(uint32 bytes)
             }
             if(abated < state->sendQueueLimit) { // try of a splitt
                     state->queueUpdate = false;
-                    abated = std::min(2*state->snd_wnd , abated);
+                   // abated = std::min(2*state->snd_wnd , abated);
            }
     if(abated && (!getState()->send_fin))
 #endif // PRIVATE
