@@ -16,3 +16,10 @@ Wenn Crypto gebraucht wird ist dies immer auf Costum Makefile zu ändern.
  TEST Mit Valgrind
  
  valgrind --tool=memcheck --log-file="valgrind.log"  ../../../src/inet -r 0 -u Cmdenv -n ../..:../../../simulations:../../../src  fehler.ini
+ 
+ 
+ Ausführen der Fremden umgebung 
+ 
+ lib/ld-loader.so --library-path lib ./simulation-binary -u Cmdenv -f run3-parameters.ini -n ../../../src:../../../examples:../../sctp
+ 
+ 

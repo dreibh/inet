@@ -530,6 +530,22 @@ void TCPConnection::sendIndicationToApp(int code, const int id)
     // MBE: check if it is a good idea to request for further messages
     if(this->getState()->send_fin || this->getState()->fin_rcvd)
         return; // I think no
+    switch (code)
+    {
+        case(TCP_I_DATA): break;
+        case(TCP_I_URGENT_DATA): break;
+        case(TCP_I_ESTABLISHED): break;
+        case(TCP_I_PEER_CLOSED): break;
+        case(TCP_I_CLOSED): break;
+        case(TCP_I_CONNECTION_REFUSED): break;
+        case(TCP_I_CONNECTION_RESET): break;
+        case(TCP_I_TIMED_OUT): break;
+        case(TCP_I_STATUS): break;
+        case(TCP_I_SEND_MSG):
+                fprintf(stderr,"Request new Data from app! Report Buffer %i\n",id); break;
+        default: break;
+    }
+
 #endif // PRIVATE
     tcpEV << "Notifying app: " << indicationName(code) << "\n";
     cMessage *msg = new cMessage(indicationName(code));
@@ -985,7 +1001,7 @@ void TCPConnection::sendSegment(uint32 bytes)
             state->queueUpdate = false;
             switch(state->sendQueueLimit){
             case 0:
-                abated = state->snd_mss-options_len;
+                abated = 3*state->snd_wnd;
                 break;
             default:
                 if(alreadyQueued < state->sendQueueLimit)
@@ -993,9 +1009,10 @@ void TCPConnection::sendSegment(uint32 bytes)
                 else
                     state->queueUpdate = true;
             }
-            if(abated < (0.9 * state->sendQueueLimit)) { // try of a splitt
-                    state->queueUpdate = true;
-                    abated = 0.8 * abated;
+            if(abated < state->sendQueueLimit) { // try of a splitt
+                    state->queueUpdate = false;
+
+                    abated = std::min(2*state->snd_wnd , abated);
            }
 
     if(abated && (!getState()->send_fin))
