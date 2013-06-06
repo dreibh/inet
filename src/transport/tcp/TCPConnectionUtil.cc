@@ -999,10 +999,11 @@ void TCPConnection::sendSegment(uint32 bytes)
     // Try to setup a saturated sender.....
 
             state->queueUpdate = false;
+            fprintf(stderr,"Queue Limi %u\n",state->sendQueueLimit);
             switch(state->sendQueueLimit){
             case 0:
                 abated = 3*state->snd_wnd;
-                fprintf(stderr,"abated second:  %ul\n",abated);
+                fprintf(stderr,"abated second:  %u\n",abated);
                 break;
             default:
                 if(alreadyQueued < state->sendQueueLimit){
