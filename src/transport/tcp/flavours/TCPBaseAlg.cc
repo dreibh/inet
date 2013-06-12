@@ -508,9 +508,11 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
         abated = std::min(conn->getState()->sendQueueLimit, abated);
     }
     else abated = 0;
-    if(conn->getState()->sendQueueLimit && abated)
+
+    abated = std::min(conn->getState()->sendQueueLimit-state->requested , abated);
+
+    if(abated)
     if(conn->getState()->requested <= conn->getState()->sendQueueLimit){
-        abated = std::min(conn->getState()->sendQueueLimit-state->requested , abated);
         conn->getState()->requested += abated;
         conn->sendIndicationToApp(TCP_I_SEND_MSG, abated);
     }
