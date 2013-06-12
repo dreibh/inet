@@ -464,6 +464,7 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
         if(first){
             first = false;
             if(conn->isSubflow){
+               bool send_something = false;
                TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)conn->flow->getSubflows();
                 // the sendCommandInvoked could possible increase the numbers of subflows
                size_t max = subflow_list->size();
@@ -471,11 +472,13 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
                for (size_t cnt = 0; cnt < max; cnt++,it++) {
                     TCP_subflow_t* entry = (*it);
                     TCPConnection* tmp = entry->subflow;
-                    if(tmp->isQueueAble)
+                    if(tmp->isQueueAble){
                         tmp->getTcpAlgorithm()->sendCommandInvoked();
+                        send_something = true;
+                    }
                }
                first = true;
-               return true;
+               return send_something;
             }
             first = true;
         }
