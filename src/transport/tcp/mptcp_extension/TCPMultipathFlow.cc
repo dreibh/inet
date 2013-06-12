@@ -634,10 +634,12 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
                 TCPConnection *conn_tmp = subflow->cloneMPTCPConnection(false,getLocalToken(),subflow->localAddr,subflow->remoteAddr );
                 subflow->getTcpMain()->addNewMPTCPConnection(subflow,conn_tmp);
                 subflow->isSubflow = true;
+                subflow->isQueueAble = true;
                 TCP_subflow_t *t = new TCP_subflow_t();
                 t->active = true;
                 t->subflow = conn_tmp;
                 t->subflow->flow = this;
+
                 // subflow_list.push_back(t);
 
             }
@@ -741,7 +743,8 @@ int MPTCP_Flow::_writeJoinHandshakeHeader(uint t,
         DEBUGPRINT(
                 "[MPTCP][HANDSHAKE][MP_JOIN] SYN ACK with MP_JOIN <Not filled yet>%s",
                 "\0");
-
+        subflow->isQueueAble = true;
+        subflow->updateWndInfo(tcpseg,true);
         // Prepare
         assert(MP_JOIN_SIZE_SYNACK==16 && "Did someone a change on MP_JOIN_SIZE_SYNACK?");
         // In the draft it is defined as 12
@@ -766,6 +769,8 @@ int MPTCP_Flow::_writeJoinHandshakeHeader(uint t,
 // ACK MP_JOIN
     } else if ((!tcpseg->getSynBit()) && (tcpseg->getAckBit())) {
         // MPTCP OUT MP_JOIN ACK
+        subflow->isQueueAble = true;
+        subflow->updateWndInfo(tcpseg,true);
         DEBUGPRINT(
                 "[MPTCP][HANDSHAKE][MP_JOIN] ACK with MP_JOIN <Not filled yet>%s",
                 "\0");

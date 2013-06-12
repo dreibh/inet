@@ -267,6 +267,26 @@ void TCP::handleMessage(cMessage *msg)
                 fprintf(stderr,"\n[TCP][NEW SEG] from  %s:%d to %s:%d\n", srcAddr.str().c_str(), tcpseg->getSrcPort(), destAddr.str().c_str(),tcpseg->getDestPort());
                 fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
 #endif // _PRIVATE
+#ifdef PRIVATE
+                if(conn->getTcpMain()->multipath){
+                  // OK we find in general a multipath connection, but perhaps we know it more in detail of the subflow
+                    if(conn->flow){
+                        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)conn->flow->getSubflows();
+                        for ( TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
+                             TCP_subflow_t* entry = (*it);
+
+                             if (((entry->subflow->remoteAddr == srcAddr)
+                                             && (entry->subflow->remotePort == tcpseg->getSrcPort())
+                                             && (entry->subflow->localAddr == destAddr)
+                                             && (entry->subflow->localPort == tcpseg->getDestPort())) ){
+                                 conn = entry->subflow;
+                                 break;
+                             }
+
+                         }
+                    }
+                }
+#endif
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
                 if (!ret){
                     removeConnection(conn);

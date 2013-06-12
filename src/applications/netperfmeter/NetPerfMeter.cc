@@ -938,7 +938,7 @@ unsigned long NetPerfMeter::getFrameSize(const unsigned int streamID)
 void NetPerfMeter::sendDataOfSaturatedStreams(const unsigned long long   bytesAvailableInQueue,
                                               const SCTPSendQueueAbated* sendQueueAbatedIndication)
 {
-   if(!ActiveMode)
+   if(ActiveMode == false)
        return;
 
     // ====== SCTP tells current queue occupation for each stream ============

@@ -1005,7 +1005,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
 
     if (buffered == 0){
-        fprintf(stderr, "Sent  %s:%d to %s:%d <- No data in queue..in  fly %i ...\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort, state->snd_nxt-state->snd_una);
+        //fprintf(stderr, "Sent  %s:%d to %s:%d <- No data in queue..in  fly %i ...\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort, state->snd_nxt-state->snd_una);
         return false;
     }
 
@@ -1019,7 +1019,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     {
         tcpEV << "Effective window is zero (advertised window " << state->snd_wnd <<
             ", congestion window " << congestionWindow << "), cannot send.\n";
-        fprintf(stderr, "Sent  %s:%d to %s:%d <- Window zero\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
+        //fprintf(stderr, "Sent  %s:%d to %s:%d <- Window zero\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
         return false;
     }
 
@@ -1048,7 +1048,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     {
         tcpEV << "Cannot send, not enough data for a full segment (SMSS=" << state->snd_mss
             << ", effectiveWindow=" << effectiveWin << ", bytesToSend=" << bytesToSend << ", in buffer " << buffered << ")\n";
-        fprintf(stderr, "Sent  %s:%d to %s:%d <- Not enough data\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
+        //fprintf(stderr, "Sent  %s:%d to %s:%d <- Not enough data\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
         return false;
     }
 
@@ -1137,7 +1137,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
-    fprintf(stderr, "Sent  %s:%d to %s:%d <- OK\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
+    //fprintf(stderr, "Sent  %s:%d to %s:%d <- OK\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
     return true;
 }
 

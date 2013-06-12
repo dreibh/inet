@@ -293,6 +293,7 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         return MPTCP_STATEFULL;
     } else if (tcpseg->getAckBit()) {
         // ACK: We aspect the sender key in the MP_CAPABLE Option
+
         if (option->getValuesArraySize() < 5) {
             ASSERT(false && "we need some more options..." );
             return 0; //should never be happen
@@ -392,7 +393,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
     else if((tcpseg->getSynBit()) && (tcpseg->getAckBit()) ) {
         DEBUGPRINT("[MPTCP][ESTABLISHED][JOIN] process SYN ACK%s","\0");
         // FIXME - Check if this is the correct subflow - we added the flow still on the MPTCP SYN - I'm not sure if this is OK
-
+        subflow->isQueueAble = true;
         // Read the truncated MAC
         option->getValues(1);
         option->getValues(2);
@@ -414,6 +415,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
 // process ACK
     else if((!tcpseg->getSynBit()) && (tcpseg->getAckBit()) ) {
         DEBUGPRINT("[MPTCP][ESTABLISHED][JOIN] process ACK%s","\0");
+        subflow->isQueueAble = true;
 //      unsigned char mac160[160];
 //      int offset = 0;
         // FIXME Interprete MP_JOIN ACK
