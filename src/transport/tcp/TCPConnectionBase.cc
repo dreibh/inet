@@ -543,8 +543,8 @@ bool TCPConnection::processTCPSegment(TCPSegment *tcpseg, IPvXAddress segSrcAddr
     // first do actions
     TCPEventCode event = process_RCV_SEGMENT(tcpseg, segSrcAddr, segDestAddr);
 
-    // then state transitions
     return performStateTransition(event);
+
 }
 
 bool TCPConnection::processAppCommand(cMessage *msg)
@@ -573,7 +573,6 @@ bool TCPConnection::processAppCommand(cMessage *msg)
         default:
             throw cRuntimeError(tcpMain, "wrong event code");
     }
-
     // then state transitions
     return performStateTransition(event);
 }

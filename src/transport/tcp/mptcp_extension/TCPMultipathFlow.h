@@ -175,10 +175,12 @@ class INET_API MPTCP_Flow
 
 public:
     // common Omnetpp identifier
-    TCPConnection *lastused;
+    TCPConnection *lastscheduled;
+    TCPConnection *lastenqueued;
     bool isFIN;
     int  appID;                             // The application ID of this Flow
     int  appGateIndex;
+    uint32 commonSendQueueLimit;
 };
 
 

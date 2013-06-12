@@ -282,7 +282,15 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
         // and an ack would have been sent in the first step (sequence
         // number check).
         //"
+#ifdef PRIVATE
+        if(this->getTcpMain()->multipath){
+            // In Multipath it is possible, that an SYN comes in, from the passive side
+            // in this case we should just ignore
 
+            // FIXME somewhere is a Timer for this SYN -> search for this!!
+            return TCP_E_IGNORE;
+        }
+#endif
         ASSERT(isSegmentAcceptable(tcpseg));  // assert SYN is in the window
         tcpEV << "SYN is in the window: performing connection reset, closing connection\n";
         sendIndicationToApp(TCP_I_CONNECTION_RESET);

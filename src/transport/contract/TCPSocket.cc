@@ -89,9 +89,11 @@ void TCPSocket::sendToTCP(cMessage *msg)
 {
     if (!gateToTcp)
         throw cRuntimeError("TCPSocket: setOutputGate() must be invoked before socket can be used");
-
+#ifndef PRIVATE
+    check_and_cast<cSimpleModule *>(gateToTcp->getOwnerModule())->sendDirect(msg, gateToTcp);
+#else
     check_and_cast<cSimpleModule *>(gateToTcp->getOwnerModule())->send(msg, gateToTcp);
-
+#endif
 }
 
 void TCPSocket::bind(int lPort)

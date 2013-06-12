@@ -164,8 +164,8 @@ ulong TCPMultipathVirtualDataRcvQueue::extractTo(uint64 seq)
         ASSERT(i->begin == old_end && "UPS....not in order");
         old_end = i->end;
         regionList.erase(i);
-        fprintf(stderr,"[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %x%x ...%x%x\n", (uint32)(i->begin>>32),(uint32)i->begin,(uint32) (i->end>>32),(uint32) i->end );
-        fprintf(stderr,"[MPTCP][RCV QUEUE][OUT IN SEQUENCE] check old  %x%x for seq %x%x", (uint32)(old_end>>32),(uint32)old_end,(uint32)(seq>>32),(uint32)seq );
+//        fprintf(stderr,"[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %x%x ...%x%x\n", (uint32)(i->begin>>32),(uint32)i->begin,(uint32) (i->end>>32),(uint32) i->end );
+//        fprintf(stderr,"[MPTCP][RCV QUEUE][OUT IN SEQUENCE] check old  %x%x for seq %x%x", (uint32)(old_end>>32),(uint32)old_end,(uint32)(seq>>32),(uint32)seq );
         return octets;
     }
     else

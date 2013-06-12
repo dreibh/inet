@@ -102,9 +102,14 @@ class INET_API TCPBaseAlgStateVariables : public TCPStateVariables
  */
 class INET_API TCPBaseAlg : public TCPAlgorithm
 {
+#ifndef PRIVATE
   protected:
     TCPBaseAlgStateVariables *&state; // alias to TCPAlgorithm's 'state'
-
+#else
+  public:
+    TCPBaseAlgStateVariables *&state;
+  protected:
+#endif
     cMessage *rexmitTimer;
     cMessage *persistTimer;
     cMessage *delayedAckTimer;

@@ -94,7 +94,9 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     char name[255]; // opp_dup will be called
 	sprintf(name,"[FLOW-%d][RCV-QUEUE] size",ID);
 	mptcpRcvBufferSize = new cOutVector(name);
-	lastused = NULL;
+	lastscheduled = NULL;
+	lastenqueued = NULL;
+	commonSendQueueLimit = 0;
 }
 /**
  * Destructor
@@ -120,7 +122,8 @@ MPTCP_Flow::~MPTCP_Flow() {
         delete mptcpRcvBufferSize;
         mptcpRcvBufferSize = NULL;
     }
-    lastused = NULL;
+    lastscheduled = NULL;
+    lastenqueued = NULL;
 }
 
 void MPTCP_Flow::removeSubflow(TCPConnection* subflow){
@@ -217,6 +220,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
     }
 
     // set subflow as active
+    subflow->getState()->sendQueueLimit = commonSendQueueLimit;
     t->active = true;
     t->subflow = subflow;
     t->subflow->flow = this;
@@ -1249,7 +1253,7 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
        TCP_SubFlowVector_t::iterator i = subflow_list.begin();
        if(ordered){	// Ordered is just for debugging, makes things more easy
            uint32 kind = msg->getKind();
-           if((!(kind&TCP_I_DATA)) || (kind&TCP_I_ESTABLISHED)){
+           if((!(kind&TCP_I_DATA)) || (kind&TCP_I_ESTABLISHED) || (kind&TCP_I_SEND_MSG)){
                (*i)->subflow->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
                return;
            }

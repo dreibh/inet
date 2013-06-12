@@ -154,16 +154,15 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 
     TCPSendCommand *sendCommand = check_and_cast<TCPSendCommand *>(tcpCommand);
 #ifdef PRIVATE
+    cPacket* pkt = check_and_cast<cPacket*> (msg);
     {
     static uint64 cnt = 0;
     static int number = 0;
     number++;
-    cPacket* test = check_and_cast<cPacket *> (msg);
-    cnt += test->getByteLength();
-    if(!isSubflow){
-        if(getState()->requested > test->getByteLength())
-         getState()->requested -= test->getByteLength();
-    }
+
+    cnt += pkt->getByteLength();
+
+    // Overflow is correct
     }
 #endif // PRIVATE
     // FIXME how to support PUSH? One option is to treat each SEND as a unit of data,
@@ -179,6 +178,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             sendSyn();
             startSynRexmitTimer();
             scheduleTimeout(connEstabTimer, TCP_TIMEOUT_CONN_ESTAB);
+            (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
             sendQueue->enqueueAppData(PK(msg));  // queue up for later
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -186,12 +186,14 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
         case TCP_S_SYN_RCVD:
         case TCP_S_SYN_SENT:
             tcpEV << "Queueing up data for sending later.\n";
+            (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
             sendQueue->enqueueAppData(PK(msg)); // queue up for later
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
 
         case TCP_S_ESTABLISHED:
         case TCP_S_CLOSE_WAIT:
+            (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
             sendQueue->enqueueAppData(PK(msg));
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue, plus "
                   << (state->snd_max-state->snd_una) << " bytes unacknowledged\n";
@@ -377,6 +379,22 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
         opp_error("Called process_QUEUE_BYTES_LIMIT on uninitialized TCPConnection!");
     }
     state->sendQueueLimit = tcpCommand->getUserId();
+    state->requested += tcpCommand->getUserId();
+    if(getTcpMain()->multipath){
+            TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
+
+           for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
+                 TCP_subflow_t* entry = (*it);
+                 TCPConnection* conn = entry->subflow;
+                     // I know that seems crazy, but if we not ask here for more messages we run out of messages in some cases
+                  if(this!=conn){
+                     sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
+                     conn->getState()->sendQueueLimit = tcpCommand->getUserId();
+                     conn->getState()->requested = tcpCommand->getUserId();
+                  }
+           }
+        flow->commonSendQueueLimit = tcpCommand->getUserId();
+    }
     delete msg;
     delete tcpCommand;
 }

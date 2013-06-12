@@ -561,12 +561,14 @@ void TCPConnection::sendEstabIndicationToApp()
 {
 #ifdef PRIVATE
     // The application only need one notification, otherwise he work on more than one connection
-    this->getState()->requested = 3*state->snd_mss;
-    sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
+    // this->getState()->requested = 3*state->snd_mss;
+    // sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
+    isQueueAble = true;
     if(tcpMain->multipath){
-        isQueueAble = true;
-        if(flow->sendEstablished){
 
+        if(flow->sendEstablished){
+            getState()->requested += getState()->sendQueueLimit;
+            sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
 
             return; // we need no notification message
         }
@@ -901,6 +903,8 @@ void TCPConnection::sendSegment(uint32 bytes)
     }
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
 
+    if(!buffered)
+        return; // FIXME -> Why we have nothing in buffer
     if (bytes > buffered) // last segment?
         bytes = buffered;
 
@@ -984,39 +988,6 @@ void TCPConnection::sendSegment(uint32 bytes)
     
     // send it
     sendToIP(tcpseg);
-
-    // let application fill queue again, if there is space
-    uint32 alreadyQueued = sendQueue->getBytesAvailable(sendQueue->getBufferStartSeq());
-    uint32 abated        = (state->sendQueueLimit > alreadyQueued) ? state->sendQueueLimit - alreadyQueued : 0;
-
-#ifdef PRIVATE
-#warning "The simulation time needs really long in case of request data every time, perhaps it is better to split"
-    // Try to setup a saturated sender.....
-//
-//
-//
-//            switch(state->sendQueueLimit){
-//            case 0:
-//                abated = 3*state->snd_wnd;
-//                state->requested = 0;
-//                break;
-//            default:
-//                    break;
-//            }
-
-    if(state->requested < state->sendQueueLimit){
-        abated = std::min(state->sendQueueLimit-(state->requested + state->snd_mss),abated);
-        abated = std::min(state->sendQueueLimit, abated);
-    }
-    else
-        abated = 0;
-
-    if((!getState()->send_fin))
-#endif // PRIVATE
-    if ((abated >= state->snd_mss)) {   // T.D. 07.09.2010: Just request more data if space >= 1 MSS
-             state->requested += (abated);
-             sendIndicationToApp(TCP_I_SEND_MSG, abated);
-    }
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
@@ -1033,8 +1004,10 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // check how many bytes we have
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
 
-    if (buffered == 0)
+    if (buffered == 0){
+        // fprintf(stderr, "Sent  %s:%d to %s:%d <- No data in queue..in  fly %i ...\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort, state->snd_nxt-state->snd_una);
         return false;
+    }
 
     // maxWindow is minimum of snd_wnd and congestionWindow (snd_cwnd)
     ulong maxWindow = std::min(state->snd_wnd, congestionWindow);
@@ -1046,6 +1019,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     {
         tcpEV << "Effective window is zero (advertised window " << state->snd_wnd <<
             ", congestion window " << congestionWindow << "), cannot send.\n";
+        //fprintf(stderr, "Sent  %s:%d to %s:%d <- Window zero\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
         return false;
     }
 
@@ -1074,6 +1048,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     {
         tcpEV << "Cannot send, not enough data for a full segment (SMSS=" << state->snd_mss
             << ", effectiveWindow=" << effectiveWin << ", bytesToSend=" << bytesToSend << ", in buffer " << buffered << ")\n";
+        // fprintf(stderr, "Sent  %s:%d to %s:%d <- Not enough data\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
         return false;
     }
 
@@ -1098,9 +1073,15 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // Note: if (bytesToSend == 1010 && MSS == 1012 && ts_enabled == true) => we may send
     // 2 segments (1000 payload + 12 optionsHeader and 10 payload + 12 optionsHeader)
     // FIXME this should probably obey Nagle's alg -- to be checked
+#ifndef PRIVATE
     if (bytesToSend <= state->snd_mss)
     {
         sendSegment(bytesToSend);
+#else
+    if (bytesToSend <= effectiveMaxBytesSend)
+    {
+        sendSegment(effectiveMaxBytesSend);
+#endif
         bytesToSend -= state->sentBytes;
     }
     else // send whole segments only (nagle_enabled)
@@ -1108,7 +1089,11 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         while (bytesToSend >= effectiveMaxBytesSend)
         {
             const ulong b0 = sendQueue->getBytesAvailable(state->snd_nxt);
+#ifndef PRIVATE
             sendSegment(state->snd_mss);
+#else
+            sendSegment(effectiveMaxBytesSend);
+#endif // PRIVATE
             const ulong b1 = sendQueue->getBytesAvailable(state->snd_nxt);
 
             if(b0 - state->sentBytes != b1) {
@@ -1152,6 +1137,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
+    // fprintf(stderr, "Sent  %s:%d to %s:%d <- OK\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
     return true;
 }
 
@@ -1200,7 +1186,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
             sendQueue->getBytesAvailable(state->snd_nxt));
 #else
     // TODO I use my solution....Perhaps This should switched to the old above
-    ulong bytes = std::min((ulong)state->snd_mss,sendQueue->getBytesAvailable(state->snd_una));
+    ulong bytes = state->snd_mss; // FIXME, why is sometimes the queue empty for retransmission?
 #endif // PRIVATE
     // FIN (without user data) needs to be resent
     if (bytes == 0 && state->send_fin && state->snd_fin_seq == sendQueue->getBufferEndSeq())

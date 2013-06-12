@@ -545,7 +545,8 @@ void NetPerfMeter::successfullyEstablishedConnection(cMessage*          msg,
 
       TCPCommand* connectInfo = check_and_cast<TCPCommand*>(msg->getControlInfo());
       ConnectionID = connectInfo->getConnId();
-      sendTCPQueueRequest(QueueSize);   // Limit the send queue as given.
+      if(ActiveMode)
+          sendTCPQueueRequest(QueueSize);   // Limit the send queue as given.
    }
    else if(TransportProtocol == SCTP) {
       if(ActiveMode == false) {

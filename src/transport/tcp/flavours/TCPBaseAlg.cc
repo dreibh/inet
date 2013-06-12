@@ -17,6 +17,7 @@
 //
 
 #include "TCPBaseAlg.h"
+#include "TCPSendQueue.h"
 #include "TCP.h"
 #include "TCPSACKRexmitQueue.h"
 
@@ -454,6 +455,32 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
     // Therefore, a TCP SHOULD set cwnd to no more than RW before beginning
     // transmission if the TCP has not sent data in an interval exceeding
     // the retransmission timeout."
+
+#ifdef PRIVATE
+    // we have a trigger to send, so send....over all flows which have data
+    if(conn->getTcpMain()->multipath){
+        static bool first = true; // I know it is not a nice workaraound, but it works
+
+        if(first){
+            first = false;
+            if(conn->isSubflow){
+               TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)conn->flow->getSubflows();
+                // the sendCommandInvoked could possible increase the numbers of subflows
+               size_t max = subflow_list->size();
+               TCP_SubFlowVector_t::iterator it =subflow_list->begin();
+               for (size_t cnt = 0; cnt < max; cnt++,it++) {
+                    TCP_subflow_t* entry = (*it);
+                    TCPConnection* tmp = entry->subflow;
+                    if(tmp->isQueueAble)
+                        tmp->getTcpAlgorithm()->sendCommandInvoked();
+               }
+               first = true;
+               return true;
+            }
+            first = true;
+        }
+    }
+#endif
     if (!conn->isSendQueueEmpty())  // do we have any data to send?
     {
         if ((simTime() - state->time_last_data_sent) > state->rexmit_timeout)
@@ -467,13 +494,26 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
             tcpEV << "Restarting idle connection, CWND is set to " << state->snd_cwnd << "\n";
         }
     }
+//    fprintf(stderr, "Send  %s:%d to %s:%d Queued: %i \n",conn->localAddr.str().c_str(),conn->localPort,  conn->remoteAddr.str().c_str(),conn->remotePort, conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq()));
 
-    //
-    // Send window is effectively the minimum of the congestion window (cwnd)
-    // and the advertised window (snd_wnd).
-    //
-    return conn->sendData(fullSegmentsOnly, state->snd_cwnd);
+
+
+    bool ret = conn->sendData(fullSegmentsOnly, state->snd_cwnd);
+    uint32 alreadyQueued =  conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq());
+    uint32 abated        = (conn->getState()->sendQueueLimit > alreadyQueued) ? conn->getState()->sendQueueLimit - alreadyQueued : 0;
+    if(conn->getState()->sendQueueLimit){
+        abated = std::min(conn->getState()->sendQueueLimit, abated);
+    }
+    else abated = 0;
+    if(conn->getState()->sendQueueLimit)
+    if(conn->getState()->requested <= conn->getState()->sendQueueLimit){
+        abated = std::min(conn->getState()->sendQueueLimit-state->requested , abated);
+        conn->getState()->requested += abated;
+        conn->sendIndicationToApp(TCP_I_SEND_MSG, abated);
+    }
+    return ret;
 }
+
 
 void TCPBaseAlg::sendCommandInvoked()
 {
