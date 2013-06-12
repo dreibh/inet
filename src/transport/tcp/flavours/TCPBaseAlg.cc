@@ -497,7 +497,7 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
             tcpEV << "Restarting idle connection, CWND is set to " << state->snd_cwnd << "\n";
         }
     }
-    // fprintf(stderr, "Send  %s:%d to %s:%d Queued: %i in fly %i \n",conn->localAddr.str().c_str(),conn->localPort,  conn->remoteAddr.str().c_str(),conn->remotePort, conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq()), conn->getState()->snd_nxt - conn->getState()->snd_una );
+    fprintf(stderr, "Send  %s:%d to %s:%d Queued: %i in fly %i \n",conn->localAddr.str().c_str(),conn->localPort,  conn->remoteAddr.str().c_str(),conn->remotePort, conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq()), conn->getState()->snd_nxt - conn->getState()->snd_una );
 
 
 
