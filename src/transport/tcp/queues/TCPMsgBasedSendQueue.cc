@@ -56,7 +56,7 @@ void TCPMsgBasedSendQueue::enqueueAppData(cPacket *msg)
         throw cRuntimeError("Send queue is full");
 #else
         // FIXME MBe
-        fprintf(stderr,"Send Queue is full - we should check this");
+        // fprintf(stderr,"Send Queue is full - we should check this");
         delete msg;
         return;
 #endif //PRIVATE

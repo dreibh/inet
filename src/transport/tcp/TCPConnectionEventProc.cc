@@ -387,11 +387,11 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
                  TCP_subflow_t* entry = (*it);
                  TCPConnection* conn = entry->subflow;
                      // I know that seems crazy, but if we not ask here for more messages we run out of messages in some cases
-                  if(this!=conn){
-                     sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
-                     conn->getState()->sendQueueLimit = tcpCommand->getUserId();
-                     conn->getState()->requested = tcpCommand->getUserId();
-                  }
+                  //if(this!=conn){
+                  //   sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
+                  //   conn->getState()->sendQueueLimit = tcpCommand->getUserId();
+                     conn->getState()->requested = tcpCommand->getUserId()/subflow_list->size();
+                 // }
            }
         flow->commonSendQueueLimit = tcpCommand->getUserId();
     }

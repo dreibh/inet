@@ -494,7 +494,7 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
             tcpEV << "Restarting idle connection, CWND is set to " << state->snd_cwnd << "\n";
         }
     }
-//    fprintf(stderr, "Send  %s:%d to %s:%d Queued: %i \n",conn->localAddr.str().c_str(),conn->localPort,  conn->remoteAddr.str().c_str(),conn->remotePort, conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq()));
+    // fprintf(stderr, "Send  %s:%d to %s:%d Queued: %i in fly %i \n",conn->localAddr.str().c_str(),conn->localPort,  conn->remoteAddr.str().c_str(),conn->remotePort, conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq()), conn->getState()->snd_nxt - conn->getState()->snd_una );
 
 
 
@@ -505,7 +505,7 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
         abated = std::min(conn->getState()->sendQueueLimit, abated);
     }
     else abated = 0;
-    if(conn->getState()->sendQueueLimit)
+    if(conn->getState()->sendQueueLimit && abated)
     if(conn->getState()->requested <= conn->getState()->sendQueueLimit){
         abated = std::min(conn->getState()->sendQueueLimit-state->requested , abated);
         conn->getState()->requested += abated;
