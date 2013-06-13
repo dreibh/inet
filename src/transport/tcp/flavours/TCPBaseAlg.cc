@@ -500,23 +500,8 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
     }
     //fprintf(stderr, "Send  %s:%d to %s:%d Queued: %i in fly %i \n",conn->localAddr.str().c_str(),conn->localPort,  conn->remoteAddr.str().c_str(),conn->remotePort, conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq()), conn->getState()->snd_nxt - conn->getState()->snd_una );
 
-
-
     bool ret = conn->sendData(fullSegmentsOnly, state->snd_cwnd);
-    uint32 alreadyQueued =  conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq());
-    uint32 abated        = (conn->getState()->sendQueueLimit > alreadyQueued) ? conn->getState()->sendQueueLimit - alreadyQueued : 0;
-    if(conn->getState()->sendQueueLimit){
-        abated = std::min(conn->getState()->sendQueueLimit, abated);
-    }
-    else abated = 0;
 
-    abated = std::min(conn->getState()->sendQueueLimit-state->requested , abated);
-
-    if(abated)
-    if(conn->getState()->requested <= conn->getState()->sendQueueLimit){
-        conn->getState()->requested += abated;
-        conn->sendIndicationToApp(TCP_I_SEND_MSG, abated);
-    }
     return ret;
 }
 
