@@ -203,13 +203,13 @@ simple TCP like ITCP
     parameters:
         int advertisedWindow = default(14*this.mss); // in bytes, corresponds with the maximal receiver buffer capacity (Note: normally, NIC queues should be at least this size)
         bool delayedAcksEnabled = default(false); // delayed ACK algorithm (RFC 1122) enabled/disabled
-        bool nagleEnabled = default(true); // Nagle's algorithm (RFC 896) enabled/disabled
+        bool nagleEnabled = default(false); // Nagle's algorithm (RFC 896) enabled/disabled
         bool limitedTransmitEnabled = default(true); // Limited Transmit algorithm (RFC 3042) enabled/disabled (can be used for TCPReno/TCPTahoe/TCPNewReno/TCPNoCongestionControl)
         bool increasedIWEnabled = default(false); // Increased Initial Window (RFC 3390) enabled/disabled
         bool sackSupport = default(false); // Selective Acknowledgment (RFC 2018, 2883, 3517) support (header option) (SACK will be enabled for a connection if both endpoints support it)
         bool windowScalingSupport = default(true); // Window Scale (RFC 1323) support (header option) (WS will be enabled for a connection if both endpoints support it)
         bool timestampSupport = default(true); // Timestamps (RFC 1323) support (header option) (TS will be enabled for a connection if both endpoints support it)
-        int mss = default(536); // Maximum Segment Size (RFC 793) (header option)
+        int mss = default(1460); // Maximum Segment Size (RFC 793) (header option)
         string tcpAlgorithmClass = default("TCPNewReno"); // TCPReno/TCPTahoe/TCPNewReno/TCPNoCongestionControl/DumbTCP
         bool recordStats = default(true); // recording of seqNum etc. into output vectors enabled/disabled
 	

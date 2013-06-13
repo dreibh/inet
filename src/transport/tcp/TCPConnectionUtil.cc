@@ -988,6 +988,21 @@ void TCPConnection::sendSegment(uint32 bytes)
     
     // send it
     sendToIP(tcpseg);
+
+    uint32 alreadyQueued =  getSendQueue()->getBytesAvailable(getSendQueue()->getBufferStartSeq());
+    uint32 abated        = (getState()->sendQueueLimit > alreadyQueued) ? getState()->sendQueueLimit - alreadyQueued : 0;
+    if(getState()->sendQueueLimit){
+       abated = std::min(getState()->sendQueueLimit, abated);
+    }
+    else abated = 0;
+
+    abated = std::min(getState()->sendQueueLimit-state->requested , abated);
+
+    if(abated)
+    if(getState()->requested <= getState()->sendQueueLimit){
+       getState()->requested += abated;
+       sendIndicationToApp(TCP_I_SEND_MSG, abated);
+    }
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
