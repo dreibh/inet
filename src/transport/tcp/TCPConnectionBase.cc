@@ -600,7 +600,22 @@ TCPEventCode TCPConnection::preanalyseAppCommandEvent(int commandCode)
 bool TCPConnection::performStateTransition(const TCPEventCode& event)
 {
     ASSERT(fsm.getState() != TCP_S_CLOSED); // closed connections should be deleted immediately
+#ifdef PRIVATE
+    uint32 alreadyQueued =  getSendQueue()->getBytesAvailable(getState()->snd_nxt);
+    uint32 abated        = (getState()->sendQueueLimit > alreadyQueued) ? getState()->sendQueueLimit - alreadyQueued : 0;
+    if(getState()->sendQueueLimit){
+      abated = std::min(getState()->sendQueueLimit, abated);
+    }
+    else abated = 0;
 
+    // abated = std::min(getState()->sendQueueLimit-state->requested , abated);
+
+    if(getState()->requested < (getState()->snd_mss) && abated)
+    if(getState()->requested + abated <= getState()->sendQueueLimit){
+      getState()->requested += abated;
+      sendIndicationToApp(TCP_I_SEND_MSG, abated);
+    }
+#endif
     if (event == TCP_E_IGNORE)  // e.g. discarded segment
     {
         tcpEV << "Staying in state: " << stateName(fsm.getState()) << " (no FSM event)\n";
@@ -747,6 +762,9 @@ bool TCPConnection::performStateTransition(const TCPEventCode& event)
         case TCP_S_CLOSED:
             break;
     }
+
+
+
 
     if (oldState != fsm.getState())
     {

@@ -812,6 +812,7 @@ unsigned long NetPerfMeter::transmitFrame(const unsigned int frameSize,
       tcpMessage->setCreationTime(simTime());
       tcpMessage->setByteLength(frameSize);
       tcpMessage->setKind(TCP_C_SEND);
+      tcpMessage->setSchedulingPriority(1);
 
       if(IncomingSocketTCP) {
          IncomingSocketTCP->send(tcpMessage);

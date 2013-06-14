@@ -528,8 +528,8 @@ void TCPConnection::sendIndicationToApp(int code, const int id)
 {
 #ifdef PRIVATE
     // MBE: check if it is a good idea to request for further messages
-    if(this->getState()->send_fin || this->getState()->fin_rcvd)
-        return; // I think no
+//    if(this->getState()->send_fin || this->getState()->fin_rcvd)
+//        return; // I think no
     switch (code)
     {
         case(TCP_I_DATA): break;
@@ -989,20 +989,6 @@ void TCPConnection::sendSegment(uint32 bytes)
     // send it
     sendToIP(tcpseg);
 
-    uint32 alreadyQueued =  getSendQueue()->getBytesAvailable(getSendQueue()->getBufferStartSeq());
-    uint32 abated        = (getState()->sendQueueLimit > alreadyQueued) ? getState()->sendQueueLimit - alreadyQueued : 0;
-    if(getState()->sendQueueLimit){
-       abated = std::min(getState()->sendQueueLimit, abated);
-    }
-    else abated = 0;
-
-    abated = std::min(getState()->sendQueueLimit-state->requested , abated);
-
-    if(abated)
-    if(getState()->requested <= getState()->sendQueueLimit){
-       getState()->requested += abated;
-       sendIndicationToApp(TCP_I_SEND_MSG, abated);
-    }
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
@@ -1020,7 +1006,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
 
     if (buffered == 0){
-        //fprintf(stderr, "Sent  %s:%d to %s:%d <- No data in queue..in  fly %i ...\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort, state->snd_nxt-state->snd_una);
+        fprintf(stderr, "Sent  %s:%d to %s:%d <- No data in queue..in  fly %i ...\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort, state->snd_nxt-state->snd_una);
         return false;
     }
 
