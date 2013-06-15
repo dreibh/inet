@@ -519,7 +519,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
         if (!tcpseg->getSynBit()) {
             DEBUGPRINT("[FLOW][OUT] ERROR MPTCP Connection state: %u",
                     getState());
-            // ASSERT(false && "Not a SYN -> in IDLE not allowed");
+             ASSERT(false && "Not a SYN -> in IDLE not allowed");
             return t;
         }
 

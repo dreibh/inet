@@ -542,7 +542,11 @@ void TCPConnection::sendIndicationToApp(int code, const int id)
         case(TCP_I_TIMED_OUT): break;
         case(TCP_I_STATUS): break;
         case(TCP_I_SEND_MSG):
-             break;
+            if (state->send_fin){
+                return;
+            }
+
+            break;
         default: break;
     }
 
