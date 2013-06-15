@@ -11,11 +11,11 @@ cp vectors.vec Archive/vector_tcp_singlePath.vec
 cp scalars.sca Archive/scalars_tcp_singlePath.sca
 echo "Szenario Single-Path SCPT"
 
-time ../../../src/inet -r 0 -u Cmdenv -c SCTP_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
-cat vectors.vec >> Archive/vectors.vec
-cat scalars.sca >> Archive/scalars.sca
-cp vectors.vec Archive/vector_sctp_singlePath.vec
-cp scalars.sca Archive/scalars_sctp_singlePath.sca
+#time ../../../src/inet -r 0 -u Cmdenv -c SCTP_Netperfmeter -n ../..:../../../simulations:../../../src  build.ini > dat.log 2> err.log 
+#cat vectors.vec >> Archive/vectors.vec
+#cat scalars.sca >> Archive/scalars.sca
+#cp vectors.vec Archive/vector_sctp_singlePath.vec
+#cp scalars.sca Archive/scalars_sctp_singlePath.sca
 
 echo "==================== RESULT =========================" > abort.log
 cat dat.log | grep "ASSERT:" >> abort.log 

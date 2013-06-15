@@ -12,7 +12,7 @@ network basic
     types:
         channel C1 extends DatarateChannel
         {
-            datarate = 10 Mbps;
+            datarate = 100 Mbps;
             delay = 10 ms;
             per = 0;
         }
