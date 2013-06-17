@@ -1,7 +1,6 @@
 # ignore generated files
 *_m.h
 *_m.cc
-src/Makefile.vc
 /doc/doxy/
 /doc/neddoc/
 /examples/*/results/
