@@ -62,6 +62,63 @@ void MPTCP_RFC6356::recalculateSlowStartThreshold()
     if (ssthreshVector)
         ssthreshVector->record(state->ssthresh);
 }
+
+void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
+//#ifdef PRIVATE
+//   // First, calculate per-path values.
+//   for (SCTPPathMap::iterator otherPathIterator = sctpPathMap.begin();
+//      otherPathIterator != sctpPathMap.end(); otherPathIterator++) {
+//      SCTPPathVariables* otherPath = otherPathIterator->second;
+//      otherPath->utilizedCwnd      = otherPath->outstandingBytesBeforeUpdate;
+//   }
+//
+//   // Calculate per-path-group values.
+//   for (SCTPPathMap::iterator currentPathIterator = sctpPathMap.begin();
+//        currentPathIterator != sctpPathMap.end(); currentPathIterator++) {
+//      SCTPPathVariables* currentPath = currentPathIterator->second;
+//
+//      currentPath->cmtGroupPaths                      = 0;
+//      currentPath->cmtGroupTotalCwnd                  = 0;
+//      currentPath->cmtGroupTotalSsthresh              = 0;
+//      currentPath->cmtGroupTotalUtilizedCwnd          = 0;
+//      currentPath->cmtGroupTotalCwndBandwidth         = 0.0;
+//      currentPath->cmtGroupTotalUtilizedCwndBandwidth = 0.0;
+//
+//      double qNumerator   = 0.0;
+//      double qDenominator = 0.0;
+//      for (SCTPPathMap::const_iterator otherPathIterator = sctpPathMap.begin();
+//         otherPathIterator != sctpPathMap.end(); otherPathIterator++) {
+//         const SCTPPathVariables* otherPath = otherPathIterator->second;
+//         if(otherPath->cmtCCGroup == currentPath->cmtCCGroup) {
+//            currentPath->cmtGroupPaths++;
+//
+//            currentPath->cmtGroupTotalCwnd                  += otherPath->cwnd;
+//            currentPath->cmtGroupTotalSsthresh              += otherPath->ssthresh;
+//            currentPath->cmtGroupTotalCwndBandwidth         += otherPath->cwnd / GET_SRTT(otherPath->srtt.dbl());
+//
+//            if( (otherPath->blockingTimeout < 0.0) || (otherPath->blockingTimeout < simTime()) ) {
+//               currentPath->cmtGroupTotalUtilizedCwnd          += otherPath->utilizedCwnd;
+//               currentPath->cmtGroupTotalUtilizedCwndBandwidth += otherPath->utilizedCwnd / GET_SRTT(otherPath->srtt.dbl());
+//            }
+//
+//            qNumerator   = max(qNumerator, otherPath->cwnd / (pow(GET_SRTT(otherPath->srtt.dbl()), 2.0)));
+//            qDenominator = qDenominator + (otherPath->cwnd / GET_SRTT(otherPath->srtt.dbl()));
+//         }
+//      }
+//      currentPath->cmtGroupAlpha = currentPath->cmtGroupTotalCwnd * (qNumerator / pow(qDenominator, 2.0));
+//
+///*
+//      printf("alpha(%s)=%1.6f\ttotalCwnd=%u\tcwnd=%u\tpaths=%u\n",
+//             currentPath->remoteAddress.str().c_str(),
+//             currentPath->cmtGroupAlpha,
+//             currentPath->cmtGroupTotalCwnd,
+//             currentPath->cwnd,
+//             currentPath->cmtGroupPaths);
+//*/
+
+}
+
+
 uint32 MPTCP_RFC6356::bytesInFlight(){
     // FIXME
     // uint32 flight_size = state->snd_max - state->snd_una;

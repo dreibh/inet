@@ -109,6 +109,13 @@ class INET_API MPTCP_Flow
     uint64_t seq;                           	  // start seq-no generated after getting keys for the first flow
     uint64_t start_seq;
 
+    //######################################################
+    // MPTCP CC stuff
+    uint32             utilizedCMTCwnd;
+    uint32             totalCMTCwnd;
+    uint32             totalCMTSsthresh;
+
+
     // helper
    // uint32_t flow_send_queue_limit;
   protected:

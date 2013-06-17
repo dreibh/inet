@@ -97,6 +97,11 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 	lastscheduled = NULL;
 	lastenqueued = NULL;
 	commonSendQueueLimit = 0;
+
+	// init for MPTCP CC
+    utilizedCMTCwnd = 0;
+    totalCMTCwnd = 0;
+    totalCMTSsthresh = 0;
 }
 /**
  * Destructor

@@ -54,6 +54,9 @@ class INET_API MPTCP_RFC6356 : public TCPTahoeRenoFamily
     /** Utility function to recalculate ssthresh */
     virtual void recalculateSlowStartThreshold();
 
+    /** Utility function to recalculate path variables */
+    virtual void recalculateMPTCPCCBasis();
+
     /** Redefine what should happen on retransmission */
     virtual void processRexmitTimer(TCPEventCode& event);
 
