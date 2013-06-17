@@ -16,19 +16,19 @@
 //
 
 #include <algorithm>   // min,max
-#include "TCPNewReno.h"
+#include "MPTCP_RFC6356.h"
 #include "TCP.h"
 
 
-Register_Class(TCPNewReno);
+Register_Class(MPTCP_RFC6356);
 
 
-TCPNewReno::TCPNewReno() : TCPTahoeRenoFamily(),
-  state((TCPNewRenoStateVariables *&)TCPAlgorithm::state)
+MPTCP_RFC6356::MPTCP_RFC6356() : TCPTahoeRenoFamily(),
+  state((MPTCP_RFC6356StateVariables *&)TCPAlgorithm::state)
 {
 }
 
-void TCPNewReno::initialize(){
+void MPTCP_RFC6356::initialize(){
     TCPTahoeRenoFamily::initialize(); // call super
     state->lossRecovery = false;
     state->firstPartialACK = false;
@@ -37,12 +37,15 @@ void TCPNewReno::initialize(){
     initilazeCWND();
 }
 
-void TCPNewReno::initilazeCWND(){
+void MPTCP_RFC6356::initilazeCWND(){
     this->setCWND(std::max((int)(2*state->snd_mss), 4380));
 }
+
+
+
 //############################# helper ##############################################
 
-void TCPNewReno::recalculateSlowStartThreshold()
+void MPTCP_RFC6356::recalculateSlowStartThreshold()
 {
     // RFC 2581, page 4:
     // "When a TCP sender detects segment loss using the retransmission
@@ -59,59 +62,50 @@ void TCPNewReno::recalculateSlowStartThreshold()
     if (ssthreshVector)
         ssthreshVector->record(state->ssthresh);
 }
-uint32 TCPNewReno::bytesInFlight(){
+uint32 MPTCP_RFC6356::bytesInFlight(){
     // FIXME
     // uint32 flight_size = state->snd_max - state->snd_una;
    return std::min(state->snd_cwnd, state->snd_wnd);
 }
 
-void TCPNewReno::increaseCWND(uint32 increase){
+void MPTCP_RFC6356::increaseCWND(uint32 increase){
+
+
+//    const uint32 increase =
+//          max(1,
+//              min( (uint32)ceil((double)w * a * (double)min(ackedBytes, mtu)  / (double)totalW),
+//                   (uint32)min(ackedBytes, mtu) ));
+
     state->snd_cwnd += increase;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if(state->snd_cwnd > (65535 + state->snd_mss))
-        tcpEV << " wow what big" << endl;
-    if(state->snd_cwnd == 0)
-        tcpEV << " not possible" << endl;
+
+
+
+
     return;
 }
 
-void TCPNewReno::decreaseCWND(uint32 decrease){
+void MPTCP_RFC6356::decreaseCWND(uint32 decrease){
     state->snd_cwnd -= decrease;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if(state->snd_cwnd > (65535 + state->snd_mss))
-           tcpEV << " wow what big" << endl;
-    if(state->snd_cwnd == 0)
-        tcpEV << " not possible" << endl;
     return;
 }
-void TCPNewReno::setCWND(uint32 newCWND){
+void MPTCP_RFC6356::setCWND(uint32 newCWND){
     state->snd_cwnd = newCWND;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if(state->snd_cwnd > (65535 + state->snd_mss))
-        tcpEV << " wow what big" << endl;
-    if(state->snd_cwnd == 0)
-        tcpEV << " not possible" << endl;
     return;
 }
 
-void TCPNewReno::updateCWND(uint32 firstSeqAcked){
+void MPTCP_RFC6356::updateCWND(uint32 firstSeqAcked){
     // Perform slow start and congestion avoidance.
    if (state->snd_cwnd < state->ssthresh){
        tcpEV << "cwnd <= ssthresh: Slow Start: increasing cwnd by SMSS bytes to ";
 
-       // perform Slow Start. RFC 2581: "During slow start, a TCP increments cwnd
-       // by at most SMSS bytes for each ACK received that acknowledges new data."
+       // perform Slow Start.
        increaseCWND(state->snd_mss);
-       // Note: we could increase cwnd based on the number of bytes being
-       // acknowledged by each arriving ACK, rather than by the number of ACKs
-       // that arrive. This is called "Appropriate Byte Counting" (ABC) and is
-       // described in RFC 3465. This RFC is experimental and probably not
-       // implemented in real-life TCPs, hence it's commented out. Also, the ABC
-       // RFC would require other modifications as well in addition to the
-       // two lines below.
 
        tcpEV << "cwnd=" << state->snd_cwnd << "\n";
    }
@@ -121,18 +115,11 @@ void TCPNewReno::updateCWND(uint32 firstSeqAcked){
        adder = std::max (1.0, adder);
        increaseCWND(static_cast<uint32>(adder));
 
-       //
-       // Note: some implementations use extra additive constant mss / 8 here
-       // which is known to be incorrect (RFC 2581 p5)
-       //
-       // Note 2: RFC 3465 (experimental) "Appropriate Byte Counting" (ABC)
-       // would require maintaining a bytes_acked variable here which we don't do
-       //
        tcpEV << "cwnd > ssthresh: Congestion Avoidance: increasing cwnd linearly, to " << state->snd_cwnd << "\n";
    }
 }
 // ############################## New Reno Stuff #################################
-void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
+void MPTCP_RFC6356::receivedDataAck(uint32 firstSeqAcked)
 {
 
      TCPTahoeRenoFamily::receivedDataAck(firstSeqAcked);
@@ -143,8 +130,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             setCWND(std::min(state->ssthresh, bytesInFlight() + state->snd_mss));
             state->lossRecovery = false;
             state->firstPartialACK = false;
-//            if (rexmitTimer->isScheduled())
-//                 cancelEvent(rexmitTimer);   // Todo ...is here the best point
+
             tcpEV << "End Loss Recovery\n";
         }
         else{
@@ -159,7 +145,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
             increaseCWND(state->snd_mss); // Is this correct ?
-            conn->sendAck();    // Fixme ...needed?
+            conn->sendAck();
             // Retranmist
             conn->retransmitOneSegment(false); // we send an retransmit, so we are out
             return;
@@ -178,7 +164,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 }
 
 
-void TCPNewReno::receivedDuplicateAck()
+void MPTCP_RFC6356::receivedDuplicateAck()
 {
     // Overworked....
     TCPTahoeRenoFamily::receivedDuplicateAck();
@@ -213,7 +199,7 @@ void TCPNewReno::receivedDuplicateAck()
 
 }
 
-void TCPNewReno::processRexmitTimer(TCPEventCode& event)
+void MPTCP_RFC6356::processRexmitTimer(TCPEventCode& event)
 {
     TCPTahoeRenoFamily::processRexmitTimer(event);
 

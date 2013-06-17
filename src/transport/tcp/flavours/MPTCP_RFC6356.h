@@ -24,31 +24,31 @@
 
 
 /**
- * State variables for TCPNewReno.
+ * State variables for MPTCP_RFC6356.
  */
-typedef TCPTahoeRenoFamilyStateVariables TCPNewRenoStateVariables;
+typedef TCPTahoeRenoFamilyStateVariables MPTCP_RFC6356StateVariables;
 
 
 /**
  * Implements TCP NewReno.
  */
-class INET_API TCPNewReno : public TCPTahoeRenoFamily
+class INET_API MPTCP_RFC6356 : public TCPTahoeRenoFamily
 {
   private:
     void increaseCWND(uint32 increase);
     void decreaseCWND(uint32 decrease);
     void setCWND(uint32 newCWND);
-    void initializeTCPNewReno();
+    void initializeMPTCP_RFC6356();
     void initilazeCWND();
     void updateCWND(uint32 firstSeqAcked);
     uint32 bytesInFlight();
 
   protected:
-    TCPNewRenoStateVariables *&state; // alias to TCPAlgorithm's 'state'
+    MPTCP_RFC6356StateVariables *&state; // alias to TCPAlgorithm's 'state'
 
-    /** Create and return a TCPNewRenoStateVariables object. */
+    /** Create and return a MPTCP_RFC6356StateVariables object. */
     virtual TCPStateVariables *createStateVariables() {
-        return new TCPNewRenoStateVariables();
+        return new MPTCP_RFC6356StateVariables();
     }
 
     /** Utility function to recalculate ssthresh */
@@ -59,7 +59,7 @@ class INET_API TCPNewReno : public TCPTahoeRenoFamily
 
   public:
     /** Ctor */
-    TCPNewReno();
+    MPTCP_RFC6356();
 
     /** Redefine what should happen when data got acked, to add congestion window management */
     virtual void receivedDataAck(uint32 firstSeqAcked);

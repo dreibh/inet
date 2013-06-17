@@ -69,10 +69,6 @@ void TCPNewReno::increaseCWND(uint32 increase){
     state->snd_cwnd += increase;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if(state->snd_cwnd > (65535 + state->snd_mss))
-        tcpEV << " wow what big" << endl;
-    if(state->snd_cwnd == 0)
-        tcpEV << " not possible" << endl;
     return;
 }
 
@@ -80,20 +76,12 @@ void TCPNewReno::decreaseCWND(uint32 decrease){
     state->snd_cwnd -= decrease;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if(state->snd_cwnd > (65535 + state->snd_mss))
-           tcpEV << " wow what big" << endl;
-    if(state->snd_cwnd == 0)
-        tcpEV << " not possible" << endl;
     return;
 }
 void TCPNewReno::setCWND(uint32 newCWND){
     state->snd_cwnd = newCWND;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if(state->snd_cwnd > (65535 + state->snd_mss))
-        tcpEV << " wow what big" << endl;
-    if(state->snd_cwnd == 0)
-        tcpEV << " not possible" << endl;
     return;
 }
 

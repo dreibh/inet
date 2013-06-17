@@ -12,12 +12,12 @@ network bottleneck
     types:
         channel C1 extends DatarateChannel
         {
-            datarate = 100 Mbps;
+            datarate = 10 Mbps;
             //delay = 1 ms;
         }
         channel C2 extends DatarateChannel
         {
-            datarate = 100 Mbps;
+            datarate = 10 Mbps;
             // delay = 1 ms;
         }
     submodules:
