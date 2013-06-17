@@ -871,7 +871,7 @@ endif
 
 # Main target
 all: $O/$(TARGET)
-#	$(Q)$(LN) $O/$(TARGET) .
+	$(Q)$(LN) $O/$(TARGET) .
 
 $O/$(TARGET): $(OBJS)  $(wildcard $(EXTRA_OBJS)) Makefile
 	@$(MKPATH) $O
