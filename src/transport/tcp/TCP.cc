@@ -80,6 +80,7 @@ void TCP::initialize()
 
 #ifdef PRIVATE
     static int id;
+    isRFC6356 = false;
     // MBe: setup Multipath and the CC  by CC Variant
      if(strcmp((const char*)par("cmtCCVariant"), "off") == 0) {
          multipath     = false;
@@ -89,8 +90,8 @@ void TCP::initialize()
      }
      else if( (strcmp((const char*)par("cmtCCVariant"), "like-mptcp") == 0) ||
               (strcmp((const char*)par("cmtCCVariant"), "mptcp-like") == 0) ) {
-         // MBe: A dummy up to now
-         throw cRuntimeError("Not Supported yet: %s\n",(const char*)par("cmtCCVariant"));
+         multipath     = true;
+         isRFC6356 = true;
      }
      else {
          throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",

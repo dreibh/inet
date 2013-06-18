@@ -624,13 +624,28 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
     rexmitQueue->setConnection(this);
 
     // create algorithm
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath){
+        if(this->getTcpMain()->isRFC6356){
+               tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne("MPTCP_RFC6356"));
+        }
+        else{
+            const char *tcpAlgorithmClass = openCmd->getTcpAlgorithmClass();
+            if (!tcpAlgorithmClass || !tcpAlgorithmClass[0])
+               tcpAlgorithmClass = tcpMain->par("tcpAlgorithmClass");
+            tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
+        }
+    }
+    else {
+#endif
     const char *tcpAlgorithmClass = openCmd->getTcpAlgorithmClass();
-
     if (!tcpAlgorithmClass || !tcpAlgorithmClass[0])
         tcpAlgorithmClass = tcpMain->par("tcpAlgorithmClass");
 
     tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
-
+#ifdef PRIVATE
+    }
+#endif
     tcpAlgorithm->setConnection(this);
 
     // create state block
