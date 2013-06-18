@@ -654,6 +654,7 @@ void NetPerfMeter::teardownConnection(const bool stopTimeReached)
       }
       else if(TransportProtocol == TCP) {
          if(IncomingSocketTCP != NULL) {
+             IncomingSocketTCP->close();
             delete IncomingSocketTCP;
             IncomingSocketTCP = NULL;
          }
