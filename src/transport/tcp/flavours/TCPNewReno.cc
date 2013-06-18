@@ -26,6 +26,7 @@ Register_Class(TCPNewReno);
 TCPNewReno::TCPNewReno() : TCPTahoeRenoFamily(),
   state((TCPNewRenoStateVariables *&)TCPAlgorithm::state)
 {
+    acked = 0;
 }
 
 void TCPNewReno::initialize(){
@@ -105,6 +106,7 @@ void TCPNewReno::updateCWND(uint32 firstSeqAcked){
    }
    else{
        // perform Congestion Avoidance (RFC 2581)
+       acked = firstSeqAcked;
        double adder = static_cast<double> (state->snd_mss * state->snd_mss) / state->snd_cwnd;
        adder = std::max (1.0, adder);
        increaseCWND(static_cast<uint32>(adder));

@@ -87,7 +87,7 @@ rm -f err.log
 for JOB in $RUNS
 do
 	echo "run Szenario " $JOB
-	time ../../../src/inet -r 0 -u Cmdenv -c $JOB -n ../..:../../../simulations:../../../src  build.ini >> dat.log 2>> err.log 
+	time ../../../0/gcc-debug/src/inet -r 0 -u Cmdenv -c $JOB -n ../..:../../../simulations:../../../src  build.ini >> dat.log 2>> err.log 
 	sleep 5
 	if [ $BIGFILES == "yes" ];
 	then

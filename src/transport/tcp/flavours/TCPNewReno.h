@@ -35,13 +35,7 @@ typedef TCPTahoeRenoFamilyStateVariables TCPNewRenoStateVariables;
 class INET_API TCPNewReno : public TCPTahoeRenoFamily
 {
   private:
-    void increaseCWND(uint32 increase);
-    void decreaseCWND(uint32 decrease);
-    void setCWND(uint32 newCWND);
-    void initializeTCPNewReno();
-    void initilazeCWND();
-    void updateCWND(uint32 firstSeqAcked);
-    uint32 bytesInFlight();
+
 
   protected:
     TCPNewRenoStateVariables *&state; // alias to TCPAlgorithm's 'state'
@@ -57,10 +51,19 @@ class INET_API TCPNewReno : public TCPTahoeRenoFamily
     /** Redefine what should happen on retransmission */
     virtual void processRexmitTimer(TCPEventCode& event);
 
+    virtual void increaseCWND(uint32 increase);
+
+    virtual void decreaseCWND(uint32 decrease);
+    virtual void setCWND(uint32 newCWND);
+    // virtual void initializeTCPNewReno();
+    virtual void initilazeCWND();
+    virtual void updateCWND(uint32 firstSeqAcked);
+    virtual uint32 bytesInFlight();
+
   public:
     /** Ctor */
     TCPNewReno();
-
+    uint32 acked;
     /** Redefine what should happen when data got acked, to add congestion window management */
     virtual void receivedDataAck(uint32 firstSeqAcked);
 

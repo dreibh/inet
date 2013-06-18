@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2009 Thomas Reschka
+// Copyright (C) 2013 Martin Becke
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,63 +15,66 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_TCPNEWRENO_H
-#define __INET_TCPNEWRENO_H
+#ifndef __INET_MPTCP_RFC6356
+#define __INET_MPTCP_RFC6356
 
 #include "INETDefs.h"
-
-#include "TCPTahoeRenoFamily.h"
+#include "TCPNewReno.h"
 
 
 /**
  * State variables for MPTCP_RFC6356.
  */
-typedef TCPTahoeRenoFamilyStateVariables MPTCP_RFC6356StateVariables;
+//typedef TCPTahoeRenoFamilyStateVariables MPTCP_RFC6356StateVariables;
 
 
 /**
- * Implements TCP NewReno.
+ * Implements TCP MPTCP_RFC6356.
  */
-class INET_API MPTCP_RFC6356 : public TCPTahoeRenoFamily
+class INET_API MPTCP_RFC6356 : public TCPNewReno
 {
   private:
-    void increaseCWND(uint32 increase);
-    void decreaseCWND(uint32 decrease);
-    void setCWND(uint32 newCWND);
-    void initializeMPTCP_RFC6356();
-    void initilazeCWND();
-    void updateCWND(uint32 firstSeqAcked);
-    uint32 bytesInFlight();
+    bool isCA;
 
-  protected:
-    MPTCP_RFC6356StateVariables *&state; // alias to TCPAlgorithm's 'state'
 
-    /** Create and return a MPTCP_RFC6356StateVariables object. */
-    virtual TCPStateVariables *createStateVariables() {
-        return new MPTCP_RFC6356StateVariables();
-    }
-
-    /** Utility function to recalculate ssthresh */
-    virtual void recalculateSlowStartThreshold();
-
+    virtual void increaseCWND(uint32 increase);
     /** Utility function to recalculate path variables */
     virtual void recalculateMPTCPCCBasis();
-
-    /** Redefine what should happen on retransmission */
-    virtual void processRexmitTimer(TCPEventCode& event);
-
+//    virtual void updateCWND(uint32 firstSeqAcked);
+//    virtual void decreaseCWND(uint32 decrease);
+//    virtual void setCWND(uint32 newCWND);
+//    virtual void initializeMPTCP_RFC6356();
+//    virtual void initilazeCWND();
+//
+//    virtual uint32 bytesInFlight();
+//
+//  protected:
+//    MPTCP_RFC6356StateVariables *&state; // alias to TCPAlgorithm's 'state'
+//
+//    /** Create and return a MPTCP_RFC6356StateVariables object. */
+//    virtual TCPStateVariables *createStateVariables() {
+//        return new MPTCP_RFC6356StateVariables();
+//    }
+//
+//    /** Utility function to recalculate ssthresh */
+//    virtual void recalculateSlowStartThreshold();
+//
+//
+//    /** Redefine what should happen on retransmission */
+//    virtual void processRexmitTimer(TCPEventCode& event);
+//
   public:
-    /** Ctor */
+//    /** Ctor */
     MPTCP_RFC6356();
 
-    /** Redefine what should happen when data got acked, to add congestion window management */
-    virtual void receivedDataAck(uint32 firstSeqAcked);
-
-    /** Redefine what should happen when dupAck was received, to add congestion window management */
-    virtual void receivedDuplicateAck();
-
-    /* redefine initialize*/
-    virtual void initialize();
+//    /** Redefine what should happen when data got acked, to add congestion window management */
+//    virtual void receivedDataAck(uint32 firstSeqAcked);
+//
+//    /** Redefine what should happen when dupAck was received, to add congestion window management */
+//    virtual void receivedDuplicateAck();
+//
+//    /* redefine initialize*/
+//    virtual void initialize();
 };
 
 #endif
