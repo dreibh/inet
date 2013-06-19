@@ -95,13 +95,14 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
         numerator =  (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
         denominator = GET_SRTT(another_state->srtt.dbl())*GET_SRTT(another_state->srtt.dbl());
         maxCwndBasedBandwidth = std::max(maxCwndBasedBandwidth, (numerator / denominator));
-        if(maxCwndBasedBandwidth ==  (numerator / denominator)){
-            // bestCWND =
-        }
-        numerator   = (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
+
+
+        numerator =  (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
         denominator = GET_SRTT(another_state->srtt.dbl());
-        totalCwndBasedBandwidth += numerator/denominator;
+        totalCwndBasedBandwidth += std::max(maxCwndBasedBandwidth, (numerator / denominator));
+
     }
+
 /*
  *   The formula to compute alpha is:
  *
@@ -109,25 +110,76 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
  *     alpha = cwnd_total * -------------------------           (2)
  *                          (SUM (cwnd_i/rtt_i))^2
  */
-/*// we use it like 4.3 (similar to Linux)
- *  Note that the calculation of alpha does not take into account path
- *  MSS and is the same for stacks that keep cwnd in bytes or packets.
- *  With this formula, the algorithm for computing alpha will match the
- *  rate of TCP on the best path in B/s for byte-oriented stacks, and in
- *  packets/s in packet-based stacks.  In practice, MSS rarely changes
- *  between paths so this shouldn't be a problem.
- *
- *                                               cwnd_max
- * alpha = alpha_scale * cwnd_total * ------------------------------------
- *                                   (SUM ((rtt_max * cwnd_i) / rtt_i))^2
- */
-
-    numerator   = conn->flow->totalCMTCwnd * maxCwndBasedBandwidth;
-    denominator = totalCwndBasedBandwidth * totalCwndBasedBandwidth; // power 2
-    conn->flow->cmtCC_alpha = (uint32)ceil(this->alpha_scale *(numerator / denominator ));
+      numerator   = maxCwndBasedBandwidth;
+      denominator = totalCwndBasedBandwidth * totalCwndBasedBandwidth; // power 2
+      conn->flow->cmtCC_alpha = (uint32)ceil(this->alpha_scale * conn->flow->totalCMTCwnd *  numerator / denominator );
 }
 
-
+//void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
+//    // it is necessary to calculate all flow information
+//    double numerator = 0.0;
+//    double denominator = 0.0;
+//
+//    TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)(conn->flow->getSubflows());
+//    conn->flow->totalCMTCwnd = 0;
+//    conn->flow->totalCMTSsthresh = 0;
+//    conn->flow->utilizedCMTCwnd = 0;
+//    double bestCWND = 0.0;
+//    double bestSRTT = 0.0;
+//    double maxCwndBasedBandwidth = 0.0;
+//    double totalCwndBasedBandwidth = 0.0;
+//    // conn->flow->totalCwndBasedBandwidth = 0;
+//    for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
+//        if(!conn->isQueueAble) continue;
+//        TCPConnection* tmp = (*it)->subflow;
+//        TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
+//
+//        tmp->flow->totalCMTCwnd     += (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
+//        tmp->flow->totalCMTSsthresh += another_state->ssthresh;
+//
+//        //numerator =  (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
+//        //denominator = GET_SRTT(another_state->srtt.dbl())*GET_SRTT(another_state->srtt.dbl());
+//        //maxCwndBasedBandwidth = std::max(maxCwndBasedBandwidth, (numerator / denominator));
+//        if(maxCwndBasedBandwidth ==  (numerator / denominator)){
+//            bestCWND = (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
+//            bestSRTT = GET_SRTT(another_state->srtt.dbl());
+//        }
+//
+//    }
+//    for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
+//           if(!conn->isQueueAble) continue;
+//           TCPConnection* tmp = (*it)->subflow;
+//           TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
+//           numerator   = bestSRTT * (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
+//           denominator = GET_SRTT(another_state->srtt.dbl());
+//           totalCwndBasedBandwidth += numerator/denominator;
+//    }
+///*
+// *   The formula to compute alpha is:
+// *
+// *                          MAX (cwnd_i/rtt_i^2)
+// *     alpha = cwnd_total * -------------------------           (2)
+// *                          (SUM (cwnd_i/rtt_i))^2
+// */
+///*// we use it like 4.3 (similar to Linux)
+// *  Note that the calculation of alpha does not take into account path
+// *  MSS and is the same for stacks that keep cwnd in bytes or packets.
+// *  With this formula, the algorithm for computing alpha will match the
+// *  rate of TCP on the best path in B/s for byte-oriented stacks, and in
+// *  packets/s in packet-based stacks.  In practice, MSS rarely changes
+// *  between paths so this shouldn't be a problem.
+// *
+// *                                               cwnd_max (bestCWND)
+// * alpha = alpha_scale * cwnd_total * ------------------------------------
+// *                                   (SUM ((rtt_max * cwnd_i) / rtt_i))^2
+// */
+//    numerator = bestCWND;
+//    denominator = totalCwndBasedBandwidth * totalCwndBasedBandwidth;
+//    conn->flow->cmtCC_alpha = this->alpha_scale * conn->flow->totalCMTCwnd * numerator / denominator;
+////    numerator   = conn->flow->totalCMTCwnd * maxCwndBasedBandwidth;
+////    denominator = totalCwndBasedBandwidth * totalCwndBasedBandwidth; // power 2
+////    conn->flow->cmtCC_alpha = (uint32)ceil(this->alpha_scale *(numerator / denominator ));
+//}
 //uint32 MPTCP_RFC6356::bytesInFlight(){
 //    // FIXME
 //    // uint32 flight_size = state->snd_max - state->snd_una;
