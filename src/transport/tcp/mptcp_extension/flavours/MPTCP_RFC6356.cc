@@ -127,7 +127,7 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
             oldMaxCwndBasedBandwidth = maxCwndBasedBandwidth;
             bestCWND = (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
             bestSRTT = GET_SRTT(another_state->srtt.dbl());
-            fprintf(stderr,"MAX cwnd %i and srtt %.2f\n",bestCWND,bestSRTT);
+//            fprintf(stderr,"MAX cwnd %i and srtt %.2f\n",bestCWND,bestSRTT);
         }
     }
 
@@ -136,7 +136,7 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
            TCPConnection* tmp = (*it)->subflow;
            TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
 
-           fprintf(stderr,"Calc BestRTT : %.2f CWND %i / RTT %.2f\n",bestSRTT,(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd, GET_SRTT(another_state->srtt.dbl()));
+//           fprintf(stderr,"Calc BestRTT : %.2f CWND %i / RTT %.2f\n",bestSRTT,(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd, GET_SRTT(another_state->srtt.dbl()));
            totalCwndBasedBandwidth += bestSRTT * ((tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd) / GET_SRTT(another_state->srtt.dbl());
     }
 /*
@@ -160,9 +160,9 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
  */
 
 
-    fprintf(stderr,"%i =  * nenner %i * bestCWND %i\n",(this->conn->flow->totalCMTCwnd * bestCWND),this->conn->flow->totalCMTCwnd,bestCWND);
+//    fprintf(stderr,"%i =  * nenner %i * bestCWND %i\n",(this->conn->flow->totalCMTCwnd * bestCWND),this->conn->flow->totalCMTCwnd,bestCWND);
     denominator = totalCwndBasedBandwidth * totalCwndBasedBandwidth;
-    fprintf(stderr,"sum %f quad*(%f)\n",denominator, totalCwndBasedBandwidth);
+//    fprintf(stderr,"sum %f quad*(%f)\n",denominator, totalCwndBasedBandwidth);
     conn->flow->cmtCC_alpha =  (double)(conn->flow->totalCMTCwnd * bestCWND) / denominator;
 
 }
@@ -187,12 +187,12 @@ void MPTCP_RFC6356::increaseCWND(uint32 ackedBytes){
         numerator =  conn->flow->cmtCC_alpha * std::min(acked, conn->getState()->snd_mss) * conn->getState()->snd_mss;
         denominator = conn->flow->totalCMTCwnd;
         double term1 = numerator / denominator;
-        fprintf(stderr,"All term1 %i alpha %.2f  tatal cwnd %i  acked %i\n", (uint32)ceil(term1), conn->flow->cmtCC_alpha, conn->flow->totalCMTCwnd,acked);
+//        fprintf(stderr,"All term1 %i alpha %.2f  tatal cwnd %i  acked %i\n", (uint32)ceil(term1), conn->flow->cmtCC_alpha, conn->flow->totalCMTCwnd,acked);
 
         numerator = conn->getState()->snd_mss * std::min(acked, conn->getState()->snd_mss);
         denominator = state->snd_cwnd;
         double term2 = numerator / denominator;
-        fprintf(stderr,"ONE term2 %i cwnd %i \n", (uint32)(term2), state->snd_cwnd);
+//        fprintf(stderr,"ONE term2 %i cwnd %i \n", (uint32)(term2), state->snd_cwnd);
 
         increase = std::max((uint32)1,
                 std::min((uint32)term1,(uint32)term2));
