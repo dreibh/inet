@@ -112,6 +112,7 @@ INCLUDE_PATH = \
     -Itransport/tcp \
     -Itransport/tcp/flavours \
     -Itransport/tcp/mptcp_extension \
+    -Itransport/tcp/mptcp_extension/flavours \
     -Itransport/tcp/mptcp_extension/mptcp_queues \
     -Itransport/tcp/mptcp_extension/mptcp_scheduler \
     -Itransport/tcp/queues \
@@ -531,10 +532,11 @@ OBJS = \
     $O/transport/tcp/flavours/TCPTahoeRenoFamily.o \
     $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o \
     $O/transport/tcp/mptcp_extension/TCPMultipathPCB.o \
-    $O/transport/tcp/mptcp_extension/TCPSchedulerManager.o \
+    $O/transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.o \
     $O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathMsgBasedRcvQueue.o \
     $O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathVirtualDataRcvQueue.o \
     $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler.o \
+    $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.o \
     $O/transport/tcp/queues/TCPByteStreamRcvQueue.o \
     $O/transport/tcp/queues/TCPByteStreamSendQueue.o \
     $O/transport/tcp/queues/TCPMsgBasedRcvQueue.o \
@@ -994,6 +996,7 @@ clean:
 	$(Q)-rm -f transport/tcp/*_m.cc transport/tcp/*_m.h
 	$(Q)-rm -f transport/tcp/flavours/*_m.cc transport/tcp/flavours/*_m.h
 	$(Q)-rm -f transport/tcp/mptcp_extension/*_m.cc transport/tcp/mptcp_extension/*_m.h
+	$(Q)-rm -f transport/tcp/mptcp_extension/flavours/*_m.cc transport/tcp/mptcp_extension/flavours/*_m.h
 	$(Q)-rm -f transport/tcp/mptcp_extension/mptcp_queues/*_m.cc transport/tcp/mptcp_extension/mptcp_queues/*_m.h
 	$(Q)-rm -f transport/tcp/mptcp_extension/mptcp_scheduler/*_m.cc transport/tcp/mptcp_extension/mptcp_scheduler/*_m.h
 	$(Q)-rm -f transport/tcp/queues/*_m.cc transport/tcp/queues/*_m.h
@@ -1024,7 +1027,7 @@ cleanall: clean
 
 depend:
 	$(qecho) Creating dependencies...
-	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES)  ./*.cc applications/*.cc applications/dhcp/*.cc applications/ethernet/*.cc applications/generic/*.cc applications/httptools/*.cc applications/netperfmeter/*.cc applications/pingapp/*.cc applications/rtpapp/*.cc applications/sctpapp/*.cc applications/tcpapp/*.cc applications/traci/*.cc applications/udpapp/*.cc applications/voip/*.cc base/*.cc battery/*.cc battery/models/*.cc linklayer/*.cc linklayer/common/*.cc linklayer/contract/*.cc linklayer/ethernet/*.cc linklayer/ethernet/switch/*.cc linklayer/etherswitch/*.cc linklayer/ext/*.cc linklayer/idealwireless/*.cc linklayer/ieee80211/*.cc linklayer/ieee80211/mac/*.cc linklayer/ieee80211/mgmt/*.cc linklayer/ieee80211/radio/*.cc linklayer/ieee80211/radio/errormodel/*.cc linklayer/ppp/*.cc linklayer/queue/*.cc linklayer/radio/*.cc linklayer/radio/propagation/*.cc mobility/*.cc mobility/models/*.cc networklayer/*.cc networklayer/arp/*.cc networklayer/autorouting/*.cc networklayer/autorouting/ipv4/*.cc networklayer/autorouting/ipv6/*.cc networklayer/bgpv4/*.cc networklayer/bgpv4/BGPMessage/*.cc networklayer/common/*.cc networklayer/contract/*.cc networklayer/diffserv/*.cc networklayer/extras/*.cc networklayer/icmpv6/*.cc networklayer/internetcloud/*.cc networklayer/ipv4/*.cc networklayer/ipv6/*.cc networklayer/ipv6tunneling/*.cc networklayer/ldp/*.cc networklayer/manetrouting/*.cc networklayer/manetrouting/aodv/*.cc networklayer/manetrouting/aodv/aodv-uu/*.cc networklayer/manetrouting/base/*.cc networklayer/manetrouting/batman/*.cc networklayer/manetrouting/batman/batmand/*.cc networklayer/manetrouting/batman/batmand/orig/*.cc networklayer/manetrouting/dsdv/*.cc networklayer/manetrouting/dsr/*.cc networklayer/manetrouting/dsr/dsr-uu/*.cc networklayer/manetrouting/dymo/*.cc networklayer/manetrouting/dymo/dymoum/*.cc networklayer/manetrouting/dymo_fau/*.cc networklayer/manetrouting/olsr/*.cc networklayer/mpls/*.cc networklayer/ospfv2/*.cc networklayer/ospfv2/interface/*.cc networklayer/ospfv2/messagehandler/*.cc networklayer/ospfv2/neighbor/*.cc networklayer/ospfv2/router/*.cc networklayer/queue/*.cc networklayer/rsvp_te/*.cc networklayer/ted/*.cc networklayer/xmipv6/*.cc nodes/*.cc nodes/bgp/*.cc nodes/ethernet/*.cc nodes/httptools/*.cc nodes/inet/*.cc nodes/internetcloud/*.cc nodes/ipv6/*.cc nodes/mpls/*.cc nodes/ospfv2/*.cc nodes/wireless/*.cc nodes/xmipv6/*.cc transport/*.cc transport/contract/*.cc transport/rtp/*.cc transport/rtp/profiles/*.cc transport/rtp/profiles/avprofile/*.cc transport/sctp/*.cc transport/tcp/*.cc transport/tcp/flavours/*.cc transport/tcp/mptcp_extension/*.cc transport/tcp/mptcp_extension/mptcp_queues/*.cc transport/tcp/mptcp_extension/mptcp_scheduler/*.cc transport/tcp/queues/*.cc transport/tcp_common/*.cc transport/udp/*.cc util/*.cc util/headerserializers/*.cc util/headerserializers/headers/*.cc util/headerserializers/ipv4/*.cc util/headerserializers/ipv4/headers/*.cc util/headerserializers/sctp/*.cc util/headerserializers/sctp/headers/*.cc util/headerserializers/tcp/*.cc util/headerserializers/tcp/headers/*.cc util/headerserializers/udp/*.cc util/headerserializers/udp/headers/*.cc world/*.cc world/annotations/*.cc world/httptools/*.cc world/obstacles/*.cc world/powercontrol/*.cc world/radio/*.cc world/scenario/*.cc world/traci/*.cc
+	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES)  ./*.cc applications/*.cc applications/dhcp/*.cc applications/ethernet/*.cc applications/generic/*.cc applications/httptools/*.cc applications/netperfmeter/*.cc applications/pingapp/*.cc applications/rtpapp/*.cc applications/sctpapp/*.cc applications/tcpapp/*.cc applications/traci/*.cc applications/udpapp/*.cc applications/voip/*.cc base/*.cc battery/*.cc battery/models/*.cc linklayer/*.cc linklayer/common/*.cc linklayer/contract/*.cc linklayer/ethernet/*.cc linklayer/ethernet/switch/*.cc linklayer/etherswitch/*.cc linklayer/ext/*.cc linklayer/idealwireless/*.cc linklayer/ieee80211/*.cc linklayer/ieee80211/mac/*.cc linklayer/ieee80211/mgmt/*.cc linklayer/ieee80211/radio/*.cc linklayer/ieee80211/radio/errormodel/*.cc linklayer/ppp/*.cc linklayer/queue/*.cc linklayer/radio/*.cc linklayer/radio/propagation/*.cc mobility/*.cc mobility/models/*.cc networklayer/*.cc networklayer/arp/*.cc networklayer/autorouting/*.cc networklayer/autorouting/ipv4/*.cc networklayer/autorouting/ipv6/*.cc networklayer/bgpv4/*.cc networklayer/bgpv4/BGPMessage/*.cc networklayer/common/*.cc networklayer/contract/*.cc networklayer/diffserv/*.cc networklayer/extras/*.cc networklayer/icmpv6/*.cc networklayer/internetcloud/*.cc networklayer/ipv4/*.cc networklayer/ipv6/*.cc networklayer/ipv6tunneling/*.cc networklayer/ldp/*.cc networklayer/manetrouting/*.cc networklayer/manetrouting/aodv/*.cc networklayer/manetrouting/aodv/aodv-uu/*.cc networklayer/manetrouting/base/*.cc networklayer/manetrouting/batman/*.cc networklayer/manetrouting/batman/batmand/*.cc networklayer/manetrouting/batman/batmand/orig/*.cc networklayer/manetrouting/dsdv/*.cc networklayer/manetrouting/dsr/*.cc networklayer/manetrouting/dsr/dsr-uu/*.cc networklayer/manetrouting/dymo/*.cc networklayer/manetrouting/dymo/dymoum/*.cc networklayer/manetrouting/dymo_fau/*.cc networklayer/manetrouting/olsr/*.cc networklayer/mpls/*.cc networklayer/ospfv2/*.cc networklayer/ospfv2/interface/*.cc networklayer/ospfv2/messagehandler/*.cc networklayer/ospfv2/neighbor/*.cc networklayer/ospfv2/router/*.cc networklayer/queue/*.cc networklayer/rsvp_te/*.cc networklayer/ted/*.cc networklayer/xmipv6/*.cc nodes/*.cc nodes/bgp/*.cc nodes/ethernet/*.cc nodes/httptools/*.cc nodes/inet/*.cc nodes/internetcloud/*.cc nodes/ipv6/*.cc nodes/mpls/*.cc nodes/ospfv2/*.cc nodes/wireless/*.cc nodes/xmipv6/*.cc transport/*.cc transport/contract/*.cc transport/rtp/*.cc transport/rtp/profiles/*.cc transport/rtp/profiles/avprofile/*.cc transport/sctp/*.cc transport/tcp/*.cc transport/tcp/flavours/*.cc transport/tcp/mptcp_extension/*.cc transport/tcp/mptcp_extension/flavours/*.cc transport/tcp/mptcp_extension/mptcp_queues/*.cc transport/tcp/mptcp_extension/mptcp_scheduler/*.cc transport/tcp/queues/*.cc transport/tcp_common/*.cc transport/udp/*.cc util/*.cc util/headerserializers/*.cc util/headerserializers/headers/*.cc util/headerserializers/ipv4/*.cc util/headerserializers/ipv4/headers/*.cc util/headerserializers/sctp/*.cc util/headerserializers/sctp/headers/*.cc util/headerserializers/tcp/*.cc util/headerserializers/tcp/headers/*.cc util/headerserializers/udp/*.cc util/headerserializers/udp/headers/*.cc world/*.cc world/annotations/*.cc world/httptools/*.cc world/obstacles/*.cc world/powercontrol/*.cc world/radio/*.cc world/scenario/*.cc world/traci/*.cc
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 $O/applications/dhcp/DHCPClient.o: applications/dhcp/DHCPClient.cc \
@@ -9953,7 +9956,6 @@ $O/transport/tcp/TCPConnectionUtil.o: transport/tcp/TCPConnectionUtil.cc \
   transport/tcp_common/TCPSegment.h \
   networklayer/contract/IPv6Address.h \
   transport/tcp/TCPAlgorithm.h \
-  transport/tcp/mptcp_extension/TCPSchedulerManager.h \
   transport/tcp/mptcp_extension/TCPMultipathPCB.h \
   networklayer/common/IInterfaceTable.h \
   networklayer/contract/IPv4Address.h \
@@ -9974,6 +9976,7 @@ $O/transport/tcp/TCPConnectionUtil.o: transport/tcp/TCPConnectionUtil.cc \
   transport/tcp/TCPSendQueue.h \
   networklayer/ipv4/RoutingTable.h \
   base/ModuleAccess.h \
+  transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.h \
   networklayer/contract/IPv4ControlInfo.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
@@ -10276,7 +10279,6 @@ $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o: transport/tcp/mptcp_extensi
   transport/tcp_common/TCPSegment.h \
   networklayer/contract/IPv6Address.h \
   transport/tcp/mptcp_extension/TCPMultipathPCB.h \
-  transport/tcp/mptcp_extension/TCPSchedulerManager.h \
   networklayer/common/IInterfaceTable.h \
   networklayer/contract/IPv4Address.h \
   transport/tcp/mptcp_extension/TCPMultipathSchedulerI.h \
@@ -10294,6 +10296,7 @@ $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o: transport/tcp/mptcp_extensi
   networklayer/ipv4/IRoutingTable.h \
   networklayer/ipv4/RoutingTable.h \
   base/ModuleAccess.h \
+  transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
@@ -10337,27 +10340,27 @@ $O/transport/tcp/mptcp_extension/TCPMultipathPCB.o: transport/tcp/mptcp_extensio
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
   transport/tcp/TCP.h
-$O/transport/tcp/mptcp_extension/TCPSchedulerManager.o: transport/tcp/mptcp_extension/TCPSchedulerManager.cc \
-  networklayer/ipv4/IPv4InterfaceData.h \
+$O/transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.o: transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.cc \
+  transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.h \
   networklayer/ipv6/IPv6InterfaceData.h \
+  networklayer/ipv4/IPv4InterfaceData.h \
   transport/tcp_common/TCPSegment.h \
   networklayer/contract/IPv6Address.h \
+  transport/tcp/TCPAlgorithm.h \
   transport/tcp/mptcp_extension/TCPMultipathPCB.h \
-  transport/tcp/mptcp_extension/TCPSchedulerManager.h \
   networklayer/common/IInterfaceTable.h \
   networklayer/contract/IPv4Address.h \
-  transport/tcp/mptcp_extension/TCPMultipathSchedulerI.h \
-  networklayer/common/InterfaceTableAccess.h \
   linklayer/contract/MACAddress.h \
+  networklayer/common/InterfaceTableAccess.h \
   base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
   networklayer/common/InterfaceToken.h \
   transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
-  transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler.h \
-  base/INotifiable.h \
   transport/tcp/mptcp_extension/TCPMultipath.h \
+  base/INotifiable.h \
+  transport/tcp/flavours/TCPBaseAlg.h \
   networklayer/ipv4/IRoutingTable.h \
   networklayer/ipv4/RoutingTable.h \
   base/ModuleAccess.h \
@@ -10369,6 +10372,7 @@ $O/transport/tcp/mptcp_extension/TCPSchedulerManager.o: transport/tcp/mptcp_exte
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
+  transport/tcp/flavours/TCPTahoeRenoFamily.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
   transport/tcp/TCP.h
@@ -10437,6 +10441,41 @@ $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler
   transport/tcp/TCPSendQueue.h \
   networklayer/ipv4/RoutingTable.h \
   base/ModuleAccess.h \
+  base/ByteArray.h \
+  base/NotifierConsts.h \
+  transport/tcp/mptcp_extension/TCPMultipathFlow.h \
+  base/NotificationBoard.h \
+  transport/contract/TCPCommand_m.h \
+  networklayer/ipv4/IPv4Route.h \
+  base/INETDefs.h \
+  transport/tcp/TCPConnection.h \
+  networklayer/common/InterfaceTable.h \
+  networklayer/contract/IPvXAddress.h \
+  transport/tcp/TCP.h
+$O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.o: transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.cc \
+  networklayer/ipv4/IPv4InterfaceData.h \
+  networklayer/ipv6/IPv6InterfaceData.h \
+  transport/tcp_common/TCPSegment.h \
+  networklayer/contract/IPv6Address.h \
+  transport/tcp/mptcp_extension/TCPMultipathPCB.h \
+  networklayer/common/IInterfaceTable.h \
+  networklayer/contract/IPv4Address.h \
+  transport/tcp/mptcp_extension/TCPMultipathSchedulerI.h \
+  networklayer/common/InterfaceTableAccess.h \
+  linklayer/contract/MACAddress.h \
+  base/ByteArray_m.h \
+  networklayer/common/InterfaceEntry.h \
+  transport/tcp_common/TCPSegment_m.h \
+  networklayer/ipv4/RoutingTableAccess.h \
+  networklayer/common/InterfaceToken.h \
+  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
+  transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler.h \
+  base/INotifiable.h \
+  transport/tcp/mptcp_extension/TCPMultipath.h \
+  networklayer/ipv4/IRoutingTable.h \
+  networklayer/ipv4/RoutingTable.h \
+  base/ModuleAccess.h \
+  transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
