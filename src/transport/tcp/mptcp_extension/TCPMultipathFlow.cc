@@ -51,7 +51,7 @@
 // Version of MPTCP
 #define VERSION 0x0
 
-int MPTCP_Flow::ID = 0;
+int MPTCP_Flow::CNT = 0;
 /**
  * Constructor
  * @param int ID for each Flow
@@ -61,7 +61,7 @@ int MPTCP_Flow::ID = 0;
 MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
         MPTCP_PCB* aPCB) :
         state(IDLE), local_key(0), remote_key(0) {
-	ID++;
+	ID = CNT++;
     // For easy PCB Lookup set ID and Application Index
     appID = connID;
     appGateIndex = aAppGateIndex;
