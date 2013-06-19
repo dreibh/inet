@@ -114,8 +114,8 @@ class INET_API MPTCP_Flow
     uint32             utilizedCMTCwnd;
     uint32             totalCMTCwnd;
     uint32             totalCMTSsthresh;
-    double             maxCwndBasedBandwidth;
-    double             totalCwndBasedBandwidth;
+    // double             maxCwndBasedBandwidth;
+    // double             totalCwndBasedBandwidth;
     uint32             cmtCC_alpha;
     // helper
    // uint32_t flow_send_queue_limit;

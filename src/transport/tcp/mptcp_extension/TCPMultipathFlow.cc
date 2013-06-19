@@ -102,8 +102,8 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     utilizedCMTCwnd = 0;
     totalCMTCwnd = 0;
     totalCMTSsthresh = 0;
-    maxCwndBasedBandwidth = 0;
-    totalCwndBasedBandwidth = 0;
+//    maxCwndBasedBandwidth = 0;
+//    totalCwndBasedBandwidth = 0;
     cmtCC_alpha = 0;
 }
 /**
