@@ -79,6 +79,8 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
     conn->flow->totalCMTCwnd = 0;
     conn->flow->totalCMTSsthresh = 0;
     conn->flow->utilizedCMTCwnd = 0;
+    double bestCWND = 0.0;
+    double bestSRTT = 0.0;
     double maxCwndBasedBandwidth = 0.0;
     double totalCwndBasedBandwidth = 0.0;
     // conn->flow->totalCwndBasedBandwidth = 0;
@@ -86,14 +88,16 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
         if(!conn->isQueueAble) continue;
         TCPConnection* tmp = (*it)->subflow;
         TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
-        tmp->flow->utilizedCMTCwnd  += tmp->getState()->snd_nxt - tmp->getState()->snd_una;
-        tmp->flow->totalCMTCwnd     += std::min(tmp->flow->utilizedCMTCwnd ,(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd);
+
+        tmp->flow->totalCMTCwnd     += (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
         tmp->flow->totalCMTSsthresh += another_state->ssthresh;
 
-        numerator = another_state->snd_cwnd;
+        numerator =  (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
         denominator = GET_SRTT(another_state->srtt.dbl())*GET_SRTT(another_state->srtt.dbl());
         maxCwndBasedBandwidth = std::max(maxCwndBasedBandwidth, (numerator / denominator));
-
+        if(maxCwndBasedBandwidth ==  (numerator / denominator)){
+            // bestCWND =
+        }
         numerator   = (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
         denominator = GET_SRTT(another_state->srtt.dbl());
         totalCwndBasedBandwidth += numerator/denominator;
@@ -105,7 +109,18 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
  *     alpha = cwnd_total * -------------------------           (2)
  *                          (SUM (cwnd_i/rtt_i))^2
  */
-
+/*// we use it like 4.3 (similar to Linux)
+ *  Note that the calculation of alpha does not take into account path
+ *  MSS and is the same for stacks that keep cwnd in bytes or packets.
+ *  With this formula, the algorithm for computing alpha will match the
+ *  rate of TCP on the best path in B/s for byte-oriented stacks, and in
+ *  packets/s in packet-based stacks.  In practice, MSS rarely changes
+ *  between paths so this shouldn't be a problem.
+ *
+ *                                               cwnd_max
+ * alpha = alpha_scale * cwnd_total * ------------------------------------
+ *                                   (SUM ((rtt_max * cwnd_i) / rtt_i))^2
+ */
 
     numerator   = conn->flow->totalCMTCwnd * maxCwndBasedBandwidth;
     denominator = totalCwndBasedBandwidth * totalCwndBasedBandwidth; // power 2
