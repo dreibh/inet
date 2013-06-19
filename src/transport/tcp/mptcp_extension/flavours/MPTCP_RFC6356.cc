@@ -110,7 +110,7 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
     double oldMaxCwndBasedBandwidth = 0.0;
     double totalCwndBasedBandwidth = 0.0;
     int flowID = conn->flow->ID;
-    fprintf(stderr,"\n");
+    //fprintf(stderr,"\n");
     // conn->flow->totalCwndBasedBandwidth = 0;
     for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++, cnt++) {
         if(!conn->isQueueAble) continue;
@@ -118,7 +118,7 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
         TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
 
         ASSERT(flowID==tmp->flow->ID);
-        fprintf(stderr,"CWND %i - %i\n",cnt,(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd);
+        //fprintf(stderr,"CWND %i - %i\n",cnt,(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd);
         tmp->flow->totalCMTCwnd     +=  (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
 
         maxCwndBasedBandwidth = (double)((tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd) /
@@ -196,7 +196,7 @@ void MPTCP_RFC6356::increaseCWND(uint32 ackedBytes){
 
         increase = std::max((uint32)1,
                 std::min((uint32)term1,(uint32)term2));
-        fprintf(stderr,"increase %i \n", increase);
+//        fprintf(stderr,"increase %i \n", increase);
     }
 
     state->snd_cwnd += increase;
