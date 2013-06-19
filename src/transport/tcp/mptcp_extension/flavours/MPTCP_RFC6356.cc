@@ -137,7 +137,7 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
            TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
 
            fprintf(stderr,"Calc BestRTT : %.2f CWND %i / RTT %.2f\n",bestSRTT,(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd, GET_SRTT(another_state->srtt.dbl()));
-           totalCwndBasedBandwidth += bestSRTT * (double)(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd / GET_SRTT(another_state->srtt.dbl());
+           totalCwndBasedBandwidth += bestSRTT * ((tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd) / GET_SRTT(another_state->srtt.dbl());
     }
 /*
  *   The formula to compute alpha is:
