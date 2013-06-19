@@ -303,6 +303,8 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             throw cRuntimeError(tcpMain, "Duplicate CLOSE command: connection already closing");
             /* no break */
     }
+    // workaround FIXME - Something goes wrong here
+    sendRst(getState()->snd_nxt);
 }
 
 void TCPConnection::process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)

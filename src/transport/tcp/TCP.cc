@@ -370,7 +370,7 @@ void TCP::segmentArrivalWhileClosed(TCPSegment *tcpseg, IPvXAddress srcAddr, IPv
 {
     TCPConnection *tmp = new TCPConnection();
     tmp->segmentArrivalWhileClosed(tcpseg, srcAddr, destAddr);
-    delete tmp;
+    // delete tmp;  // FIXME run in Error
     delete tcpseg;
 }
 
