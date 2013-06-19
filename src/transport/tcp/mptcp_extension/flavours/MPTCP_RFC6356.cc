@@ -38,7 +38,6 @@ Register_Class(MPTCP_RFC6356);
 MPTCP_RFC6356::MPTCP_RFC6356() : TCPNewReno()
 {
     isCA = false;
-    alpha_scale = 512;
 }
 static inline double GET_SRTT(const double srtt)
 {
@@ -92,38 +91,43 @@ static inline double GET_SRTT(const double srtt)
 // */
 //      numerator   = maxCwndBasedBandwidth;
 //      denominator = totalCwndBasedBandwidth * totalCwndBasedBandwidth; // power 2
-//      conn->flow->cmtCC_alpha = (uint32)ceil(0.8*this->alpha_scale * conn->flow->totalCMTCwnd *  numerator / denominator );
+//      conn->flow->cmtCC_alpha = (uint32)ceil(this->alpha_scale * conn->flow->totalCMTCwnd *  numerator / denominator );
 //}
 
 void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
     // it is necessary to calculate all flow information
-    double numerator = 0.0;
+
     double denominator = 0.0;
 
     TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)(conn->flow->getSubflows());
     conn->flow->totalCMTCwnd = 0;
     conn->flow->totalCMTSsthresh = 0;
     conn->flow->utilizedCMTCwnd = 0;
-    double bestCWND = 0.0;
-    double bestSRTT = 0.0;
-
+    uint32 bestCWND = 0;
+    double bestSRTT = 0;
+    int cnt = 0;
     double maxCwndBasedBandwidth = 0.0;
+    double oldMaxCwndBasedBandwidth = 0.0;
     double totalCwndBasedBandwidth = 0.0;
+    int flowID = conn->flow->ID;
+    fprintf(stderr,"\n");
     // conn->flow->totalCwndBasedBandwidth = 0;
-    for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
+    for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++, cnt++) {
         if(!conn->isQueueAble) continue;
         TCPConnection* tmp = (*it)->subflow;
         TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
 
+        ASSERT(flowID==tmp->flow->ID);
+        fprintf(stderr,"CWND %i - %i\n",cnt,(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd);
         tmp->flow->totalCMTCwnd     +=  (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
-        tmp->flow->totalCMTSsthresh +=  another_state->ssthresh;
 
-        numerator =   (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd ;
-        denominator = GET_SRTT(another_state->srtt.dbl())*GET_SRTT(another_state->srtt.dbl());
-        maxCwndBasedBandwidth = std::max(maxCwndBasedBandwidth, (numerator / denominator));
-        if(maxCwndBasedBandwidth ==  (numerator / denominator)){
+        maxCwndBasedBandwidth = (double)((tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd) /
+                                         (GET_SRTT(another_state->srtt.dbl())*GET_SRTT(another_state->srtt.dbl()));
+        if(oldMaxCwndBasedBandwidth < maxCwndBasedBandwidth){
+            oldMaxCwndBasedBandwidth = maxCwndBasedBandwidth;
             bestCWND = (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
             bestSRTT = GET_SRTT(another_state->srtt.dbl());
+            fprintf(stderr,"MAX cwnd %i and srtt %.2f\n",bestCWND,bestSRTT);
         }
     }
 
@@ -131,9 +135,9 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
            if(!conn->isQueueAble) continue;
            TCPConnection* tmp = (*it)->subflow;
            TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
-           numerator   = bestSRTT * (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
-           denominator = GET_SRTT(another_state->srtt.dbl());
-           totalCwndBasedBandwidth += numerator/denominator;
+
+           fprintf(stderr,"Calc BestRTT : %.2f CWND %i / RTT %.2f\n",bestSRTT,(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd, GET_SRTT(another_state->srtt.dbl()));
+           totalCwndBasedBandwidth += bestSRTT * (double)(tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd / GET_SRTT(another_state->srtt.dbl());
     }
 /*
  *   The formula to compute alpha is:
@@ -154,9 +158,12 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
  * alpha = alpha_scale * cwnd_total * ------------------------------------
  *                                   (SUM ((rtt_max * cwnd_i) / rtt_i))^2
  */
-    numerator = this->alpha_scale * conn->flow->totalCMTCwnd * bestCWND;
+
+
+    fprintf(stderr,"%i =  * nenner %i * bestCWND %i\n",(this->conn->flow->totalCMTCwnd * bestCWND),this->conn->flow->totalCMTCwnd,bestCWND);
     denominator = totalCwndBasedBandwidth * totalCwndBasedBandwidth;
-    conn->flow->cmtCC_alpha =  numerator / denominator;
+    fprintf(stderr,"sum %f quad*(%f)\n",denominator, totalCwndBasedBandwidth);
+    conn->flow->cmtCC_alpha =  (double)(conn->flow->totalCMTCwnd * bestCWND) / denominator;
 
 }
 
@@ -177,15 +184,15 @@ void MPTCP_RFC6356::increaseCWND(uint32 ackedBytes){
     if ((!(state->snd_cwnd < state->ssthresh)) && (!this->conn->getState()->lossRecovery) && ackedBytes){
         // in CA
         recalculateMPTCPCCBasis();
-        numerator = conn->flow->cmtCC_alpha * std::min(acked, conn->getState()->snd_mss) * conn->getState()->snd_mss;
-        denominator = this->alpha_scale* conn->flow->totalCMTCwnd;
+        numerator =  conn->flow->cmtCC_alpha * std::min(acked, conn->getState()->snd_mss) * conn->getState()->snd_mss;
+        denominator = conn->flow->totalCMTCwnd;
         double term1 = numerator / denominator;
-        fprintf(stderr,"All term1 %i \n", (uint32)(term1));
+        fprintf(stderr,"All term1 %i alpha %.2f  tatal cwnd %i  acked %i\n", (uint32)ceil(term1), conn->flow->cmtCC_alpha, conn->flow->totalCMTCwnd,acked);
 
         numerator = conn->getState()->snd_mss * std::min(acked, conn->getState()->snd_mss);
         denominator = state->snd_cwnd;
         double term2 = numerator / denominator;
-        fprintf(stderr,"ONE term2 %i \n", (uint32)(term2));
+        fprintf(stderr,"ONE term2 %i cwnd %i \n", (uint32)(term2), state->snd_cwnd);
 
         increase = std::max((uint32)1,
                 std::min((uint32)term1,(uint32)term2));

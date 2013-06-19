@@ -32,8 +32,8 @@ class INET_API MPTCP_Flow
 {
 
   public:
-	static int ID;
-
+	static int CNT;
+	int ID;
     // Flow could only be initilized with an Protocol Control Block
     MPTCP_Flow(int ID, int aAppGateIndex,TCPConnection* subflow, MPTCP_PCB* aPCB);
     ~MPTCP_Flow();
@@ -116,7 +116,7 @@ class INET_API MPTCP_Flow
     uint32             totalCMTSsthresh;
     // double             maxCwndBasedBandwidth;
     // double             totalCwndBasedBandwidth;
-    uint32             cmtCC_alpha;
+    double             cmtCC_alpha;
     // helper
    // uint32_t flow_send_queue_limit;
   protected:
