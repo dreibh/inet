@@ -125,9 +125,8 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
             bestCWND = (tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd;
             bestSRTT = GET_SRTT(another_state->srtt.dbl());
         }
-
     }
-    totalCwndBasedBandwidth = 0;
+
     for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
            if(!conn->isQueueAble) continue;
            TCPConnection* tmp = (*it)->subflow;
