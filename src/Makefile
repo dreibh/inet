@@ -88,7 +88,6 @@ INCLUDE_PATH = \
     -Inetworklayer/ospfv2/messagehandler \
     -Inetworklayer/ospfv2/neighbor \
     -Inetworklayer/ospfv2/router \
-    -Inetworklayer/queue \
     -Inetworklayer/rsvp_te \
     -Inetworklayer/ted \
     -Inetworklayer/xmipv6 \
@@ -103,9 +102,13 @@ INCLUDE_PATH = \
     -Inodes/ospfv2 \
     -Inodes/wireless \
     -Inodes/xmipv6 \
+    -Isecurity \
+    -Isecurity/contract \
+    -Isecurity/dtls \
     -Itransport \
     -Itransport/contract \
     -Itransport/rtp \
+    -Itransport/rtp/packets \
     -Itransport/rtp/profiles \
     -Itransport/rtp/profiles/avprofile \
     -Itransport/sctp \
@@ -118,6 +121,7 @@ INCLUDE_PATH = \
     -Itransport/tcp/queues \
     -Itransport/tcp_common \
     -Itransport/udp \
+    -Itransport/utility \
     -Iutil \
     -Iutil/headerserializers \
     -Iutil/headerserializers/headers \
@@ -972,7 +976,6 @@ clean:
 	$(Q)-rm -f networklayer/ospfv2/messagehandler/*_m.cc networklayer/ospfv2/messagehandler/*_m.h
 	$(Q)-rm -f networklayer/ospfv2/neighbor/*_m.cc networklayer/ospfv2/neighbor/*_m.h
 	$(Q)-rm -f networklayer/ospfv2/router/*_m.cc networklayer/ospfv2/router/*_m.h
-	$(Q)-rm -f networklayer/queue/*_m.cc networklayer/queue/*_m.h
 	$(Q)-rm -f networklayer/rsvp_te/*_m.cc networklayer/rsvp_te/*_m.h
 	$(Q)-rm -f networklayer/ted/*_m.cc networklayer/ted/*_m.h
 	$(Q)-rm -f networklayer/xmipv6/*_m.cc networklayer/xmipv6/*_m.h
@@ -987,9 +990,13 @@ clean:
 	$(Q)-rm -f nodes/ospfv2/*_m.cc nodes/ospfv2/*_m.h
 	$(Q)-rm -f nodes/wireless/*_m.cc nodes/wireless/*_m.h
 	$(Q)-rm -f nodes/xmipv6/*_m.cc nodes/xmipv6/*_m.h
+	$(Q)-rm -f security/*_m.cc security/*_m.h
+	$(Q)-rm -f security/contract/*_m.cc security/contract/*_m.h
+	$(Q)-rm -f security/dtls/*_m.cc security/dtls/*_m.h
 	$(Q)-rm -f transport/*_m.cc transport/*_m.h
 	$(Q)-rm -f transport/contract/*_m.cc transport/contract/*_m.h
 	$(Q)-rm -f transport/rtp/*_m.cc transport/rtp/*_m.h
+	$(Q)-rm -f transport/rtp/packets/*_m.cc transport/rtp/packets/*_m.h
 	$(Q)-rm -f transport/rtp/profiles/*_m.cc transport/rtp/profiles/*_m.h
 	$(Q)-rm -f transport/rtp/profiles/avprofile/*_m.cc transport/rtp/profiles/avprofile/*_m.h
 	$(Q)-rm -f transport/sctp/*_m.cc transport/sctp/*_m.h
@@ -1002,6 +1009,7 @@ clean:
 	$(Q)-rm -f transport/tcp/queues/*_m.cc transport/tcp/queues/*_m.h
 	$(Q)-rm -f transport/tcp_common/*_m.cc transport/tcp_common/*_m.h
 	$(Q)-rm -f transport/udp/*_m.cc transport/udp/*_m.h
+	$(Q)-rm -f transport/utility/*_m.cc transport/utility/*_m.h
 	$(Q)-rm -f util/*_m.cc util/*_m.h
 	$(Q)-rm -f util/headerserializers/*_m.cc util/headerserializers/*_m.h
 	$(Q)-rm -f util/headerserializers/headers/*_m.cc util/headerserializers/headers/*_m.h
@@ -1027,7 +1035,7 @@ cleanall: clean
 
 depend:
 	$(qecho) Creating dependencies...
-	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES)  ./*.cc applications/*.cc applications/dhcp/*.cc applications/ethernet/*.cc applications/generic/*.cc applications/httptools/*.cc applications/netperfmeter/*.cc applications/pingapp/*.cc applications/rtpapp/*.cc applications/sctpapp/*.cc applications/tcpapp/*.cc applications/traci/*.cc applications/udpapp/*.cc applications/voip/*.cc base/*.cc battery/*.cc battery/models/*.cc linklayer/*.cc linklayer/common/*.cc linklayer/contract/*.cc linklayer/ethernet/*.cc linklayer/ethernet/switch/*.cc linklayer/etherswitch/*.cc linklayer/ext/*.cc linklayer/idealwireless/*.cc linklayer/ieee80211/*.cc linklayer/ieee80211/mac/*.cc linklayer/ieee80211/mgmt/*.cc linklayer/ieee80211/radio/*.cc linklayer/ieee80211/radio/errormodel/*.cc linklayer/ppp/*.cc linklayer/queue/*.cc linklayer/radio/*.cc linklayer/radio/propagation/*.cc mobility/*.cc mobility/models/*.cc networklayer/*.cc networklayer/arp/*.cc networklayer/autorouting/*.cc networklayer/autorouting/ipv4/*.cc networklayer/autorouting/ipv6/*.cc networklayer/bgpv4/*.cc networklayer/bgpv4/BGPMessage/*.cc networklayer/common/*.cc networklayer/contract/*.cc networklayer/diffserv/*.cc networklayer/extras/*.cc networklayer/icmpv6/*.cc networklayer/internetcloud/*.cc networklayer/ipv4/*.cc networklayer/ipv6/*.cc networklayer/ipv6tunneling/*.cc networklayer/ldp/*.cc networklayer/manetrouting/*.cc networklayer/manetrouting/aodv/*.cc networklayer/manetrouting/aodv/aodv-uu/*.cc networklayer/manetrouting/base/*.cc networklayer/manetrouting/batman/*.cc networklayer/manetrouting/batman/batmand/*.cc networklayer/manetrouting/batman/batmand/orig/*.cc networklayer/manetrouting/dsdv/*.cc networklayer/manetrouting/dsr/*.cc networklayer/manetrouting/dsr/dsr-uu/*.cc networklayer/manetrouting/dymo/*.cc networklayer/manetrouting/dymo/dymoum/*.cc networklayer/manetrouting/dymo_fau/*.cc networklayer/manetrouting/olsr/*.cc networklayer/mpls/*.cc networklayer/ospfv2/*.cc networklayer/ospfv2/interface/*.cc networklayer/ospfv2/messagehandler/*.cc networklayer/ospfv2/neighbor/*.cc networklayer/ospfv2/router/*.cc networklayer/queue/*.cc networklayer/rsvp_te/*.cc networklayer/ted/*.cc networklayer/xmipv6/*.cc nodes/*.cc nodes/bgp/*.cc nodes/ethernet/*.cc nodes/httptools/*.cc nodes/inet/*.cc nodes/internetcloud/*.cc nodes/ipv6/*.cc nodes/mpls/*.cc nodes/ospfv2/*.cc nodes/wireless/*.cc nodes/xmipv6/*.cc transport/*.cc transport/contract/*.cc transport/rtp/*.cc transport/rtp/profiles/*.cc transport/rtp/profiles/avprofile/*.cc transport/sctp/*.cc transport/tcp/*.cc transport/tcp/flavours/*.cc transport/tcp/mptcp_extension/*.cc transport/tcp/mptcp_extension/flavours/*.cc transport/tcp/mptcp_extension/mptcp_queues/*.cc transport/tcp/mptcp_extension/mptcp_scheduler/*.cc transport/tcp/queues/*.cc transport/tcp_common/*.cc transport/udp/*.cc util/*.cc util/headerserializers/*.cc util/headerserializers/headers/*.cc util/headerserializers/ipv4/*.cc util/headerserializers/ipv4/headers/*.cc util/headerserializers/sctp/*.cc util/headerserializers/sctp/headers/*.cc util/headerserializers/tcp/*.cc util/headerserializers/tcp/headers/*.cc util/headerserializers/udp/*.cc util/headerserializers/udp/headers/*.cc world/*.cc world/annotations/*.cc world/httptools/*.cc world/obstacles/*.cc world/powercontrol/*.cc world/radio/*.cc world/scenario/*.cc world/traci/*.cc
+	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES)  ./*.cc applications/*.cc applications/dhcp/*.cc applications/ethernet/*.cc applications/generic/*.cc applications/httptools/*.cc applications/netperfmeter/*.cc applications/pingapp/*.cc applications/rtpapp/*.cc applications/sctpapp/*.cc applications/tcpapp/*.cc applications/traci/*.cc applications/udpapp/*.cc applications/voip/*.cc base/*.cc battery/*.cc battery/models/*.cc linklayer/*.cc linklayer/common/*.cc linklayer/contract/*.cc linklayer/ethernet/*.cc linklayer/ethernet/switch/*.cc linklayer/etherswitch/*.cc linklayer/ext/*.cc linklayer/idealwireless/*.cc linklayer/ieee80211/*.cc linklayer/ieee80211/mac/*.cc linklayer/ieee80211/mgmt/*.cc linklayer/ieee80211/radio/*.cc linklayer/ieee80211/radio/errormodel/*.cc linklayer/ppp/*.cc linklayer/queue/*.cc linklayer/radio/*.cc linklayer/radio/propagation/*.cc mobility/*.cc mobility/models/*.cc networklayer/*.cc networklayer/arp/*.cc networklayer/autorouting/*.cc networklayer/autorouting/ipv4/*.cc networklayer/autorouting/ipv6/*.cc networklayer/bgpv4/*.cc networklayer/bgpv4/BGPMessage/*.cc networklayer/common/*.cc networklayer/contract/*.cc networklayer/diffserv/*.cc networklayer/extras/*.cc networklayer/icmpv6/*.cc networklayer/internetcloud/*.cc networklayer/ipv4/*.cc networklayer/ipv6/*.cc networklayer/ipv6tunneling/*.cc networklayer/ldp/*.cc networklayer/manetrouting/*.cc networklayer/manetrouting/aodv/*.cc networklayer/manetrouting/aodv/aodv-uu/*.cc networklayer/manetrouting/base/*.cc networklayer/manetrouting/batman/*.cc networklayer/manetrouting/batman/batmand/*.cc networklayer/manetrouting/batman/batmand/orig/*.cc networklayer/manetrouting/dsdv/*.cc networklayer/manetrouting/dsr/*.cc networklayer/manetrouting/dsr/dsr-uu/*.cc networklayer/manetrouting/dymo/*.cc networklayer/manetrouting/dymo/dymoum/*.cc networklayer/manetrouting/dymo_fau/*.cc networklayer/manetrouting/olsr/*.cc networklayer/mpls/*.cc networklayer/ospfv2/*.cc networklayer/ospfv2/interface/*.cc networklayer/ospfv2/messagehandler/*.cc networklayer/ospfv2/neighbor/*.cc networklayer/ospfv2/router/*.cc networklayer/rsvp_te/*.cc networklayer/ted/*.cc networklayer/xmipv6/*.cc nodes/*.cc nodes/bgp/*.cc nodes/ethernet/*.cc nodes/httptools/*.cc nodes/inet/*.cc nodes/internetcloud/*.cc nodes/ipv6/*.cc nodes/mpls/*.cc nodes/ospfv2/*.cc nodes/wireless/*.cc nodes/xmipv6/*.cc security/*.cc security/contract/*.cc security/dtls/*.cc transport/*.cc transport/contract/*.cc transport/rtp/*.cc transport/rtp/packets/*.cc transport/rtp/profiles/*.cc transport/rtp/profiles/avprofile/*.cc transport/sctp/*.cc transport/tcp/*.cc transport/tcp/flavours/*.cc transport/tcp/mptcp_extension/*.cc transport/tcp/mptcp_extension/flavours/*.cc transport/tcp/mptcp_extension/mptcp_queues/*.cc transport/tcp/mptcp_extension/mptcp_scheduler/*.cc transport/tcp/queues/*.cc transport/tcp_common/*.cc transport/udp/*.cc transport/utility/*.cc util/*.cc util/headerserializers/*.cc util/headerserializers/headers/*.cc util/headerserializers/ipv4/*.cc util/headerserializers/ipv4/headers/*.cc util/headerserializers/sctp/*.cc util/headerserializers/sctp/headers/*.cc util/headerserializers/tcp/*.cc util/headerserializers/tcp/headers/*.cc util/headerserializers/udp/*.cc util/headerserializers/udp/headers/*.cc world/*.cc world/annotations/*.cc world/httptools/*.cc world/obstacles/*.cc world/powercontrol/*.cc world/radio/*.cc world/scenario/*.cc world/traci/*.cc
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 $O/applications/dhcp/DHCPClient.o: applications/dhcp/DHCPClient.cc \
@@ -1082,13 +1090,6 @@ $O/applications/dhcp/DHCPServer.o: applications/dhcp/DHCPServer.cc \
   base/ModuleAccess.h \
   applications/dhcp/DHCPServer.h \
   transport/contract/UDPSocket.h
-$O/applications/dhcp/DHCP_m.o: applications/dhcp/DHCP_m.cc \
-  applications/dhcp/Byte.h \
-  networklayer/contract/IPv4Address.h \
-  applications/dhcp/DHCP_m.h \
-  linklayer/contract/MACAddress.h \
-  base/INETDefs.h \
-  applications/dhcp/DHCPOptions.h
 $O/applications/ethernet/EtherAppCli.o: applications/ethernet/EtherAppCli.cc \
   applications/ethernet/EtherAppCli.h \
   linklayer/contract/MACAddress.h \
@@ -1101,9 +1102,6 @@ $O/applications/ethernet/EtherAppSrv.o: applications/ethernet/EtherAppSrv.cc \
   linklayer/contract/Ieee802Ctrl_m.h \
   applications/ethernet/EtherApp_m.h \
   applications/ethernet/EtherAppSrv.h
-$O/applications/ethernet/EtherApp_m.o: applications/ethernet/EtherApp_m.cc \
-  base/INETDefs.h \
-  applications/ethernet/EtherApp_m.h
 $O/applications/ethernet/EtherTrafGen.o: applications/ethernet/EtherTrafGen.cc \
   linklayer/contract/MACAddress.h \
   base/INETDefs.h \
@@ -1177,10 +1175,6 @@ $O/applications/httptools/HttpBrowserDirect.o: applications/httptools/HttpBrowse
   applications/httptools/HttpBrowserDirect.h \
   applications/httptools/HttpMessages_m.h \
   applications/httptools/HttpUtils.h
-$O/applications/httptools/HttpEventMessages_m.o: applications/httptools/HttpEventMessages_m.cc \
-  applications/httptools/HttpEventMessages_m.h
-$O/applications/httptools/HttpMessages_m.o: applications/httptools/HttpMessages_m.cc \
-  applications/httptools/HttpMessages_m.h
 $O/applications/httptools/HttpNodeBase.o: applications/httptools/HttpNodeBase.cc \
   applications/httptools/HttpEventMessages_m.h \
   applications/httptools/HttpLogdefs.h \
@@ -1341,13 +1335,6 @@ $O/applications/netperfmeter/NetPerfMeter.o: applications/netperfmeter/NetPerfMe
   transport/sctp/SCTPSeqNumbers.h \
   networklayer/contract/IPvXAddress.h \
   transport/contract/UDPSocket.h
-$O/applications/netperfmeter/NetPerfMeter_m.o: applications/netperfmeter/NetPerfMeter_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  applications/netperfmeter/NetPerfMeter_m.h \
-  transport/sctp/SCTPMessage_m.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h
 $O/applications/pingapp/PingApp.o: applications/pingapp/PingApp.cc \
   networklayer/contract/IPv6ControlInfo_m.h \
   networklayer/contract/IPv6Address.h \
@@ -1362,9 +1349,6 @@ $O/applications/pingapp/PingApp.o: applications/pingapp/PingApp.cc \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/contract/IPv6ControlInfo.h \
   networklayer/contract/IPvXAddress.h
-$O/applications/pingapp/PingPayload_m.o: applications/pingapp/PingPayload_m.cc \
-  applications/pingapp/PingPayload_m.h \
-  base/INETDefs.h
 $O/applications/pingapp/PingTestApp.o: applications/pingapp/PingTestApp.cc \
   networklayer/contract/IPv6ControlInfo_m.h \
   networklayer/ipv6/IPv6InterfaceData.h \
@@ -1602,9 +1586,6 @@ $O/applications/sctpapp/SCTPServer.o: applications/sctpapp/SCTPServer.cc \
   transport/sctp/SCTPSeqNumbers.h \
   networklayer/contract/IPvXAddress.h \
   transport/contract/UDPSocket.h
-$O/applications/tcpapp/GenericAppMsg_m.o: applications/tcpapp/GenericAppMsg_m.cc \
-  applications/tcpapp/GenericAppMsg_m.h \
-  base/INETDefs.h
 $O/applications/tcpapp/TCPBasicClientApp.o: applications/tcpapp/TCPBasicClientApp.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/contract/IPv4Address.h \
@@ -1786,8 +1767,6 @@ $O/applications/udpapp/UDPVideoStreamSvr.o: applications/udpapp/UDPVideoStreamSv
   base/INETDefs.h \
   networklayer/contract/IPvXAddress.h \
   transport/contract/UDPSocket.h
-$O/applications/voip/SimpleVoIPPacket_m.o: applications/voip/SimpleVoIPPacket_m.cc \
-  applications/voip/SimpleVoIPPacket_m.h
 $O/applications/voip/SimpleVoIPReceiver.o: applications/voip/SimpleVoIPReceiver.cc \
   networklayer/contract/IPv6Address.h \
   applications/voip/SimpleVoIPPacket_m.h \
@@ -1830,14 +1809,6 @@ $O/base/ByteArrayMessage.o: base/ByteArrayMessage.cc \
   base/ByteArrayMessage.h \
   base/ByteArrayMessage_m.h \
   base/ByteArray.h \
-  base/INETDefs.h
-$O/base/ByteArrayMessage_m.o: base/ByteArrayMessage_m.cc \
-  base/ByteArray_m.h \
-  base/ByteArrayMessage_m.h \
-  base/ByteArray.h \
-  base/INETDefs.h
-$O/base/ByteArray_m.o: base/ByteArray_m.cc \
-  base/ByteArray_m.h \
   base/INETDefs.h
 $O/base/Coord.o: base/Coord.cc \
   util/FWMath.h \
@@ -1924,17 +1895,10 @@ $O/linklayer/common/WirelessMacBase.o: linklayer/common/WirelessMacBase.cc \
   base/NotificationBoard.h \
   base/INETDefs.h \
   linklayer/common/WirelessMacBase.h
-$O/linklayer/contract/Ieee802Ctrl_m.o: linklayer/contract/Ieee802Ctrl_m.cc \
-  linklayer/contract/MACAddress.h \
-  base/INETDefs.h \
-  linklayer/contract/Ieee802Ctrl_m.h
 $O/linklayer/contract/MACAddress.o: linklayer/contract/MACAddress.cc \
   linklayer/contract/MACAddress.h \
   networklayer/common/InterfaceToken.h \
   base/INETDefs.h
-$O/linklayer/contract/PhyControlInfo_m.o: linklayer/contract/PhyControlInfo_m.cc \
-  base/INETDefs.h \
-  linklayer/contract/PhyControlInfo_m.h
 $O/linklayer/ethernet/EtherBus.o: linklayer/ethernet/EtherBus.cc \
   base/INETDefs.h \
   linklayer/ethernet/EtherBus.h
@@ -1951,12 +1915,6 @@ $O/linklayer/ethernet/EtherEncap.o: linklayer/ethernet/EtherEncap.cc \
   base/INETDefs.h
 $O/linklayer/ethernet/EtherFrameClassifier.o: linklayer/ethernet/EtherFrameClassifier.cc \
   linklayer/ethernet/EtherFrameClassifier.h \
-  linklayer/contract/MACAddress.h \
-  linklayer/ethernet/Ethernet.h \
-  linklayer/ethernet/EtherFrame_m.h \
-  linklayer/contract/Ieee802Ctrl_m.h \
-  base/INETDefs.h
-$O/linklayer/ethernet/EtherFrame_m.o: linklayer/ethernet/EtherFrame_m.cc \
   linklayer/contract/MACAddress.h \
   linklayer/ethernet/Ethernet.h \
   linklayer/ethernet/EtherFrame_m.h \
@@ -2036,8 +1994,6 @@ $O/linklayer/ethernet/switch/MACRelayUnitPP.o: linklayer/ethernet/switch/MACRela
   linklayer/contract/Ieee802Ctrl_m.h \
   base/INETDefs.h \
   linklayer/ethernet/switch/MACRelayUnitPP.h
-$O/linklayer/ext/ExtFrame_m.o: linklayer/ext/ExtFrame_m.cc \
-  linklayer/ext/ExtFrame_m.h
 $O/linklayer/ext/ExtInterface.o: linklayer/ext/ExtInterface.cc \
   networklayer/common/IInterfaceTable.h \
   networklayer/contract/IPv4Address.h \
@@ -2066,10 +2022,6 @@ $O/linklayer/ext/cSocketRTScheduler.o: linklayer/ext/cSocketRTScheduler.cc \
   base/INETDefs.h \
   util/headerserializers/headers/bsdint.h \
   util/headerserializers/headers/ethernet.h
-$O/linklayer/idealwireless/IdealWirelessFrame_m.o: linklayer/idealwireless/IdealWirelessFrame_m.cc \
-  linklayer/contract/MACAddress.h \
-  base/INETDefs.h \
-  linklayer/idealwireless/IdealWirelessFrame_m.h
 $O/linklayer/idealwireless/IdealWirelessMac.o: linklayer/idealwireless/IdealWirelessMac.cc \
   util/FWMath.h \
   base/BasicModule.h \
@@ -2102,12 +2054,6 @@ $O/linklayer/ieee80211/mac/Ieee80211DataRate.o: linklayer/ieee80211/mac/Ieee8021
   base/INETDefs.h \
   linklayer/radio/ModulationType.h \
   linklayer/ieee80211/mac/WifiMode.h
-$O/linklayer/ieee80211/mac/Ieee80211Frame_m.o: linklayer/ieee80211/mac/Ieee80211Frame_m.cc \
-  linklayer/contract/MACAddress.h \
-  linklayer/ieee80211/mac/Ieee80211Consts.h \
-  linklayer/contract/Ieee802Ctrl_m.h \
-  base/INETDefs.h \
-  linklayer/ieee80211/mac/Ieee80211Frame_m.h
 $O/linklayer/ieee80211/mac/Ieee80211Mac.o: linklayer/ieee80211/mac/Ieee80211Mac.cc \
   util/FWMath.h \
   linklayer/ieee80211/radio/WifiPreambleType.h \
@@ -2166,10 +2112,6 @@ $O/linklayer/ieee80211/mac/WifiMode.o: linklayer/ieee80211/mac/WifiMode.cc \
   base/INETDefs.h \
   linklayer/radio/ModulationType.h \
   linklayer/ieee80211/mac/WifiMode.h
-$O/linklayer/ieee80211/mgmt/ETXPacket_m.o: linklayer/ieee80211/mgmt/ETXPacket_m.cc \
-  linklayer/contract/MACAddress.h \
-  base/INETDefs.h \
-  linklayer/ieee80211/mgmt/ETXPacket_m.h
 $O/linklayer/ieee80211/mgmt/Ieee80211AgentSTA.o: linklayer/ieee80211/mgmt/Ieee80211AgentSTA.cc \
   linklayer/ieee80211/mgmt/Ieee80211AgentSTA.h \
   networklayer/common/IInterfaceTable.h \
@@ -2310,13 +2252,6 @@ $O/linklayer/ieee80211/mgmt/Ieee80211MgmtBase.o: linklayer/ieee80211/mgmt/Ieee80
   base/INETDefs.h \
   linklayer/contract/Ieee802Ctrl_m.h \
   linklayer/ieee80211/mac/Ieee80211Frame_m.h
-$O/linklayer/ieee80211/mgmt/Ieee80211MgmtFrames_m.o: linklayer/ieee80211/mgmt/Ieee80211MgmtFrames_m.cc \
-  linklayer/contract/MACAddress.h \
-  linklayer/ieee80211/mac/Ieee80211Consts.h \
-  linklayer/ieee80211/mgmt/Ieee80211MgmtFrames_m.h \
-  base/INETDefs.h \
-  linklayer/contract/Ieee802Ctrl_m.h \
-  linklayer/ieee80211/mac/Ieee80211Frame_m.h
 $O/linklayer/ieee80211/mgmt/Ieee80211MgmtSTA.o: linklayer/ieee80211/mgmt/Ieee80211MgmtSTA.cc \
   base/BasicModule.h \
   util/FWMath.h \
@@ -2356,14 +2291,6 @@ $O/linklayer/ieee80211/mgmt/Ieee80211MgmtSTASimplified.o: linklayer/ieee80211/mg
   linklayer/ieee80211/mgmt/Ieee80211MgmtFrames_m.h \
   base/INETDefs.h \
   linklayer/contract/Ieee802Ctrl_m.h \
-  linklayer/ieee80211/mac/Ieee80211Frame_m.h
-$O/linklayer/ieee80211/mgmt/Ieee80211Primitives_m.o: linklayer/ieee80211/mgmt/Ieee80211Primitives_m.cc \
-  linklayer/contract/MACAddress.h \
-  linklayer/ieee80211/mgmt/Ieee80211Primitives_m.h \
-  linklayer/ieee80211/mac/Ieee80211Consts.h \
-  linklayer/ieee80211/mgmt/Ieee80211MgmtFrames_m.h \
-  linklayer/contract/Ieee802Ctrl_m.h \
-  base/INETDefs.h \
   linklayer/ieee80211/mac/Ieee80211Frame_m.h
 $O/linklayer/ieee80211/radio/BerParseFile.o: linklayer/ieee80211/radio/BerParseFile.cc \
   linklayer/ieee80211/radio/BerParseFile.h \
@@ -2420,9 +2347,6 @@ $O/linklayer/ppp/PPP.o: linklayer/ppp/PPP.cc \
   linklayer/ppp/PPP.h \
   base/INETDefs.h \
   linklayer/ppp/PPPFrame_m.h
-$O/linklayer/ppp/PPPFrame_m.o: linklayer/ppp/PPPFrame_m.cc \
-  base/INETDefs.h \
-  linklayer/ppp/PPPFrame_m.h
 $O/linklayer/queue/AlgorithmicDropperBase.o: linklayer/queue/AlgorithmicDropperBase.cc \
   linklayer/queue/AlgorithmicDropperBase.h \
   linklayer/queue/IQueueAccess.h \
@@ -2464,12 +2388,6 @@ $O/linklayer/queue/WRRScheduler.o: linklayer/queue/WRRScheduler.cc \
   util/opp_utils.h \
   base/INETDefs.h \
   linklayer/queue/WRRScheduler.h
-$O/linklayer/radio/AirFrame_m.o: linklayer/radio/AirFrame_m.cc \
-  util/FWMath.h \
-  base/Coord.h \
-  linklayer/radio/AirFrame_m.h \
-  base/INETDefs.h \
-  linklayer/radio/ModulationType.h
 $O/linklayer/radio/GenericRadioModel.o: linklayer/radio/GenericRadioModel.cc \
   util/FWMath.h \
   linklayer/radio/IRadioModel.h \
@@ -2481,11 +2399,6 @@ $O/linklayer/radio/GenericRadioModel.o: linklayer/radio/GenericRadioModel.cc \
   linklayer/radio/ModulationType.h \
   linklayer/radio/IModulation.h \
   linklayer/radio/SnrList.h
-$O/linklayer/radio/IdealAirFrame_m.o: linklayer/radio/IdealAirFrame_m.cc \
-  util/FWMath.h \
-  base/Coord.h \
-  linklayer/radio/IdealAirFrame_m.h \
-  base/INETDefs.h
 $O/linklayer/radio/IdealRadio.o: linklayer/radio/IdealRadio.cc \
   util/FWMath.h \
   base/BasicModule.h \
@@ -2531,9 +2444,6 @@ $O/linklayer/radio/Radio.o: linklayer/radio/Radio.cc \
   world/radio/IChannelControl.h \
   world/powercontrol/IPowerControl.h \
   linklayer/radio/SnrList.h
-$O/linklayer/radio/Radio80211aControlInfo_m.o: linklayer/radio/Radio80211aControlInfo_m.cc \
-  linklayer/radio/ModulationType.h \
-  linklayer/radio/Radio80211aControlInfo_m.h
 $O/linklayer/radio/propagation/FreeSpaceModel.o: linklayer/radio/propagation/FreeSpaceModel.cc \
   base/BasicModule.h \
   util/FWMath.h \
@@ -2923,11 +2833,6 @@ $O/networklayer/arp/ARP.o: networklayer/arp/ARP.cc \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ipv4/IPv4Datagram.h \
   networklayer/arp/ARP.h
-$O/networklayer/arp/ARPPacket_m.o: networklayer/arp/ARPPacket_m.cc \
-  networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
-  networklayer/arp/ARPPacket_m.h \
-  base/INETDefs.h
 $O/networklayer/autorouting/ipv4/FlatNetworkConfigurator.o: networklayer/autorouting/ipv4/FlatNetworkConfigurator.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/contract/IPv6Address.h \
@@ -3205,34 +3110,10 @@ $O/networklayer/bgpv4/BGPSession.o: networklayer/bgpv4/BGPSession.cc \
   networklayer/ospfv2/router/OSPFArea.h \
   transport/contract/TCPSocketMap.h \
   networklayer/bgpv4/BGPCommon.h
-$O/networklayer/bgpv4/BGPMessage/BGPASPathSegment_m.o: networklayer/bgpv4/BGPMessage/BGPASPathSegment_m.cc \
-  networklayer/bgpv4/BGPMessage/BGPASPathSegment_m.h
-$O/networklayer/bgpv4/BGPMessage/BGPHeader_m.o: networklayer/bgpv4/BGPMessage/BGPHeader_m.cc \
-  networklayer/bgpv4/BGPMessage/BGPHeader_m.h
-$O/networklayer/bgpv4/BGPMessage/BGPKeepAlive_m.o: networklayer/bgpv4/BGPMessage/BGPKeepAlive_m.cc \
-  networklayer/bgpv4/BGPMessage/BGPHeader_m.h \
-  networklayer/bgpv4/BGPMessage/BGPKeepAlive_m.h
-$O/networklayer/bgpv4/BGPMessage/BGPOpen_m.o: networklayer/bgpv4/BGPMessage/BGPOpen_m.cc \
-  networklayer/contract/IPv4Address.h \
-  networklayer/bgpv4/BGPMessage/BGPHeader_m.h \
-  base/INETDefs.h \
-  networklayer/bgpv4/BGPMessage/BGPOpen_m.h
 $O/networklayer/bgpv4/BGPMessage/BGPUpdate.o: networklayer/bgpv4/BGPMessage/BGPUpdate.cc \
   networklayer/contract/IPv4Address.h \
   networklayer/bgpv4/BGPMessage/BGPUpdatePathAttributes_m.h \
   networklayer/bgpv4/BGPMessage/BGPUpdate.h \
-  networklayer/bgpv4/BGPMessage/BGPHeader_m.h \
-  networklayer/bgpv4/BGPMessage/BGPUpdate_m.h \
-  base/INETDefs.h \
-  networklayer/bgpv4/BGPMessage/BGPASPathSegment_m.h
-$O/networklayer/bgpv4/BGPMessage/BGPUpdatePathAttributes_m.o: networklayer/bgpv4/BGPMessage/BGPUpdatePathAttributes_m.cc \
-  networklayer/contract/IPv4Address.h \
-  networklayer/bgpv4/BGPMessage/BGPUpdatePathAttributes_m.h \
-  base/INETDefs.h \
-  networklayer/bgpv4/BGPMessage/BGPASPathSegment_m.h
-$O/networklayer/bgpv4/BGPMessage/BGPUpdate_m.o: networklayer/bgpv4/BGPMessage/BGPUpdate_m.cc \
-  networklayer/contract/IPv4Address.h \
-  networklayer/bgpv4/BGPMessage/BGPUpdatePathAttributes_m.h \
   networklayer/bgpv4/BGPMessage/BGPHeader_m.h \
   networklayer/bgpv4/BGPMessage/BGPUpdate_m.h \
   base/INETDefs.h \
@@ -3266,9 +3147,6 @@ $O/networklayer/common/InterfaceTable.o: networklayer/common/InterfaceTable.cc \
   base/NotificationBoard.h \
   base/INETDefs.h \
   networklayer/common/InterfaceTable.h
-$O/networklayer/contract/IPProtocolId_m.o: networklayer/contract/IPProtocolId_m.cc \
-  networklayer/contract/IPProtocolId_m.h \
-  base/INETDefs.h
 $O/networklayer/contract/IPv4Address.o: networklayer/contract/IPv4Address.cc \
   networklayer/contract/IPv4Address.h \
   base/INETDefs.h
@@ -3281,12 +3159,6 @@ $O/networklayer/contract/IPv4ControlInfo.o: networklayer/contract/IPv4ControlInf
   base/INETDefs.h \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ipv4/IPv4Datagram.h
-$O/networklayer/contract/IPv4ControlInfo_m.o: networklayer/contract/IPv4ControlInfo_m.cc \
-  networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
-  networklayer/contract/IPProtocolId_m.h \
-  base/INETDefs.h \
-  networklayer/contract/IPv4ControlInfo_m.h
 $O/networklayer/contract/IPv6Address.o: networklayer/contract/IPv6Address.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/common/InterfaceToken.h \
@@ -3299,11 +3171,6 @@ $O/networklayer/contract/IPv6ControlInfo.o: networklayer/contract/IPv6ControlInf
   networklayer/contract/IPProtocolId_m.h \
   base/INETDefs.h \
   networklayer/contract/IPv6ControlInfo.h
-$O/networklayer/contract/IPv6ControlInfo_m.o: networklayer/contract/IPv6ControlInfo_m.cc \
-  networklayer/contract/IPv6ControlInfo_m.h \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPProtocolId_m.h \
-  base/INETDefs.h
 $O/networklayer/contract/IPvXAddress.o: networklayer/contract/IPvXAddress.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/contract/IPv4Address.h \
@@ -3359,9 +3226,6 @@ $O/networklayer/diffserv/DSCPMarker.o: networklayer/diffserv/DSCPMarker.cc \
   networklayer/diffserv/DiffservUtil.h \
   base/INETDefs.h \
   networklayer/ipv4/IPv4Datagram.h
-$O/networklayer/diffserv/DSCP_m.o: networklayer/diffserv/DSCP_m.cc \
-  networklayer/diffserv/DSCP_m.h \
-  base/INETDefs.h
 $O/networklayer/diffserv/DiffservUtil.o: networklayer/diffserv/DiffservUtil.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/common/IInterfaceTable.h \
@@ -3437,15 +3301,6 @@ $O/networklayer/icmpv6/ICMPv6.o: networklayer/icmpv6/ICMPv6.cc \
   base/INETDefs.h \
   networklayer/icmpv6/ICMPv6.h \
   networklayer/contract/IPv6ControlInfo.h
-$O/networklayer/icmpv6/ICMPv6Message_m.o: networklayer/icmpv6/ICMPv6Message_m.cc \
-  networklayer/icmpv6/ICMPv6Message_m.h \
-  base/INETDefs.h
-$O/networklayer/icmpv6/IPv6NDMessage_m.o: networklayer/icmpv6/IPv6NDMessage_m.cc \
-  networklayer/contract/IPv6Address.h \
-  linklayer/contract/MACAddress.h \
-  networklayer/icmpv6/ICMPv6Message_m.h \
-  base/INETDefs.h \
-  networklayer/icmpv6/IPv6NDMessage_m.h
 $O/networklayer/icmpv6/IPv6NeighbourCache.o: networklayer/icmpv6/IPv6NeighbourCache.cc \
   networklayer/contract/IPv6Address.h \
   linklayer/contract/MACAddress.h \
@@ -3549,13 +3404,6 @@ $O/networklayer/ipv4/ICMP.o: networklayer/ipv4/ICMP.cc \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ipv4/IPv4Datagram.h \
   networklayer/ipv4/ICMPMessage.h
-$O/networklayer/ipv4/ICMPMessage_m.o: networklayer/ipv4/ICMPMessage_m.cc \
-  networklayer/ipv4/ICMPMessage_m.h \
-  base/INETDefs.h
-$O/networklayer/ipv4/IGMPMessage_m.o: networklayer/ipv4/IGMPMessage_m.cc \
-  networklayer/contract/IPv4Address.h \
-  base/INETDefs.h \
-  networklayer/ipv4/IGMPMessage_m.h
 $O/networklayer/ipv4/IGMPv2.o: networklayer/ipv4/IGMPv2.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/common/IInterfaceTable.h \
@@ -3613,11 +3461,6 @@ $O/networklayer/ipv4/IPv4.o: networklayer/ipv4/IPv4.cc \
   networklayer/ipv4/IPv4Datagram.h \
   networklayer/manetrouting/base/ManetAddress.h \
   networklayer/ipv4/ICMPMessage.h
-$O/networklayer/ipv4/IPv4Datagram_m.o: networklayer/ipv4/IPv4Datagram_m.cc \
-  networklayer/contract/IPv4Address.h \
-  networklayer/contract/IPProtocolId_m.h \
-  networklayer/ipv4/IPv4Datagram_m.h \
-  base/INETDefs.h
 $O/networklayer/ipv4/IPv4FragBuf.o: networklayer/ipv4/IPv4FragBuf.cc \
   base/ReassemblyBuffer.h \
   networklayer/ipv4/ICMP.h \
@@ -3767,11 +3610,6 @@ $O/networklayer/ipv6/IPv6Datagram.o: networklayer/ipv6/IPv6Datagram.cc \
   networklayer/ipv6/IPv6ExtensionHeaders_m.h \
   base/INETDefs.h \
   networklayer/ipv6/IPv6ExtensionHeaders.h
-$O/networklayer/ipv6/IPv6Datagram_m.o: networklayer/ipv6/IPv6Datagram_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPProtocolId_m.h \
-  networklayer/ipv6/IPv6Datagram_m.h \
-  base/INETDefs.h
 $O/networklayer/ipv6/IPv6ErrorHandling.o: networklayer/ipv6/IPv6ErrorHandling.cc \
   networklayer/contract/IPv6ControlInfo_m.h \
   networklayer/ipv6/IPv6ErrorHandling.h \
@@ -3790,13 +3628,6 @@ $O/networklayer/ipv6/IPv6ExtensionHeaders.o: networklayer/ipv6/IPv6ExtensionHead
   networklayer/ipv6/IPv6ExtensionHeaders_m.h \
   base/INETDefs.h \
   networklayer/ipv6/IPv6ExtensionHeaders.h
-$O/networklayer/ipv6/IPv6ExtensionHeaders_m.o: networklayer/ipv6/IPv6ExtensionHeaders_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/ipv6/IPv6Datagram.h \
-  networklayer/contract/IPProtocolId_m.h \
-  networklayer/ipv6/IPv6Datagram_m.h \
-  networklayer/ipv6/IPv6ExtensionHeaders_m.h \
-  base/INETDefs.h
 $O/networklayer/ipv6/IPv6FragBuf.o: networklayer/ipv6/IPv6FragBuf.cc \
   base/ReassemblyBuffer.h \
   networklayer/contract/IPv6Address.h \
@@ -3910,10 +3741,6 @@ $O/networklayer/ldp/LDP.o: networklayer/ldp/LDP.cc \
   networklayer/mpls/IClassifier.h \
   transport/contract/TCPSocketMap.h \
   transport/contract/UDPSocket.h
-$O/networklayer/ldp/LDPPacket_m.o: networklayer/ldp/LDPPacket_m.cc \
-  networklayer/contract/IPv4Address.h \
-  networklayer/ldp/LDPPacket_m.h \
-  base/INETDefs.h
 $O/networklayer/manetrouting/aodv/aodv_msg_struct.o: networklayer/manetrouting/aodv/aodv_msg_struct.cc \
   networklayer/contract/IPv6ControlInfo_m.h \
   transport/udp/UDPPacket.h \
@@ -3950,15 +3777,6 @@ $O/networklayer/manetrouting/aodv/aodv_msg_struct.o: networklayer/manetrouting/a
   networklayer/ipv4/IPv4Datagram.h \
   networklayer/manetrouting/base/ManetAddress.h \
   networklayer/ipv4/ICMPMessage.h
-$O/networklayer/manetrouting/aodv/aodv_msg_struct_m.o: networklayer/manetrouting/aodv/aodv_msg_struct_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
-  networklayer/manetrouting/aodv/aodv_msg_struct_m.h \
-  base/INETDefs.h \
-  networklayer/manetrouting/aodv/aodv_msg_struct.h \
-  networklayer/contract/IPvXAddress.h \
-  networklayer/manetrouting/base/ManetAddress.h
 $O/networklayer/manetrouting/aodv/aodv_uu_omnet.o: networklayer/manetrouting/aodv/aodv_uu_omnet.cc \
   networklayer/contract/IPv6ControlInfo_m.h \
   util/FWMath.h \
@@ -4775,18 +4593,6 @@ $O/networklayer/manetrouting/aodv/aodv-uu/timer_queue_aodv.o: networklayer/manet
   networklayer/manetrouting/aodv/aodv-uu/defs_aodv.h \
   networklayer/ipv4/ICMPMessage.h \
   networklayer/manetrouting/aodv/aodv-uu/../aodv-uu/routing_table.h
-$O/networklayer/manetrouting/base/ControlInfoBreakLink_m.o: networklayer/manetrouting/base/ControlInfoBreakLink_m.cc \
-  linklayer/contract/MACAddress.h \
-  base/INETDefs.h \
-  networklayer/manetrouting/base/ControlInfoBreakLink_m.h
-$O/networklayer/manetrouting/base/ControlManetRouting_m.o: networklayer/manetrouting/base/ControlManetRouting_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
-  networklayer/manetrouting/base/ControlManetRouting_m.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h \
-  networklayer/manetrouting/base/ManetAddress.h
 $O/networklayer/manetrouting/base/ManetAddress.o: networklayer/manetrouting/base/ManetAddress.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/contract/IPv4Address.h \
@@ -4842,15 +4648,6 @@ $O/networklayer/manetrouting/base/ManetRoutingBase.o: networklayer/manetrouting/
   networklayer/manetrouting/base/ControlInfoBreakLink_m.h \
   networklayer/manetrouting/base/ManetAddress.h \
   networklayer/ipv4/ICMPMessage.h
-$O/networklayer/manetrouting/base/MeshControlInfo_m.o: networklayer/manetrouting/base/MeshControlInfo_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
-  linklayer/contract/Ieee802Ctrl_m.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h \
-  networklayer/manetrouting/base/ManetAddress.h \
-  networklayer/manetrouting/base/MeshControlInfo_m.h
 $O/networklayer/manetrouting/batman/BatmanMain.o: networklayer/manetrouting/batman/BatmanMain.cc \
   util/FWMath.h \
   networklayer/ipv4/ICMP.h \
@@ -4886,14 +4683,6 @@ $O/networklayer/manetrouting/batman/BatmanMain.o: networklayer/manetrouting/batm
   networklayer/arp/ARP.h \
   networklayer/manetrouting/base/ManetAddress.h \
   networklayer/ipv4/ICMPMessage.h
-$O/networklayer/manetrouting/batman/BatmanMsg_m.o: networklayer/manetrouting/batman/BatmanMsg_m.cc \
-  networklayer/manetrouting/batman/BatmanMsg_m.h \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h \
-  networklayer/manetrouting/base/ManetAddress.h
 $O/networklayer/manetrouting/batman/batmand/batman.o: networklayer/manetrouting/batman/batmand/batman.cc \
   util/FWMath.h \
   networklayer/ipv4/ICMP.h \
@@ -5125,10 +4914,6 @@ $O/networklayer/manetrouting/dsdv/DSDV_2.o: networklayer/manetrouting/dsdv/DSDV_
   base/INETDefs.h \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ipv4/IPv4Datagram.h
-$O/networklayer/manetrouting/dsdv/DSDVhello_m.o: networklayer/manetrouting/dsdv/DSDVhello_m.cc \
-  networklayer/manetrouting/dsdv/DSDVhello_m.h \
-  networklayer/contract/IPv4Address.h \
-  base/INETDefs.h
 $O/networklayer/manetrouting/dsr/dsr-pkt_omnet.o: networklayer/manetrouting/dsr/dsr-pkt_omnet.cc \
   networklayer/manetrouting/dsr/dsr-uu/dsr-opt.h \
   networklayer/contract/IPv4Address.h \
@@ -6952,35 +6737,6 @@ $O/networklayer/manetrouting/dymo_fau/DYMO_OutstandingRREQList.o: networklayer/m
   base/INETDefs.h \
   networklayer/manetrouting/dymo_fau/DYMO_Timeout_m.h \
   networklayer/manetrouting/dymo_fau/DYMO_Timer.h
-$O/networklayer/manetrouting/dymo_fau/DYMO_PacketBBMessage_m.o: networklayer/manetrouting/dymo_fau/DYMO_PacketBBMessage_m.cc \
-  networklayer/manetrouting/dymo_fau/DYMO_PacketBBMessage_m.h
-$O/networklayer/manetrouting/dymo_fau/DYMO_Packet_m.o: networklayer/manetrouting/dymo_fau/DYMO_Packet_m.cc \
-  networklayer/manetrouting/dymo_fau/DYMO_Packet_m.h
-$O/networklayer/manetrouting/dymo_fau/DYMO_RERR_m.o: networklayer/manetrouting/dymo_fau/DYMO_RERR_m.cc \
-  networklayer/manetrouting/dymo_fau/DYMO_RERR_m.h \
-  networklayer/manetrouting/dymo_fau/InspectorHelpers.h \
-  networklayer/manetrouting/dymo_fau/DYMO_PacketBBMessage_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_AddressBlock.h
-$O/networklayer/manetrouting/dymo_fau/DYMO_RM_m.o: networklayer/manetrouting/dymo_fau/DYMO_RM_m.cc \
-  networklayer/manetrouting/dymo_fau/DYMO_RERR_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_RM_m.h \
-  networklayer/manetrouting/dymo_fau/InspectorHelpers.h \
-  networklayer/manetrouting/dymo_fau/DYMO_PacketBBMessage_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_AddressBlock.h
-$O/networklayer/manetrouting/dymo_fau/DYMO_RREP_m.o: networklayer/manetrouting/dymo_fau/DYMO_RREP_m.cc \
-  networklayer/manetrouting/dymo_fau/DYMO_RREP_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_RERR_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_RM_m.h \
-  networklayer/manetrouting/dymo_fau/InspectorHelpers.h \
-  networklayer/manetrouting/dymo_fau/DYMO_PacketBBMessage_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_AddressBlock.h
-$O/networklayer/manetrouting/dymo_fau/DYMO_RREQ_m.o: networklayer/manetrouting/dymo_fau/DYMO_RREQ_m.cc \
-  networklayer/manetrouting/dymo_fau/DYMO_RERR_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_RM_m.h \
-  networklayer/manetrouting/dymo_fau/InspectorHelpers.h \
-  networklayer/manetrouting/dymo_fau/DYMO_PacketBBMessage_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_RREQ_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_AddressBlock.h
 $O/networklayer/manetrouting/dymo_fau/DYMO_RoutingEntry.o: networklayer/manetrouting/dymo_fau/DYMO_RoutingEntry.cc \
   util/FWMath.h \
   base/ReassemblyBuffer.h \
@@ -7097,8 +6853,6 @@ $O/networklayer/manetrouting/dymo_fau/DYMO_RoutingTable.o: networklayer/manetrou
   networklayer/manetrouting/dymo_fau/DYMO_AddressBlock.h \
   networklayer/manetrouting/dymo_fau/DYMO_UERR_m.h \
   networklayer/manetrouting/dymo_fau/DYMO_RoutingTable.h
-$O/networklayer/manetrouting/dymo_fau/DYMO_Timeout_m.o: networklayer/manetrouting/dymo_fau/DYMO_Timeout_m.cc \
-  networklayer/manetrouting/dymo_fau/DYMO_Timeout_m.h
 $O/networklayer/manetrouting/dymo_fau/DYMO_Timer.o: networklayer/manetrouting/dymo_fau/DYMO_Timer.cc \
   base/INETDefs.h \
   networklayer/manetrouting/dymo_fau/DYMO_Timeout_m.h \
@@ -7155,9 +6909,6 @@ $O/networklayer/manetrouting/dymo_fau/DYMO_TokenBucket.o: networklayer/manetrout
   networklayer/manetrouting/dymo_fau/DYMO_AddressBlock.h \
   networklayer/manetrouting/dymo_fau/DYMO_UERR_m.h \
   networklayer/manetrouting/dymo_fau/DYMO_RoutingTable.h
-$O/networklayer/manetrouting/dymo_fau/DYMO_UERR_m.o: networklayer/manetrouting/dymo_fau/DYMO_UERR_m.cc \
-  networklayer/manetrouting/dymo_fau/DYMO_PacketBBMessage_m.h \
-  networklayer/manetrouting/dymo_fau/DYMO_UERR_m.h
 $O/networklayer/manetrouting/dymo_fau/InspectorHelpers.o: networklayer/manetrouting/dymo_fau/InspectorHelpers.cc \
   networklayer/manetrouting/dymo_fau/DYMO_RERR_m.h \
   networklayer/manetrouting/dymo_fau/DYMO_RM_m.h \
@@ -7427,15 +7178,6 @@ $O/networklayer/manetrouting/olsr/OLSR_state.o: networklayer/manetrouting/olsr/O
   networklayer/manetrouting/base/ManetAddress.h \
   networklayer/ipv4/ICMPMessage.h \
   networklayer/manetrouting/olsr/OLSRpkt_m.h
-$O/networklayer/manetrouting/olsr/OLSRpkt_m.o: networklayer/manetrouting/olsr/OLSRpkt_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
-  networklayer/manetrouting/olsr/OLSR_ETX_parameter.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h \
-  networklayer/manetrouting/base/ManetAddress.h \
-  networklayer/manetrouting/olsr/OLSRpkt_m.h
 $O/networklayer/mpls/LIBTable.o: networklayer/mpls/LIBTable.cc \
   util/XMLUtils.h \
   networklayer/contract/IPv4Address.h \
@@ -7491,10 +7233,6 @@ $O/networklayer/mpls/MPLS.o: networklayer/mpls/MPLS.cc \
 $O/networklayer/mpls/MPLSPacket.o: networklayer/mpls/MPLSPacket.cc \
   networklayer/mpls/MPLSPacket.h \
   base/INETDefs.h
-$O/networklayer/ospfv2/OSPFPacket_m.o: networklayer/ospfv2/OSPFPacket_m.cc \
-  networklayer/contract/IPv4Address.h \
-  base/INETDefs.h \
-  networklayer/ospfv2/OSPFPacket_m.h
 $O/networklayer/ospfv2/OSPFRouting.o: networklayer/ospfv2/OSPFRouting.cc \
   util/XMLUtils.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -7519,14 +7257,14 @@ $O/networklayer/ospfv2/OSPFRouting.o: networklayer/ospfv2/OSPFRouting.cc \
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
   base/NotifierConsts.h \
+  networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
   base/NotificationBoard.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ospfv2/router/LSA.h \
   networklayer/ipv4/IPv4Route.h \
-  networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
+  networklayer/ospfv2/router/LSA.h \
   base/INETDefs.h \
+  networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
   networklayer/ospfv2/OSPFPacket_m.h \
@@ -7536,9 +7274,6 @@ $O/networklayer/ospfv2/OSPFRouting.o: networklayer/ospfv2/OSPFRouting.cc \
   networklayer/ospfv2/router/OSPFcommon.h \
   networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.h \
   networklayer/ospfv2/router/OSPFArea.h
-$O/networklayer/ospfv2/OSPFTimer_m.o: networklayer/ospfv2/OSPFTimer_m.cc \
-  networklayer/ospfv2/OSPFTimer_m.h \
-  base/INETDefs.h
 $O/networklayer/ospfv2/interface/OSPFInterface.o: networklayer/ospfv2/interface/OSPFInterface.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/ospfv2/neighbor/OSPFNeighbor.h \
@@ -7949,15 +7684,15 @@ $O/networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.o: network
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  base/NotifierConsts.h \
   networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
+  base/NotifierConsts.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ipv4/IPv4Route.h \
   networklayer/ospfv2/router/LSA.h \
+  networklayer/ipv4/IPv4Route.h \
   networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   base/INETDefs.h \
-  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
+  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
   networklayer/ospfv2/router/OSPFcommon.h \
@@ -7990,8 +7725,8 @@ $O/networklayer/ospfv2/messagehandler/LinkStateRequestHandler.o: networklayer/os
   networklayer/ospfv2/router/LSA.h \
   networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   base/INETDefs.h \
-  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
+  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
   networklayer/ospfv2/router/OSPFcommon.h \
@@ -8063,8 +7798,8 @@ $O/networklayer/ospfv2/messagehandler/MessageHandler.o: networklayer/ospfv2/mess
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
-  networklayer/ospfv2/messagehandler/IMessageHandler.h \
   networklayer/ospfv2/router/OSPFcommon.h \
+  networklayer/ospfv2/messagehandler/IMessageHandler.h \
   networklayer/ipv4/ICMPMessage.h \
   networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.h \
   networklayer/ospfv2/router/OSPFArea.h
@@ -8538,19 +8273,19 @@ $O/networklayer/ospfv2/router/OSPFRouter.o: networklayer/ospfv2/router/OSPFRoute
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  base/NotifierConsts.h \
   networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
+  base/NotifierConsts.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ipv4/IPv4Route.h \
   networklayer/ospfv2/router/LSA.h \
-  networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
+  networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
-  networklayer/contract/IPv4ControlInfo_m.h \
+  networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
+  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
-  networklayer/ospfv2/messagehandler/IMessageHandler.h \
   networklayer/ospfv2/router/OSPFcommon.h \
+  networklayer/ospfv2/messagehandler/IMessageHandler.h \
   networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.h \
   networklayer/ospfv2/router/OSPFArea.h
 $O/networklayer/ospfv2/router/OSPFRoutingTableEntry.o: networklayer/ospfv2/router/OSPFRoutingTableEntry.cc \
@@ -8590,10 +8325,6 @@ $O/networklayer/ospfv2/router/SummaryLSA.o: networklayer/ospfv2/router/SummaryLS
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
   networklayer/ospfv2/router/OSPFcommon.h
-$O/networklayer/rsvp_te/IntServ_m.o: networklayer/rsvp_te/IntServ_m.cc \
-  networklayer/contract/IPv4Address.h \
-  base/INETDefs.h \
-  networklayer/rsvp_te/IntServ_m.h
 $O/networklayer/rsvp_te/RSVP.o: networklayer/rsvp_te/RSVP.cc \
   networklayer/rsvp_te/RSVPPathMsg.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -8642,40 +8373,6 @@ $O/networklayer/rsvp_te/RSVP.o: networklayer/rsvp_te/RSVP.cc \
   networklayer/mpls/IClassifier.h \
   networklayer/rsvp_te/IRSVPClassifier.h \
   networklayer/rsvp_te/RSVPResvMsg_m.h
-$O/networklayer/rsvp_te/RSVPHello_m.o: networklayer/rsvp_te/RSVPHello_m.cc \
-  networklayer/contract/IPv4Address.h \
-  networklayer/rsvp_te/RSVPPacket.h \
-  networklayer/rsvp_te/RSVPPacket_m.h \
-  networklayer/rsvp_te/RSVPHello_m.h \
-  base/INETDefs.h \
-  networklayer/rsvp_te/IntServ_m.h
-$O/networklayer/rsvp_te/RSVPPacket_m.o: networklayer/rsvp_te/RSVPPacket_m.cc \
-  networklayer/contract/IPv4Address.h \
-  networklayer/rsvp_te/RSVPPacket_m.h \
-  base/INETDefs.h \
-  networklayer/rsvp_te/IntServ_m.h
-$O/networklayer/rsvp_te/RSVPPathMsg_m.o: networklayer/rsvp_te/RSVPPathMsg_m.cc \
-  networklayer/rsvp_te/IntServ.h \
-  networklayer/contract/IPv4Address.h \
-  networklayer/rsvp_te/RSVPPacket.h \
-  networklayer/rsvp_te/RSVPPacket_m.h \
-  base/INETDefs.h \
-  networklayer/rsvp_te/RSVPPathMsg_m.h \
-  networklayer/rsvp_te/IntServ_m.h
-$O/networklayer/rsvp_te/RSVPResvMsg_m.o: networklayer/rsvp_te/RSVPResvMsg_m.cc \
-  networklayer/rsvp_te/IntServ.h \
-  networklayer/contract/IPv4Address.h \
-  networklayer/rsvp_te/RSVPPacket.h \
-  networklayer/rsvp_te/RSVPPacket_m.h \
-  base/INETDefs.h \
-  networklayer/rsvp_te/IntServ_m.h \
-  networklayer/rsvp_te/RSVPResvMsg_m.h
-$O/networklayer/rsvp_te/SignallingMsg_m.o: networklayer/rsvp_te/SignallingMsg_m.cc \
-  networklayer/rsvp_te/IntServ.h \
-  networklayer/contract/IPv4Address.h \
-  base/INETDefs.h \
-  networklayer/rsvp_te/SignallingMsg_m.h \
-  networklayer/rsvp_te/IntServ_m.h
 $O/networklayer/rsvp_te/SimpleClassifier.o: networklayer/rsvp_te/SimpleClassifier.cc \
   networklayer/rsvp_te/RSVPPathMsg.h \
   util/XMLUtils.h \
@@ -8716,11 +8413,6 @@ $O/networklayer/rsvp_te/Utils.o: networklayer/rsvp_te/Utils.cc \
   networklayer/rsvp_te/Utils.h \
   base/INETDefs.h \
   networklayer/rsvp_te/IntServ_m.h
-$O/networklayer/ted/LinkStatePacket_m.o: networklayer/ted/LinkStatePacket_m.cc \
-  networklayer/ted/LinkStatePacket_m.h \
-  networklayer/ted/TED_m.h \
-  networklayer/contract/IPv4Address.h \
-  base/INETDefs.h
 $O/networklayer/ted/LinkStateRouting.o: networklayer/ted/LinkStateRouting.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/ted/LinkStatePacket_m.h \
@@ -8770,10 +8462,6 @@ $O/networklayer/ted/TED.o: networklayer/ted/TED.cc \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ted/TED.h \
   networklayer/rsvp_te/IntServ_m.h
-$O/networklayer/ted/TED_m.o: networklayer/ted/TED_m.cc \
-  networklayer/ted/TED_m.h \
-  networklayer/contract/IPv4Address.h \
-  base/INETDefs.h
 $O/networklayer/xmipv6/BindingCache.o: networklayer/xmipv6/BindingCache.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/xmipv6/BindingCache.h \
@@ -8794,15 +8482,6 @@ $O/networklayer/xmipv6/MobilityHeader.o: networklayer/xmipv6/MobilityHeader.cc \
   networklayer/ipv6/IPv6Datagram.h \
   networklayer/ipv6/IPv6Datagram_m.h \
   networklayer/contract/IPProtocolId_m.h \
-  networklayer/ipv6/IPv6ExtensionHeaders_m.h \
-  base/INETDefs.h \
-  networklayer/ipv6/IPv6ExtensionHeaders.h
-$O/networklayer/xmipv6/MobilityHeader_m.o: networklayer/xmipv6/MobilityHeader_m.cc \
-  networklayer/xmipv6/MobilityHeader_m.h \
-  networklayer/contract/IPv6Address.h \
-  networklayer/ipv6/IPv6Datagram.h \
-  networklayer/contract/IPProtocolId_m.h \
-  networklayer/ipv6/IPv6Datagram_m.h \
   networklayer/ipv6/IPv6ExtensionHeaders_m.h \
   base/INETDefs.h \
   networklayer/ipv6/IPv6ExtensionHeaders.h
@@ -8842,13 +8521,15 @@ $O/networklayer/xmipv6/xMIPv6.o: networklayer/xmipv6/xMIPv6.cc \
   networklayer/icmpv6/IPv6NeighbourDiscovery.h \
   networklayer/contract/IPv6ControlInfo.h \
   networklayer/xmipv6/BindingUpdateListAccess.h
-$O/transport/contract/SCTPCommand_m.o: transport/contract/SCTPCommand_m.cc \
+$O/security/contract/DTLSControlInfo_m.o: security/contract/DTLSControlInfo_m.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/contract/IPv4Address.h \
-  transport/contract/SCTPCommand_m.h \
+  security/contract/DTLSControlInfo_m.h \
   base/INETDefs.h \
-  transport/contract/SCTPCommand.h \
   networklayer/contract/IPvXAddress.h
+$O/security/dtls/DTLSPacket_m.o: security/dtls/DTLSPacket_m.cc \
+  security/dtls/DTLSPacket_m.h \
+  base/INETDefs.h
 $O/transport/contract/SCTPSocket.o: transport/contract/SCTPSocket.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/common/IInterfaceTable.h \
@@ -8888,12 +8569,6 @@ $O/transport/contract/SCTPSocket.o: transport/contract/SCTPSocket.cc \
   transport/sctp/SCTPSeqNumbers.h \
   networklayer/contract/IPvXAddress.h \
   transport/contract/UDPSocket.h
-$O/transport/contract/TCPCommand_m.o: transport/contract/TCPCommand_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  transport/contract/TCPCommand_m.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h
 $O/transport/contract/TCPSocket.o: transport/contract/TCPSocket.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/contract/IPv4Address.h \
@@ -8909,12 +8584,6 @@ $O/transport/contract/TCPSocketMap.o: transport/contract/TCPSocketMap.cc \
   transport/contract/TCPSocket.h \
   networklayer/contract/IPvXAddress.h \
   transport/contract/TCPSocketMap.h
-$O/transport/contract/UDPControlInfo_m.o: transport/contract/UDPControlInfo_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  transport/contract/UDPControlInfo_m.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h
 $O/transport/contract/UDPSocket.o: transport/contract/UDPSocket.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/contract/IPv6Address.h \
@@ -8973,26 +8642,6 @@ $O/transport/rtp/RTCPPacket.o: transport/rtp/RTCPPacket.cc \
   transport/rtp/RTCPPacket2_m.h \
   base/INETDefs.h \
   transport/rtp/reports.h
-$O/transport/rtp/RTCPPacket1_m.o: transport/rtp/RTCPPacket1_m.cc \
-  transport/rtp/RTCPPacket1_m.h
-$O/transport/rtp/RTCPPacket2_m.o: transport/rtp/RTCPPacket2_m.cc \
-  transport/rtp/RTCPPacket1_m.h \
-  transport/rtp/sdes.h \
-  transport/rtp/reports_m.h \
-  transport/rtp/RTCPPacket1.h \
-  transport/rtp/RTCPPacket2_m.h \
-  base/INETDefs.h \
-  transport/rtp/reports.h
-$O/transport/rtp/RTCPPacket3_m.o: transport/rtp/RTCPPacket3_m.cc \
-  transport/rtp/RTCPPacket1_m.h \
-  transport/rtp/RTCPPacket2.h \
-  transport/rtp/sdes.h \
-  transport/rtp/RTCPPacket3_m.h \
-  transport/rtp/reports_m.h \
-  transport/rtp/RTCPPacket1.h \
-  transport/rtp/RTCPPacket2_m.h \
-  base/INETDefs.h \
-  transport/rtp/reports.h
 $O/transport/rtp/RTP.o: transport/rtp/RTP.cc \
   networklayer/contract/IPv6Address.h \
   transport/rtp/RTPProfile.h \
@@ -9026,25 +8675,8 @@ $O/transport/rtp/RTPInnerPacket.o: transport/rtp/RTPInnerPacket.cc \
   base/INETDefs.h \
   transport/rtp/RTPSenderStatusMessage_m.h \
   transport/rtp/RTPInnerPacket_m.h
-$O/transport/rtp/RTPInnerPacket_m.o: transport/rtp/RTPInnerPacket_m.cc \
-  networklayer/contract/IPv4Address.h \
-  transport/rtp/RTPSenderControlMessage_m.h \
-  transport/rtp/RTPPacket.h \
-  transport/rtp/RTPPacket_m.h \
-  base/INETDefs.h \
-  transport/rtp/RTPSenderStatusMessage_m.h \
-  transport/rtp/RTPInnerPacket_m.h
-$O/transport/rtp/RTPInterfacePacket_m.o: transport/rtp/RTPInterfacePacket_m.cc \
-  transport/rtp/RTPInterfacePacket_m.h \
-  networklayer/contract/IPv4Address.h \
-  transport/rtp/RTPSenderControlMessage_m.h \
-  base/INETDefs.h \
-  transport/rtp/RTPSenderStatusMessage_m.h
 $O/transport/rtp/RTPPacket.o: transport/rtp/RTPPacket.cc \
   transport/rtp/RTPPacket.h \
-  transport/rtp/RTPPacket_m.h \
-  base/INETDefs.h
-$O/transport/rtp/RTPPacket_m.o: transport/rtp/RTPPacket_m.cc \
   transport/rtp/RTPPacket_m.h \
   base/INETDefs.h
 $O/transport/rtp/RTPParticipantInfo.o: transport/rtp/RTPParticipantInfo.cc \
@@ -9057,10 +8689,6 @@ $O/transport/rtp/RTPParticipantInfo.o: transport/rtp/RTPParticipantInfo.cc \
   transport/rtp/reports_m.h \
   base/INETDefs.h \
   transport/rtp/reports.h
-$O/transport/rtp/RTPParticipantInfo_m.o: transport/rtp/RTPParticipantInfo_m.cc \
-  networklayer/contract/IPv4Address.h \
-  transport/rtp/RTPParticipantInfo_m.h \
-  base/INETDefs.h
 $O/transport/rtp/RTPPayloadReceiver.o: transport/rtp/RTPPayloadReceiver.cc \
   networklayer/contract/IPv4Address.h \
   transport/rtp/RTPInnerPacket.h \
@@ -9105,9 +8733,6 @@ $O/transport/rtp/RTPReceiverInfo.o: transport/rtp/RTPReceiverInfo.cc \
   transport/rtp/reports_m.h \
   base/INETDefs.h \
   transport/rtp/reports.h
-$O/transport/rtp/RTPSenderControlMessage_m.o: transport/rtp/RTPSenderControlMessage_m.cc \
-  transport/rtp/RTPSenderControlMessage_m.h \
-  base/INETDefs.h
 $O/transport/rtp/RTPSenderInfo.o: transport/rtp/RTPSenderInfo.cc \
   networklayer/contract/IPv4Address.h \
   transport/rtp/sdes.h \
@@ -9119,16 +8744,20 @@ $O/transport/rtp/RTPSenderInfo.o: transport/rtp/RTPSenderInfo.cc \
   transport/rtp/reports_m.h \
   base/INETDefs.h \
   transport/rtp/reports.h
-$O/transport/rtp/RTPSenderStatusMessage_m.o: transport/rtp/RTPSenderStatusMessage_m.cc \
-  base/INETDefs.h \
-  transport/rtp/RTPSenderStatusMessage_m.h
 $O/transport/rtp/reports.o: transport/rtp/reports.cc \
   transport/rtp/reports_m.h \
   transport/rtp/reports.h
-$O/transport/rtp/reports_m.o: transport/rtp/reports_m.cc \
-  transport/rtp/reports_m.h
 $O/transport/rtp/sdes.o: transport/rtp/sdes.cc \
   transport/rtp/sdes.h \
+  base/INETDefs.h
+$O/transport/rtp/packets/RTPGenericPayloadPacket_m.o: transport/rtp/packets/RTPGenericPayloadPacket_m.cc \
+  transport/rtp/packets/RTPGenericPayloadPacket_m.h \
+  base/INETDefs.h
+$O/transport/rtp/packets/RTPSenderControlMessage_m.o: transport/rtp/packets/RTPSenderControlMessage_m.cc \
+  transport/rtp/packets/RTPSenderControlMessage_m.h \
+  base/INETDefs.h
+$O/transport/rtp/packets/RTPSenderStatusMessage_m.o: transport/rtp/packets/RTPSenderStatusMessage_m.cc \
+  transport/rtp/packets/RTPSenderStatusMessage_m.h \
   base/INETDefs.h
 $O/transport/rtp/profiles/avprofile/RTPAVProfile.o: transport/rtp/profiles/avprofile/RTPAVProfile.cc \
   transport/rtp/RTPProfile.h \
@@ -9153,8 +8782,6 @@ $O/transport/rtp/profiles/avprofile/RTPAVProfilePayload32Sender.o: transport/rtp
   transport/rtp/RTPSenderStatusMessage_m.h \
   transport/rtp/RTPPayloadSender.h \
   transport/rtp/RTPInnerPacket_m.h
-$O/transport/rtp/profiles/avprofile/RTPMpegPacket_m.o: transport/rtp/profiles/avprofile/RTPMpegPacket_m.cc \
-  transport/rtp/profiles/avprofile/RTPMpegPacket_m.h
 $O/transport/sctp/ChunkMap.o: transport/sctp/ChunkMap.cc \
   transport/sctp/ChunkMap.h
 $O/transport/sctp/GapList.o: transport/sctp/GapList.cc \
@@ -9593,12 +9220,6 @@ $O/transport/sctp/SCTPMessage.o: transport/sctp/SCTPMessage.cc \
   transport/sctp/SCTPSeqNumbers.h \
   networklayer/contract/IPvXAddress.h \
   transport/contract/UDPSocket.h
-$O/transport/sctp/SCTPMessage_m.o: transport/sctp/SCTPMessage_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  transport/sctp/SCTPMessage_m.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h
 $O/transport/sctp/SCTPNatTable.o: transport/sctp/SCTPNatTable.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/common/IInterfaceTable.h \
@@ -10342,30 +9963,31 @@ $O/transport/tcp/mptcp_extension/TCPMultipathPCB.o: transport/tcp/mptcp_extensio
   transport/tcp/TCP.h
 $O/transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.o: transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.cc \
   transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.h \
-  networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
+  networklayer/ipv6/IPv6InterfaceData.h \
   transport/tcp_common/TCPSegment.h \
   networklayer/contract/IPv6Address.h \
   transport/tcp/TCPAlgorithm.h \
   transport/tcp/mptcp_extension/TCPMultipathPCB.h \
   networklayer/common/IInterfaceTable.h \
   networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
+  transport/tcp/flavours/TCPNewReno.h \
   networklayer/common/InterfaceTableAccess.h \
-  base/ByteArray_m.h \
+  linklayer/contract/MACAddress.h \
   networklayer/common/InterfaceEntry.h \
+  base/ByteArray_m.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
-  networklayer/common/InterfaceToken.h \
   transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
-  transport/tcp/mptcp_extension/TCPMultipath.h \
-  base/INotifiable.h \
+  networklayer/common/InterfaceToken.h \
   transport/tcp/flavours/TCPBaseAlg.h \
+  base/INotifiable.h \
+  transport/tcp/mptcp_extension/TCPMultipath.h \
   networklayer/ipv4/IRoutingTable.h \
   networklayer/ipv4/RoutingTable.h \
   base/ModuleAccess.h \
-  base/ByteArray.h \
   base/NotifierConsts.h \
+  base/ByteArray.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
@@ -10704,11 +10326,6 @@ $O/transport/tcp_common/TCPSegment.o: transport/tcp_common/TCPSegment.cc \
   transport/tcp_common/TCPSegment_m.h \
   base/ByteArray.h \
   base/INETDefs.h
-$O/transport/tcp_common/TCPSegment_m.o: transport/tcp_common/TCPSegment_m.cc \
-  base/ByteArray_m.h \
-  transport/tcp_common/TCPSegment_m.h \
-  base/ByteArray.h \
-  base/INETDefs.h
 $O/transport/tcp_common/TCPSpoof.o: transport/tcp_common/TCPSpoof.cc \
   networklayer/contract/IPv6ControlInfo_m.h \
   transport/tcp_common/TCPSegment.h \
@@ -10766,9 +10383,6 @@ $O/transport/udp/UDP.o: transport/udp/UDP.cc \
   networklayer/contract/IPvXAddress.h \
   networklayer/ipv4/IPv4Datagram.h \
   networklayer/ipv4/ICMPMessage.h
-$O/transport/udp/UDPPacket_m.o: transport/udp/UDPPacket_m.cc \
-  transport/udp/UDPPacket_m.h \
-  base/INETDefs.h
 $O/util/Delayer.o: util/Delayer.cc \
   util/Delayer.h \
   base/INETDefs.h
@@ -11068,8 +10682,6 @@ $O/world/powercontrol/PowerControlManager.o: world/powercontrol/PowerControlMana
   world/powercontrol/IPowerControl.h \
   world/powercontrol/PowerControlMessages_m.h \
   world/powercontrol/PowerControlManager.h
-$O/world/powercontrol/PowerControlMessages_m.o: world/powercontrol/PowerControlMessages_m.cc \
-  world/powercontrol/PowerControlMessages_m.h
 $O/world/radio/ChannelAccess.o: world/radio/ChannelAccess.cc \
   base/BasicModule.h \
   util/FWMath.h \
