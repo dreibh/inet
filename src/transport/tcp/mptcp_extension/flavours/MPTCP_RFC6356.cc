@@ -84,9 +84,10 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
         if(!conn->isQueueAble) continue;
         TCPConnection* tmp = (*it)->subflow;
         TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
-        tmp->flow->totalCMTCwnd     += another_state->snd_cwnd;
-        tmp->flow->totalCMTSsthresh += another_state->ssthresh;
         tmp->flow->utilizedCMTCwnd  += tmp->getState()->snd_nxt - tmp->getState()->snd_una;
+        tmp->flow->totalCMTCwnd     += std::min(tmp->flow->utilizedCMTCwnd ,(state->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd);
+        tmp->flow->totalCMTSsthresh += another_state->ssthresh;
+
         numerator = another_state->snd_cwnd;
         denominator = GET_SRTT(another_state->srtt.dbl())*GET_SRTT(another_state->srtt.dbl());
         tmp->flow->maxCwndBasedBandwidth = std::max(tmp->flow->maxCwndBasedBandwidth, (numerator / denominator));
