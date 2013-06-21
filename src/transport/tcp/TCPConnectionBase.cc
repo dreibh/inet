@@ -601,19 +601,23 @@ bool TCPConnection::performStateTransition(const TCPEventCode& event)
 {
     ASSERT(fsm.getState() != TCP_S_CLOSED); // closed connections should be deleted immediately
 #ifdef PRIVATE
-    uint32 alreadyQueued =  getSendQueue()->getBytesAvailable(getState()->snd_nxt);
-    uint32 abated        = (getState()->sendQueueLimit > alreadyQueued) ? getState()->sendQueueLimit - alreadyQueued : 0;
-    if(getState()->sendQueueLimit){
-      abated = std::min(getState()->sendQueueLimit, abated);
+    uint32 alreadyQueued = 0;
+    uint32 abated = 0;
+    if(getSendQueue()){
+        alreadyQueued =  getSendQueue()->getBytesAvailable(getState()->snd_nxt);
+        abated        = (getState()->sendQueueLimit > alreadyQueued) ? getState()->sendQueueLimit - alreadyQueued : 0;
+        if(getState()->sendQueueLimit){
+          abated = std::min(getState()->sendQueueLimit, abated);
+        }
+        else abated = 0;
     }
-    else abated = 0;
-
     // abated = std::min(getState()->sendQueueLimit-state->requested , abated);
-
-    if(getState()->requested < (getState()->snd_mss) && abated)
-    if(getState()->requested + abated <= getState()->sendQueueLimit){
-      getState()->requested += abated;
-      sendIndicationToApp(TCP_I_SEND_MSG, abated);
+    if(state){
+        if(getState()->requested < (getState()->snd_mss) && abated)
+        if(getState()->requested + abated <= getState()->sendQueueLimit){
+          getState()->requested += abated;
+          sendIndicationToApp(TCP_I_SEND_MSG, abated);
+        }
     }
 #endif
     if (event == TCP_E_IGNORE)  // e.g. discarded segment
