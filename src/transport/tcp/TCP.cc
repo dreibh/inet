@@ -104,6 +104,7 @@ void TCP::initialize()
 		multipath_DSSSeqNo8 = par("multipath_DSSSeqNo8");
 	}
 	scheduler = NULL;
+	flow = NULL;
 #endif
 
     const char *q;

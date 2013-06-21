@@ -231,7 +231,7 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
     switch (fsm.getState())
     {
         case TCP_S_INIT:
-            throw cRuntimeError(tcpMain, "Error processing command CLOSE: connection not open");
+            //throw cRuntimeError(tcpMain, "Error processing command CLOSE: connection not open");
 
 #ifdef PRIVATE
             if(!getTcpMain()->multipath)
