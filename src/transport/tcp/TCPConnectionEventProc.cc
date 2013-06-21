@@ -305,6 +305,9 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             /* no break */
     }
     // workaround FIXME - Something goes wrong here
+#ifdef PRIVATE
+    if(state)
+#endif
     sendRst(getState()->snd_nxt);
 }
 
