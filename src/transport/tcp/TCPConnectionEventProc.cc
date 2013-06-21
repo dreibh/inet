@@ -236,8 +236,9 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
 #ifdef PRIVATE
             if(!getTcpMain()->multipath)
             	if(!this->isSubflow)
-#endif // PRIVATE !! NEED NEXT LINE !!!
+#else // PRIVATE !! NEED NEXT LINE !!!
                 throw cRuntimeError(tcpMain, "Error processing command CLOSE: connection not open");
+#endif
             /* no break */
         case TCP_S_LISTEN:
             // Nothing to do here
