@@ -102,13 +102,9 @@ INCLUDE_PATH = \
     -Inodes/ospfv2 \
     -Inodes/wireless \
     -Inodes/xmipv6 \
-    -Isecurity \
-    -Isecurity/contract \
-    -Isecurity/dtls \
     -Itransport \
     -Itransport/contract \
     -Itransport/rtp \
-    -Itransport/rtp/packets \
     -Itransport/rtp/profiles \
     -Itransport/rtp/profiles/avprofile \
     -Itransport/sctp \
@@ -121,7 +117,6 @@ INCLUDE_PATH = \
     -Itransport/tcp/queues \
     -Itransport/tcp_common \
     -Itransport/udp \
-    -Itransport/utility \
     -Iutil \
     -Iutil/headerserializers \
     -Iutil/headerserializers/headers \
@@ -877,7 +872,7 @@ endif
 
 # Main target
 all: $O/$(TARGET)
-#	$(Q)$(LN) $O/$(TARGET) .
+	$(Q)$(LN) $O/$(TARGET) .
 
 $O/$(TARGET): $(OBJS)  $(wildcard $(EXTRA_OBJS)) Makefile
 	@$(MKPATH) $O
@@ -990,13 +985,9 @@ clean:
 	$(Q)-rm -f nodes/ospfv2/*_m.cc nodes/ospfv2/*_m.h
 	$(Q)-rm -f nodes/wireless/*_m.cc nodes/wireless/*_m.h
 	$(Q)-rm -f nodes/xmipv6/*_m.cc nodes/xmipv6/*_m.h
-	$(Q)-rm -f security/*_m.cc security/*_m.h
-	$(Q)-rm -f security/contract/*_m.cc security/contract/*_m.h
-	$(Q)-rm -f security/dtls/*_m.cc security/dtls/*_m.h
 	$(Q)-rm -f transport/*_m.cc transport/*_m.h
 	$(Q)-rm -f transport/contract/*_m.cc transport/contract/*_m.h
 	$(Q)-rm -f transport/rtp/*_m.cc transport/rtp/*_m.h
-	$(Q)-rm -f transport/rtp/packets/*_m.cc transport/rtp/packets/*_m.h
 	$(Q)-rm -f transport/rtp/profiles/*_m.cc transport/rtp/profiles/*_m.h
 	$(Q)-rm -f transport/rtp/profiles/avprofile/*_m.cc transport/rtp/profiles/avprofile/*_m.h
 	$(Q)-rm -f transport/sctp/*_m.cc transport/sctp/*_m.h
@@ -1009,7 +1000,6 @@ clean:
 	$(Q)-rm -f transport/tcp/queues/*_m.cc transport/tcp/queues/*_m.h
 	$(Q)-rm -f transport/tcp_common/*_m.cc transport/tcp_common/*_m.h
 	$(Q)-rm -f transport/udp/*_m.cc transport/udp/*_m.h
-	$(Q)-rm -f transport/utility/*_m.cc transport/utility/*_m.h
 	$(Q)-rm -f util/*_m.cc util/*_m.h
 	$(Q)-rm -f util/headerserializers/*_m.cc util/headerserializers/*_m.h
 	$(Q)-rm -f util/headerserializers/headers/*_m.cc util/headerserializers/headers/*_m.h
@@ -1035,7 +1025,7 @@ cleanall: clean
 
 depend:
 	$(qecho) Creating dependencies...
-	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES)  ./*.cc applications/*.cc applications/dhcp/*.cc applications/ethernet/*.cc applications/generic/*.cc applications/httptools/*.cc applications/netperfmeter/*.cc applications/pingapp/*.cc applications/rtpapp/*.cc applications/sctpapp/*.cc applications/tcpapp/*.cc applications/traci/*.cc applications/udpapp/*.cc applications/voip/*.cc base/*.cc battery/*.cc battery/models/*.cc linklayer/*.cc linklayer/common/*.cc linklayer/contract/*.cc linklayer/ethernet/*.cc linklayer/ethernet/switch/*.cc linklayer/etherswitch/*.cc linklayer/ext/*.cc linklayer/idealwireless/*.cc linklayer/ieee80211/*.cc linklayer/ieee80211/mac/*.cc linklayer/ieee80211/mgmt/*.cc linklayer/ieee80211/radio/*.cc linklayer/ieee80211/radio/errormodel/*.cc linklayer/ppp/*.cc linklayer/queue/*.cc linklayer/radio/*.cc linklayer/radio/propagation/*.cc mobility/*.cc mobility/models/*.cc networklayer/*.cc networklayer/arp/*.cc networklayer/autorouting/*.cc networklayer/autorouting/ipv4/*.cc networklayer/autorouting/ipv6/*.cc networklayer/bgpv4/*.cc networklayer/bgpv4/BGPMessage/*.cc networklayer/common/*.cc networklayer/contract/*.cc networklayer/diffserv/*.cc networklayer/extras/*.cc networklayer/icmpv6/*.cc networklayer/internetcloud/*.cc networklayer/ipv4/*.cc networklayer/ipv6/*.cc networklayer/ipv6tunneling/*.cc networklayer/ldp/*.cc networklayer/manetrouting/*.cc networklayer/manetrouting/aodv/*.cc networklayer/manetrouting/aodv/aodv-uu/*.cc networklayer/manetrouting/base/*.cc networklayer/manetrouting/batman/*.cc networklayer/manetrouting/batman/batmand/*.cc networklayer/manetrouting/batman/batmand/orig/*.cc networklayer/manetrouting/dsdv/*.cc networklayer/manetrouting/dsr/*.cc networklayer/manetrouting/dsr/dsr-uu/*.cc networklayer/manetrouting/dymo/*.cc networklayer/manetrouting/dymo/dymoum/*.cc networklayer/manetrouting/dymo_fau/*.cc networklayer/manetrouting/olsr/*.cc networklayer/mpls/*.cc networklayer/ospfv2/*.cc networklayer/ospfv2/interface/*.cc networklayer/ospfv2/messagehandler/*.cc networklayer/ospfv2/neighbor/*.cc networklayer/ospfv2/router/*.cc networklayer/rsvp_te/*.cc networklayer/ted/*.cc networklayer/xmipv6/*.cc nodes/*.cc nodes/bgp/*.cc nodes/ethernet/*.cc nodes/httptools/*.cc nodes/inet/*.cc nodes/internetcloud/*.cc nodes/ipv6/*.cc nodes/mpls/*.cc nodes/ospfv2/*.cc nodes/wireless/*.cc nodes/xmipv6/*.cc security/*.cc security/contract/*.cc security/dtls/*.cc transport/*.cc transport/contract/*.cc transport/rtp/*.cc transport/rtp/packets/*.cc transport/rtp/profiles/*.cc transport/rtp/profiles/avprofile/*.cc transport/sctp/*.cc transport/tcp/*.cc transport/tcp/flavours/*.cc transport/tcp/mptcp_extension/*.cc transport/tcp/mptcp_extension/flavours/*.cc transport/tcp/mptcp_extension/mptcp_queues/*.cc transport/tcp/mptcp_extension/mptcp_scheduler/*.cc transport/tcp/queues/*.cc transport/tcp_common/*.cc transport/udp/*.cc transport/utility/*.cc util/*.cc util/headerserializers/*.cc util/headerserializers/headers/*.cc util/headerserializers/ipv4/*.cc util/headerserializers/ipv4/headers/*.cc util/headerserializers/sctp/*.cc util/headerserializers/sctp/headers/*.cc util/headerserializers/tcp/*.cc util/headerserializers/tcp/headers/*.cc util/headerserializers/udp/*.cc util/headerserializers/udp/headers/*.cc world/*.cc world/annotations/*.cc world/httptools/*.cc world/obstacles/*.cc world/powercontrol/*.cc world/radio/*.cc world/scenario/*.cc world/traci/*.cc
+	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES)  ./*.cc applications/*.cc applications/dhcp/*.cc applications/ethernet/*.cc applications/generic/*.cc applications/httptools/*.cc applications/netperfmeter/*.cc applications/pingapp/*.cc applications/rtpapp/*.cc applications/sctpapp/*.cc applications/tcpapp/*.cc applications/traci/*.cc applications/udpapp/*.cc applications/voip/*.cc base/*.cc battery/*.cc battery/models/*.cc linklayer/*.cc linklayer/common/*.cc linklayer/contract/*.cc linklayer/ethernet/*.cc linklayer/ethernet/switch/*.cc linklayer/etherswitch/*.cc linklayer/ext/*.cc linklayer/idealwireless/*.cc linklayer/ieee80211/*.cc linklayer/ieee80211/mac/*.cc linklayer/ieee80211/mgmt/*.cc linklayer/ieee80211/radio/*.cc linklayer/ieee80211/radio/errormodel/*.cc linklayer/ppp/*.cc linklayer/queue/*.cc linklayer/radio/*.cc linklayer/radio/propagation/*.cc mobility/*.cc mobility/models/*.cc networklayer/*.cc networklayer/arp/*.cc networklayer/autorouting/*.cc networklayer/autorouting/ipv4/*.cc networklayer/autorouting/ipv6/*.cc networklayer/bgpv4/*.cc networklayer/bgpv4/BGPMessage/*.cc networklayer/common/*.cc networklayer/contract/*.cc networklayer/diffserv/*.cc networklayer/extras/*.cc networklayer/icmpv6/*.cc networklayer/internetcloud/*.cc networklayer/ipv4/*.cc networklayer/ipv6/*.cc networklayer/ipv6tunneling/*.cc networklayer/ldp/*.cc networklayer/manetrouting/*.cc networklayer/manetrouting/aodv/*.cc networklayer/manetrouting/aodv/aodv-uu/*.cc networklayer/manetrouting/base/*.cc networklayer/manetrouting/batman/*.cc networklayer/manetrouting/batman/batmand/*.cc networklayer/manetrouting/batman/batmand/orig/*.cc networklayer/manetrouting/dsdv/*.cc networklayer/manetrouting/dsr/*.cc networklayer/manetrouting/dsr/dsr-uu/*.cc networklayer/manetrouting/dymo/*.cc networklayer/manetrouting/dymo/dymoum/*.cc networklayer/manetrouting/dymo_fau/*.cc networklayer/manetrouting/olsr/*.cc networklayer/mpls/*.cc networklayer/ospfv2/*.cc networklayer/ospfv2/interface/*.cc networklayer/ospfv2/messagehandler/*.cc networklayer/ospfv2/neighbor/*.cc networklayer/ospfv2/router/*.cc networklayer/rsvp_te/*.cc networklayer/ted/*.cc networklayer/xmipv6/*.cc nodes/*.cc nodes/bgp/*.cc nodes/ethernet/*.cc nodes/httptools/*.cc nodes/inet/*.cc nodes/internetcloud/*.cc nodes/ipv6/*.cc nodes/mpls/*.cc nodes/ospfv2/*.cc nodes/wireless/*.cc nodes/xmipv6/*.cc transport/*.cc transport/contract/*.cc transport/rtp/*.cc transport/rtp/profiles/*.cc transport/rtp/profiles/avprofile/*.cc transport/sctp/*.cc transport/tcp/*.cc transport/tcp/flavours/*.cc transport/tcp/mptcp_extension/*.cc transport/tcp/mptcp_extension/flavours/*.cc transport/tcp/mptcp_extension/mptcp_queues/*.cc transport/tcp/mptcp_extension/mptcp_scheduler/*.cc transport/tcp/queues/*.cc transport/tcp_common/*.cc transport/udp/*.cc util/*.cc util/headerserializers/*.cc util/headerserializers/headers/*.cc util/headerserializers/ipv4/*.cc util/headerserializers/ipv4/headers/*.cc util/headerserializers/sctp/*.cc util/headerserializers/sctp/headers/*.cc util/headerserializers/tcp/*.cc util/headerserializers/tcp/headers/*.cc util/headerserializers/udp/*.cc util/headerserializers/udp/headers/*.cc world/*.cc world/annotations/*.cc world/httptools/*.cc world/obstacles/*.cc world/powercontrol/*.cc world/radio/*.cc world/scenario/*.cc world/traci/*.cc
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 $O/applications/dhcp/DHCPClient.o: applications/dhcp/DHCPClient.cc \
@@ -7257,14 +7247,14 @@ $O/networklayer/ospfv2/OSPFRouting.o: networklayer/ospfv2/OSPFRouting.cc \
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  base/NotifierConsts.h \
   networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
+  base/NotifierConsts.h \
   base/NotificationBoard.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ipv4/IPv4Route.h \
   networklayer/ospfv2/router/LSA.h \
-  base/INETDefs.h \
+  networklayer/ipv4/IPv4Route.h \
   networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
+  base/INETDefs.h \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
   networklayer/ospfv2/OSPFPacket_m.h \
@@ -7684,15 +7674,15 @@ $O/networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.o: network
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
   base/NotifierConsts.h \
+  networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ospfv2/router/LSA.h \
   networklayer/ipv4/IPv4Route.h \
+  networklayer/ospfv2/router/LSA.h \
   networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   base/INETDefs.h \
-  networklayer/ospfv2/interface/OSPFInterface.h \
   networklayer/contract/IPv4ControlInfo_m.h \
+  networklayer/ospfv2/interface/OSPFInterface.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
   networklayer/ospfv2/router/OSPFcommon.h \
@@ -7725,8 +7715,8 @@ $O/networklayer/ospfv2/messagehandler/LinkStateRequestHandler.o: networklayer/os
   networklayer/ospfv2/router/LSA.h \
   networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   base/INETDefs.h \
-  networklayer/ospfv2/interface/OSPFInterface.h \
   networklayer/contract/IPv4ControlInfo_m.h \
+  networklayer/ospfv2/interface/OSPFInterface.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
   networklayer/ospfv2/router/OSPFcommon.h \
@@ -7798,8 +7788,8 @@ $O/networklayer/ospfv2/messagehandler/MessageHandler.o: networklayer/ospfv2/mess
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
-  networklayer/ospfv2/router/OSPFcommon.h \
   networklayer/ospfv2/messagehandler/IMessageHandler.h \
+  networklayer/ospfv2/router/OSPFcommon.h \
   networklayer/ipv4/ICMPMessage.h \
   networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.h \
   networklayer/ospfv2/router/OSPFArea.h
@@ -8273,19 +8263,19 @@ $O/networklayer/ospfv2/router/OSPFRouter.o: networklayer/ospfv2/router/OSPFRoute
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
   base/NotifierConsts.h \
+  networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ospfv2/router/LSA.h \
   networklayer/ipv4/IPv4Route.h \
-  base/INETDefs.h \
+  networklayer/ospfv2/router/LSA.h \
   networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
-  networklayer/ospfv2/interface/OSPFInterface.h \
+  base/INETDefs.h \
   networklayer/contract/IPv4ControlInfo_m.h \
+  networklayer/ospfv2/interface/OSPFInterface.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
-  networklayer/ospfv2/router/OSPFcommon.h \
   networklayer/ospfv2/messagehandler/IMessageHandler.h \
+  networklayer/ospfv2/router/OSPFcommon.h \
   networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.h \
   networklayer/ospfv2/router/OSPFArea.h
 $O/networklayer/ospfv2/router/OSPFRoutingTableEntry.o: networklayer/ospfv2/router/OSPFRoutingTableEntry.cc \
@@ -8521,15 +8511,6 @@ $O/networklayer/xmipv6/xMIPv6.o: networklayer/xmipv6/xMIPv6.cc \
   networklayer/icmpv6/IPv6NeighbourDiscovery.h \
   networklayer/contract/IPv6ControlInfo.h \
   networklayer/xmipv6/BindingUpdateListAccess.h
-$O/security/contract/DTLSControlInfo_m.o: security/contract/DTLSControlInfo_m.cc \
-  networklayer/contract/IPv6Address.h \
-  networklayer/contract/IPv4Address.h \
-  security/contract/DTLSControlInfo_m.h \
-  base/INETDefs.h \
-  networklayer/contract/IPvXAddress.h
-$O/security/dtls/DTLSPacket_m.o: security/dtls/DTLSPacket_m.cc \
-  security/dtls/DTLSPacket_m.h \
-  base/INETDefs.h
 $O/transport/contract/SCTPSocket.o: transport/contract/SCTPSocket.cc \
   networklayer/contract/IPv6Address.h \
   networklayer/common/IInterfaceTable.h \
@@ -8749,15 +8730,6 @@ $O/transport/rtp/reports.o: transport/rtp/reports.cc \
   transport/rtp/reports.h
 $O/transport/rtp/sdes.o: transport/rtp/sdes.cc \
   transport/rtp/sdes.h \
-  base/INETDefs.h
-$O/transport/rtp/packets/RTPGenericPayloadPacket_m.o: transport/rtp/packets/RTPGenericPayloadPacket_m.cc \
-  transport/rtp/packets/RTPGenericPayloadPacket_m.h \
-  base/INETDefs.h
-$O/transport/rtp/packets/RTPSenderControlMessage_m.o: transport/rtp/packets/RTPSenderControlMessage_m.cc \
-  transport/rtp/packets/RTPSenderControlMessage_m.h \
-  base/INETDefs.h
-$O/transport/rtp/packets/RTPSenderStatusMessage_m.o: transport/rtp/packets/RTPSenderStatusMessage_m.cc \
-  transport/rtp/packets/RTPSenderStatusMessage_m.h \
   base/INETDefs.h
 $O/transport/rtp/profiles/avprofile/RTPAVProfile.o: transport/rtp/profiles/avprofile/RTPAVProfile.cc \
   transport/rtp/RTPProfile.h \
