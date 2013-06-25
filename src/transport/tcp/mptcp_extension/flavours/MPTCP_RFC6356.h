@@ -39,41 +39,10 @@ class INET_API MPTCP_RFC6356 : public TCPNewReno
     virtual void increaseCWND(uint32 increase);
     /** Utility function to recalculate path variables */
     virtual void recalculateMPTCPCCBasis();
-//    virtual void updateCWND(uint32 firstSeqAcked);
-//    virtual void decreaseCWND(uint32 decrease);
-//    virtual void setCWND(uint32 newCWND);
-//    virtual void initializeMPTCP_RFC6356();
-//    virtual void initilazeCWND();
-//
-//    virtual uint32 bytesInFlight();
-//
-//  protected:
-//    MPTCP_RFC6356StateVariables *&state; // alias to TCPAlgorithm's 'state'
-//
-//    /** Create and return a MPTCP_RFC6356StateVariables object. */
-//    virtual TCPStateVariables *createStateVariables() {
-//        return new MPTCP_RFC6356StateVariables();
-//    }
-//
-//    /** Utility function to recalculate ssthresh */
-//    virtual void recalculateSlowStartThreshold();
-//
-//
-//    /** Redefine what should happen on retransmission */
-//    virtual void processRexmitTimer(TCPEventCode& event);
-//
+
   public:
 //    /** Ctor */
     MPTCP_RFC6356();
-
-//    /** Redefine what should happen when data got acked, to add congestion window management */
-//    virtual void receivedDataAck(uint32 firstSeqAcked);
-//
-//    /** Redefine what should happen when dupAck was received, to add congestion window management */
-//    virtual void receivedDuplicateAck();
-//
-//    /* redefine initialize*/
-//    virtual void initialize();
 };
 
 #endif

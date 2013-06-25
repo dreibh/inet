@@ -110,7 +110,7 @@ network bottleneck
         server1.pppg[1] <--> C1 <--> router4.pppg[1];
 
 
-        router5.pppg[2] <--> C2 {  delay = 50 ms; per = 0.001; } <--> router6.pppg[2];
+        router5.pppg[2] <--> C2 {  delay = 10 ms; per = 0.0001; } <--> router6.pppg[2];
 
         router6.pppg[1] <--> C1 <--> router4.pppg[0];
         router5.pppg[1] <--> C1 <--> router1.pppg[1];

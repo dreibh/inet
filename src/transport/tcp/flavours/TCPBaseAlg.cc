@@ -582,7 +582,7 @@ void TCPBaseAlg::receivedDataAck(uint32 firstSeqAcked)
             state->rtseq_sendtime = 0;
         }
     }
-
+#warning "Test if RTT measured as expected"
     //
     // handling of retransmission timer: if the ACK is for the last segment sent
     // (no data in flight), cancel the timer, otherwise restart the timer

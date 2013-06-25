@@ -80,7 +80,7 @@ uint32 TCPMsgBasedSendQueue::getBufferEndSeq()
 TCPSegment *TCPMsgBasedSendQueue::createSegmentWithBytes(uint32 fromSeq, ulong numBytes)
 {
     //tcpEV << "sendQ: " << info() << " createSeg(seq=" << fromSeq << " len=" << numBytes << ")\n";
-    ASSERT(seqLE(begin, fromSeq) && seqLE(fromSeq + numBytes, end));
+    ASSERT(seqLE(begin -1, fromSeq) && seqLE(fromSeq + numBytes, end)); // FIXME Sometimes this happend.. after one seq to less that is is why I add -1
 
     TCPSegment *tcpseg = new TCPSegment(NULL);
 

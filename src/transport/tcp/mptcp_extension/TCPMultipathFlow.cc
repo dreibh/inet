@@ -480,8 +480,9 @@ bool  MPTCP_Flow::close(){
               i != subflow_list.end(); ++i) {
           TCP_subflow_t* entry = (*i);
               if(!entry->subflow->getState()->send_fin){
-                  entry->subflow->sendRst(entry->subflow->getState()->snd_nxt);     // FIXME RSt should not used here,... but we have to tear down the connextion
-                  entry->subflow->process_CLOSE();
+                    entry->subflow->process_CLOSE();
+                    entry->subflow->sendRst(entry->subflow->getState()->snd_nxt);     // FIXME RSt should not used here,... but we have to tear down the connextion
+
               }
       }
     return true;
