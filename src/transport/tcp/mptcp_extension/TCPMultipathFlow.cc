@@ -114,7 +114,7 @@ MPTCP_Flow::~MPTCP_Flow() {
     for(TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++){
        TCPConnection *conn =  (*i)->subflow;
        // I want everything off
-       if(conn != NULL)
+       if(conn != NULL && (conn->getState() != NULL))
            delete conn;
            conn = NULL;
     }
@@ -1267,7 +1267,7 @@ void MPTCP_Flow::sendToApp(cMessage* msg, TCPConnection* conn){
        // 3) OK we got a valid connection to an app, check if there data
        TCP_SubFlowVector_t::iterator i = subflow_list.begin();
        if(!(subflow_list.size() > 1)){
-           conn->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
+           conn->getTcpMain()->send(msg, "appOut",  conn->appGateIndex);
        }
        else if(ordered){	// Ordered is just for debugging, makes things more easy
            uint32 kind = msg->getKind();
