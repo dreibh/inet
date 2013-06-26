@@ -599,7 +599,7 @@ void TCPConnection::sendToApp(cMessage *msg)
 {
 #ifdef PRIVATE
     if((tcpMain->multipath) && (isSubflow)){
-        flow->sendToApp(msg);
+        flow->sendToApp(msg,this);
     }
     else
 #endif // PRIVATE

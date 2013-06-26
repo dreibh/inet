@@ -53,7 +53,7 @@ class INET_API MPTCP_Flow
 
     // for 2 -> Omnet Interface
     void enqueueMPTCPData(TCPSegment *tcpseg, uint64 dss_start_seq, uint32 data_len);
-    void sendToApp(cMessage* msg);
+    void sendToApp(cMessage* msg, TCPConnection *conn);
     // for 1 & 3
     int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32, TCPConnection* subflow);
     // for 6

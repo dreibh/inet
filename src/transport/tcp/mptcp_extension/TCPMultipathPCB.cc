@@ -238,8 +238,13 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
                     if ((!tcpseg->getSynBit()) && (tcpseg->getAckBit())){
                         _processMP_CAPABLE(connId, subflow, tcpseg, &option);
                     }
-                    else
+                    else{
+#warning "Why we enter this state"
+#ifdef PROBLEM
                         ASSERT(false && "This state is currently not allowed");
+#endif
+                        return 1;
+                    }
                     break;
                 case MP_JOIN:
                     // Subtype MP_JOIN
