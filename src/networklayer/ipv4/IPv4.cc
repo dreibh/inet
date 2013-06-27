@@ -46,6 +46,9 @@ void IPv4::initialize()
     defaultMCTimeToLive = par("multicastTimeToLive");
     fragmentTimeoutTime = par("fragmentTimeout");
     forceBroadcast = par("forceBroadcast");
+#ifdef PRIVATE
+    rpf = par("reversePathFiltering");
+#endif
     mapping.parseProtocolMapping(par("protocolMapping"));
 
     curFragmentId = 0;
@@ -195,6 +198,11 @@ void IPv4::handlePacketFromNetwork(IPv4Datagram *datagram, InterfaceEntry *fromI
         // do not yet have an IP address assigned. This happens during DHCP requests.
         if (rt->isLocalAddress(destAddr) || fromIE->ipv4Data()->getIPAddress().isUnspecified())
         {
+            if(rpf && (!(fromIE->ipv4Data()->getIPAddress() == destAddr))){
+                EV << "Reverse path filtering off\n";
+                numDropped++;
+                delete datagram;
+            }
             reassembleAndDeliver(datagram);
         }
         else if (destAddr.isLimitedBroadcastAddress() || (broadcastIE=rt->findInterfaceByLocalBroadcastAddress(destAddr)))

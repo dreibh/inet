@@ -57,7 +57,9 @@ class INET_API IPv4 : public QueueBase
     int defaultMCTimeToLive;
     simtime_t fragmentTimeoutTime;
     bool forceBroadcast;
-
+#ifdef PRIVATE
+    bool rpf;
+#endif
     // working vars
     long curFragmentId; // counter, used to assign unique fragmentIds to datagrams
     IPv4FragBuf fragbuf;  // fragmentation reassembly buffer

@@ -90,6 +90,7 @@ simple IPv4
         string protocolMapping;
         double fragmentTimeout @unit("s") = default(60s);
         bool forceBroadcast = default(false);
+        bool reversePathFiltering = default(false);
         @display("i=block/routing");
     gates:
         input transportIn[] @labels(IPv4ControlInfo/down,TCPSegment,UDPPacket);
