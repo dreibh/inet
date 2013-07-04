@@ -270,25 +270,39 @@ void TCP::handleMessage(cMessage *msg)
                 fprintf(stderr,"\n[TCP][WORK CONNECTION] use remote:  %s:%d local %s:%d\n", conn->remoteAddr.str().c_str(), conn->remotePort, conn->localAddr.str().c_str(), conn->localPort);
 #endif // _PRIVATE
 #ifdef PRIVATE
-                if(conn->getTcpMain()->multipath){
-                  // OK we find in general a multipath connection, but perhaps we know it more in detail of the subflow
-                    if(conn->flow){
-                        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)conn->flow->getSubflows();
-                        for ( TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
-                             TCP_subflow_t* entry = (*it);
-
-                             if (((entry->subflow->remoteAddr == srcAddr)
-                                             && (entry->subflow->remotePort == tcpseg->getSrcPort())
-                                             && (entry->subflow->localAddr == destAddr)
-                                             && (entry->subflow->localPort == tcpseg->getDestPort())) ){
-                                 conn = entry->subflow;
-                                 break;
-                             }
-
-                         }
-                    }
+//                if(conn->getTcpMain()->multipath){
+//                  // OK we find in general a multipath connection, but perhaps we know it more in detail of the subflow
+//                    if(conn->flow){
+//                        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)conn->flow->getSubflows();
+//                        for ( TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
+//                             TCP_subflow_t* entry = (*it);
+//
+//                             if (((entry->subflow->remoteAddr == srcAddr)
+//                                             && (entry->subflow->remotePort == tcpseg->getSrcPort())
+//                                             && (entry->subflow->localAddr == destAddr)
+//                                             && (entry->subflow->localPort == tcpseg->getDestPort())) ){
+//                                 conn = entry->subflow;
+//                                 break;
+//                             }
+//
+//                         }
+//                    }
+//                }
+                if(conn->isQueueAble){
+                   if(conn->getState()->requested != 0){
+                       // we should first work first on all messages to fill our queue
+                       TCP_Segement_info* tmp = new TCP_Segement_info();
+                       tmp->src = srcAddr;
+                       tmp->dst = destAddr;
+                       tmp->seg = tcpseg;
+                       conn->getTcpMain()->tmp_msg_buf.push(tmp);
+                   }
+                   else{
+                       // should be released in ApplicationAPP
+                   }
                 }
 #endif
+
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
                 if (!ret){
                     removeConnection(conn);
@@ -352,6 +366,24 @@ void TCP::handleMessage(cMessage *msg)
         }
 
         bool ret = conn->processAppCommand(msg);
+#ifdef PRIVATE
+        // During the time we fill the queue, we possible store some messages
+        if(conn->isQueueAble){
+            if(conn->getState()->requested == 0){
+                while (!tmp_msg_buf.empty())
+                {
+                    TCP_Segement_info *tmp_info = conn->getTcpMain()->tmp_msg_buf.front();
+                    conn->getTcpMain()->tmp_msg_buf.pop();
+                    bool ret = conn->processTCPSegment(tmp_info->seg, tmp_info->src, tmp_info->dst);
+                    if (!ret){
+                        removeConnection(conn);
+                        conn = NULL;
+                    }
+                    delete tmp_info;
+                }
+            }
+        }
+#endif
         if (!ret){
             removeConnection(conn);
             conn = NULL;

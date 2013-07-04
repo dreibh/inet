@@ -70,6 +70,7 @@ void TCPNewReno::increaseCWND(uint32 increase){
     state->snd_cwnd += increase;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
+    // fprintf(stderr,"increase %i\n", increase);
     return;
 }
 
@@ -177,7 +178,7 @@ void TCPNewReno::receivedDuplicateAck()
     {
         increaseCWND(state->snd_mss);
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
-        //conn->sendOneNewSegment(false, state->snd_cwnd);
+        // conn->sendOneNewSegment(false, state->snd_cwnd);
         //conn->sendData(false, state->snd_cwnd);
         sendData(true); // is this pending data?
     }
@@ -194,11 +195,11 @@ void TCPNewReno::receivedDuplicateAck()
                 tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
     }
     else if((!state->lossRecovery) && (state->limited_transmit_enabled)){
-        increaseCWND(0);    // Just for Debug
+        //increaseCWND(0);    // Just for Debug
         conn->sendOneNewSegment(false, state->snd_cwnd);
     }
     else{
-        increaseCWND(0);    // Just for Debug
+        //increaseCWND(0);    // Just for Debug
     }
 
 }

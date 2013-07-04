@@ -57,6 +57,15 @@ class TCPReceiveQueue;
 // testingEV writes log that automated test cases can check (*.test files)
 #define testingEV (ev.isDisabled()||!TCP::testing)?ev:ev
 
+#ifdef PRIVATE
+#include <queue>
+typedef struct _TCP_SEGMENT_INFO{
+    IPvXAddress src;
+    IPvXAddress dst;
+    TCPSegment* seg;
+} TCP_Segement_info;
+typedef std::queue<TCP_Segement_info*>         Tmp_Buffer_t;
+#endif
 
 /**
  * Implements the TCP protocol. This section describes the internal
@@ -184,6 +193,7 @@ class INET_API TCP : public cSimpleModule
     bool multipath_DSSDataACK8;     // kind of ack length
     bool multipath_DSSSeqNo8;       // kind of seq no length
     int  multipath_subflow_id;      // helper for identification
+    Tmp_Buffer_t tmp_msg_buf;
 #endif
 
   public:

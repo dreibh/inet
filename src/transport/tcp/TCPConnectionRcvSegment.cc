@@ -1330,10 +1330,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
             state->fin_ack_rcvd = true;
             discardUpToSeq--; // the FIN sequence number is not real data
         }
-#if PRIVATE
-        if((sendQueue->getBufferEndSeq() != sendQueue->getBufferStartSeq()))
-            // FIXME... The Connection could be still closed, even Messages comes in
-#endif   // Private
+
         // acked data no longer needed in send queue
         sendQueue->discardUpTo(discardUpToSeq);
 
