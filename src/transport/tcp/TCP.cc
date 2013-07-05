@@ -288,6 +288,7 @@ void TCP::handleMessage(cMessage *msg)
 //                         }
 //                    }
 //                }
+                bool isQueued = false;
                 if(conn->isQueueAble){
                    if(conn->getState()->requested != 0){
                        // we should first work first on all messages to fill our queue
@@ -296,11 +297,13 @@ void TCP::handleMessage(cMessage *msg)
                        tmp->dst = destAddr;
                        tmp->seg = tcpseg;
                        conn->getTcpMain()->tmp_msg_buf.push(tmp);
+                       isQueued = true;
                    }
                    else{
                        // should be released in ApplicationAPP
                    }
                 }
+                if(!isQueued){
 #endif
 
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
@@ -308,6 +311,9 @@ void TCP::handleMessage(cMessage *msg)
                     removeConnection(conn);
                     conn = NULL;
                 }
+#ifdef PRIVATE
+                }
+#endif
             }
             else
             {
@@ -373,12 +379,14 @@ void TCP::handleMessage(cMessage *msg)
                 while (!tmp_msg_buf.empty())
                 {
                     TCP_Segement_info *tmp_info = conn->getTcpMain()->tmp_msg_buf.front();
-                    conn->getTcpMain()->tmp_msg_buf.pop();
-                    bool ret = conn->processTCPSegment(tmp_info->seg, tmp_info->src, tmp_info->dst);
+                    TCPConnection *tmp = findConnForSegment(tmp_info->seg, tmp_info->src, tmp_info->dst);
+
+                    bool ret = tmp->processTCPSegment(tmp_info->seg, tmp_info->src, tmp_info->dst);
                     if (!ret){
-                        removeConnection(conn);
-                        conn = NULL;
+                        removeConnection(tmp);
+                        tmp = NULL;
                     }
+                    conn->getTcpMain()->tmp_msg_buf.pop();
                     delete tmp_info;
                 }
             }

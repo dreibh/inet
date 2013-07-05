@@ -179,6 +179,8 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             startSynRexmitTimer();
             scheduleTimeout(connEstabTimer, TCP_TIMEOUT_CONN_ESTAB);
             (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
+            if(state->requested < state->snd_mss) state->requested = 0;
+
             sendQueue->enqueueAppData(PK(msg));  // queue up for later
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -187,6 +189,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
         case TCP_S_SYN_SENT:
             tcpEV << "Queueing up data for sending later.\n";
             (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
+            if(state->requested < state->snd_mss) state->requested = 0;
             sendQueue->enqueueAppData(PK(msg)); // queue up for later
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -194,6 +197,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
         case TCP_S_ESTABLISHED:
         case TCP_S_CLOSE_WAIT:
             (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
+            if(state->requested < state->snd_mss) state->requested = 0;
             sendQueue->enqueueAppData(PK(msg));
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue, plus "
                   << (state->snd_max-state->snd_una) << " bytes unacknowledged\n";
