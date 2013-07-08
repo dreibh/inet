@@ -137,15 +137,20 @@ void TCPConnection::process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCom
 
 #ifdef PRIVATE
 void TCPConnection::process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg){
-    if(isSubflow){
+
+    if(this->getTcpMain()->multipath && isSubflow){
 #warning "Experiment SETUP for scheduling experiments -> should find the best..."
         // MBe: OK here we got data -> we are able to schedule now, but at least we could enqueue this data and schedule it later
         // depends on the scheduler and queue size
         flow->schedule(this, msg);
     }
-    else{
+    else if(this->getState()){
         process_SEND(event,tcpCommand,msg);
     }
+    else{
+        delete msg;
+    }
+
 }
 #endif // PRIVATE
 
@@ -170,7 +175,8 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
     switch (fsm.getState())
     {
         case TCP_S_INIT:
-            throw cRuntimeError(tcpMain, "Error processing command SEND: connection not open");
+            if(!this->getTcpMain()->multipath)
+                throw cRuntimeError(tcpMain, "Error processing command SEND: connection not open");
         case TCP_S_LISTEN:
             tcpEV << "SEND command turns passive open into active open, sending initial SYN\n";
             state->active = true;

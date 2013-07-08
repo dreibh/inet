@@ -47,11 +47,11 @@ xxx
 .csett*
 
 
-./.cproject
+#./.cproject
 ./.project
 .cproject
 .oppbuildspec
-.project
+#.project
 /locale_notizen.txt
 
 

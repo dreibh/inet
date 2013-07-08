@@ -6,6 +6,14 @@ import ned.DatarateChannel;
 
 import inet.nodes.inet.Router;
 
+
+
+import inet.linklayer.IOutputQueue;
+import inet.linklayer.queue.DropTailQueue;
+import inet.linklayer.queue.FIFOQueue;
+import inet.linklayer.queue.REDDropper;
+
+
 network basic
 {
     @display("bgb=833,441");
@@ -13,10 +21,10 @@ network basic
         channel C1 extends DatarateChannel
         {
             datarate = 100 Mbps;
-            delay = 10 ms;
+            delay = 5 ms;
             per = 0;
         }
-     
+
     submodules:
         mptcp1: StandardHost {
             parameters:
@@ -32,9 +40,16 @@ network basic
             gates:
                 pppg[1];
         }
+        router: Router {
+            @display("p=404,130");
+            routingFile = "router.mrt";
+            gates:
+                pppg[2];
+        }
     connections:
 		// simple MPTCP Network 
 		// Subflow 1
-        mptcp1.pppg[0] <--> C1 <--> server1.pppg[0];
+        mptcp1.pppg[0] <--> C1 <--> router.pppg[0];
+        router.pppg[1] <--> C1 <--> server1.pppg[0];
 }
 
