@@ -1076,11 +1076,10 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     buffered = sendQueue->getBytesAvailable(state->snd_nxt);
     uint32 abated = 0;
     if(getTcpMain()->request_for_data && (buffered  < (bytesToSend + getState()->snd_mss))){
-        uint64 tmp = std::max((uint64)getState()->enqueued,(uint64) buffered);
-        abated        = (getState()->sendQueueLimit > tmp) ? getState()->sendQueueLimit - tmp : 0;
-        if(getState()->sendQueueLimit){
-          abated = std::min(getState()->sendQueueLimit, abated);
 
+        abated        = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
+        if(abated && getState()->sendQueueLimit){
+          abated = std::min(getState()->sendQueueLimit, abated);
           if( getState()->requested < std::max(bytesToSend,(ulong)2*state->snd_mss)){
               getState()->requested += abated;              // Request
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
