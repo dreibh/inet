@@ -371,8 +371,9 @@ void TCPConnection::process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, c
     switch (fsm.getState())
     {
         case TCP_S_INIT:
-            throw cRuntimeError("Error processing command ABORT: connection not open");
 
+            // throw cRuntimeError("Error processing command ABORT: connection not open"); FIXME
+            return;
         case TCP_S_SYN_RCVD:
         case TCP_S_ESTABLISHED:
         case TCP_S_FIN_WAIT_1:
