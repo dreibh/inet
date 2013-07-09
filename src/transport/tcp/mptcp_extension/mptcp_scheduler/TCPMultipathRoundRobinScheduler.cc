@@ -82,7 +82,7 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
             }
             else if (firstrun) continue;
 
-            if(((!tmp->getState()->enqueued) || (tmp->getState()->requested > bytes-1)) && tmp->isQueueAble){
+            if(((0 == tmp->getState()->enqueued) || (tmp->getState()->requested > bytes-1)) && tmp->isQueueAble){
                 found = true;
                 break;
             }
