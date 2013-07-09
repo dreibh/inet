@@ -105,6 +105,7 @@ void TCP::initialize()
 	}
 	scheduler = NULL;
 	flow = NULL;
+	request_for_data = false;
 #endif
 
     const char *q;

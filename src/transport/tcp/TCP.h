@@ -189,6 +189,8 @@ class INET_API TCP : public cSimpleModule
     bool multipath_DSSDataACK8;     // kind of ack length
     bool multipath_DSSSeqNo8;       // kind of seq no length
     int  multipath_subflow_id;      // helper for identification
+
+    bool request_for_data;
 #endif
 
   public:
