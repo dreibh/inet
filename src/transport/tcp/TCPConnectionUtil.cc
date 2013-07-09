@@ -1037,11 +1037,11 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     ulong bytesToSend = effectiveWin;
 #ifdef PRIVATE
     //fullSegmentsOnly = true; // In Multipath TCP we try to send only full packets FIXME
-
+    fullSegmentsOnly = true;
     // OK for Multipath
     if(this->getTcpMain()->multipath){
 
-        fullSegmentsOnly = true;
+
         if(buffered < bytesToSend){
             // check if there are pre-buffered Data
             int enq = 0;
