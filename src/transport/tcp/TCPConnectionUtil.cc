@@ -1072,12 +1072,17 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
         }
     }
+    else{
+        getState()->enqueued -= bytesToSend;
+    }
     // In every case we should request for more data if needed
     buffered = sendQueue->getBytesAvailable(state->snd_nxt);
     uint32 abated = 0;
     if(getTcpMain()->request_for_data && (buffered  < (bytesToSend + getState()->snd_mss))){
-
-        abated        = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
+        if(this->isSubflow)
+            abated  = (getState()->sendQueueLimit >  (getState()->enqueued/flow->getSubflows()->size())) ? getState()->sendQueueLimit - (getState()->enqueued/flow->getSubflows()->size()) : 0;
+        else
+            abated  = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
         if(abated && getState()->sendQueueLimit){
           abated = std::min(getState()->sendQueueLimit, abated);
           if( getState()->requested < std::max(bytesToSend,(ulong)2*state->snd_mss)){
