@@ -59,12 +59,8 @@ class TCPReceiveQueue;
 
 #ifdef PRIVATE
 #include <queue>
-typedef struct _TCP_SEGMENT_INFO{
-    IPvXAddress src;
-    IPvXAddress dst;
-    TCPSegment* seg;
-} TCP_Segement_info;
-typedef std::queue<TCP_Segement_info*>         Tmp_Buffer_t;
+
+typedef std::queue<cPacket*>         Tmp_Buffer_t;
 #endif
 
 /**
@@ -193,7 +189,6 @@ class INET_API TCP : public cSimpleModule
     bool multipath_DSSDataACK8;     // kind of ack length
     bool multipath_DSSSeqNo8;       // kind of seq no length
     int  multipath_subflow_id;      // helper for identification
-    Tmp_Buffer_t tmp_msg_buf;
 #endif
 
   public:

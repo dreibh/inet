@@ -21,6 +21,7 @@
 #include "TCPMultipathFlow.h"
 #include "TCPSACKRexmitQueue.h"
 #include "TCPSchedulerManager.h"
+#include "TCPAlgorithm.h"
 
 #if defined(__APPLE__)
 #define COMMON_DIGEST_FOR_OPENSSL
@@ -105,6 +106,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 //    maxCwndBasedBandwidth = 0;
 //    totalCwndBasedBandwidth = 0;
     cmtCC_alpha = 0;
+    tmp_msg_buf = subflow->tmp_msg_buf;
 }
 /**
  * Destructor
@@ -246,6 +248,16 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
              //return 0;
         }
         DEBUGPRINT("SUBFLOW connID %i ",t->subflow->connId);
+
+//        if(subflow_list != 0){
+            // We use only on tmp queue
+            while(!t->subflow->tmp_msg_buf->empty()){
+                tmp_msg_buf->push(t->subflow->tmp_msg_buf->front());
+                t->subflow->tmp_msg_buf->pop();
+            }
+            delete t->subflow->tmp_msg_buf;
+            t->subflow->tmp_msg_buf = tmp_msg_buf;
+//        }
         subflow_list.push_back(t);
     }
     // ###################################
@@ -488,6 +500,15 @@ bool  MPTCP_Flow::close(){
     return true;
 }
 
+bool MPTCP_Flow::sendCommandInvoked(){
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                  i != subflow_list.end(); ++i) {
+              TCP_subflow_t* entry = (*i);
+              if(entry->subflow->isQueueAble)
+                  entry->subflow->getTcpAlgorithm()->sendCommandInvoked();
+    }
+    return true;
+}
 /*
  * Do the MP_CAPABLE Handshake
  */

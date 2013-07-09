@@ -24,8 +24,6 @@
 #include "TCPConnection.h"
 #include "TCPSegment.h"
 
-
-
 /**
  * Abstract base class for TCP algorithms which encapsulate all behaviour
  * during data transfer state: flavour of congestion control, fast

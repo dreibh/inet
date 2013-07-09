@@ -136,6 +136,9 @@ void TCPConnection::process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCom
 }
 
 #ifdef PRIVATE
+
+
+
 void TCPConnection::process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg){
 
     if(this->getTcpMain()->multipath && isSubflow){
@@ -184,32 +187,57 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             sendSyn();
             startSynRexmitTimer();
             scheduleTimeout(connEstabTimer, TCP_TIMEOUT_CONN_ESTAB);
-            (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
-            if(state->requested < state->snd_mss) state->requested = 0;
-
+#ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg));  // queue up for later
+#else
+            if(getTcpMain()->multipath)
+                tmp_msg_buf->push(PK(msg));
+            else
+                sendQueue->enqueueAppData(PK(msg));
+            if(state->sendQueueLimit)
+                (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
+#endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
 
         case TCP_S_SYN_RCVD:
         case TCP_S_SYN_SENT:
             tcpEV << "Queueing up data for sending later.\n";
-            (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
-            if(state->requested < state->snd_mss) state->requested = 0;
+#ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg)); // queue up for later
+#else
+            if(getTcpMain()->multipath)
+                tmp_msg_buf->push(PK(msg));
+            else
+                sendQueue->enqueueAppData(PK(msg));
+            if(state->sendQueueLimit)
+                (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
+#endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
 
         case TCP_S_ESTABLISHED:
         case TCP_S_CLOSE_WAIT:
-            (state->requested  >  pkt->getByteLength())? state->requested  -=  pkt->getByteLength(): state->requested=0;
-            if(state->requested < state->snd_mss) state->requested = 0;
+#ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg));
+#else
+            if(getTcpMain()->multipath)
+                tmp_msg_buf->push(PK(msg));
+            else
+                sendQueue->enqueueAppData(PK(msg));
+            if(state->sendQueueLimit)
+                (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
+#endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue, plus "
-                  << (state->snd_max-state->snd_una) << " bytes unacknowledged\n";
+                 << (state->snd_max-state->snd_una) << " bytes unacknowledged\n";
+
+#ifdef PRIVATE
+            if(getTcpMain()->multipath)
+                this->flow->sendCommandInvoked();
+            else
+#endif
             tcpAlgorithm->sendCommandInvoked();
             break;
-
         case TCP_S_LAST_ACK:
         case TCP_S_FIN_WAIT_1:
         case TCP_S_FIN_WAIT_2:
@@ -395,19 +423,14 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
         opp_error("Called process_QUEUE_BYTES_LIMIT on uninitialized TCPConnection!");
     }
     state->sendQueueLimit = tcpCommand->getUserId();
-    state->requested += tcpCommand->getUserId();
+    state->requested = tcpCommand->getUserId(); // On start netperfmeter send one queue size
     if(getTcpMain()->multipath){
             TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
 
            for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
                  TCP_subflow_t* entry = (*it);
                  TCPConnection* conn = entry->subflow;
-                     // I know that seems crazy, but if we not ask here for more messages we run out of messages in some cases
-                  //if(this!=conn){
-                  //   sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
-                     conn->getState()->sendQueueLimit = tcpCommand->getUserId();
-                     conn->getState()->requested = tcpCommand->getUserId()/subflow_list->size();
-                 // }
+                 conn->getState()->sendQueueLimit = tcpCommand->getUserId();
            }
         flow->commonSendQueueLimit = tcpCommand->getUserId();
     }

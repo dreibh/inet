@@ -187,6 +187,7 @@ TCPConnection::TCPConnection()
 	bzero(MAC160,160);
 	dss_dataMapofSubflow.clear();
 	bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
+    tmp_msg_buf = new Tmp_Buffer_t();
 #endif // PRIVATE
 
     // Note: this ctor is NOT used to create live connections, only
@@ -227,6 +228,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     bzero(MAC160,160);
     dss_dataMapofSubflow.clear();
     bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
+    tmp_msg_buf = new Tmp_Buffer_t();
 #endif
 
 
@@ -471,6 +473,12 @@ TCPConnection::~TCPConnection()
     }
 
 #ifdef PRIVATE
+
+    if(!tmp_msg_buf){
+        // FIXME - Who is responsible for delete messages as structure inside
+    }
+    // FIXME - Who is responsible for delete tmp_msg_buf
+    tmp_msg_buf = NULL;
     delete scheduledBytesVector;
     scheduledBytesVector = NULL;
     isSubflow = false;
@@ -600,26 +608,6 @@ TCPEventCode TCPConnection::preanalyseAppCommandEvent(int commandCode)
 bool TCPConnection::performStateTransition(const TCPEventCode& event)
 {
     ASSERT(fsm.getState() != TCP_S_CLOSED); // closed connections should be deleted immediately
-#ifdef PRIVATE
-    uint32 alreadyQueued = 0;
-    uint32 abated = 0;
-    if(getSendQueue()){
-        alreadyQueued =  getSendQueue()->getBytesAvailable(getState()->snd_nxt);
-        abated        = (getState()->sendQueueLimit > alreadyQueued) ? getState()->sendQueueLimit - alreadyQueued : 0;
-        if(getState()->sendQueueLimit){
-          abated = std::min(getState()->sendQueueLimit, abated);
-        }
-        else abated = 0;
-    }
-    // abated = std::min(getState()->sendQueueLimit-state->requested , abated);
-    if(state){
-        if(getState()->requested < (getState()->snd_mss) && abated)
-        if(getState()->requested + abated <= getState()->sendQueueLimit){
-          getState()->requested += abated;
-          sendIndicationToApp(TCP_I_SEND_MSG, abated);
-        }
-    }
-#endif
     if (event == TCP_E_IGNORE)  // e.g. discarded segment
     {
         tcpEV << "Staying in state: " << stateName(fsm.getState()) << " (no FSM event)\n";

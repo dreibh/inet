@@ -571,14 +571,14 @@ void TCPConnection::sendEstabIndicationToApp()
     if(tcpMain->multipath){
 
         if(flow->sendEstablished){
-            getState()->requested += getState()->sendQueueLimit;
-            sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
+//            getState()->requested += getState()->sendQueueLimit;
+//            sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
 
             return; // we need no notification message
         }
         this->flow->sendEstablished = true;
     }
-    // Request minimum data
+
 #endif // PRIVATE
     tcpEV << "Notifying app: " << indicationName(TCP_I_ESTABLISHED) << "\n";
     cMessage *msg = new cMessage(indicationName(TCP_I_ESTABLISHED));
@@ -1023,11 +1023,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // check how many bytes we have
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
 
-    if (buffered == 0){
-        fprintf(stderr, "Sent  %s:%d to %s:%d <- No data in queue..in  fly %i ...\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort, state->snd_nxt-state->snd_una);
-        return false;
-    }
-
     // maxWindow is minimum of snd_wnd and congestionWindow (snd_cwnd)
     ulong maxWindow = std::min(state->snd_wnd, congestionWindow);
 
@@ -1043,7 +1038,39 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     }
 
     ulong bytesToSend = effectiveWin;
+#ifdef PRIVATE
+    // OK for Multipath
+    if(this->getTcpMain()->multipath){
+        if(buffered < bytesToSend){
+            // check if there are pre-buffered Data
+            int enq = 0;
+            while(!tmp_msg_buf->empty()){
+                cPacket* pkt = tmp_msg_buf->front();
+                enq += pkt->getByteLength();
+                getSendQueue()->enqueueAppData(pkt);
+                tmp_msg_buf->pop();
+                if(enq > bytesToSend) break;
+            }
+            buffered = sendQueue->getBytesAvailable(state->snd_nxt);
+        }
+    }
+    // In every case we should request for more data
 
+    uint32 abated = 0;
+    if(buffered  < (bytesToSend + getState()->snd_mss)){
+        abated        = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
+        if(getState()->sendQueueLimit){
+          abated = std::min(getState()->sendQueueLimit, abated);
+
+          if(getState()->requested < std::max(bytesToSend,(ulong)2*state->snd_mss)){
+              getState()->requested += abated;              // Request
+              sendIndicationToApp(TCP_I_SEND_MSG, abated);
+          }
+        }
+        else abated = 0;
+    }
+    if(!buffered) return false;
+#endif
     if (bytesToSend > buffered)
         bytesToSend = buffered;
 
@@ -1197,7 +1224,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     uint32 old_snd_nxt = state->snd_nxt;
 
     // retransmit one segment at snd_una, and set snd_nxt accordingly (if not called at RTO)
-    state->snd_nxt = state->snd_una;
+    state->snd_nxt = state->snd_una - 1;
 
 #ifndef PRIVATE
    // When FIN sent the snd_max - snd_nxt larger than bytes available in queue

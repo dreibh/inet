@@ -27,6 +27,12 @@
 #include "IPvXAddress.h"
 #include "TCP.h"
 #include "TCPSegment.h"
+#ifdef PRIVATE
+// MBE: Includes
+#include "TCPMultipath.h"
+#include "TCPMultipathPCB.h"
+#include "TCPMultipathFlow.h"
+#endif
 class TCPSegment;
 class TCPCommand;
 class TCPOpenCommand;
@@ -36,11 +42,6 @@ class TCPReceiveQueue;
 class TCPAlgorithm;
 
 #ifdef PRIVATE
-// MBE: Includes
-#include "TCPMultipath.h"
-#include "TCPMultipathPCB.h"
-#include "TCPMultipathFlow.h"
-
 // MBe: Pre-declaration
 class MPTCP_PCB;
 class MPTCP_Flow;
@@ -388,6 +389,8 @@ class INET_API TCPConnection
 
     TCPMultipathDSSStatus dss_dataMapofSubflow;
     DSS_BASE_INFO         base_una_dss_info;
+
+    Tmp_Buffer_t* tmp_msg_buf;       // Just a helper to organize messages
 #endif // PRIVATE
 
   protected:

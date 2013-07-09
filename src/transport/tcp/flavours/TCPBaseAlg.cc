@@ -456,35 +456,6 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
     // transmission if the TCP has not sent data in an interval exceeding
     // the retransmission timeout."
 
-#ifdef PRIVATE
-    // we have a trigger to send, so send....over all flows which have data
-    if(conn->getTcpMain()->multipath){
-        static bool first = true; // I know it is not a nice workaraound, but it works
-
-        if(first){
-            first = false;
-            if(conn->isSubflow){
-               bool send_something = false;
-               TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)conn->flow->getSubflows();
-                // the sendCommandInvoked could possible increase the numbers of subflows
-               size_t max = subflow_list->size();
-               TCP_SubFlowVector_t::iterator it =subflow_list->begin();
-               for (size_t cnt = 0; cnt < max; cnt++,it++) {
-                    TCP_subflow_t* entry = (*it);
-                    TCPConnection* tmp = entry->subflow;
-                    if(tmp->isQueueAble){
-                        tmp->getTcpAlgorithm()->sendCommandInvoked();
-                        send_something = true;
-                    }
-               }
-               first = true;
-               return send_something;
-            }
-            first = true;
-        }
-    }
-#endif
-
     if (!conn->isSendQueueEmpty())  // do we have any data to send?
     {
         if ((simTime() - state->time_last_data_sent) > state->rexmit_timeout)

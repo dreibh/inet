@@ -1,21 +1,4 @@
-//
-// Copyright (C) 2009 Thomas Reschka
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU Lesser General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with this program; if not, see <http://www.gnu.org/licenses/>.
-//
-
-#include <algorithm>   // min,max
+#include <algorithm> // min,max
 #include "TCPNewReno.h"
 #include "TCP.h"
 
@@ -50,7 +33,7 @@ void TCPNewReno::recalculateSlowStartThreshold()
     // timer, the value of ssthresh MUST be set to no more than the value
     // given in equation 3:
     //
-    //   ssthresh = max (FlightSize / 2, 2*SMSS)            (3)
+    // ssthresh = max (FlightSize / 2, 2*SMSS) (3)
     //
     // As discussed above, FlightSize is the amount of outstanding data in
     // the network."
@@ -70,7 +53,6 @@ void TCPNewReno::increaseCWND(uint32 increase){
     state->snd_cwnd += increase;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    // fprintf(stderr,"increase %i\n", increase);
     return;
 }
 
@@ -134,8 +116,8 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             setCWND(std::min(state->ssthresh, bytesInFlight() + state->snd_mss));
             state->lossRecovery = false;
             state->firstPartialACK = false;
-//            if (rexmitTimer->isScheduled())
-//                 cancelEvent(rexmitTimer);   // Todo ...is here the best point
+// if (rexmitTimer->isScheduled())
+// cancelEvent(rexmitTimer); // Todo ...is here the best point
             tcpEV << "End Loss Recovery\n";
         }
         else{
@@ -150,7 +132,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
             increaseCWND(state->snd_mss); // Is this correct ?
-            conn->sendAck();    // Fixme ...needed?
+            conn->sendAck(); // Fixme ...needed?
             // Retranmist
             conn->retransmitOneSegment(false); // we send an retransmit, so we are out
             return;
@@ -161,7 +143,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 
 
     // Retransmit Timer
-    if ( state->lossRecovery && (!state->firstPartialACK) && (!state->fin_rcvd))    // TODO Unacked date => Correct? ... overwork check Fin state
+    if ( state->lossRecovery && (!state->firstPartialACK) && (!state->fin_rcvd)) // TODO Unacked date => Correct? ... overwork check Fin state
     {
         restartRexmitTimer();
     }
@@ -172,25 +154,15 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 void TCPNewReno::receivedDuplicateAck()
 {
     // Overworked....
-    TCPTahoeRenoFamily::receivedDuplicateAck();
-    // Duplicate ACK in Slow Start
-    if((!state->lossRecovery) && (state->snd_cwnd < state->ssthresh)){
-        recalculateSlowStartThreshold();
-        setCWND(state->snd_mss);
-        state->dupacks = 0;
-        conn->sendOneNewSegment(false, state->snd_cwnd);
-        return;
-    }
-    // Duplicate ACK in CA
+    //TCPTahoeRenoFamily::receivedDuplicateAck();
+
     if (state->lossRecovery)
     {
         increaseCWND(state->snd_mss);
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
-        // conn->sendOneNewSegment(false, state->snd_cwnd);
-        //conn->sendData(false, state->snd_cwnd);
-        sendData(true); // is this pending data?
+        sendData(false); // is this pending data?
     }
-    else if ((state->dupacks == DUPTHRESH && (!state->lossRecovery) )) // DUPTHRESH = 3
+    else if (state->dupacks == DUPTHRESH && (!state->lossRecovery)) // DUPTHRESH = 3
     {
                 tcpEV << "NewReno on dupAcks == DUPTHRESH(=3): perform Fast Retransmit, and enter Fast Recovery:";
                 state->lossRecovery = true;
@@ -202,12 +174,12 @@ void TCPNewReno::receivedDuplicateAck()
                 setCWND(state->ssthresh + (3 * state->snd_mss));
                 tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
     }
-    else if((!state->lossRecovery) && (state->limited_transmit_enabled)){
-        //increaseCWND(0);    // Just for Debug
-        conn->sendOneNewSegment(false, state->snd_cwnd);
+    else if((!state->lossRecovery)){
+        increaseCWND(0); // Just for Debug
+        sendData(false); // conn->sendOneNewSegment(false, state->snd_cwnd);
     }
     else{
-        //increaseCWND(0);    // Just for Debug
+        increaseCWND(0); // Just for Debug
     }
 
 }
@@ -220,7 +192,7 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
         return;
 
     // RFC 3782, page 6:
-    // "6)  Retransmit timeouts:
+    // "6) Retransmit timeouts:
     // After a retransmit timeout, record the highest sequence number
     // transmitted in the variable "recover" and exit the Fast Recovery
     // procedure if applicable."
@@ -239,7 +211,7 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
     // RFC 2581, page 5:
     // "Furthermore, upon a timeout cwnd MUST be set to no more than the loss
     // window, LW, which equals 1 full-sized segment (regardless of the
-    // value of IW).  Therefore, after retransmitting the dropped segment
+    // value of IW). Therefore, after retransmitting the dropped segment
     // the TCP sender uses the slow start algorithm to increase the window
     // from 1 full-sized segment to the new value of ssthresh, at which
     // point congestion avoidance again takes over."
@@ -253,8 +225,4 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
     state->afterRto = true;
     conn->retransmitOneSegment(true);
 }
-
-
-
-
 
