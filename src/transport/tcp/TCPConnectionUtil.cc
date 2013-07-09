@@ -1079,12 +1079,14 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         if(getState()->sendQueueLimit){
           abated = std::min(getState()->sendQueueLimit, abated);
 
-          if( getState()->enqueued < std::max(bytesToSend,(ulong)2*state->snd_mss)){
+          if( (uint32) getState()->enqueued < std::max(bytesToSend,(ulong)2*state->snd_mss)){
               getState()->requested += abated;              // Request
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
+              if(this->getTcpMain()->multipath){
+                  this->flow->sendCommandInvoked();
+              }
           }
         }
-        else abated = 0;
     }
     if(!buffered) return false;
 
