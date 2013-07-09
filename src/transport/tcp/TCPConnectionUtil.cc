@@ -1036,9 +1036,11 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
     ulong bytesToSend = effectiveWin;
 #ifdef PRIVATE
+    fullSegmentsOnly = true; // In Multipath TCP we try to send only full packets FIXME
+
     // OK for Multipath
     if(this->getTcpMain()->multipath){
-        fullSegmentsOnly = true; // In Multipath TCP we try to send only full packets FIXME
+
 
         if(buffered < bytesToSend){
             // check if there are pre-buffered Data
@@ -1083,7 +1085,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
               getState()->requested += abated;              // Request
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
               if(this->getTcpMain()->multipath){
-                  this->flow->sendCommandInvoked();
+                  if(flow)
+                      flow->sendCommandInvoked();
               }
           }
         }
