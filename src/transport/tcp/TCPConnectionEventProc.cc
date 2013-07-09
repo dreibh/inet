@@ -190,7 +190,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 #ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg));  // queue up for later
 #else
-            getTcpMain()->request_for_data = true;
+            if(state->sendQueueLimit) getTcpMain()->request_for_data = true;
             if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
@@ -207,7 +207,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 #ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg)); // queue up for later
 #else
-            getTcpMain()->request_for_data = true;
+            if(state->sendQueueLimit) getTcpMain()->request_for_data = true;
             if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
@@ -223,7 +223,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 #ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg));
 #else
-            getTcpMain()->request_for_data = true;
+            if(state->sendQueueLimit) getTcpMain()->request_for_data = true;
             if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
