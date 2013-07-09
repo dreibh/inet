@@ -1048,7 +1048,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
                 if((enq + pkt->getByteLength()) <= bytesToSend){
                     enq += pkt->getByteLength();
                     getSendQueue()->enqueueAppData(PK(pkt));
-                    if(getState()->enqueued > pkt->getByteLength())
+                    if(getState()->enqueued >= pkt->getByteLength())
                         getState()->enqueued -= pkt->getByteLength();
                     else // Overbooked
                         sendIndicationToApp(TCP_I_SEND_MSG, pkt->getByteLength());
@@ -1058,7 +1058,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
                     uint64 old_length = pkt->getByteLength();
                     pkt->setByteLength(bytesToSend-enq);
                     getSendQueue()->enqueueAppData(pkt->dup());
-                    if(getState()->enqueued > pkt->getByteLength())
+                    if(getState()->enqueued >= pkt->getByteLength())
                         getState()->enqueued -= pkt->getByteLength();
                     else // Overbooked
                         sendIndicationToApp(TCP_I_SEND_MSG, pkt->getByteLength());
