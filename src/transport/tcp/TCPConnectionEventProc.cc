@@ -193,7 +193,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
-                sendQueue->enqueueAppData(PK(msg));
+                sendQueue->enqueueAppData((PK(msg))->dup());
             if(state->sendQueueLimit)
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
 #endif
@@ -209,7 +209,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
-                sendQueue->enqueueAppData(PK(msg));
+                sendQueue->enqueueAppData((PK(msg))->dup());
             if(state->sendQueueLimit)
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
 #endif
@@ -224,7 +224,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
             if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
-                sendQueue->enqueueAppData(PK(msg));
+                sendQueue->enqueueAppData((PK(msg))->dup());
             if(state->sendQueueLimit)
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
 #endif

@@ -1046,10 +1046,18 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
             int enq = 0;
             while(!tmp_msg_buf->empty()){
                 cPacket* pkt = tmp_msg_buf->front();
-                enq += pkt->getByteLength();
-                getSendQueue()->enqueueAppData(pkt);
-                tmp_msg_buf->pop();
-                if(enq > bytesToSend) break;
+                if((enq + pkt->getByteLength()) <= bytesToSend){
+                    enq += pkt->getByteLength();
+                    getSendQueue()->enqueueAppData(PK(pkt));
+                    tmp_msg_buf->pop();
+                }
+                else{
+                    uint64 old_length = pkt->getByteLength();
+                    pkt->setByteLength(bytesToSend-enq);
+                    getSendQueue()->enqueueAppData(pkt->dup());
+                    pkt->setByteLength(old_length - (bytesToSend-enq));
+                    break;
+                }
             }
             buffered = sendQueue->getBytesAvailable(state->snd_nxt);
         }

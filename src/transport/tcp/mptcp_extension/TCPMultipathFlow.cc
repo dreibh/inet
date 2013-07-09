@@ -249,15 +249,14 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
         }
         DEBUGPRINT("SUBFLOW connID %i ",t->subflow->connId);
 
-//        if(subflow_list != 0){
-            // We use only on tmp queue
+        if(t->subflow->tmp_msg_buf != tmp_msg_buf){
             while(!t->subflow->tmp_msg_buf->empty()){
                 tmp_msg_buf->push(t->subflow->tmp_msg_buf->front());
                 t->subflow->tmp_msg_buf->pop();
             }
             delete t->subflow->tmp_msg_buf;
             t->subflow->tmp_msg_buf = tmp_msg_buf;
-//        }
+        }
         subflow_list.push_back(t);
     }
     // ###################################
