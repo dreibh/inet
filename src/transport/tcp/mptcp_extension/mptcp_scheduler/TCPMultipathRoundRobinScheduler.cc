@@ -82,11 +82,10 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
             }
             else if (firstrun) continue;
 
-            if(tmp->getState()->requested > bytes-1){//&& tmp->isQueueAble){
+            if(((!tmp->getState()->enqueued) || (tmp->getState()->requested > bytes-1)) && tmp->isQueueAble){
                 found = true;
                 break;
             }
-
             if(cnt > subflow_list->size()){
                 discard += bytes;
                 // fprintf(stderr,"Discard....%i", discard);
