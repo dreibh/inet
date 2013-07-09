@@ -195,8 +195,10 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
                 tmp_msg_buf->push(PK(msg));
             else
                 sendQueue->enqueueAppData((PK(msg))->dup());
-            if(state->sendQueueLimit)
+            if(state->sendQueueLimit){
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
+                getState()->enqueued += PK(msg)->getByteLength();
+            }
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -212,8 +214,10 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
                 tmp_msg_buf->push(PK(msg));
             else
                 sendQueue->enqueueAppData((PK(msg))->dup());
-            if(state->sendQueueLimit)
+            if(state->sendQueueLimit){
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
+                getState()->enqueued += PK(msg)->getByteLength();
+            }
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -228,8 +232,10 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
                 tmp_msg_buf->push(PK(msg));
             else
                 sendQueue->enqueueAppData((PK(msg))->dup());
-            if(state->sendQueueLimit)
+            if(state->sendQueueLimit){
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
+                getState()->enqueued += PK(msg)->getByteLength();
+            }
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue, plus "
                  << (state->snd_max-state->snd_una) << " bytes unacknowledged\n";

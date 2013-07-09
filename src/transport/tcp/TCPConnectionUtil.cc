@@ -1048,28 +1048,38 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
                 if((enq + pkt->getByteLength()) <= bytesToSend){
                     enq += pkt->getByteLength();
                     getSendQueue()->enqueueAppData(PK(pkt));
+                    if(getState()->enqueued > pkt->getByteLength())
+                        getState()->enqueued -= pkt->getByteLength();
+                    else // Overbooked
+                        sendIndicationToApp(TCP_I_SEND_MSG, pkt->getByteLength());
                     tmp_msg_buf->pop();
                 }
                 else{
                     uint64 old_length = pkt->getByteLength();
                     pkt->setByteLength(bytesToSend-enq);
                     getSendQueue()->enqueueAppData(pkt->dup());
+                    if(getState()->enqueued > pkt->getByteLength())
+                        getState()->enqueued -= pkt->getByteLength();
+                    else // Overbooked
+                        sendIndicationToApp(TCP_I_SEND_MSG, pkt->getByteLength());
                     pkt->setByteLength(old_length - (bytesToSend-enq));
                     break;
                 }
             }
             buffered = sendQueue->getBytesAvailable(state->snd_nxt);
+
         }
     }
     // In every case we should request for more data if needed
 
     uint32 abated = 0;
     if(getTcpMain()->request_for_data && (buffered  < (bytesToSend + getState()->snd_mss))){
-        abated        = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
+        uint64 tmp = std::max((uint64)getState()->enqueued,(uint64) buffered);
+        abated        = (getState()->sendQueueLimit > tmp) ? getState()->sendQueueLimit - tmp : 0;
         if(getState()->sendQueueLimit){
           abated = std::min(getState()->sendQueueLimit, abated);
 
-          if(getState()->requested < std::max(bytesToSend,(ulong)2*state->snd_mss)){
+          if( getState()->enqueued < std::max(bytesToSend,(ulong)2*state->snd_mss)){
               getState()->requested += abated;              // Request
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
           }

@@ -118,6 +118,7 @@ TCPStateVariables::TCPStateVariables()
 
     sendQueueLimit = 0;
     requested = 0;
+    enqueued = 0;
 }
 
 std::string TCPStateVariables::info() const
@@ -228,6 +229,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     bzero(MAC160,160);
     dss_dataMapofSubflow.clear();
     bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
+
     tmp_msg_buf = new Tmp_Buffer_t();
 #endif
 
