@@ -1037,7 +1037,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     ulong bytesToSend = effectiveWin;
 #ifdef PRIVATE
     //fullSegmentsOnly = true; // In Multipath TCP we try to send only full packets FIXME
-    fullSegmentsOnly = true;
+   // fullSegmentsOnly = true;
     // OK for Multipath
     if(this->getTcpMain()->multipath){
 
