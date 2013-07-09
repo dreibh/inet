@@ -1083,10 +1083,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
           if( getState()->requested < std::max(bytesToSend,(ulong)2*state->snd_mss)){
               getState()->requested += abated;              // Request
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
-              if(this->getTcpMain()->multipath){
-                  if(flow)
-                      flow->sendCommandInvoked();
-              }
           }
         }
     }
