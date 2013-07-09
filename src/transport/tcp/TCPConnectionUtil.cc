@@ -1036,12 +1036,12 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
     ulong bytesToSend = effectiveWin;
 #ifdef PRIVATE
-    fullSegmentsOnly = true; // In Multipath TCP we try to send only full packets FIXME
+    //fullSegmentsOnly = true; // In Multipath TCP we try to send only full packets FIXME
 
     // OK for Multipath
     if(this->getTcpMain()->multipath){
 
-
+        fullSegmentsOnly = true;
         if(buffered < bytesToSend){
             // check if there are pre-buffered Data
             int enq = 0;
@@ -1068,12 +1068,12 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
                     break;
                 }
             }
-            buffered = sendQueue->getBytesAvailable(state->snd_nxt);
+
 
         }
     }
     // In every case we should request for more data if needed
-
+    buffered = sendQueue->getBytesAvailable(state->snd_nxt);
     uint32 abated = 0;
     if(getTcpMain()->request_for_data && (buffered  < (bytesToSend + getState()->snd_mss))){
         uint64 tmp = std::max((uint64)getState()->enqueued,(uint64) buffered);
@@ -1081,7 +1081,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         if(getState()->sendQueueLimit){
           abated = std::min(getState()->sendQueueLimit, abated);
 
-          if( (uint32) getState()->enqueued < std::max(bytesToSend,(ulong)2*state->snd_mss)){
+          if( getState()->requested < std::max(bytesToSend,(ulong)2*state->snd_mss)){
               getState()->requested += abated;              // Request
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
               if(this->getTcpMain()->multipath){
