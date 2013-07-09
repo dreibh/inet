@@ -571,9 +571,8 @@ void TCPConnection::sendEstabIndicationToApp()
     if(tcpMain->multipath){
 
         if(flow->sendEstablished){
-//            getState()->requested += getState()->sendQueueLimit;
-//            sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
-
+            getState()->requested += getState()->sendQueueLimit;
+            sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
             return; // we need no notification message
         }
         this->flow->sendEstablished = true;
@@ -1063,9 +1062,9 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         }
     }
     // In every case we should request for more data
-
+    static bool enable_request_for_data = false;
     uint32 abated = 0;
-    if(buffered  < (bytesToSend + getState()->snd_mss)){
+    if(enable_request_for_data && (buffered  < (bytesToSend + getState()->snd_mss))){
         abated        = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
         if(getState()->sendQueueLimit){
           abated = std::min(getState()->sendQueueLimit, abated);
@@ -1078,6 +1077,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         else abated = 0;
     }
     if(!buffered) return false;
+    enable_request_for_data = true;
 #endif
     if (bytesToSend > buffered)
         bytesToSend = buffered;
