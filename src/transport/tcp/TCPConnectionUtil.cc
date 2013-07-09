@@ -1040,6 +1040,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 #ifdef PRIVATE
     // OK for Multipath
     if(this->getTcpMain()->multipath){
+        fullSegmentsOnly = true; // In Multipath TCP we try to send only full packets FIXME
+
         if(buffered < bytesToSend){
             // check if there are pre-buffered Data
             int enq = 0;
