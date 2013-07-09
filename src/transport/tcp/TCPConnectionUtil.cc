@@ -571,8 +571,6 @@ void TCPConnection::sendEstabIndicationToApp()
     if(tcpMain->multipath){
 
         if(flow->sendEstablished){
-            getState()->requested += getState()->sendQueueLimit;
-            sendIndicationToApp(TCP_I_SEND_MSG,  getState()->sendQueueLimit);
             return; // we need no notification message
         }
         this->flow->sendEstablished = true;
