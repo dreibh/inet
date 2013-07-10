@@ -1078,7 +1078,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
             abated  = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
         if(abated && getState()->sendQueueLimit){
           abated = std::min(getState()->sendQueueLimit, abated);
-          if( getState()->requested < std::max(bytesToSend,(ulong)2*state->snd_mss)){
+          if( ((getState()->requested == 0) && (abated > (uint32)state->snd_mss))){
               getState()->requested += abated;              // Request
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
           }
