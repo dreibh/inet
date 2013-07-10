@@ -166,7 +166,7 @@ void TCPNewReno::receivedDuplicateAck()
                 tcpEV << "NewReno on dupAcks == DUPTHRESH(=3): perform Fast Retransmit, and enter Fast Recovery:";
                 state->lossRecovery = true;
                 state->recover = (state->snd_nxt);
-                tcpEV << " set recover=" << state->recover;§
+                tcpEV << " set recover=" << state->recover;
                 recalculateSlowStartThreshold();
                 conn->retransmitOneSegment(false);
                 state->firstPartialACK = false;
@@ -175,7 +175,7 @@ void TCPNewReno::receivedDuplicateAck()
     }
     else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0); // Just for Debug
-        conn->sendOneNewSegment(false, state->snd_cwnd);
+        conn->sendOneNewSegment(false, state->snd_mss);
         //sendData(false); // conn->sendOneNewSegment(false, state->snd_cwnd);
     }
     else{
