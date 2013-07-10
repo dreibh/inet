@@ -68,7 +68,7 @@ echo "##########################################################################
 echo "extends = _Bottleneck_NetPerfMeter							  #" 	>> build.ini 
 echo "description = "Setup with Bottleneck"						          #" 	>> build.ini 
 echo "#############################################################################################" 	>> build.ini
-echo "**.mptcp1.netPerfMeterApp[*].startTime       				= 1.0 s"		>> build.ini
+echo "**.mptcp1.netPerfMeterApp[*].startTime       				= uniform(2.9s,3.1s)"		>> build.ini
 echo "**.mptcp1.netPerfMeterApp[*].resetTime       				=  60 s"		>> build.ini 
 echo "**.mptcp1.netPerfMeterApp[*].stopTime        				= $DURATION_CLIENT"	>> build.ini
 echo ""
