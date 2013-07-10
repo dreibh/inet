@@ -975,7 +975,10 @@ void TCPConnection::sendSegment(uint32 bytes)
     tcpseg->setAckNo(state->rcv_nxt);
     tcpseg->setAckBit(true);
     tcpseg->setWindow(updateRcvWnd());
-    
+// DEBUG FIXME  REMOVE
+    if(tcpseg->getSequenceNo() == 39395084)
+        fprintf(stderr,"Found searched seq: 39395084 ");
+// END DEBUG
     // TBD when to set PSH bit?
     // TBD set URG bit if needed
     ASSERT(bytes == tcpseg->getPayloadLength());
@@ -1047,7 +1050,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
             int enq = 0;
             while(!tmp_msg_buf->empty()){
                 cPacket* pkt = tmp_msg_buf->front();
-                if((enq + pkt->getByteLength()) <= bytesToSend){
+                if(enq <= bytesToSend){ // ONLY COMPLETE MESSAGES -> We don t fragment user Messages
                     enq += pkt->getByteLength();
                     getSendQueue()->enqueueAppData(PK(pkt));
                     if(getState()->enqueued >= pkt->getByteLength())
@@ -1056,17 +1059,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
                         sendIndicationToApp(TCP_I_SEND_MSG, pkt->getByteLength());
                     tmp_msg_buf->pop();
                 }
-                else{
-                    uint64 old_length = pkt->getByteLength();
-                    pkt->setByteLength(bytesToSend-enq);
-                    getSendQueue()->enqueueAppData(pkt->dup());
-                    if(getState()->enqueued >= pkt->getByteLength())
-                        getState()->enqueued -= pkt->getByteLength();
-                    else // Overbooked
-                        sendIndicationToApp(TCP_I_SEND_MSG, pkt->getByteLength());
-                    pkt->setByteLength(old_length - (bytesToSend-enq));
-                    break;
-                }
+                else break;
             }
 
 
@@ -1247,7 +1240,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     uint32 old_snd_nxt = state->snd_nxt;
 
     // retransmit one segment at snd_una, and set snd_nxt accordingly (if not called at RTO)
-    state->snd_nxt = state->snd_una - 1;
+    state->snd_nxt = state->snd_una;
 
 #ifndef PRIVATE
    // When FIN sent the snd_max - snd_nxt larger than bytes available in queue
