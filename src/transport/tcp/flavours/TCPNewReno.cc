@@ -155,7 +155,6 @@ void TCPNewReno::receivedDuplicateAck()
 {
     // Overworked....
     //TCPTahoeRenoFamily::receivedDuplicateAck();
-
     if (state->lossRecovery)
     {
         increaseCWND(state->snd_mss);
@@ -167,16 +166,17 @@ void TCPNewReno::receivedDuplicateAck()
                 tcpEV << "NewReno on dupAcks == DUPTHRESH(=3): perform Fast Retransmit, and enter Fast Recovery:";
                 state->lossRecovery = true;
                 state->recover = (state->snd_nxt);
-                tcpEV << " set recover=" << state->recover;
+                tcpEV << " set recover=" << state->recover;§
                 recalculateSlowStartThreshold();
                 conn->retransmitOneSegment(false);
                 state->firstPartialACK = false;
                 setCWND(state->ssthresh + (3 * state->snd_mss));
                 tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
     }
-    else if((!state->lossRecovery)){
+    else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0); // Just for Debug
-        sendData(false); // conn->sendOneNewSegment(false, state->snd_cwnd);
+        conn->sendOneNewSegment(false, state->snd_cwnd);
+        //sendData(false); // conn->sendOneNewSegment(false, state->snd_cwnd);
     }
     else{
         increaseCWND(0); // Just for Debug
