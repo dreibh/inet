@@ -159,7 +159,7 @@ void TCPNewReno::receivedDuplicateAck()
     {
         increaseCWND(state->snd_mss);
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
-        sendData(false); // is this pending data?
+        sendData(true); // is this pending data?
     }
     else if (state->dupacks == DUPTHRESH && (!state->lossRecovery)) // DUPTHRESH = 3
     {
@@ -175,7 +175,7 @@ void TCPNewReno::receivedDuplicateAck()
     }
     else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0); // Just for Debug
-        conn->sendOneNewSegment(false, state->snd_mss);
+        conn->sendOneNewSegment(false, state->snd_cwnd);
         //sendData(false); // conn->sendOneNewSegment(false, state->snd_cwnd);
     }
     else{
