@@ -5,7 +5,21 @@
 
 ####################### Config  Runs ##################### 
 
-RUNS="SCTP_Netperfmeter TCP_Netperfmeter CMT_Netperfmeter_Single CMT_Netperfmeter_Multi MPTCP_Netperfmeter_Single MPTCP_Netperfmeter_Multi Experiment_Bottleneck_TCP Experiment_Bottleneck_SCTP Experiment_Bottleneck_SCTP_TCP Experiment_Bottleneck_MPTCP_TCP Experiment_Bottleneck_CMT_SCTP"
+RUNS="TCP_RED_90_30_002_Netperfmeter 
+      TCP_FIF0_100_Netperfmeter 
+      SCTP_FIF0_100_Netperfmeter 
+      SCTP_RED_90_30_002_Netperfmeter
+      Bottleneck_SCTP_TCP_FIF0_100_Netperfmeter
+      Bottleneck_SCTP_TCP_RED_90_30_002_Netperfmeter
+      CMT_Netperfmeter_Single 
+      CMT_Netperfmeter_Multi 
+      MPTCP_Netperfmeter_Single 
+      MPTCP_Netperfmeter_Multi 
+      Experiment_Bottleneck_TCP 
+      Experiment_Bottleneck_SCTP  
+      Experiment_Bottleneck_MPTCP_TCP 
+      Experiment_Bottleneck_CMT_SCTP"
+
 DURATION_CLIENT="300 s"
 DURATION_SERVER="360 s"
 BIGFILES="NO" # YES
