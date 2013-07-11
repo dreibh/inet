@@ -49,8 +49,9 @@ uint32 TCPNewReno::bytesInFlight(){
    return std::min(state->snd_cwnd, state->snd_wnd);
 }
 
-void TCPNewReno::increaseCWND(uint32 increase){
+void TCPNewReno::increaseCWND(uint32 increase, bool print){
     state->snd_cwnd += increase;
+    if(print)
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
     return;
@@ -76,7 +77,7 @@ void TCPNewReno::updateCWND(uint32 firstSeqAcked){
 
        // perform Slow Start. RFC 2581: "During slow start, a TCP increments cwnd
        // by at most SMSS bytes for each ACK received that acknowledges new data."
-       increaseCWND(state->snd_mss);
+       increaseCWND(state->snd_mss,true);
        // Note: we could increase cwnd based on the number of bytes being
        // acknowledged by each arriving ACK, rather than by the number of ACKs
        // that arrive. This is called "Appropriate Byte Counting" (ABC) and is
@@ -92,7 +93,7 @@ void TCPNewReno::updateCWND(uint32 firstSeqAcked){
        acked = firstSeqAcked;
        double adder = static_cast<double> (state->snd_mss * state->snd_mss) / state->snd_cwnd;
        adder = std::max (1.0, adder);
-       increaseCWND(static_cast<uint32>(adder));
+       increaseCWND(static_cast<uint32>(adder),true);
 
        //
        // Note: some implementations use extra additive constant mss / 8 here
@@ -131,7 +132,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
 
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
-            increaseCWND(state->snd_mss); // Is this correct ?
+            increaseCWND(state->snd_mss, true); // Is this correct ?
             conn->sendAck(); // Fixme ...needed?
             // Retranmist
             conn->retransmitOneSegment(false); // we send an retransmit, so we are out
@@ -157,7 +158,7 @@ void TCPNewReno::receivedDuplicateAck()
     //TCPTahoeRenoFamily::receivedDuplicateAck();
     if (state->lossRecovery)
     {
-        increaseCWND(state->snd_mss);
+        increaseCWND(state->snd_mss, false);
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
         sendData(true); // is this pending data?
     }
@@ -174,12 +175,12 @@ void TCPNewReno::receivedDuplicateAck()
                 tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
     }
     else if((!state->lossRecovery) && state->limited_transmit_enabled){
-        increaseCWND(0); // Just for Debug
+        increaseCWND(0,true); // Just for Debug
         //conn->sendOneNewSegment(false, state->snd_cwnd);
         sendData(false); // conn->sendOneNewSegment(false, state->snd_cwnd);
     }
     else{
-        increaseCWND(0); // Just for Debug
+        increaseCWND(0,true); // Just for Debug
     }
 
 }

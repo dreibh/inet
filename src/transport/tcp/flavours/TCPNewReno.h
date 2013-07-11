@@ -51,7 +51,7 @@ class INET_API TCPNewReno : public TCPTahoeRenoFamily
     /** Redefine what should happen on retransmission */
     virtual void processRexmitTimer(TCPEventCode& event);
 
-    virtual void increaseCWND(uint32 increase);
+    virtual void increaseCWND(uint32 increase, bool print);
 
     virtual void decreaseCWND(uint32 decrease);
     virtual void setCWND(uint32 newCWND);
