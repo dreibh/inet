@@ -175,12 +175,12 @@ void TCPNewReno::receivedDuplicateAck()
                 tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
     }
     else if((!state->lossRecovery) && state->limited_transmit_enabled){
-        increaseCWND(0,true); // Just for Debug
+        increaseCWND(0,false); // Just for Debug
         //conn->sendOneNewSegment(false, state->snd_cwnd);
         sendData(false); // conn->sendOneNewSegment(false, state->snd_cwnd);
     }
     else{
-        increaseCWND(0,true); // Just for Debug
+        increaseCWND(0,false); // Just for Debug
     }
 
 }
