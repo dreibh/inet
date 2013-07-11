@@ -53,7 +53,7 @@ class INET_API TCPNewReno : public TCPTahoeRenoFamily
 
     virtual void increaseCWND(uint32 increase, bool print);
 
-    virtual void decreaseCWND(uint32 decrease);
+    virtual void decreaseCWND(uint32 decrease, bool print);
     virtual void setCWND(uint32 newCWND);
     // virtual void initializeTCPNewReno();
     virtual void initilazeCWND();

@@ -54,25 +54,23 @@ void TCPNewReno::increaseCWND(uint32 increase, bool print){
     if(print)
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if(print && (state->snd_cwnd > 300000))
-        printf("Woher");
+
     return;
 }
 
-void TCPNewReno::decreaseCWND(uint32 decrease){
+void TCPNewReno::decreaseCWND(uint32 decrease, bool print){
     state->snd_cwnd -= decrease;
+    if(print)
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if((state->snd_cwnd > 300000))
-        printf("Woher");
+
     return;
 }
 void TCPNewReno::setCWND(uint32 newCWND){
     state->snd_cwnd = newCWND;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
-    if((state->snd_cwnd > 300000))
-        printf("Woher");
+
     return;
 }
 
@@ -134,7 +132,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             // FIXME deflate ?? -> Try a probe
             if(state->snd_una < firstSeqAcked)
                 throw cRuntimeError("This is not possible");
-             decreaseCWND(std::min(state->snd_una - firstSeqAcked,state->snd_mss)); // Fixe ME -> How to do deflating
+             decreaseCWND(std::min(state->snd_una - firstSeqAcked,state->snd_mss), false); // Fixe ME -> How to do deflating
             tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
 
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
