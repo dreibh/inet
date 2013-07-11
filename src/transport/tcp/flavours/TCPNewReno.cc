@@ -54,6 +54,8 @@ void TCPNewReno::increaseCWND(uint32 increase, bool print){
     if(print)
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
+    if(print && (state->snd_cwnd > 300000))
+        printf("Woher");
     return;
 }
 
@@ -61,12 +63,16 @@ void TCPNewReno::decreaseCWND(uint32 decrease){
     state->snd_cwnd -= decrease;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
+    if((state->snd_cwnd > 300000))
+        printf("Woher");
     return;
 }
 void TCPNewReno::setCWND(uint32 newCWND){
     state->snd_cwnd = newCWND;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
+    if((state->snd_cwnd > 300000))
+        printf("Woher");
     return;
 }
 
