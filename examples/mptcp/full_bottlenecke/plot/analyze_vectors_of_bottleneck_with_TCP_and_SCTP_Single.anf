@@ -14,6 +14,8 @@
         <properties name="Y.Axis.Title" value="Window (w)"/>
         <properties name="Legend.Display" value="true"/>
         <properties name="Legend.Position" value="Inside"/>
+        <properties name="X.Axis.Min" value="0.0"/>
+        <properties name="X.Axis.Max" value="60.0"/>
       </items>
     </datasets>
   </datasets>
