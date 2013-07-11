@@ -1,9 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<scave:Analysis xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:scave="http://www.omnetpp.org/omnetpp/scave">
+<scave:Analysis xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:scave="http://www.omnetpp.org/omnetpp/scave">
   <inputs>
     <inputs name="/inet/examples/mptcp/full_bottlenecke/vectors.vec"/>
     <inputs name="/inet/examples/mptcp/full_bottlenecke/vectors.sca"/>
   </inputs>
-  <datasets/>
-  <chartSheets/>
+  <datasets>
+    <datasets name="Congestion Window">
+      <items xsi:type="scave:Add" filterPattern="file(/inet/examples/mptcp/full_bottlenecke/vectors.vec) AND attr:configname(TCP_RED_90_30_002_Netperfmeter) AND attr:runnumber(0) AND module(bottleneck.default1.tcp) AND name(cwnd)" type="VECTOR"/>
+      <items xsi:type="scave:LineChart" name="Congestion Window" lineNameFormat="">
+        <properties name="Graph.Title" value="TCP Reno Congestion Window on 10 Mbps link with Red Queue Router"/>
+        <properties name="X.Axis.Title" value="Time (s)"/>
+        <properties name="Y.Axis.Title" value="Window (w)"/>
+        <properties name="Legend.Display" value="true"/>
+        <properties name="Legend.Position" value="Inside"/>
+      </items>
+    </datasets>
+  </datasets>
+  <chartSheets>
+    <chartSheets name="default" charts="//@datasets/@datasets.0/@items.1"/>
+  </chartSheets>
 </scave:Analysis>
