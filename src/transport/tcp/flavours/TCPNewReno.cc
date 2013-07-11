@@ -132,7 +132,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
 
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
-            increaseCWND(state->snd_mss, true); // Is this correct ?
+            increaseCWND(state->snd_mss, false); // Is this correct ?
             conn->sendAck(); // Fixme ...needed?
             // Retranmist
             conn->retransmitOneSegment(false); // we send an retransmit, so we are out
