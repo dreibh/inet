@@ -56,7 +56,7 @@ exit 0
 fi
 	
 echo "Work on " $RUNS
-DELETE_FIRST="test_vectors.vec test_scalars.sca results.log abort.log"
+DELETE_FIRST="vectors/test_vectors.vec scalars/test_scalars.sca results.log abort.log"
 for FILE in $DELETE_FIRST
 do
 	if [ -e $FILE ];
@@ -69,8 +69,8 @@ done
 # Delete job files
 for JOB in $RUNS
 do
-	[ -f Archive/vectors_$JOB.vec ] && mv Archive/vectors_$JOB.vec Archive/old.vectors_$JOB.vec
-	[ -f Archive/scalars_$JOB.sca ] && mv Archive/scalars_$JOB.sca Archive/old.scalars_$JOB.sca
+	[ -f scalars/vectors_$JOB.vec ] && mv vectors/vectors_$JOB.vec vectors/old.vectors_$JOB.vec
+	[ -f scalars/scalars_$JOB.sca ] && mv vectors/scalars_$JOB.sca vectors/old.scalars_$JOB.sca
 done
 
 
@@ -105,11 +105,11 @@ do
 	sleep 5
 	if [ $BIGFILES == "yes" ];
 	then
-	cat vectors.vec >> Archive/test_vectors.vec
-	cat scalars.sca >> Archive/test_scalars.sca
+	cat vectors/vectors.vec >> vectors/test_vectors.vec
+	cat scalars/scalars.sca >> scalars/test_scalars.sca
 	fi
-	cp vectors.vec Archive/vectors_$JOB.vec
-	cp scalars.sca Archive/scalars_$JOB.sca
+	cp vectors/vectors.vec vectors/vectors_$JOB.vec
+	cp scalars/scalars.sca scalars/scalars_$JOB.sca
 	
    echo $JOB
 done
@@ -123,7 +123,7 @@ cat dat.log | grep "No more events -- simulation ended at event" >> results.log
 for JOB in $RUNS
 do  
 	echo $JOB  >> results.log
-	cat Archive/scalars_$JOB.sca | grep "Total Received Bytes" 	     >> results.log
-	cat Archive/scalars_$JOB.sca | grep "Total Reception Bit Rate"       >> results.log
+	cat scalars/scalars_$JOB.sca | grep "Total Received Bytes" 	     >> results.log
+	cat scalars/scalars_$JOB.sca | grep "Total Reception Bit Rate"       >> results.log
 done
 cat results.log
