@@ -21,7 +21,7 @@ RUNS="TCP_RED_90_30_002_Netperfmeter
       Experiment_Bottleneck_CMT_SCTP"
 
 DURATION_CLIENT="300 s"
-DURATION_SERVER="360 s"
+DURATION_SERVER="300 s"
 BIGFILES="NO" # YES
 ####################### Prepare Runs ######################
 echo "Get Parameter"
