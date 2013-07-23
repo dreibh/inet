@@ -686,21 +686,42 @@ void TCPConnection::configureStateVariables()
     state->sack_support = tcpMain->par("sackSupport"); // if set, this means that current host supports SACK (RFC 2018, 2883, 3517)
 
 #ifdef PRIVATE
-    if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "none") == 0) {
-        state->cmtBufferSplitVariant = TCPStateVariables::CBSV_None;
+    if(strcmp((const char*)tcpMain->par("cmtBufferOptimizationLevel"), "none") == 0) {
+        state->cmtBufferOptimizationLevel = TCPStateVariables::C_None;
     }
-    else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "senderOnly") == 0) {
-       state->cmtBufferSplitVariant = TCPStateVariables::CBSV_SenderOnly;
-    }
-    else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "receiverOnly") == 0) {
-       state->cmtBufferSplitVariant = TCPStateVariables::CBSV_ReceiverOnly;
-    }
-    else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "bothSides") == 0) {
-       state->cmtBufferSplitVariant = TCPStateVariables::CBSV_BothSides;
+    if(strcmp((const char*)tcpMain->par("cmtBufferOptimizationLevel"), "SCTPlikeGlobecom") == 0) {
+            state->cmtBufferOptimizationLevel = TCPStateVariables::C_SCTPlikeGlobecom;
     }
     else {
-       throw cRuntimeError("Bad setting for cmtBufferSplitVariant: %s\n",
-                (const char*)tcpMain->par("cmtBufferSplitVariant"));
+        throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
+                 (const char*)tcpMain->par("cmtBufferOptimizationLevel"));
+    }
+    switch(state->cmtBufferOptimizationLevel){
+    case TCPStateVariables::C_SCTPlikeGlobecom:
+        if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "none") == 0) {
+            state->cmtBufferSplitVariant = TCPStateVariables::C_SCTPlikeGlobecom_None;
+        }
+        else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "senderOnly") == 0) {
+           state->cmtBufferSplitVariant = TCPStateVariables:: C_SCTPlikeGlobecom_SenderOnly;
+        }
+        else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "receiverOnly") == 0) {
+           state->cmtBufferSplitVariant = TCPStateVariables:: C_SCTPlikeGlobecom_ReceiverOnly;
+        }
+        else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "bothSides") == 0) {
+           state->cmtBufferSplitVariant = TCPStateVariables::C_SCTPlikeGlobecom_BothSides;
+        }
+        else {
+           throw cRuntimeError("Bad setting for cmtBufferSplitVariant: %s\n",
+                    (const char*)tcpMain->par("cmtBufferSplitVariant"));
+        }
+        break;
+    case TCPStateVariables::C_MPTCPlike:
+        break;
+    case TCPStateVariables::C_None:
+        break;
+    default:
+        throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
+                          (const char*)tcpMain->par("cmtBufferOptimizationLevel"));
     }
 #endif
 
@@ -920,6 +941,33 @@ void TCPConnection::sendFin()
     // notify
     tcpAlgorithm->ackSent();
 }
+#ifdef PRIVATE
+bool TCPConnection::SCTPlikeBufferSplittingGlobecom(){
+    // ------ Sender Side -------------------------------------
+      if( (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_SenderOnly) ||
+          (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_BothSides) ) {
+
+         // Limit is 1/n of current sender-side buffer allocation
+         const uint32 limit = ((state->sendQueueLimit != 0) ? state->sendQueueLimit : 0xffffffff) / this->flow->getSubflows()->size();
+         if((state->snd_max + state->snd_una) + state->snd_mss > limit) {
+             return false;
+         }
+      }
+
+      // ------ Receiver Side -----------------------------------
+      if(
+          ( (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_ReceiverOnly) ||
+            (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_BothSides) ) ) {
+
+          // Limit is 1/n of current receiver-side buffer allocation
+          const uint32 limit = (state->rcv_adv + (state->snd_max + state->snd_una)) / this->flow->getSubflows()->size();
+          if((state->snd_max + state->snd_una) + state->snd_mss > limit + state->snd_mss) {
+              return false; // Yes, even if there is a open window we avoid to occupy more from the send buffer
+          }
+      }
+      return true;
+}
+#endif
 
 void TCPConnection::sendSegment(uint32 bytes)
 {
@@ -938,28 +986,20 @@ void TCPConnection::sendSegment(uint32 bytes)
     }
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath && this->isSubflow) {
-        // ------ Sender Side -------------------------------------
-        if( (state->cmtBufferSplitVariant == TCPStateVariables::CBSV_SenderOnly) ||
-            (state->cmtBufferSplitVariant == TCPStateVariables::CBSV_BothSides) ) {
+        switch(state->cmtBufferOptimizationLevel){
 
-           // Limit is 1/n of current sender-side buffer allocation
-           const uint32 limit = ((state->sendQueueLimit != 0) ? state->sendQueueLimit : 0xffffffff) / this->flow->getSubflows()->size();
-           if((state->snd_max + state->snd_una) + state->snd_mss > limit) {
-               return;
-           }
+        case TCPStateVariables::C_None:
+            // turn all Bufferoptimization off
+            break;
+        case TCPStateVariables::C_SCTPlikeGlobecom:
+            if(!SCTPlikeBufferSplittingGlobecom()) return;
+            break;
+        default:
+            throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
+                                   (const char*)getTcpMain()->par("cmtBufferOptimizationLevel"));
         }
 
-        // ------ Receiver Side -----------------------------------
-        if(
-            ( (state->cmtBufferSplitVariant == TCPStateVariables::CBSV_ReceiverOnly) ||
-              (state->cmtBufferSplitVariant == TCPStateVariables::CBSV_BothSides) ) ) {
 
-            // Limit is 1/n of current receiver-side buffer allocation
-            const uint32 limit = (state->rcv_adv + (state->snd_max + state->snd_una)) / this->flow->getSubflows()->size();
-            if((state->snd_max + state->snd_una) + state->snd_mss > limit + state->snd_mss) {
-                return; // Yes, even if there is a open window we avoid to occupy more from the send buffer
-            }
-        }
     }
 #endif
 

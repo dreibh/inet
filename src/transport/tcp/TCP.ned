@@ -216,8 +216,9 @@ simple TCP like ITCP
        
         string cmtCCVariant   				= default("off"); 
         string cmtRetransmissionVariant     = default("normal"); 
+        string cmtBufferOptimizationLevel   = default("none"); // C_SCTPlikeGlobecom, C_MPTCPlike
+        // SCTPlikeGlobecom
         string cmtBufferSplitVariant        = default("none");
-        
         string sendQueueClass = default("");    // Obsolete!!!
         string receiveQueueClass = default(""); // Obsolete!!!
         bool multipath_DSSDataACK8 = default(false); // switch sending DSS ACK with 8 or 4 Octets
