@@ -294,6 +294,15 @@ class INET_API TCPStateVariables : public cObject
 #ifdef PRIVATE
     int64 requested;
     int64 enqueued;
+
+    enum BufferSplitVariant {
+       CBSV_None         = 0,
+       CBSV_SenderOnly   = 1,
+       CBSV_ReceiverOnly = 2,
+       CBSV_BothSides    = 3
+    };
+
+    BufferSplitVariant cmtBufferSplitVariant;
 #endif
     // those counters would logically belong to TCPAlgorithm, but it's a lot easier to manage them here
     uint32 dupacks;          // current number of received consecutive duplicate ACKs

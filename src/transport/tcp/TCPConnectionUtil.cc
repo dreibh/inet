@@ -685,6 +685,25 @@ void TCPConnection::configureStateVariables()
     state->ts_support = tcpMain->par("timestampSupport"); // if set, this means that current host supports TS (RFC 1323)
     state->sack_support = tcpMain->par("sackSupport"); // if set, this means that current host supports SACK (RFC 2018, 2883, 3517)
 
+#ifdef PRIVATE
+    if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "none") == 0) {
+        state->cmtBufferSplitVariant = TCPStateVariables::CBSV_None;
+    }
+    else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "senderOnly") == 0) {
+       state->cmtBufferSplitVariant = TCPStateVariables::CBSV_SenderOnly;
+    }
+    else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "receiverOnly") == 0) {
+       state->cmtBufferSplitVariant = TCPStateVariables::CBSV_ReceiverOnly;
+    }
+    else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "bothSides") == 0) {
+       state->cmtBufferSplitVariant = TCPStateVariables::CBSV_BothSides;
+    }
+    else {
+       throw cRuntimeError("Bad setting for cmtBufferSplitVariant: %s\n",
+                (const char*)tcpMain->par("cmtBufferSplitVariant"));
+    }
+#endif
+
     if (state->sack_support)
     {
         std::string algorithmName1 = "TCPReno";
@@ -917,6 +936,33 @@ void TCPConnection::sendSegment(uint32 bytes)
             rexmitQueue->info();
         }
     }
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && this->isSubflow) {
+        // ------ Sender Side -------------------------------------
+        if( (state->cmtBufferSplitVariant == TCPStateVariables::CBSV_SenderOnly) ||
+            (state->cmtBufferSplitVariant == TCPStateVariables::CBSV_BothSides) ) {
+
+           // Limit is 1/n of current sender-side buffer allocation
+           const uint32 limit = ((state->sendQueueLimit != 0) ? state->sendQueueLimit : 0xffffffff) / this->flow->getSubflows()->size();
+           if((state->snd_max + state->snd_una) + state->snd_mss > limit) {
+               return;
+           }
+        }
+
+        // ------ Receiver Side -----------------------------------
+        if(
+            ( (state->cmtBufferSplitVariant == TCPStateVariables::CBSV_ReceiverOnly) ||
+              (state->cmtBufferSplitVariant == TCPStateVariables::CBSV_BothSides) ) ) {
+
+            // Limit is 1/n of current receiver-side buffer allocation
+            const uint32 limit = (state->rcv_adv + (state->snd_max + state->snd_una)) / this->flow->getSubflows()->size();
+            if((state->snd_max + state->snd_una) + state->snd_mss > limit + state->snd_mss) {
+                return; // Yes, even if there is a open window we avoid to occupy more from the send buffer
+            }
+        }
+    }
+#endif
+
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
     if(buffered == 0)
         fprintf(stderr,"Why have we not buffered any data?\n");

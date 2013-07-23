@@ -214,7 +214,10 @@ simple TCP like ITCP
         bool recordStats = default(true); // recording of seqNum etc. into output vectors enabled/disabled
 	
        
-        string cmtCCVariant   = default("off"); 
+        string cmtCCVariant   				= default("off"); 
+        string cmtRetransmissionVariant     = default("normal"); 
+        string cmtBufferSplitVariant        = default("none");
+        
         string sendQueueClass = default("");    // Obsolete!!!
         string receiveQueueClass = default(""); // Obsolete!!!
         bool multipath_DSSDataACK8 = default(false); // switch sending DSS ACK with 8 or 4 Octets
