@@ -730,7 +730,8 @@ void TCPConnection::configureStateVariables()
         std::string algorithmName1 = "TCPReno";
         std::string algorithmName2 = tcpMain->par("tcpAlgorithmClass");
 
-        if (algorithmName1 != algorithmName2) // TODO add additional checks for new SACK supporting algorithms here once they are implemented
+        std::string algorithmName3 = "TCPNewReno";
+        if ((algorithmName1 != algorithmName2) && (algorithmName3 != algorithmName2)) // TODO add additional checks for new SACK supporting algorithms here once they are implemented
         {
             EV << "If you want to use TCP SACK please set tcpAlgorithmClass to TCPReno\n";
 
