@@ -20,8 +20,8 @@ RUNS="TCP_RED_90_30_002_Netperfmeter
       Experiment_Bottleneck_MPTCP_TCP 
       Experiment_Bottleneck_CMT_SCTP"
 
-DURATION_CLIENT="300 s"
-DURATION_SERVER="300 s"
+DURATION_CLIENT="900 s"
+DURATION_SERVER="900 s"
 BIGFILES="NO" # YES
 ####################### Prepare Runs ######################
 echo "Get Parameter"
@@ -70,6 +70,7 @@ done
 for JOB in $RUNS
 do
 	[ -f scalars/vectors_$JOB.vec ] && mv vectors/vectors_$JOB.vec vectors/old.vectors_$JOB.vec
+	[ -f scalars/vectors_$JOB.vci ] && mv vectors/vectors_$JOB.vec vectors/old.vectors_$JOB.vci
 	[ -f scalars/scalars_$JOB.sca ] && mv vectors/scalars_$JOB.sca vectors/old.scalars_$JOB.sca
 done
 
@@ -106,9 +107,11 @@ do
 	if [ $BIGFILES == "yes" ];
 	then
 	cat vectors/vectors.vec >> vectors/test_vectors.vec
+	cat vectors/vectors.vci >> vectors/test_vectors.vci
 	cat scalars/scalars.sca >> scalars/test_scalars.sca
 	fi
 	cp vectors/vectors.vec vectors/vectors_$JOB.vec
+	cp vectors/vectors.vci vectors/vectors_$JOB.vci
 	cp scalars/scalars.sca scalars/scalars_$JOB.sca
 	
    echo $JOB
