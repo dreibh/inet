@@ -565,8 +565,8 @@ class INET_API TCPConnection
     virtual void removeVectors();
     virtual void renameMPTCPVectors(char* cnt);
 
-
     virtual bool SCTPlikeBufferSplittingGlobecom();
+    virtual bool MPTCPlikeBufferSplitting(uint32 bytes);
 #endif  // PRIVATE
 
     /** Utility: send ACK */

@@ -689,7 +689,7 @@ void TCPConnection::configureStateVariables()
     if(strcmp((const char*)tcpMain->par("cmtBufferOptimizationLevel"), "none") == 0) {
         state->cmtBufferOptimizationLevel = TCPStateVariables::C_None;
     }
-    if(strcmp((const char*)tcpMain->par("cmtBufferOptimizationLevel"), "SCTPlikeGlobecom") == 0) {
+    else if(strcmp((const char*)tcpMain->par("cmtBufferOptimizationLevel"), "SCTPlikeGlobecom") == 0) {
             state->cmtBufferOptimizationLevel = TCPStateVariables::C_SCTPlikeGlobecom;
     }
     else {
@@ -967,6 +967,22 @@ bool TCPConnection::SCTPlikeBufferSplittingGlobecom(){
       }
       return true;
 }
+
+
+bool TCPConnection::MPTCPlikeBufferSplitting(uint32 bytes){
+    // Is there a message marked for retransmission
+
+    // Do penalization
+    // decrease the window of the  "slowest" path
+
+    // In every RTT check and penalization
+
+    // If penalization aktivated and we have no send side blocking (enough snd buffer memory)
+
+    // Check for other sending queues if there exists a srrt 4 time less than the current path
+
+    return false;
+}
 #endif
 
 void TCPConnection::sendSegment(uint32 bytes)
@@ -992,14 +1008,15 @@ void TCPConnection::sendSegment(uint32 bytes)
             // turn all Bufferoptimization off
             break;
         case TCPStateVariables::C_SCTPlikeGlobecom:
-            if(!SCTPlikeBufferSplittingGlobecom()) return;
+            if(!SCTPlikeBufferSplittingGlobecom()) return; // avoid of buffer blocking by buffer splitting
+            break;
+        case TCPStateVariables::C_MPTCPlike:
+            if(!MPTCPlikeBufferSplitting(bytes)) return; // avoid of buffer blocking by buffer splitting
             break;
         default:
             throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
                                    (const char*)getTcpMain()->par("cmtBufferOptimizationLevel"));
         }
-
-
     }
 #endif
 
@@ -1061,10 +1078,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     tcpseg->setAckNo(state->rcv_nxt);
     tcpseg->setAckBit(true);
     tcpseg->setWindow(updateRcvWnd());
-// DEBUG FIXME  REMOVE
-    if(tcpseg->getSequenceNo() == 39395084)
-        fprintf(stderr,"Found searched seq: 39395084 ");
-// END DEBUG
+
     // TBD when to set PSH bit?
     // TBD set URG bit if needed
     ASSERT(bytes == tcpseg->getPayloadLength());
