@@ -1275,7 +1275,13 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
             // we need to update send window even if the ACK is a dupACK, because rcv win
             // could have been changed if faulty data receiver is not respecting the "do not shrink window" rule
             updateWndInfo(tcpseg);
-
+#ifdef PRIVATE
+            bool doit = true;
+            if(this->getTcpMain()->multipath)
+                if(this->flow->isFIN)
+            doit = false;
+            if(doit)
+#endif // PRIVATE
             tcpAlgorithm->receivedDuplicateAck();
         }
         else
