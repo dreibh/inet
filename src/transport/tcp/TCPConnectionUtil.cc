@@ -1072,7 +1072,13 @@ void TCPConnection::sendSegment(uint32 bytes)
 #endif // PRIVATE
 
     // if sack_enabled copy region of tcpseg to rexmitQueue
-
+#ifdef PRIVATE
+    bool doenq = true;
+    if(this->getTcpMain()->multipath)
+        if(this->flow->isFIN)
+            doenq = false;
+    if(doenq)
+#endif // PRIVATE
     if (state->sack_enabled && (!this->getState()->fin_rcvd) && (!this->getState()->send_fin))
         rexmitQueue->enqueueSentData(state->snd_nxt, state->snd_nxt + bytes);
 
