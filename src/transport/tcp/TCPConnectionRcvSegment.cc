@@ -1334,6 +1334,13 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
         // acked data no longer needed in send queue
         sendQueue->discardUpTo(discardUpToSeq);
 
+#ifdef PRIVATE
+    bool doenq = true;
+    if(this->getTcpMain()->multipath)
+        if(this->flow->isFIN)
+            doenq = false;
+    if(doenq)
+#endif // PRIVATE
         // acked data no longer needed in rexmit queue
         if (state->sack_enabled)
             rexmitQueue->discardUpTo(discardUpToSeq);
