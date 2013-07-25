@@ -1022,8 +1022,10 @@ void TCPConnection::sendSegment(uint32 bytes)
 #endif
 
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
-    if(buffered == 0)
+    if(buffered == 0){
         fprintf(stderr,"Why have we not buffered any data?\n");
+        return;
+    }
     if (bytes > buffered) // last segment?
         bytes = buffered;
 
