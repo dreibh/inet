@@ -294,6 +294,20 @@ class INET_API TCPStateVariables : public cObject
 #ifdef PRIVATE
     int64 requested;
     int64 enqueued;
+    enum BufferOptimizationLevel {
+       C_None                           = 0,
+       C_SCTPlikeGlobecom               = 1,
+       C_MPTCPlike                      = 2,
+    };
+    enum BufferSplitVariant {
+       C_SCTPlikeGlobecom_None          = 0,
+       C_SCTPlikeGlobecom_SenderOnly    = 1,
+       C_SCTPlikeGlobecom_ReceiverOnly  = 2,
+       C_SCTPlikeGlobecom_BothSides     = 3
+    };
+    BufferOptimizationLevel cmtBufferOptimizationLevel;
+    BufferSplitVariant cmtBufferSplitVariant;
+
 #endif
     // those counters would logically belong to TCPAlgorithm, but it's a lot easier to manage them here
     uint32 dupacks;          // current number of received consecutive duplicate ACKs
@@ -471,6 +485,7 @@ class INET_API TCPConnection
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     /** Utility: writeHeaderOptions (Currently only EOL, NOP, MSS, WS, SACK_PERMITTED, SACK and TS are implemented) */
     virtual TCPSegment writeHeaderOptions(TCPSegment *tcpseg);
+
 #endif  // PRIVATE
     virtual void process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
@@ -549,6 +564,9 @@ class INET_API TCPConnection
     virtual TCPConnection *cloneMPTCPConnection(bool active, uint64 token, IPvXAddress laddr, IPvXAddress raddr);
     virtual void removeVectors();
     virtual void renameMPTCPVectors(char* cnt);
+
+    virtual bool SCTPlikeBufferSplittingGlobecom();
+    virtual bool MPTCPlikeBufferSplitting(uint32 bytes);
 #endif  // PRIVATE
 
     /** Utility: send ACK */

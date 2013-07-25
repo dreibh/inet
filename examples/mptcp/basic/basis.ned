@@ -21,8 +21,8 @@ network basic
         channel C1 extends DatarateChannel
         {
             datarate = 100 Mbps;
-            delay = 0.1 ms;
-            per = 0;
+            delay = 5 ms;
+            per = 0.001;
         }
 
     submodules:

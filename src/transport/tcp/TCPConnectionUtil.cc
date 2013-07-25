@@ -685,6 +685,46 @@ void TCPConnection::configureStateVariables()
     state->ts_support = tcpMain->par("timestampSupport"); // if set, this means that current host supports TS (RFC 1323)
     state->sack_support = tcpMain->par("sackSupport"); // if set, this means that current host supports SACK (RFC 2018, 2883, 3517)
 
+#ifdef PRIVATE
+    if(strcmp((const char*)tcpMain->par("cmtBufferOptimizationLevel"), "none") == 0) {
+        state->cmtBufferOptimizationLevel = TCPStateVariables::C_None;
+    }
+    else if(strcmp((const char*)tcpMain->par("cmtBufferOptimizationLevel"), "SCTPlikeGlobecom") == 0) {
+            state->cmtBufferOptimizationLevel = TCPStateVariables::C_SCTPlikeGlobecom;
+    }
+    else {
+        throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
+                 (const char*)tcpMain->par("cmtBufferOptimizationLevel"));
+    }
+    switch(state->cmtBufferOptimizationLevel){
+    case TCPStateVariables::C_SCTPlikeGlobecom:
+        if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "none") == 0) {
+            state->cmtBufferSplitVariant = TCPStateVariables::C_SCTPlikeGlobecom_None;
+        }
+        else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "senderOnly") == 0) {
+           state->cmtBufferSplitVariant = TCPStateVariables:: C_SCTPlikeGlobecom_SenderOnly;
+        }
+        else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "receiverOnly") == 0) {
+           state->cmtBufferSplitVariant = TCPStateVariables:: C_SCTPlikeGlobecom_ReceiverOnly;
+        }
+        else if(strcmp((const char*)tcpMain->par("cmtBufferSplitVariant"), "bothSides") == 0) {
+           state->cmtBufferSplitVariant = TCPStateVariables::C_SCTPlikeGlobecom_BothSides;
+        }
+        else {
+           throw cRuntimeError("Bad setting for cmtBufferSplitVariant: %s\n",
+                    (const char*)tcpMain->par("cmtBufferSplitVariant"));
+        }
+        break;
+    case TCPStateVariables::C_MPTCPlike:
+        break;
+    case TCPStateVariables::C_None:
+        break;
+    default:
+        throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
+                          (const char*)tcpMain->par("cmtBufferOptimizationLevel"));
+    }
+#endif
+
     if (state->sack_support)
     {
         std::string algorithmName1 = "TCPReno";
@@ -901,6 +941,49 @@ void TCPConnection::sendFin()
     // notify
     tcpAlgorithm->ackSent();
 }
+#ifdef PRIVATE
+bool TCPConnection::SCTPlikeBufferSplittingGlobecom(){
+    // ------ Sender Side -------------------------------------
+      if( (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_SenderOnly) ||
+          (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_BothSides) ) {
+
+         // Limit is 1/n of current sender-side buffer allocation
+         const uint32 limit = ((state->sendQueueLimit != 0) ? state->sendQueueLimit : 0xffffffff) / this->flow->getSubflows()->size();
+         if((state->snd_max + state->snd_una) + state->snd_mss > limit) {
+             return false;
+         }
+      }
+
+      // ------ Receiver Side -----------------------------------
+      if(
+          ( (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_ReceiverOnly) ||
+            (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_BothSides) ) ) {
+
+          // Limit is 1/n of current receiver-side buffer allocation
+          const uint32 limit = (state->rcv_adv + (state->snd_max + state->snd_una)) / this->flow->getSubflows()->size();
+          if((state->snd_max + state->snd_una) + state->snd_mss > limit + state->snd_mss) {
+              return false; // Yes, even if there is a open window we avoid to occupy more from the send buffer
+          }
+      }
+      return true;
+}
+
+
+bool TCPConnection::MPTCPlikeBufferSplitting(uint32 bytes){
+    // Is there a message marked for retransmission
+
+    // Do penalization
+    // decrease the window of the  "slowest" path
+
+    // In every RTT check and penalization
+
+    // If penalization aktivated and we have no send side blocking (enough snd buffer memory)
+
+    // Check for other sending queues if there exists a srrt 4 time less than the current path
+
+    return false;
+}
+#endif
 
 void TCPConnection::sendSegment(uint32 bytes)
 {
@@ -917,6 +1000,26 @@ void TCPConnection::sendSegment(uint32 bytes)
             rexmitQueue->info();
         }
     }
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && this->isSubflow) {
+        switch(state->cmtBufferOptimizationLevel){
+
+        case TCPStateVariables::C_None:
+            // turn all Bufferoptimization off
+            break;
+        case TCPStateVariables::C_SCTPlikeGlobecom:
+            if(!SCTPlikeBufferSplittingGlobecom()) return; // avoid of buffer blocking by buffer splitting
+            break;
+        case TCPStateVariables::C_MPTCPlike:
+            if(!MPTCPlikeBufferSplitting(bytes)) return; // avoid of buffer blocking by buffer splitting
+            break;
+        default:
+            throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
+                                   (const char*)getTcpMain()->par("cmtBufferOptimizationLevel"));
+        }
+    }
+#endif
+
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
     if(buffered == 0)
         fprintf(stderr,"Why have we not buffered any data?\n");
@@ -975,10 +1078,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     tcpseg->setAckNo(state->rcv_nxt);
     tcpseg->setAckBit(true);
     tcpseg->setWindow(updateRcvWnd());
-// DEBUG FIXME  REMOVE
-    if(tcpseg->getSequenceNo() == 39395084)
-        fprintf(stderr,"Found searched seq: 39395084 ");
-// END DEBUG
+
     // TBD when to set PSH bit?
     // TBD set URG bit if needed
     ASSERT(bytes == tcpseg->getPayloadLength());

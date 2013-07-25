@@ -140,6 +140,14 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             conn->sendAck(); // Fixme ...needed?
             // Retranmist
             conn->retransmitOneSegment(false); // we send an retransmit, so we are out
+
+            if (state->sack_enabled)
+            {
+                conn->setPipe();
+                if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
+                    conn->sendDataDuringLossRecoveryPhase(state->snd_cwnd);
+
+            }
             return;
         }
     }else{
@@ -177,6 +185,15 @@ void TCPNewReno::receivedDuplicateAck()
                 state->firstPartialACK = false;
                 setCWND(state->ssthresh + (3 * state->snd_mss));
                 tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
+
+                if (state->sack_enabled)
+                {
+                    conn->setPipe();
+                    if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
+                        conn->sendDataDuringLossRecoveryPhase(state->snd_cwnd);
+
+                }
+
     }
     else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0,false); // Just for Debug
