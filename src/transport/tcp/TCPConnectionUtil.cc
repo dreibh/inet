@@ -1391,8 +1391,8 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
         if(doit)
         if (state->sack_enabled){
             uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
-            ASSERT(offset != 0);
-            bytes = offset - state->snd_una;
+            if(offset != 0);
+                bytes = offset - state->snd_una;
         }
 #endif // PRIVATE
         sendSegment(bytes);
