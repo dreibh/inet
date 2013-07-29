@@ -377,7 +377,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
         //"
 #ifdef PRIVATE
         // FIXME
-        if(isSubflow && state->fin_rcvd)
+        if((isSubflow && state->fin_rcvd) || ((isSubflow)?flow->isFIN:false) )
             return TCP_E_IGNORE;
 #endif // PRIVATE
         bool ok = processAckInEstabEtc(tcpseg);

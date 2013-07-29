@@ -1384,6 +1384,11 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
         // Not every packet has the same length
         // we have to figure out what is inside the SACK Queue
         // TRY SACK Fix
+        bool doit = true;
+        if(this->getTcpMain()->multipath)
+            if(flow->isFIN)
+                doit = false;
+        if(doit)
         if (state->sack_enabled){
             uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
             ASSERT(offset != 0);
