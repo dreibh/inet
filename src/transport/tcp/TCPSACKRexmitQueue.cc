@@ -402,8 +402,10 @@ void TCPSACKRexmitQueue::checkSackBlock(uint32 fromSeqNum, uint32 &length, bool 
 {
     int32 offset = 0;
 #ifdef PRIVATE
-    if(this->conn->getState()->send_fin)
-          offset = 1; // One for the FIN
+    if(this->conn->getState()->send_fin){
+        offset = 1;
+          return; // One for the FIN FIXME
+    }
 #endif // ENDIF
     if(!(seqLE(begin, fromSeqNum) && seqLess(fromSeqNum - offset, end))){
         ASSERT(seqLE(begin, fromSeqNum) && seqLess(fromSeqNum - offset, end));

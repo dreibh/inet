@@ -141,7 +141,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             // Retranmist
             conn->retransmitOneSegment(false); // we send an retransmit, so we are out
 
-            if (state->sack_enabled)
+            if (state->sack_enabled  && (!state->snd_fin_seq))
             {
                 conn->setPipe();
                 if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
@@ -186,7 +186,7 @@ void TCPNewReno::receivedDuplicateAck()
                 setCWND(state->ssthresh + (3 * state->snd_mss));
                 tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
 
-                if (state->sack_enabled)
+                if (state->sack_enabled && (!state->snd_fin_seq))
                 {
                     conn->setPipe();
                     if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
