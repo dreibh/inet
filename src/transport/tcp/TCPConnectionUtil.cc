@@ -990,8 +990,10 @@ void TCPConnection::sendSegment(uint32 bytes)
 {
     if (state->sack_enabled && state->afterRto)
     {
+        uint32 forward = 0;
         // check rexmitQ and try to forward snd_nxt before sending new data
-        uint32 forward = rexmitQueue->checkRexmitQueueForSackedOrRexmittedSegments(state->snd_nxt);
+        if(rexmitQueue->getQueueLength() > 0)
+            forward = rexmitQueue->checkRexmitQueueForSackedOrRexmittedSegments(state->snd_nxt);
 
         if (forward > 0)
         {
@@ -1126,7 +1128,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
     uint32 old_highRxt = 0;
 
-    if (state->sack_enabled)
+    if (state->sack_enabled && (rexmitQueue->getQueueLength() > 0 ))
         old_highRxt = rexmitQueue->getHighestRexmittedSeqNum();
 
     // check how many bytes we have

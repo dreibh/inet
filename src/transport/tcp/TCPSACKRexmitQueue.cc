@@ -93,7 +93,7 @@ void TCPSACKRexmitQueue::discardUpTo(uint32 seqNum)
 
 void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
 {
-    ASSERT(seqLE(begin, fromSeqNum) && seqLE(fromSeqNum, end));
+    ASSERT(seqLE(begin - 1, fromSeqNum) && seqLE(fromSeqNum, end));
 
     bool found = false;
     Region region;
@@ -120,7 +120,7 @@ void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
             i++;
 
         ASSERT(i != rexmitQueue.end());
-        ASSERT(seqLE(i->beginSeqNum, fromSeqNum) && seqLess(fromSeqNum, i->endSeqNum));
+        ASSERT(seqLE(i->beginSeqNum-1, fromSeqNum) && seqLess(fromSeqNum, i->endSeqNum));
 
         if (i->beginSeqNum != fromSeqNum)
         {
@@ -187,7 +187,10 @@ bool TCPSACKRexmitQueue::checkQueue() const
     for (RexmitQueue::const_iterator i = rexmitQueue.begin(); i != rexmitQueue.end(); i++)
     {
         f = f && (b == i->beginSeqNum);
-        f = f && seqLess(i->beginSeqNum, i->endSeqNum);
+        f = f && seqLE(i->beginSeqNum, i->endSeqNum);
+        if(!f){
+            fprintf(stderr,"here is a gap");
+        }
         b = i->endSeqNum;
     }
 
@@ -300,7 +303,7 @@ uint32 TCPSACKRexmitQueue::getHighestRexmittedSeqNum() const
 
 uint32 TCPSACKRexmitQueue::checkRexmitQueueForSackedOrRexmittedSegments(uint32 fromSeqNum) const
 {
-    ASSERT(seqLE(begin, fromSeqNum) && seqLE(fromSeqNum, end));
+    ASSERT(seqLE(begin - 1, fromSeqNum) && seqLE(fromSeqNum, end));
 
     if (rexmitQueue.empty() || (end == fromSeqNum))
         return 0;
