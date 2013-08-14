@@ -110,7 +110,7 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
 }
 
 
-void MPTCP_RFC6356::increaseCWND(uint32 ackedBytes){
+void MPTCP_RFC6356::increaseCWND(uint32 ackedBytes, bool print){
 
 // cite RFC6356
 /**
@@ -139,6 +139,7 @@ void MPTCP_RFC6356::increaseCWND(uint32 ackedBytes){
     }
 
     state->snd_cwnd += increase;
+    if(print)
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
 
