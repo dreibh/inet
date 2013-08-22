@@ -181,6 +181,9 @@ void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
 
 bool TCPSACKRexmitQueue::checkQueue() const
 {
+#ifdef FAST
+    return true;
+#endif
     uint32 b = begin;
     bool f = true;
 
