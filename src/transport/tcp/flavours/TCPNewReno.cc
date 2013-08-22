@@ -245,6 +245,8 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
     tcpEV << "Begin Slow Start: resetting cwnd to " << state->snd_cwnd
           << ", ssthresh=" << state->ssthresh << "\n";
     state->afterRto = true;
+
     conn->retransmitOneSegment(true);
+    state->isRTX = false;
 }
 

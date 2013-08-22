@@ -228,7 +228,7 @@ void TCPBaseAlg::processTimer(cMessage *timer, TCPEventCode& event)
 void TCPBaseAlg::processRexmitTimer(TCPEventCode& event)
 {
     tcpEV << "TCB: " << state->info() << "\n";
-
+    state->isRTX = true;
     //"
     // For any state if the retransmission timeout expires on a segment in
     // the retransmission queue, send the segment at the front of the

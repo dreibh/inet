@@ -119,6 +119,7 @@ TCPStateVariables::TCPStateVariables()
     sendQueueLimit = 0;
     requested = 0;
     enqueued = 0;
+    isRTX = false;
 }
 
 std::string TCPStateVariables::info() const

@@ -294,6 +294,7 @@ class INET_API TCPStateVariables : public cObject
 #ifdef PRIVATE
     int64 requested;
     int64 enqueued;
+    bool isRTX;
     enum BufferOptimizationLevel {
        C_None                           = 0,
        C_SCTPlikeGlobecom               = 1,

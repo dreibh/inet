@@ -1083,7 +1083,7 @@ void TCPConnection::sendSegment(uint32 bytes)
             doenq = false;
     if(doenq)
 #endif // PRIVATE
-    if (state->sack_enabled && (!this->getState()->fin_rcvd) && (!this->getState()->send_fin))
+    if (state->sack_enabled && (!this->getState()->fin_rcvd) && (!this->getState()->send_fin) && (!state->isRTX))
         rexmitQueue->enqueueSentData(state->snd_nxt, state->snd_nxt + bytes);
 
     tcpseg->setAckNo(state->rcv_nxt);
@@ -1117,6 +1117,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     
     // send it
     sendToIP(tcpseg);
+
 
 }
 
