@@ -33,9 +33,12 @@ TCPMsgBasedRcvQueue::~TCPMsgBasedRcvQueue()
 {
     while (! payloadList.empty())
     {
+#ifndef PRIVATE
+        // don t need this output
         EV << "SendQueue Destructor: Drop msg from " << this->getFullPath() <<
                 " Queue: offset=" << payloadList.front().seqNo <<
-                ", length=" << payloadList.front().packet->getByteLength() << endl;
+               ", length=" << payloadList.front().packet->getByteLength() << endl;
+#endif
         delete payloadList.front().packet;
         payloadList.pop_front();
     }
