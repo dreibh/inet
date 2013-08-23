@@ -1050,7 +1050,7 @@ void TCPConnection::sendSegment(uint32 bytes)
 		if (state->sack_enabled){
 			 uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
 			 if(offset > 0)	// we know this segment.... send only segment size
-				 bytes = offset - state->snd_una;	// FIXME: In this case we overwrite for a retransmission the sending window
+				 bytes = std::min(bytes,(offset - state->snd_una));	// FIXME: In this case we overwrite for a retransmission the sending window
 		}
     }
 #endif // PRIVATE
@@ -1058,7 +1058,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     ASSERT(options_len < state->snd_mss);
 
     if (bytes + options_len > state->snd_mss)
-        bytes = state->snd_mss - options_len;
+        bytes = std::min(bytes,(state->snd_mss - options_len));
 
     state->sentBytes = bytes;
 
