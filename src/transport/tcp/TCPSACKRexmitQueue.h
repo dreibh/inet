@@ -23,7 +23,15 @@
 #include "TCPConnection.h"
 #include "TCPSegment.h"
 
+struct Region
+{
+    uint32 beginSeqNum;
+    uint32 endSeqNum;
+    bool sacked;      // indicates whether region has already been sacked by data receiver
+    bool rexmitted;   // indicates whether region has already been retransmitted by data sender
+};
 
+typedef std::list<Region> RexmitQueue;
 /**
  * Retransmission data for SACK.
  */
@@ -32,19 +40,11 @@ class INET_API TCPSACKRexmitQueue
   public:
     TCPConnection *conn;  // the connection that owns this queue
 
-    struct Region
-    {
-        uint32 beginSeqNum;
-        uint32 endSeqNum;
-        bool sacked;      // indicates whether region has already been sacked by data receiver
-        bool rexmitted;   // indicates whether region has already been retransmitted by data sender
-    };
-
-    typedef std::list<Region> RexmitQueue;
-    RexmitQueue rexmitQueue; // rexmitQueue is ordered by seqnum, and doesn't have overlapped Regions
 
     uint32 begin;  // 1st sequence number stored
     uint32 end;    // last sequence number stored + 1
+
+    RexmitQueue rexmitQueue; // rexmitQueue is ordered by seqnum, and doesn't have overlapped Regions
 
   public:
     /**
@@ -173,6 +173,7 @@ class INET_API TCPSACKRexmitQueue
      */
     virtual void checkSackBlock(uint32 seqNum, uint32 &length, bool &sacked, bool &rexmitted) const;
 
+    virtual RexmitQueue* getRawQueue();
   protected:
     /*
      * Returns if TCPSACKRexmitQueue is valid or not.

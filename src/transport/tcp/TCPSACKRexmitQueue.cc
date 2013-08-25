@@ -60,6 +60,9 @@ void TCPSACKRexmitQueue::info() const
         j++;
     }
 }
+RexmitQueue* TCPSACKRexmitQueue::getRawQueue(){
+    return &rexmitQueue;
+}
 
 void TCPSACKRexmitQueue::discardUpTo(uint32 seqNum)
 {
@@ -181,7 +184,7 @@ void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
 
 bool TCPSACKRexmitQueue::checkQueue() const
 {
-#ifdef FAST
+#ifdef PRIVATE
     return true;
 #endif
     uint32 b = begin;
@@ -365,6 +368,11 @@ uint32 TCPSACKRexmitQueue::getAmountOfSackedBytes(uint32 fromSeqNum) const
     {
         if (i->sacked)
             bytes += (i->endSeqNum - i->beginSeqNum);
+#ifdef PRIVATE
+        // it seems we have just to know if it >= (DUPTHRESH * state->snd_mss)
+        if(bytes >=  (DUPTHRESH * this->conn->getState()->snd_mss))
+            return bytes;
+#endif
     }
 
     if ( i != rexmitQueue.rend()
@@ -396,7 +404,10 @@ uint32 TCPSACKRexmitQueue::getNumOfDiscontiguousSacks(uint32 fromSeqNum) const
     {
         if (i->sacked && !prevSacked)
             counter++;
-
+#ifdef PRIVATE
+        if(counter >= DUPTHRESH)
+            return counter;
+#endif
         prevSacked = i->sacked;
         i++;
     }
@@ -409,8 +420,7 @@ void TCPSACKRexmitQueue::checkSackBlock(uint32 fromSeqNum, uint32 &length, bool 
     int32 offset = 0;
 #ifdef PRIVATE
     if(this->conn->getState()->send_fin){
-        offset = 1;
-          return; // One for the FIN FIXME
+        return; // One for the FIN FIXME
     }
 #endif // ENDIF
     if(!(seqLE(begin, fromSeqNum) && seqLess(fromSeqNum - offset, end))){
@@ -424,7 +434,7 @@ void TCPSACKRexmitQueue::checkSackBlock(uint32 fromSeqNum, uint32 &length, bool 
     ASSERT(i != rexmitQueue.end());
     ASSERT(seqLE(i->beginSeqNum, fromSeqNum) && seqLess(fromSeqNum - offset, i->endSeqNum));
 
-    length = (i->endSeqNum - (fromSeqNum - offset));
+    length = (i->endSeqNum - (i->beginSeqNum - offset));
     sacked = i->sacked;
     rexmitted = i->rexmitted;
 }

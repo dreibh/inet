@@ -143,7 +143,18 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 
             if (state->sack_enabled  && (!state->snd_fin_seq)) // FIXME... IT should be OK, even with fin. But we have to look on the sqn
             {
-                conn->setPipe();
+                static uint32 old_pipe = 0;
+                static uint32 old_una = 0;
+                static uint32 old_max = 0;
+                if((old_una == state->snd_una) && (old_max == state->snd_max)){
+                    // we don t have to calc it new
+                    state->pipe = old_pipe;
+                }
+                else{
+                    old_una = state->snd_una;
+                    old_max =  state->snd_max;
+                 //   conn->setPipe();
+                }
                 if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
                     conn->sendDataDuringLossRecoveryPhase(state->snd_cwnd);
 

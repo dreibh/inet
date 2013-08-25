@@ -29,6 +29,11 @@
 #include "TCPReceiveQueue.h"
 #include "TCPAlgorithm.h"
 
+
+#ifdef PRIVATE
+#include "TCPSACKRexmitQueue.h"
+#endif
+
 //
 // helper functions for SACK
 //
@@ -181,8 +186,8 @@ void TCPConnection::setPipe()
     state->highRxt = rexmitQueue->getHighestRexmittedSeqNum();
     state->pipe = 0;
     uint32 length = 0; // required for rexmitQueue->checkSackBlock()
-    bool sacked;       // required for rexmitQueue->checkSackBlock()
-    bool rexmitted;    // required for rexmitQueue->checkSackBlock()
+    bool sacked = false;       // required for rexmitQueue->checkSackBlock()
+    bool rexmitted = false;    // required for rexmitQueue->checkSackBlock()
 
 #ifdef PRIVATE // FIXME Wonder we have not to focus on the fin ????
     // MBe: a first  try
@@ -197,9 +202,26 @@ void TCPConnection::setPipe()
     // the TCP receiver.  After initializing pipe to zero the following
     // steps are taken for each octet 'S1' in the sequence space between
     // HighACK and HighData that has not been SACKed:"
+#ifdef PRIVATE
+    state->pipe = 0;
+    RexmitQueue::iterator itr = rexmitQueue->getRawQueue()->begin();
+#endif
     for (uint32 s1 = state->snd_una; seqLess(s1, state->snd_max); s1 += length)
     {
+#ifndef PRIVATE
         rexmitQueue->checkSackBlock((s1+offset), length, sacked, rexmitted);
+#else
+        while (itr != rexmitQueue->getRawQueue()->end() && seqLE(itr->endSeqNum, s1+offset)) // search for seqNum
+            itr++;
+
+        if(itr == rexmitQueue->getRawQueue()->end()) break;
+        //ASSERT(seqLE(itr->beginSeqNum, s1+offset) && seqLess(s1 - offset, itr->endSeqNum));
+
+        length = (itr->endSeqNum - (itr->beginSeqNum - offset));
+        sacked = itr->sacked;
+        rexmitted = itr->rexmitted;
+#endif
+
 #ifdef PRIVATE // FIXME Wonder we have not to focus on the fin ????
        offset = 0;  // set it back again
 #endif // PRIVIATE
@@ -373,7 +395,8 @@ void TCPConnection::sendDataDuringLossRecoveryPhase(uint32 congestionWindow)
     // segments as follows:
     // (...)
     // (C.5) If cwnd - pipe >= 1 SMSS, return to (C.1)"
-    while (((int)congestionWindow - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
+    if(((int)congestionWindow >= (int)state->pipe))
+    while ((congestionWindow > (int)state->pipe)&&((int)congestionWindow - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
     {
         // RFC 3517 pages 7 and 8: "(C.1) The scoreboard MUST be queried via NextSeg () for the
         // sequence number range of the next segment to transmit (if any),
@@ -391,6 +414,7 @@ void TCPConnection::sendDataDuringLossRecoveryPhase(uint32 congestionWindow)
         // network must be updated by incrementing pipe by the number of
         // octets transmitted in (C.1)."
         state->pipe += state->sentBytes;
+
     }
 }
 
@@ -486,11 +510,15 @@ TCPSegment TCPConnection::addSacks(TCPSegment *tcpseg)
         }
         else
         {
+#ifndef PRIVATE
             tcpEV << "\t SACK in sacks_array: " << " " << it->str() << endl;
 
             ASSERT(seqGE(it->getStart(), state->rcv_nxt));
 
             it++;
+#else
+            break; // should be the last
+#endif
         }
     }
 
@@ -572,7 +600,9 @@ TCPSegment TCPConnection::addSacks(TCPSegment *tcpseg)
         it = state->sacks_array.begin();
         if (dsack_inserted)
             it++;
-
+#ifdef PRIVATE
+        bool contains = false;
+#endif
         for (; it != state->sacks_array.end(); it++)
         {
             ASSERT(!it->empty());
@@ -585,10 +615,25 @@ TCPSegment TCPConnection::addSacks(TCPSegment *tcpseg)
                 {
                     tcpEV << "sack matched, delete contained : a="<< it->str() <<", b="<< it2->str() << endl;
                     it2 = state->sacks_array.erase(it2);
+#ifdef PRIVATE
+                    contains = true;// if we found we should break
+#endif              break;
                 }
-                else
+                else{
+#ifdef PRIVATE
+                   if(seqGE(it2->getEnd(),it->getEnd())){
+                       contains = true;
+                       break;
+                   }
+#endif
                     it2++;
+                }
             }
+#ifdef PRIVATE
+            if(contains)
+                break;
+#endif
+
         }
     }
 
