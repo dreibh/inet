@@ -119,7 +119,7 @@ MPTCP_PCB* MPTCP_PCB::processMPTCPSegment(int connId, int aAppGateIndex,
         }
 
     }
-    ASSERT(tmp->_processSegment(connId, subflow, tcpseg) && "SOMETHING WENT WRONG IN PROCEEDING THE SEGMENT");
+    tmp->_processSegment(connId, subflow, tcpseg);
 
     DEBUGPRINT("End Process Segment <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<%s","\0");
     return tmp;
