@@ -162,7 +162,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 
     TCPSendCommand *sendCommand = check_and_cast<TCPSendCommand *>(tcpCommand);
 #ifdef PRIVATE
-    cPacket* pkt = check_and_cast<cPacket*> (msg);
+    cPacket* pkt = PK(msg);
     {
     static uint64 cnt = 0;
     static int number = 0;

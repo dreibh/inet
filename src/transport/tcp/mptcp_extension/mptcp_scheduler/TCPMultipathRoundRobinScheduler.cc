@@ -88,7 +88,6 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
             }
             if(cnt > subflow_list->size()){
                 discard += bytes;
-                // fprintf(stderr,"Discard....%i", discard);
                 return;
             }
         }

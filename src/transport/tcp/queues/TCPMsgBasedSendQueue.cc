@@ -100,7 +100,8 @@ TCPSegment *TCPMsgBasedSendQueue::createSegmentWithBytes(uint32 fromSeq, ulong n
     {
         if (!payloadName)
             payloadName = i->msg->getName();
-        tcpseg->addPayloadMessage(i->msg->dup(), i->endSequenceNo);
+
+        tcpseg->addPayloadMessage(i->msg->dup(), i->endSequenceNo); // duplicate of message
         ++i;
     }
 

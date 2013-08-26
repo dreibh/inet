@@ -370,14 +370,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 TCPConnection::~TCPConnection()
 {
 
-#ifdef PRIVATE
-    // MBe: remove this (sub-)connection from the MPTCP list
-    if(getTcpMain()->multipath){
-        if(isSubflow){
-            flow->removeSubflow(this);
-        }
-    }
-#endif // PRIVATE
+
 
     if (the2MSLTimer)   delete cancelEvent(the2MSLTimer);
     if (connEstabTimer) delete cancelEvent(connEstabTimer);
@@ -477,8 +470,18 @@ TCPConnection::~TCPConnection()
 
 #ifdef PRIVATE
 
-    if(!tmp_msg_buf){
+    if(getTcpMain()->multipath){
         // FIXME - Who is responsible for delete messages as structure inside
+
+        if(flow == NULL || flow->isFIN)
+        while(!tmp_msg_buf->empty()){
+            cPacket* pkt = tmp_msg_buf->front();
+            delete pkt;
+            tmp_msg_buf->pop();
+        }
+        if(isSubflow){
+              flow->removeSubflow(this);
+          }
     }
     // FIXME - Who is responsible for delete tmp_msg_buf
     tmp_msg_buf = NULL;
@@ -492,6 +495,7 @@ TCPConnection::~TCPConnection()
     inlist = false;
     randomA = 0;
     randomB = 0;
+
 #endif // PRIVATE
 }
 

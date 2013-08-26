@@ -163,8 +163,6 @@ void TCPSACKRexmitQueue::enqueueSentData(uint32 fromSeqNum, uint32 toSeqNum)
 
     ASSERT(fromSeqNum == toSeqNum);
 
-    ASSERT(fromSeqNum == toSeqNum);
-
     if (!found)
     {
         EV << "Not found enqueueSentData(" << fromSeqNum << ", " << toSeqNum << ")\nThe Queue is:\n";

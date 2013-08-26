@@ -199,7 +199,7 @@ void TCPNewReno::receivedDuplicateAck()
 
                 if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
                 {
-                    conn->setPipe();
+                    // conn->setPipe();
                     if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
                         conn->sendDataDuringLossRecoveryPhase(state->snd_cwnd);
 
