@@ -395,7 +395,8 @@ void TCPConnection::sendDataDuringLossRecoveryPhase(uint32 congestionWindow)
     // segments as follows:
     // (...)
     // (C.5) If cwnd - pipe >= 1 SMSS, return to (C.1)"
-    if(((int)congestionWindow >= (int)state->pipe))
+
+    std::cerr << "Pipe-Size:" << state->pipe << std::endl;
     while ((congestionWindow > (int)state->pipe)&&((int)congestionWindow - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
     {
         // RFC 3517 pages 7 and 8: "(C.1) The scoreboard MUST be queried via NextSeg () for the
