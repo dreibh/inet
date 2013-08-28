@@ -161,6 +161,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
         }
 
         readHeaderOptions(tcpseg);
+
     }
 
     if (acceptable)
@@ -381,6 +382,8 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
             return TCP_E_IGNORE;
 #endif // PRIVATE
         bool ok = processAckInEstabEtc(tcpseg);
+        if(ok && state->sack_enabled)
+            SACK_BLOCK->updateStatus(); // Upon ACK call update
 
         if (!ok)
             return TCP_E_IGNORE;  // if acks something not yet sent, drop it
@@ -1060,10 +1063,13 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
         {
             state->snd_una = tcpseg->getAckNo();
             sendQueue->discardUpTo(state->snd_una);
-
+#ifndef PRIVATE
             if (state->sack_enabled)
                 rexmitQueue->discardUpTo(state->snd_una);
-
+#else
+            if (state->sack_enabled)
+                SACK_BLOCK->discardUpTo(state->snd_una);
+#endif
             // although not mentioned in RFC 793, seems like we have to pick up
             // initial snd_wnd from the segment here.
             updateWndInfo(tcpseg, true);
@@ -1210,7 +1216,7 @@ TCPEventCode TCPConnection::processRstInSynReceived(TCPSegment *tcpseg)
     sendQueue->discardUpTo(sendQueue->getBufferEndSeq()); // flush send queue
 
     if (state->sack_enabled)
-        rexmitQueue->discardUpTo(rexmitQueue->getBufferEndSeq()); // flush rexmit queue
+        SACK_BLOCK->flush(); // flush rexmit queue
 
     if (state->active)
     {
@@ -1349,7 +1355,7 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
 #endif // PRIVATE
         // acked data no longer needed in rexmit queue
         if (state->sack_enabled)
-            rexmitQueue->discardUpTo(discardUpToSeq);
+            SACK_BLOCK->discardUpTo(discardUpToSeq);
 
         updateWndInfo(tcpseg);
 

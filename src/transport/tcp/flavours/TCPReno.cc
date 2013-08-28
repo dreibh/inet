@@ -168,11 +168,13 @@ void TCPReno::receivedDataAck(uint32 firstSeqAcked)
         // the scoreboard for sequence numbers greater than the new value of
         // HighACK SHOULD NOT be cleared when leaving the loss recovery
         // phase."
+#ifndef PRIVATE
         if (seqGE(state->snd_una, state->recoveryPoint))
         {
             tcpEV << "Loss Recovery terminated.\n";
             state->lossRecovery = false;
         }
+
         // RFC 3517, page 7: "(B) Upon receipt of an ACK that does not cover RecoveryPoint the
         //following actions MUST be taken:
         //
@@ -191,6 +193,9 @@ void TCPReno::receivedDataAck(uint32 firstSeqAcked)
             if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
                 conn->sendDataDuringLossRecoveryPhase(state->snd_cwnd);
         }
+#else
+        ASSERT(false && "TODO, if we want to use new SACK ANDLING");
+#endif
     }
 
     // RFC 3517, pages 7 and 8: "5.1 Retransmission Timeouts
@@ -210,7 +215,7 @@ void TCPReno::receivedDataAck(uint32 firstSeqAcked)
 void TCPReno::receivedDuplicateAck()
 {
     TCPTahoeRenoFamily::receivedDuplicateAck();
-
+#ifndef PRIVATE
     if (state->dupacks == DUPTHRESH) // DUPTHRESH = 3
     {
         tcpEV << "Reno on dupAcks == DUPTHRESH(=3): perform Fast Retransmit, and enter Fast Recovery:";
@@ -336,4 +341,7 @@ void TCPReno::receivedDuplicateAck()
 
         sendData(false);
     }
+#else
+        ASSERT(false && "TODO, if we want to use new SACK ANDLING");
+#endif
 }

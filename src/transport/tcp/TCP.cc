@@ -547,9 +547,6 @@ void TCP::addSockPair(TCPConnection *conn, IPvXAddress localAddr, IPvXAddress re
     // then insert it into tcpConnMap
     tcpConnMap[key] = conn;
 
-    if(conn->getRexmitQueue()==NULL)
-        tcpEV << "getRexmitQueue is empty "  << "\n";
-
     // mark port as used
     if (localPort >= EPHEMERAL_PORTRANGE_START && localPort < EPHEMERAL_PORTRANGE_END)
         usedEphemeralPorts.insert(localPort);

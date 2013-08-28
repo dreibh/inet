@@ -12,7 +12,7 @@
 #include "TCPMultipathSchedulerI.h"
 #include "TCPConnection.h"
 
-
+class TCPConnection;
 
 // ###############################################################################################################
 //                                            MULTIPATH TCP Scheduler

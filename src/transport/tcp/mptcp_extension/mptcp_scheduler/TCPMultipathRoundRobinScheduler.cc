@@ -23,7 +23,10 @@
 #include "TCPMultipath.h"
 #include "TCPConnection.h"
 #include "TCPMultipathRoundRobinScheduler.h"
+#include "TCPMultipathFlow.h"
 #include "TCPSendQueue.h"
+
+class MPTCP_Flow;
 
 Register_Class(MPTCP_RoundRobinScheduler);
 

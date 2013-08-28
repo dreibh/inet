@@ -13,13 +13,39 @@
 #include <vector>
 #include <map>
 #include <set>
-
+#include "InterfaceTableAccess.h"
 #include "TCPConnection.h"
 #include "TCPMultipath.h"
-#include "TCPMultipathReceiveQueue.h"
 
+class TCPStateVariables;
 class TCPMultipathReceiveQueue;
+class TCPConnection;
 
+typedef struct _subflow{
+  TCPConnection* subflow;
+  bool active;
+  int cnt;
+} TCP_subflow_t;
+typedef std::vector <TCP_subflow_t*>         TCP_SubFlowVector_t;
+
+typedef struct _addr_tuple{
+    IPvXAddress addr;
+    int         port;
+} AddrTupple_t;
+typedef std::vector <AddrTupple_t*>          TCP_AddressVector_t;
+
+typedef struct _addr_combi{
+    AddrTupple_t local;
+    AddrTupple_t remote;
+} AddrCombi_t;
+typedef std::vector <AddrCombi_t*>           TCP_JoinVector_t;
+
+enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
+
+#ifdef PRIVATE
+#include <queue>
+typedef std::queue<cPacket*>         Tmp_Buffer_t;
+#endif
 
 // ###############################################################################################################
 //                                                  MULTIPATH TCP

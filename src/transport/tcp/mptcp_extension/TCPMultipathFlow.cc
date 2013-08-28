@@ -1003,9 +1003,10 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     options_len += dss_option_offset; // Option for Multipath
 
     if (subflow->getState()->sack_enabled){
-         uint32 offset =  subflow->rexmitQueue->getEndOfRegion(subflow->getState()->snd_una);
-         if(offset > 0) // we know this segment.... send only segment size
-             bytes = offset - subflow->getState()->snd_una; // FIXME: In this case we overwrite for a retransmission the sending window
+#warning "TODO SACK"
+         //uint32 offset =  subflow->rexmitQueue->getEndOfRegion(subflow->getState()->snd_una);
+         //if(offset > 0) // we know this segment.... send only segment size
+         //    bytes = offset - subflow->getState()->snd_una; // FIXME: In this case we overwrite for a retransmission the sending window
     }
 
     while (bytes + options_len > subflow->getState()->snd_mss)
@@ -1586,7 +1587,7 @@ void MPTCP_Flow::setLocalKey(uint64_t key) {
         ASSERT(key==local_key && "that should be not allowed");
         return;
 #endif
-        fprintf(stderr, "WOW the local key will be overwritten");
+        fprintf(stderr, "WOW the local key will be overwritten\n");
     }
     _generateToken(key, MPTCP_LOCAL);
     local_key = key;
@@ -1669,7 +1670,7 @@ void MPTCP_Flow::DEBUGprintStatus() {
         DEBUGPRINT(
                 "[FLOW][SUBFLOW][%i][STATUS][SEND] rcv_nxt: %i\t snd_nxt: %i\t snd_una: %i snd_max: %i",
                 cnt, entry->subflow->getState()->rcv_nxt, entry->subflow->getState()->snd_nxt, entry->subflow->getState()->snd_una, entry->subflow->getState()->snd_max);
-        // entry->subflow->getRexmitQueue()->info();
+
     }
 
     DEBUGPRINT(

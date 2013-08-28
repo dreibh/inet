@@ -20,6 +20,7 @@
 #define __INET_TCPMultipathReceiveQueue_H
 
 #include <omnetpp.h>
+#include <vector>
 #include "TCPMultipathFlow.h"
 
 

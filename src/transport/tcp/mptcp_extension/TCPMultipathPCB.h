@@ -12,7 +12,7 @@
 //#include "TCPMultipathFlow.h"
 
 class MPTCP_Flow;
-
+class TCPConnection;
 typedef struct _4tupleWithStatus{
     MPTCP_Flow* flow;
     bool active;

@@ -21,7 +21,7 @@
 
 #ifndef __INET_TCPCONNECTION_H
 #define __INET_TCPCONNECTION_H
-
+#include <queue>
 #include "INETDefs.h"
 
 #include "IPvXAddress.h"
@@ -29,22 +29,30 @@
 #include "TCPSegment.h"
 #ifdef PRIVATE
 // MBE: Includes
+#include "SACK_RFC3517.h"
 #include "TCPMultipath.h"
 #include "TCPMultipathPCB.h"
 #include "TCPMultipathFlow.h"
+
+class SACKHandler;
+#define  SACK_BLOCK getState()->sackhandler
 #endif
 class TCPSegment;
 class TCPCommand;
 class TCPOpenCommand;
 class TCPSendQueue;
-class TCPSACKRexmitQueue;
+class TCP;
+
 class TCPReceiveQueue;
 class TCPAlgorithm;
 
 #ifdef PRIVATE
+
 // MBe: Pre-declaration
 class MPTCP_PCB;
 class MPTCP_Flow;
+
+
 
 /* MBe: Helper sturcture for DSS to handle the information in a map*/
 typedef struct _DSS_INFO{
@@ -282,11 +290,16 @@ class INET_API TCPStateVariables : public cObject
 #else
     SackList sacks_array; // MAX_SACK_BLOCKS is set to 60
 #endif
+
+    SACKHandler       *sackhandler;
+#ifndef PRIVATE
     uint32 highRxt;          // RFC 3517, page 3: ""HighRxt" is the highest sequence number which has been retransmitted during the current loss recovery phase."
     uint32 pipe;             // RFC 3517, page 3: ""Pipe" is a sender's estimate of the number of bytes outstanding in the network."
     uint32 recoveryPoint;    // RFC 3517
     uint32 sackedBytes;      // number of sackedBytes
     uint32 sackedBytes_old;  // old number of sackedBytes - needed for RFC 3042 to check if last dupAck contained new sack information
+#endif
+
     bool lossRecovery;       // indicates if algorithm is in loss recovery phase
 
     // queue management
@@ -406,7 +419,7 @@ class INET_API TCPConnection
     TCPMultipathDSSStatus dss_dataMapofSubflow;
     DSS_BASE_INFO         base_una_dss_info;
 
-    Tmp_Buffer_t* tmp_msg_buf;       // Just a helper to organize messages
+    std::queue<cPacket*> * tmp_msg_buf;       // Just a helper to organize messages
 #endif // PRIVATE
 
   protected:
@@ -424,9 +437,10 @@ class INET_API TCPConnection
     TCPDataTransferMode transferMode;   // TCP transfer mode: bytecount, object, bytestream
 
   public:
+#ifndef PRIVATE // // MBe: MPTCP public variables
     TCPSACKRexmitQueue *rexmitQueue;
+#else
 
-#ifdef PRIVATE // // MBe: MPTCP public variables
     cOutVector *scheduledBytesVector;    // bytes scheduled on subflow
 #endif // PRIVATE
 
@@ -439,7 +453,7 @@ class INET_API TCPConnection
     cMessage *connEstabTimer;
     cMessage *finWait2Timer;
     cMessage *synRexmitTimer; // for retransmitting SYN and SYN+ACK
-
+public:
     // statistics
     cOutVector *sndWndVector;   // snd_wnd
     cOutVector *rcvWndVector;   // rcv_wnd
@@ -517,7 +531,9 @@ class INET_API TCPConnection
     virtual bool processMSSOption(TCPSegment *tcpseg, const TCPOption& option);
     virtual bool processWSOption(TCPSegment *tcpseg, const TCPOption& option);
     virtual bool processSACKPermittedOption(TCPSegment *tcpseg, const TCPOption& option);
+#ifndef PRIVATE
     virtual bool processSACKOption(TCPSegment *tcpseg, const TCPOption& option);
+#endif
     virtual bool processTSOption(TCPSegment *tcpseg, const TCPOption& option);
     //@}
 
@@ -550,10 +566,10 @@ class INET_API TCPConnection
 
     /** Utility: readHeaderOptions (Currently only EOL, NOP, MSS, WS, SACK_PERMITTED, SACK and TS are implemented) */
     virtual void readHeaderOptions(TCPSegment *tcpseg);
-
+#ifndef PRIVATE
     /** Utility: adds SACKs to segments header options field */
     virtual TCPSegment addSacks(TCPSegment *tcpseg);
-
+#endif
     /** Utility: get TSval from segments TS header option */
     virtual uint32 getTSval(TCPSegment *tcpseg) const;
 
@@ -622,12 +638,11 @@ class INET_API TCPConnection
     virtual void signalConnectionTimeout();
 
     /** Utility: start a timer */
-    void scheduleTimeout(cMessage *msg, simtime_t timeout)
-        {tcpMain->scheduleAt(simTime()+timeout, msg);}
+    void scheduleTimeout(cMessage *msg, simtime_t timeout);
 
   protected:
     /** Utility: cancel a timer */
-    cMessage *cancelEvent(cMessage *msg) {return tcpMain->cancelEvent(msg);}
+    cMessage *cancelEvent(cMessage *msg);
 
     /** Utility: send IP packet */
     static void sendToIP(TCPSegment *tcpseg, IPvXAddress src, IPvXAddress dest);
@@ -701,7 +716,9 @@ class INET_API TCPConnection
     int getFsmState() const {return fsm.getState();}
     TCPStateVariables *getState() {return state;}
     TCPSendQueue *getSendQueue() {return sendQueue;}
+#ifndef PRIVATE
     TCPSACKRexmitQueue *getRexmitQueue() {return rexmitQueue;}
+#endif
     TCPReceiveQueue *getReceiveQueue() {return receiveQueue;}
     TCPAlgorithm *getTcpAlgorithm() {return tcpAlgorithm;}
     TCP *getTcpMain() {return tcpMain;}
@@ -728,6 +745,7 @@ class INET_API TCPConnection
      */
     virtual bool processAppCommand(cMessage *msg);
 
+#ifndef PRIVATE
     /**
      * For SACK TCP. RFC 3517, page 3: "This routine returns whether the given
      * sequence number is considered to be lost.  The routine returns true when
@@ -763,10 +781,12 @@ class INET_API TCPConnection
      */
     virtual void sendDataDuringLossRecoveryPhase(uint32 congestionWindow);
 
+
     /**
      * Utility: send segment during Loss Recovery phase (if SACK is enabled).
      */
     virtual void sendSegmentDuringLossRecoveryPhase(uint32 seqNum);
+#endif
 
     /**
      * Utility: send one new segment from snd_max if allowed (RFC 3042).

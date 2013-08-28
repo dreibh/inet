@@ -41,6 +41,8 @@ class MPTCP_PCB;
 #include "IPvXAddress.h"
 #include "TCPCommand_m.h"
 
+#include "TCPReceiveQueue.h"
+
 // Forward declarations:
 class MPTCP_Flow;
 class TCPConnection;
@@ -57,11 +59,7 @@ class TCPReceiveQueue;
 // testingEV writes log that automated test cases can check (*.test files)
 #define testingEV (ev.isDisabled()||!TCP::testing)?ev:ev
 
-#ifdef PRIVATE
-#include <queue>
 
-typedef std::queue<cPacket*>         Tmp_Buffer_t;
-#endif
 
 /**
  * Implements the TCP protocol. This section describes the internal

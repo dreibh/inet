@@ -20,13 +20,13 @@
 #define __INET_TCPRECEIVEQUEUE_H
 
 #include "INETDefs.h"
-
+#include "TCP.h"
 #include "TCPConnection.h"
 
 
 class TCPSegment;
 class TCPCommand;
-
+class TCPConnection;
 
 /**
  * Abstract base class for TCP receive queues. This class represents

@@ -93,16 +93,20 @@ TCPStateVariables::TCPStateVariables()
     sack_enabled = false;
     snd_sack_perm = false;
     rcv_sack_perm = false;
-
     snd_sack = false;
     snd_dsack = false;
+
+
     start_seqno = 0;
     end_seqno = 0;
+#ifndef PRIVATE
     highRxt = 0;
     pipe = 0;
     recoveryPoint = 0;
     sackedBytes = 0;
     sackedBytes_old = 0;
+#endif
+
     lossRecovery = false;
 
     dupacks = 0;
@@ -120,6 +124,9 @@ TCPStateVariables::TCPStateVariables()
     requested = 0;
     enqueued = 0;
     isRTX = false;
+#ifdef PRIVATE
+    sackhandler = NULL;
+#endif
 }
 
 std::string TCPStateVariables::info() const
@@ -196,7 +203,9 @@ TCPConnection::TCPConnection()
     // temporary ones to invoke segmentArrivalWhileClosed() on
     transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge
     sendQueue = NULL;
+#ifndef PRIVATE
     rexmitQueue = NULL;
+#endif
     receiveQueue = NULL;
     tcpAlgorithm = NULL;
     state = NULL;
@@ -249,7 +258,9 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge
     // queues and algorithm will be created on active or passive open
     sendQueue = NULL;
+#ifndef PRIVATE
     rexmitQueue = NULL;
+#endif
     receiveQueue = NULL;
     tcpAlgorithm = NULL;
     state = NULL;
@@ -381,10 +392,12 @@ TCPConnection::~TCPConnection()
         delete sendQueue;
         sendQueue = NULL;
     }
+#ifndef PRIVATE
     if(rexmitQueue){
         delete rexmitQueue;
         rexmitQueue = NULL;
     }
+#endif
     if(receiveQueue){
         delete receiveQueue;
         receiveQueue = NULL;
@@ -495,6 +508,7 @@ TCPConnection::~TCPConnection()
     inlist = false;
     randomA = 0;
     randomB = 0;
+
 
 #endif // PRIVATE
 }

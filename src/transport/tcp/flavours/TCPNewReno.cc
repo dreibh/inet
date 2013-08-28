@@ -118,46 +118,40 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
     // If we above
     if(state->lossRecovery){
         if (seqGE(state->snd_una , state->recover)){
+            // Get a sequence number greater than recover, we are out
             setCWND(std::min(state->ssthresh, bytesInFlight() + state->snd_mss));
             state->lossRecovery = false;
             state->firstPartialACK = false;
-// if (rexmitTimer->isScheduled())
-// cancelEvent(rexmitTimer); // Todo ...is here the best point
+            // A)
+            this->conn->getState()->sackhandler->discardUpTo(state->snd_una);
             tcpEV << "End Loss Recovery\n";
         }
         else{
+
             tcpEV << "Fast Recovery - Partial ACK received: retransmitting the first unacknowledged segment\n";
 
             // deflate cwnd by amount of new data acknowledged by cumulative acknowledgement field
             // FIXME deflate ?? -> Try a probe
             if(state->snd_una < firstSeqAcked)
                 throw cRuntimeError("This is not possible");
-             decreaseCWND(std::min(state->snd_una - firstSeqAcked,state->snd_mss), false); // Fixe ME -> How to do deflating
-            tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
 
+            // Do the indow stuff
+            decreaseCWND(std::min(state->snd_una - firstSeqAcked,state->snd_mss), false); // Fixe ME -> How to do deflating
+            tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
             increaseCWND(state->snd_mss, false); // Is this correct ?
+
+
             conn->sendAck(); // Fixme ...needed?
-            // Retranmist
-            conn->retransmitOneSegment(false); // we send an retransmit, so we are out
+            // Retransmit
+            conn->retransmitOneSegment(false); // It doesn t matter if here or somewhere esle ...
 
             if (state->sack_enabled  && (!state->snd_fin_seq)) // FIXME... IT should be OK, even with fin. But we have to look on the sqn
             {
-                static uint32 old_pipe = 0;
-                static uint32 old_una = 0;
-                static uint32 old_max = 0;
-                if((old_una == state->snd_una) && (old_max == state->snd_max)){
-                    // we don t have to calc it new
-                    state->pipe = old_pipe;
-                }
-                else{
-                    old_una = state->snd_una;
-                    old_max =  state->snd_max;
-                   conn->setPipe();
-                }
-                if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
-                    conn->sendDataDuringLossRecoveryPhase(state->snd_cwnd);
-
+                // B.1)
+                this->conn->getState()->sackhandler->updateStatus();
+                // B.2 & C
+                this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
             }
             return;
         }
@@ -181,30 +175,35 @@ void TCPNewReno::receivedDuplicateAck()
     //TCPTahoeRenoFamily::receivedDuplicateAck();
     if (state->lossRecovery)
     {
+        // Deflating
         increaseCWND(state->snd_mss, false);
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
-        sendData(true); // is this pending data?
+        if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
+        {
+            this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
+        }
     }
     else if (state->dupacks == DUPTHRESH && (!state->lossRecovery)) // DUPTHRESH = 3
     {
-                tcpEV << "NewReno on dupAcks == DUPTHRESH(=3): perform Fast Retransmit, and enter Fast Recovery:";
-                state->lossRecovery = true;
-                state->recover = (state->snd_nxt);
-                tcpEV << " set recover=" << state->recover;
-                recalculateSlowStartThreshold();
-                conn->retransmitOneSegment(false);
-                state->firstPartialACK = false;
-                setCWND(state->ssthresh + (3 * state->snd_mss));
-                tcpEV << " , cwnd=" << state->snd_cwnd << ", ssthresh=" << state->ssthresh << "\n";
+        if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
+        {
+            state->lossRecovery = true;
 
-                if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
-                {
-                    conn->setPipe();
-                    if (((int)state->snd_cwnd - (int)state->pipe) >= (int)state->snd_mss) // Note: Typecast needed to avoid prohibited transmissions
-                        conn->sendDataDuringLossRecoveryPhase(state->snd_cwnd);
-
-                }
-
+            this->conn->getState()->sackhandler->updateStatus();    // Update after reach of DUPTACK
+            // 1. Step RecoveryPoint = HighData
+            this->conn->getState()->sackhandler->setNewRecoveryPoint(state->snd_nxt);
+            state->recover = state->snd_nxt;
+        }
+        // 2. Recalculate Window
+        setCWND(state->ssthresh + (3 * state->snd_mss));
+        state->firstPartialACK = false;
+        // 3. Retansmit
+        conn->retransmitOneSegment(false);
+        if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
+        {
+            // Run SetPipe
+            this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
+        }
     }
     else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0,false); // Just for Debug

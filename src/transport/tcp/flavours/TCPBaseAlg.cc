@@ -277,9 +277,13 @@ void TCPBaseAlg::processRexmitTimer(TCPEventCode& event)
     // if sacked_enabled reset sack related flags
     if (state->sack_enabled)
     {
+
+#ifndef PRIVATE
         conn->rexmitQueue->resetSackedBit();
         conn->rexmitQueue->resetRexmittedBit();
-
+#else
+        state->sackhandler->reset();
+#endif
         // RFC 3517, page 8: "If an RTO occurs during loss recovery as specified in this document,
         // RecoveryPoint MUST be set to HighData.  Further, the new value of
         // RecoveryPoint MUST be preserved and the loss recovery algorithm
@@ -289,7 +293,11 @@ void TCPBaseAlg::processRexmitTimer(TCPEventCode& event)
         // RecoveryPoint."
         if (state->lossRecovery)
         {
+#ifdef PRIVATE
+            state->sackhandler->setNewRecoveryPoint(state->snd_max);
+#else
             state->recoveryPoint = state->snd_max; // HighData = snd_max
+#endif
             tcpEV << "Loss Recovery terminated.\n";
             state->lossRecovery = false;
         }

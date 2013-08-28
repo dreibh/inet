@@ -35,7 +35,9 @@
 
 #include <cstring>
 #include <inttypes.h>
-
+#include "TCP.h"
+#include "TCPConnection.h"
+#include "TCPMultipathReceiveQueue.h"
 #include "TCPCommand_m.h"
 #include "TCPSegment.h"
 #include "IPvXAddress.h"
@@ -65,26 +67,8 @@ using std::vector;
 //                                                 Typedef STUFF
 // ###############################################################################################################
 
-typedef struct _addr_tuple{
-	IPvXAddress addr;
-	int 		port;
-} AddrTupple_t;
-typedef vector <AddrTupple_t*> 			TCP_AddressVector_t;
 
-typedef struct _addr_combi{
-	AddrTupple_t local;
-	AddrTupple_t remote;
-} AddrCombi_t;
-typedef vector <AddrCombi_t*> 			TCP_JoinVector_t;
 
-enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
-typedef struct _subflow{
-  TCPConnection* subflow;
-  bool active;
-  int cnt;
-} TCP_subflow_t;
-typedef vector <TCP_subflow_t*>         TCP_SubFlowVector_t;
-//#include "TCPMultipath.h"
 
 
 // compare Section 8. IANA Considerations
@@ -140,6 +124,7 @@ const unsigned int MP_DSS_OPTIONLENGTH_4BYTE = 20;
 
 // Helper to set state for a subflow
 #define MPTCP_FSM(state) setState(state); // fprintf(stderr,"\n[FSM] CHANGE STATE %u line %u\n",state,__LINE__);
+
 
 
 #endif // __TCP_MULTIPATH_H

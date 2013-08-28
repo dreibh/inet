@@ -38,6 +38,9 @@
 #ifdef PRIVATE
 #include "TCPMultipathPCB.h"
 #include "TCPSchedulerManager.h"
+#include "SACK_RFC3517.h"
+
+
 #endif // PRIVATE
 
 const char *TCPConnection::stateName(int state)
@@ -176,6 +179,15 @@ void TCPConnection::printSegmentBrief(TCPSegment *tcpseg)
     }
     tcpEV << "\n";
 }
+
+void TCPConnection::scheduleTimeout(cMessage *msg, simtime_t timeout)
+{
+    tcpMain->scheduleAt(simTime()+timeout, msg);
+}
+cMessage *TCPConnection::cancelEvent(cMessage *msg) {
+    return tcpMain->cancelEvent(msg);
+}
+
 #ifdef PRIVATE
 /* Clone a connection for MPTCP */
 TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPvXAddress laddr, IPvXAddress raddr){
@@ -271,10 +283,13 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		// TIMESTAMP related variables
 		conn->getState()->sack_support = this->getState()->sack_support;
 		conn->getState()->sack_enabled = this->getState()->sack_enabled;
+
 		conn->getState()->last_ack_sent = 0;
+#ifndef PRIVATE
 		conn->getState()->pipe = 0;
-		conn->getState()->dupacks = 0;
 		conn->getState()->sackedBytes = 0;
+#endif
+		conn->getState()->dupacks = 0;
 		conn->getState()->sendQueueLimit = this->getState()->sendQueueLimit;
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
@@ -398,8 +413,10 @@ TCPConnection *TCPConnection::cloneListeningConnection()
     conn->receiveQueue->setConnection(conn);
 
     // create SACK retransmit queue
+#ifndef PRIVATE
     rexmitQueue = new TCPSACKRexmitQueue();
     rexmitQueue->setConnection(this);
+#endif
 
     const char *tcpAlgorithmClass = tcpAlgorithm->getClassName();
     conn->tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne(tcpAlgorithmClass));
@@ -615,11 +632,11 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
     // create receive queue
     receiveQueue = tcpMain->createReceiveQueue(transferMode);
     receiveQueue->setConnection(this);
-
+#ifndef PRIVATE
     // create SACK retransmit queue
     rexmitQueue = new TCPSACKRexmitQueue();
     rexmitQueue->setConnection(this);
-
+#endif
     // create algorithm
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath){
@@ -728,15 +745,20 @@ void TCPConnection::configureStateVariables()
     if (state->sack_support)
     {
         std::string algorithmName1 = "TCPReno";
+        std::string algorithmName3 = "TCPNewReno";
         std::string algorithmName2 = tcpMain->par("tcpAlgorithmClass");
 
-        std::string algorithmName3 = "TCPNewReno";
+
         if ((algorithmName1 != algorithmName2) && (algorithmName3 != algorithmName2)) // TODO add additional checks for new SACK supporting algorithms here once they are implemented
         {
             EV << "If you want to use TCP SACK please set tcpAlgorithmClass to TCPReno\n";
 
             ASSERT(false);
         }
+#ifdef PRIVATE
+        // TODO ... Here add new SACK variants
+       SACK_BLOCK = new SACK_RFC3517(this);
+#endif
     }
 }
 
@@ -744,11 +766,15 @@ void TCPConnection::selectInitialSeqNum()
 {
     // set the initial send sequence number
     state->iss = (unsigned long)fmod(SIMTIME_DBL(simTime()) * 250000.0, 1.0 + (double)(unsigned)0xffffffffUL) & 0xffffffffUL;
-
     state->snd_una = state->snd_nxt = state->snd_max = state->iss;
-
     sendQueue->init(state->iss + 1); // + 1 is for SYN
+
+#ifndef PRIVATE
     rexmitQueue->init(state->iss + 1); // + 1 is for SYN
+#else
+    if(state->sack_enabled)
+        SACK_BLOCK->initial();
+#endif
 }
 
 bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
@@ -992,6 +1018,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     {
         uint32 forward = 0;
         // check rexmitQ and try to forward snd_nxt before sending new data
+#ifndef PRIVATE
         if(rexmitQueue->getQueueLength() > 0)
             forward = rexmitQueue->checkRexmitQueueForSackedOrRexmittedSegments(state->snd_nxt);
 
@@ -1002,6 +1029,11 @@ void TCPConnection::sendSegment(uint32 bytes)
             tcpEV << " to "<< state->snd_nxt << endl;
             rexmitQueue->info();
         }
+#else
+        // FIXME
+        // state->snd_nxt += SACK_BLOCK->do_forward();
+
+#endif
     }
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath && this->isSubflow) {
@@ -1048,9 +1080,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     if(getTcpMain()->multipath){
         // MBe: A first try of a fix
 		if (state->sack_enabled){
-			 uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
-			 if(offset > 0)	// we know this segment.... send only segment size
-				 bytes = std::min(bytes,(offset - state->snd_una));	// FIXME: In this case we overwrite for a retransmission the sending window
+			 bytes = std::min(bytes,SACK_BLOCK->getSizeOfRtxPkt());	// FIXME: In this case we overwrite for a retransmission the sending window
 		}
     }
 #endif // PRIVATE
@@ -1083,9 +1113,14 @@ void TCPConnection::sendSegment(uint32 bytes)
             doenq = false;
     if(doenq)
 #endif // PRIVATE
+#ifndef PRIVATE
     if (state->sack_enabled && (!this->getState()->fin_rcvd) && (!this->getState()->send_fin) && (!state->isRTX))
         rexmitQueue->enqueueSentData(state->snd_nxt, state->snd_nxt + bytes);
-
+#else
+   // if (state->sack_enabled)
+   //         SACK_BLOCK->enqueueSACKReceiver(bytes);
+   // Warum?
+#endif
     tcpseg->setAckNo(state->rcv_nxt);
     tcpseg->setAckBit(true);
     tcpseg->setWindow(updateRcvWnd());
@@ -1128,10 +1163,13 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         state->snd_nxt = state->snd_max;
 
     uint32 old_highRxt = 0;
-
+#ifndef PRIVATE
     if (state->sack_enabled && (rexmitQueue->getQueueLength() > 0 ))
         old_highRxt = rexmitQueue->getHighestRexmittedSeqNum();
-
+#else
+    if (state->sack_enabled)
+        old_highRxt = SACK_BLOCK->getHighRxt();
+#endif
     // check how many bytes we have
     ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
 
@@ -1302,7 +1340,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // notify (once is enough)
     tcpAlgorithm->ackSent();
 
-    if (state->sack_enabled && state->lossRecovery && old_highRxt != state->highRxt)
+    if (state->sack_enabled && state->lossRecovery && (old_highRxt != SACK_BLOCK->getHighRxt()))
     {
         // Note: Restart of REXMIT timer on retransmission is not part of RFC 2581, however optional in RFC 3517 if sent during recovery.
         tcpEV << "Retransmission sent during recovery, restarting REXMIT timer.\n";
@@ -1311,7 +1349,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
-    //fprintf(stderr, "Sent  %s:%d to %s:%d <- OK\n",localAddr.str().c_str(),localPort,  remoteAddr.str().c_str(),remotePort);
     return true;
 }
 
@@ -1360,7 +1397,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
             sendQueue->getBytesAvailable(state->snd_nxt));
 #else
     // TODO I use my solution....Perhaps This should switched to the old above
-    ulong bytes = state->snd_mss; // FIXME, why is sometimes the queue empty for retransmission?
+    uint32 bytes = state->snd_mss; // FIXME, why is sometimes the queue empty for retransmission?
 #endif // PRIVATE
     // FIN (without user data) needs to be resent
     if (bytes == 0 && state->send_fin && state->snd_fin_seq == sendQueue->getBufferEndSeq())
@@ -1391,12 +1428,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
         if(this->getTcpMain()->multipath)
             if(flow->isFIN)
                 doit = false;
-        if(doit)
-        if (state->sack_enabled){
-            uint32 offset =  rexmitQueue->getEndOfRegion(state->snd_una);
-            if(offset != 0);
-                bytes = offset - state->snd_una;
-        }
+        if(doit)    // First try
 #endif // PRIVATE
         sendSegment(bytes);
 
@@ -1411,11 +1443,15 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
 
         if (state->sack_enabled)
         {
+#ifdef PRIVATE
+            SACK_BLOCK->updateStatus();
+#else
             // RFC 3517, page 7: "(3) Retransmit the first data segment presumed dropped -- the segment
             // starting with sequence number HighACK + 1.  To prevent repeated
             // retransmission of the same data, set HighRxt to the highest
             // sequence number in the retransmitted segment."
             state->highRxt = rexmitQueue->getHighestRexmittedSeqNum();
+#endif
         }
     }
 }
@@ -1481,7 +1517,11 @@ void TCPConnection::readHeaderOptions(TCPSegment *tcpseg)
                 break;
 
             case TCPOPTION_SACK: // SACK=5
+#ifndef PRIVATE
                 ok = processSACKOption(tcpseg, option);
+#else
+                ok = SACK_BLOCK->processSACKOption(tcpseg, option);
+#endif
                 break;
 
             case TCPOPTION_TIMESTAMP: // TS=8
@@ -1852,7 +1892,11 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
         // SACK option."
         if (state->sack_enabled && (state->snd_sack || state->snd_dsack))
         {
+#ifndef PRIVATE
             addSacks(tcpseg);
+#else
+            SACK_BLOCK->addSACK(tcpseg);
+#endif
             t = tcpseg->getOptionsArraySize();
         }
 
@@ -2047,7 +2091,11 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
     // can generate such ACKs to trigger inappropriate transmission of data
     // segments.  See [SCWA99] for a discussion of attacks by misbehaving
     // receivers."
+#ifndef PRIVATE
     if (!state->sack_enabled || (state->sack_enabled && state->sackedBytes_old != state->sackedBytes))
+#else
+    if (!state->sack_enabled || (state->sack_enabled && SACK_BLOCK->statusChanged()))
+#endif
     {
         // check how many bytes we have
         ulong buffered = sendQueue->getBytesAvailable(state->snd_max);
