@@ -182,6 +182,7 @@ void TCPNewReno::receivedDuplicateAck()
         {
             this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
         }
+        sendData(true);
     }
     else if (state->dupacks == DUPTHRESH && (!state->lossRecovery)) // DUPTHRESH = 3
     {

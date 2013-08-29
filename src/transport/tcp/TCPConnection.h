@@ -171,8 +171,12 @@ enum TCPEventCode
 #define TCP_OPTION_TS_SIZE          12  // 12 bytes, option length = 10 bytes + 2 bytes (NOP)
 #define PAWS_IDLE_TIME_THRESH   (24 * 24 * 3600)  // 24 days in seconds (RFC 1323)
 
+#ifndef PRIVATE
 #ifndef SACKS_AS_C_ARRAY
     typedef std::list<Sack> SackList;
+#endif
+#else
+    typedef std::map<uint32,uint32> SackMap;
 #endif
 
 /**
@@ -285,10 +289,14 @@ class INET_API TCPStateVariables : public cObject
 
     bool snd_sack;           // set if received vaild out-of-order segment or rcv_nxt changed, but receivedQueue is not empty
     bool snd_dsack;          // set if received duplicated segment (sequenceNo+PLength < rcv_nxt) or (segment is not acceptable)
+#ifndef PRIVATE
 #ifdef SACKS_AS_C_ARRAY
     Sack sacks_array[MAX_SACK_BLOCKS]; // MAX_SACK_BLOCKS is set to 60
 #else
     SackList sacks_array; // MAX_SACK_BLOCKS is set to 60
+#endif
+#else
+    SackMap sack_map;
 #endif
 
     SACKHandler       *sackhandler;

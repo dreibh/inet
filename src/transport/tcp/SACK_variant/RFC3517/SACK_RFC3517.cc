@@ -35,6 +35,7 @@ uint32 SACK_RFC3517::getHighRxt(){
 void SACK_RFC3517::updateStatus() {
     sb.high_acked = state->snd_una - 1;
     sb.high_data = state->snd_max;
+    discardUpTo(state->snd_una);
 }
 
 uint32 SACK_RFC3517::do_forward(){
@@ -102,18 +103,22 @@ uint32 SACK_RFC3517::getRecoveryPoint(){
 
 uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
     uint32 offset = 0;
+    if(sb.map.empty()) return 0; // No Sack no nee to work
     _setPipe();
-    while(wnd - sb.pipe >= state->snd_mss){
+
+    while(wnd - (sb.pipe + offset)>= state->snd_mss){
         uint32 new_nxt = _nextSeg(offset);
         uint32 old_nxt = state->snd_nxt;
         if(new_nxt == 0)
             return offset;
         state->snd_nxt = new_nxt;
         con->sendSegment(state->snd_mss);
-        std::cerr << "RTX on SACK base: [" << new_nxt << "..." << state->snd_nxt - 1 << "]" << std::endl;
+        // std::cerr << "RTX on SACK base: [" << new_nxt << "..." << state->snd_nxt - 1 << "]"  << "Expect " << state->snd_una << std::endl;
         sb.high_rtx = state->snd_nxt -1;
         offset += state->snd_nxt - new_nxt;
         state->snd_nxt = old_nxt;
+        if(sb.pipe+offset > wnd)
+            break;
     }
     return offset;
 }
@@ -149,7 +154,7 @@ uint32 SACK_RFC3517::_nextSeg(uint32 offset){
     }
 rule2:
     sb.high_rtx = sb.high_acked;
-    return sb.high_acked + 1;
+    return 0; // sb.high_acked + 1;
 // TODO Rule 3 und Rule 4
 }
 void SACK_RFC3517::_setPipe(){
@@ -158,6 +163,7 @@ void SACK_RFC3517::_setPipe(){
     for(int seg = sb.high_acked; seg <= sb.high_data; seg++){
         // a)
         SACK_REGION* sack = _isLost(seg);
+        if(sack==NULL) return; // no SACKs
         if(!sack->lost){
             sb.pipe += sack->end - seg;
         }
@@ -214,8 +220,9 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
     // We know exact this Sack
     SACK_MAP::iterator i;
     bool know_start = false;
-    bool know_end = false;
-    if((!sb.map.empty()) && (start <= (sb.map.end()--)->second->end)){
+
+    if((!sb.map.empty()) ){
+
         if((i =sb.map.find(start)) != sb.map.end()){
             know_start = true;
             if(i->second->end == end){
@@ -227,20 +234,19 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
         if(know_start){
             // Partial DUP less
             SACK_REGION *par = new SACK_REGION();
-            par->end = i->second->end;
-            par->lost = i->second->dup + 1;
-            i->second->end = end;
-            sb.map.insert(std::make_pair(end + 1,par));
+            par->end = end;
+            par->lost = 1;
+            sb.map.insert(std::make_pair(i->second->end + 1,par));
+            i->second->dup += 1;
             return;
         }
         for(i = sb.map.begin();i != sb.map.end();i++){
             if(i->second->end <= end){
                 if(i->second->end == end){
-                    bool know_end = false;
                     SACK_REGION *par = new SACK_REGION();
-                    par->end = end;
-                    par->dup = i->second->dup + 1;
-                    i->second->end = start - 1;
+                    par->end = i->first - 1 ;
+                    par->dup = 1;
+                    i->second->dup += 1;
                     sb.map.insert(std::make_pair(start,par));
                     return;
                 }
@@ -250,15 +256,18 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
                 pre->end = end;
                 pre->dup = i->second->dup + 1;
                 sb.map.insert(std::make_pair(start,pre));
+
                 // insert the third element
                 SACK_REGION *post = new SACK_REGION();
                 pre->end = i->second->end;
-                pre->dup = i->second->dup + 1;
+                pre->dup = 1;
                 sb.map.insert(std::make_pair(end + 1,post));
+
                 // correct the first element
                 i->second->end = start -1;
                 return;
             }
+
         }
     }
     // New Dup
@@ -274,147 +283,131 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
     uint options_len = 0;
     uint used_options_len = tcpseg->getOptionsArrayLength();
     bool dsack_inserted = false; // set if dsack is subsets of a bigger sack block recently reported
-    SackList::iterator it, it2;
 
     uint32 start = state->start_seqno;
     uint32 end = state->end_seqno;
 
     // delete old sacks (below rcv_nxt), delete duplicates and print previous status of sacks_array:
-    it = state->sacks_array.begin();
-    tcpEV << "Previous status of sacks_array: \n" << ((it != state->sacks_array.end()) ? "" : "\t EMPTY\n");
-
-    while (it != state->sacks_array.end())
-    {
-        if (seqLE(it->getEnd(), state->rcv_nxt) || it->empty())
-        {
-            tcpEV << "\t SACK in sacks_array: " << " " << it->str() << " delete now\n";
-            it = state->sacks_array.erase(it);
-        }
-        else
-        {
-            tcpEV << "\t SACK in sacks_array: " << " " << it->str() << endl;
-            ASSERT(seqGE(it->getStart(), state->rcv_nxt));
+    SackMap::iterator it = state->sack_map.begin();
+    while(it!=state->sack_map.end()){
+        if(state->rcv_nxt > it->first){
+            if(state->rcv_nxt < it->second){
+                state->sack_map.insert(std::make_pair(state->rcv_nxt+1,it->second));
+            }
+            state->sack_map.erase(it->first);
             it++;
+            continue;
         }
+        break;
     }
+
 
     if (used_options_len > TCP_OPTIONS_MAX_SIZE - TCP_OPTION_SACK_MIN_SIZE)
     {
          tcpEV << "ERROR: Failed to addSacks - at least 10 free bytes needed for SACK - used_options_len=" << used_options_len << endl;
-
          //reset flags:
          state->snd_sack = false;
          state->snd_dsack = false;
          state->start_seqno = 0;
          state->end_seqno = 0;
+         ASSERT(false && "Not enough space for ACKS");
          return tcpseg;
     }
-
+    uint key = 0;
     if (start != end)
     {
-     if (state->snd_dsack) // SequenceNo < rcv_nxt
-     {
-         // RFC 2883, page 3:
-         // "(3) The left edge of the D-SACK block specifies the first sequence
-         // number of the duplicate contiguous sequence, and the right edge of
-         // the D-SACK block specifies the sequence number immediately following
-         // the last sequence in the duplicate contiguous sequence."
-         if (seqLess(start, state->rcv_nxt) && seqLess(state->rcv_nxt, end))
-             end = state->rcv_nxt;
+        if (state->snd_dsack) // SequenceNo < rcv_nxt
+        {
+            // RFC 2883, page 3:
+            // "(3) The left edge of the D-SACK block specifies the first sequence
+            // number of the duplicate contiguous sequence, and the right edge of
+            // the D-SACK block specifies the sequence number immediately following
+            // the last sequence in the duplicate contiguous sequence."
+            if (seqLess(start, state->rcv_nxt) && seqLess(state->rcv_nxt, end))
+                end = state->rcv_nxt;
+            key = start;
+            dsack_inserted = true;
+        }
+        else
+        {
+            start = con->getReceiveQueue()->getLE(start);
+            end = con->getReceiveQueue()->getRE(end);
+        }
 
-         dsack_inserted = true;
-         Sack nSack(start, end);
-         state->sacks_array.push_front(nSack);
-         tcpEV << "inserted DSACK entry: " << nSack.str() << "\n";
-     }
-     else
-     {
-         uint32 contStart = con->getReceiveQueue()->getLE(start);
-         uint32 contEnd = con->getReceiveQueue()->getRE(end);
 
-         Sack newSack(contStart, contEnd);
-         state->sacks_array.push_front(newSack);
-         tcpEV << "Inserted SACK entry: " << newSack.str() << "\n";
-     }
+        // RFC 2883, page 3:
+        // "(3) The left edge of the D-SACK block specifies the first sequence
+        // number of the duplicate contiguous sequence, and the right edge of
+        // the D-SACK block specifies the sequence number immediately following
+        // the last sequence in the duplicate contiguous sequence."
 
-     // RFC 2883, page 3:
-     // "(3) The left edge of the D-SACK block specifies the first sequence
-     // number of the duplicate contiguous sequence, and the right edge of
-     // the D-SACK block specifies the sequence number immediately following
-     // the last sequence in the duplicate contiguous sequence."
+        // RFC 2018, page 4:
+        // "* The first SACK block (i.e., the one immediately following the
+        // kind and length fields in the option) MUST specify the contiguous
+        // block of data containing the segment which triggered this ACK,
+        // unless that segment advanced the Acknowledgment Number field in
+        // the header.  This assures that the ACK with the SACK option
+        // reflects the most recent change in the data receiver's buffer
+        // queue."
 
-     // RFC 2018, page 4:
-     // "* The first SACK block (i.e., the one immediately following the
-     // kind and length fields in the option) MUST specify the contiguous
-     // block of data containing the segment which triggered this ACK,
-     // unless that segment advanced the Acknowledgment Number field in
-     // the header.  This assures that the ACK with the SACK option
-     // reflects the most recent change in the data receiver's buffer
-     // queue."
+        // RFC 2018, page 4:
+        // "* The first SACK block (i.e., the one immediately following the
+        // kind and length fields in the option) MUST specify the contiguous
+        // block of data containing the segment which triggered this ACK,"
 
-     // RFC 2018, page 4:
-     // "* The first SACK block (i.e., the one immediately following the
-     // kind and length fields in the option) MUST specify the contiguous
-     // block of data containing the segment which triggered this ACK,"
+        // RFC 2883, page 3:
+        // "(4) If the D-SACK block reports a duplicate contiguous sequence from
+        // a (possibly larger) block of data in the receiver's data queue above
+        // the cumulative acknowledgement, then the second SACK block in that
+        // SACK option should specify that (possibly larger) block of data.
+        //
+        // (5) Following the SACK blocks described above for reporting duplicate
+        // segments, additional SACK blocks can be used for reporting additional
+        // blocks of data, as specified in RFC 2018."
 
-     // RFC 2883, page 3:
-     // "(4) If the D-SACK block reports a duplicate contiguous sequence from
-     // a (possibly larger) block of data in the receiver's data queue above
-     // the cumulative acknowledgement, then the second SACK block in that
-     // SACK option should specify that (possibly larger) block of data.
-     //
-     // (5) Following the SACK blocks described above for reporting duplicate
-     // segments, additional SACK blocks can be used for reporting additional
-     // blocks of data, as specified in RFC 2018."
+        // RFC 2018, page 4:
+        // "* The SACK option SHOULD be filled out by repeating the most
+        // recently reported SACK blocks (based on first SACK blocks in
+        // previous SACK options) that are not subsets of a SACK block
+        // already included in the SACK option being constructed."
 
-     // RFC 2018, page 4:
-     // "* The SACK option SHOULD be filled out by repeating the most
-     // recently reported SACK blocks (based on first SACK blocks in
-     // previous SACK options) that are not subsets of a SACK block
-     // already included in the SACK option being constructed."
 
-     it = state->sacks_array.begin();
-     if (dsack_inserted)
-         it++;
-    #ifdef PRIVATE
-     bool contains = false;
-    #endif
-     for (; it != state->sacks_array.end(); it++)
-     {
-         ASSERT(!it->empty());
 
-         it2 = it;
-         it2++;
-         while (it2 != state->sacks_array.end())
-         {
-             if (it->contains(*it2))
-             {
-                 tcpEV << "sack matched, delete contained : a="<< it->str() <<", b="<< it2->str() << endl;
-                 it2 = state->sacks_array.erase(it2);
-    #ifdef PRIVATE
-                 contains = true;// if we found we should break
-    #endif              break;
-             }
-             else{
-    #ifdef PRIVATE
-                if(seqGE(it2->getEnd(),it->getEnd())){
-                    contains = true;
+        for (SackMap::iterator it2 = state->sack_map.begin(); it2 != state->sack_map.end(); it2++)
+        {
+            if(start <= it2->first){
+                // OK this is the smallest we know
+                if(end< it2->first){
+                    break; // NEW smallest sack
+                }
+
+                // there is a overlapping...we have to check how far
+                bool found_end = false;
+                while(it2 != state->sack_map.end()){
+                    if(end <= it2->second){
+                        found_end = true;
+                        break;
+                    }
+                 // it2 is overlapped ....delete
+                 state->sack_map.erase(it2->first);
+                 it2++;
+                }
+                if(found_end){
+                    end = it2->second;
+                    state->sack_map.erase(it2->first);
                     break;
                 }
-    #endif
-                 it2++;
-             }
-         }
-    #ifdef PRIVATE
-         if(contains)
-             break;
-    #endif
-
-     }
+                else{
+                 // nothing to do... overlapped are erased above
+                    break;
+                }
+            }
+        }
+        std::pair<SackMap::iterator, bool> pair = state->sack_map.insert(std::make_pair(start,end));
+        ASSERT(pair.second && "Could not insert SACK");
+        it = pair.first;
     }
-
-    uint n = state->sacks_array.size();
-
+    uint n = state->sack_map.size();
     uint maxnode = ((TCP_OPTIONS_MAX_SIZE - used_options_len) - 2) / 8;    // 2: option header, 8: size of one sack entry
 
     if (n > maxnode)
@@ -422,8 +415,10 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
 
     if (n == 0)
     {
-     if (dsack_inserted)
-         state->sacks_array.pop_front(); // delete DSACK entry
+
+// FIXME Delayed SACK
+//     if (dsack_inserted)
+//         state->sacks_array.pop_front(); // delete DSACK entry
 
      // reset flags:
      state->snd_sack = false;
@@ -435,7 +430,6 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
     }
 
     uint optArrSize = tcpseg->getOptionsArraySize();
-
     uint optArrSizeAligned = optArrSize;
 
     while (used_options_len % 4 != 2)
@@ -464,20 +458,16 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
 
     // write sacks from sacks_array to options
     uint counter = 0;
-
-    for (it = state->sacks_array.begin(); it != state->sacks_array.end() && counter < 2 * n; it++)
+    for (SackMap::iterator it2 = state->sack_map.begin(); it2 != state->sack_map.end() && counter < 2 * n; it2++)
     {
-     ASSERT(it->getStart() != it->getEnd());
-
-     option.setValues(counter++, it->getStart());
-     option.setValues(counter++, it->getEnd());
+     ASSERT(it2->first != it2->second);
+     option.setValues(counter++, it2->first);
+     option.setValues(counter++, it2->second);
     }
 
     // independent of "n" we always need 2 padding bytes (NOP) to make: (used_options_len % 4 == 0)
     options_len = used_options_len + 8 * n + 2; // 8 bytes for each SACK (n) + 2 bytes for kind&length
-
     ASSERT(options_len <= TCP_OPTIONS_MAX_SIZE); // Options length allowed? - maximum: 40 Bytes
-
     tcpseg->setOptions(optArrSizeAligned, option);
 
     // update number of sent sacks
@@ -518,8 +508,9 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
     // duplicate segments.)//
     //
     // In case of d-sack: delete first sack (d-sack) and move old sacks by one to the left
-    if (dsack_inserted)
-     state->sacks_array.pop_front(); // delete DSACK entry
+//     TODO FIXME Delayed SACK
+//    if (dsack_inserted)
+//     state->sacks_array.pop_front(); // delete DSACK entry
 
     // reset flags:
     state->snd_sack = false;
@@ -568,7 +559,7 @@ bool SACK_RFC3517::processSACKOption(TCPSegment *tcpseg, const TCPOption& option
               if (seqGreater(end, tcpseg->getAckNo()) && seqGreater(end, state->snd_una))
                   this->_cntDup(start,end);
               else{
-                  ASSERT(false && "Received SACK below total cumulative ACK snd_una");
+                  //ASSERT(false && "Received SACK below total cumulative ACK snd_una");
               }
           }
           state->rcv_sacks += n; // total counter, no current number
