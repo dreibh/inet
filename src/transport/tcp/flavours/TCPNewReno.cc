@@ -196,7 +196,9 @@ void TCPNewReno::receivedDuplicateAck()
             this->conn->getState()->sackhandler->setNewRecoveryPoint(state->snd_nxt);
             state->recover = state->snd_nxt;
         }
+
         // 2. Recalculate Window
+        recalculateSlowStartThreshold();
         setCWND(state->ssthresh + (3 * state->snd_mss));
         state->firstPartialACK = false;
         // 3. Retansmit
