@@ -101,6 +101,7 @@ void SACK_RFC3517::reset(){
     SACK_MAP::iterator i = sb.map.begin();
     while(i != sb.map.end()){
         delete i->second;
+        sb.map.erase(i->first);
         i++;
     }
 }
