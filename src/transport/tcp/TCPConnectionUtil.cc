@@ -1080,7 +1080,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     if(getTcpMain()->multipath){
         // MBe: A first try of a fix
 		if (state->sack_enabled){
-			 bytes = std::min(bytes,SACK_BLOCK->getSizeOfRtxPkt());	// FIXME: In this case we overwrite for a retransmission the sending window
+			 bytes = bytes - options_len; // std::min(bytes,SACK_BLOCK->getSizeOfRtxPkt());	// FIXME: In this case we overwrite for a retransmission the sending window
 		}
     }
 #endif // PRIVATE
