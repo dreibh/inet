@@ -309,8 +309,8 @@ void TCPConnection::removeVectors(){
 	rcvAdvVector = NULL;
 	if(sndNxtVector != NULL) delete sndNxtVector;
 	sndNxtVector = NULL;
-	if(sndAckVector != NULL) delete sndAckVector;
-	sndAckVector = NULL;
+//	if(sndAckVector != NULL) delete sndAckVector;
+//	sndAckVector = NULL;
 	if(rcvSeqVector != NULL) delete rcvSeqVector;
 	rcvSeqVector = NULL;
 	if(rcvAckVector != NULL) delete rcvAckVector;
@@ -462,8 +462,8 @@ void TCPConnection::sendToIP(TCPSegment *tcpseg)
     if (sndNxtVector && tcpseg->getPayloadLength() != 0)
         sndNxtVector->record(tcpseg->getSequenceNo());
 
-    if (sndAckVector)
-        sndAckVector->record(tcpseg->getAckNo());
+//    if (sndAckVector)
+//        sndAckVector->record(tcpseg->getAckNo());
 
     // final touches on the segment before sending
     tcpseg->setSrcPort(localPort);

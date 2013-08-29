@@ -428,10 +428,10 @@ TCPConnection::~TCPConnection()
         delete sndNxtVector;
         sndNxtVector = NULL;
     }
-    if(sndAckVector){
-        delete sndAckVector;
-        sndAckVector = NULL;
-    }
+//    if(sndAckVector){
+//        delete sndAckVector;
+//        sndAckVector = NULL;
+//    }
     if(rcvSeqVector){
         delete rcvSeqVector;
         rcvSeqVector = NULL;

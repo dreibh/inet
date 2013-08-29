@@ -103,72 +103,102 @@ uint32 SACK_RFC3517::getRecoveryPoint(){
 
 uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
     uint32 offset = 0;
+    uint32 len = 0;
     if(sb.map.empty()) return 0; // No Sack no nee to work
     _setPipe();
 
     while(wnd - (sb.pipe + offset)>= state->snd_mss){
-        uint32 new_nxt = _nextSeg(offset);
-        uint32 old_nxt = state->snd_nxt;
-        if(new_nxt == 0)
-            return offset;
-        state->snd_nxt = new_nxt;
-        con->sendSegment(state->snd_mss);
-        // std::cerr << "RTX on SACK base: [" << new_nxt << "..." << state->snd_nxt - 1 << "]"  << "Expect " << state->snd_una << std::endl;
-        sb.high_rtx = state->snd_nxt -1;
-        offset += state->snd_nxt - new_nxt;
-        state->snd_nxt = old_nxt;
+        uint32 new_nxt = _nextSeg(&len);
+        if((new_nxt == 0) || (len < 1))
+             return offset;
+        sb.old_nxt = state->snd_nxt;
+        while(len){
+            if((new_nxt >=  sb.old_nxt) || ((sb.pipe+offset) > wnd))
+                return offset;
+            state->snd_nxt = new_nxt;
+            con->sendSegment(wnd - (sb.pipe+offset));
+            sb.high_rtx = state->snd_nxt -1;
+            offset += state->snd_nxt - new_nxt;
+            (len > (state->snd_nxt - new_nxt))? len -(state->snd_nxt - new_nxt):len = 0;
+            std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->snd_nxt << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
+
+            new_nxt =  state->snd_nxt;
+        }
+        state->snd_nxt = sb.old_nxt;
         if(sb.pipe+offset > wnd)
             break;
     }
     return offset;
 }
 
-uint32 SACK_RFC3517::_nextSeg(uint32 offset){
+uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
     SACK_MAP::iterator i = sb.map.end();
     uint32 s2 = sb.high_acked + 1;
-    if(offset){
+    int rule = 2;
+    if(*offset){
         s2 = sb.high_rtx + 1;
     }
+    SACK_MAP::iterator i2 = sb.map.begin();
     if(s2 < state->snd_nxt){
     // check if it is not in a SACK Block
-        SACK_MAP::iterator i2 = sb.map.begin();
         i2++;
         for(i = sb.map.begin();i != sb.map.end();i++,i2++){
             if(i2 == sb.map.end()){
                 if((s2 > i->second->end) && (s2 < state->snd_nxt)){
-                    return s2;
+                    rule = 1;
+                    break;
                 }
                 // i is last segment, we have to go to rule 2
-                goto rule2;
+                rule = 2;
+                break;
             }
             if((s2 > i->second->end) && (s2 < i2->first)){  // it is between two SACK Blocks, so we use it for retransmit
                     // found relating SACK
-                    return s2;
+                rule = 1;
+                break;
             }
          }
-
-        if( (s2 > sb.high_rtx) &&
-            (s2 < (--i)->second->end) &&
-            (_isLost(s2)->lost)){
-        }
     }
-rule2:
-    sb.high_rtx = sb.high_acked;
-    return 0; // sb.high_acked + 1;
+    switch(rule){
+    case 1:{
+            SACK_MAP::iterator it = sb.map.begin();
+            if( (s2 > sb.high_rtx) &&
+                (s2 < (--i)->second->end) &&
+                (_isLost(&it,s2)->lost)){
+                if(i2 != sb.map.end())
+                    *offset =  it->first - s2;
+                else
+                    *offset =  (sb.old_nxt - 1) - s2;
+                return s2;
+            }
+            return 0;
+    }break;
+    case 2:{
+            sb.high_rtx = sb.high_acked;
+            *offset =  i->second->end - i->first;
+            return 0; // sb.high_acked + 1;
+    }break;
 // TODO Rule 3 und Rule 4
+    case 3:
+    default:
+        return 0;
+    }
+    ASSERT(false && "Should never be reached");
+    return 0;
 }
 void SACK_RFC3517::_setPipe(){
     _createIsLostTag();
+    SACK_MAP::iterator i = sb.map.begin();
     sb.pipe = 0;
-    for(int seg = sb.high_acked; seg <= sb.high_data; seg++){
+    for(uint32 seg = sb.high_acked; seg <= sb.high_data; seg++){
         // a)
-        SACK_REGION* sack = _isLost(seg);
-        if(sack==NULL) return; // no SACKs
-        if(!sack->lost){
-            sb.pipe += sack->end - seg;
+        if(_isLost(&i, seg)==NULL)
+            return; // no SACKs
+        if(!(i->second->lost)){
+            sb.pipe += i->first - seg;
         }
         if(seg <= sb.high_rtx){
-            sb.pipe += sack->end - seg;
+            sb.pipe += i->first - seg;
         }
 
     }
@@ -199,17 +229,16 @@ void SACK_RFC3517::_createIsLostTag(){
 }
 
 
-SACK_REGION* SACK_RFC3517::_isLost(uint32 seg){
+SACK_REGION* SACK_RFC3517::_isLost(SACK_MAP::iterator *it, uint32 seg){
 
     // Perhaps we have a direct access
-    SACK_MAP::iterator i = sb.map.find(seg);
-    if(i!=sb.map.end())
-        return i->second;
-    // No direct access, we have to count
-    for(i = sb.map.begin();i != sb.map.end();i++){
-        if(seg <= i->second->end){
+    if(sb.map.empty())
+        return NULL;
+
+    for(;(*it) != sb.map.end();(*it)++){
+        if(seg <= (*it)->second->end){
             // found relating SACK
-                return i->second;
+            return (*it)->second;
         }
     }
     return NULL;
@@ -220,13 +249,13 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
     // We know exact this Sack
     SACK_MAP::iterator i;
     bool know_start = false;
-
+    if(start == 1218967)
+        std::cerr << "for debug" << std::endl;
     if((!sb.map.empty()) ){
 
         if((i =sb.map.find(start)) != sb.map.end()){
             know_start = true;
             if(i->second->end == end){
-                know_end = true;
                 i->second->dup++;
                 return;
             }
@@ -236,8 +265,18 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
             SACK_REGION *par = new SACK_REGION();
             par->end = end;
             par->lost = 1;
-            sb.map.insert(std::make_pair(i->second->end + 1,par));
-            i->second->dup += 1;
+
+
+            uint32 new_start = i->second->end + 1;
+            while(i != sb.map.end()){
+                if((start< i->second->end) && (end >= i->second->end)){
+                    i->second->dup++;
+                    new_start = i->second->end + 1;
+                }
+                else break;
+                i++;
+            }
+            sb.map.insert(std::make_pair(new_start,par));
             return;
         }
         for(i = sb.map.begin();i != sb.map.end();i++){
@@ -250,18 +289,32 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
                     sb.map.insert(std::make_pair(start,par));
                     return;
                 }
+                if(i->second->end < start){
+                    // it is a new above
+                    break;
+                }
                 // worst case
-                // insert the second element
+                // overlapping element; we have to split
                 SACK_REGION *pre = new SACK_REGION();
                 pre->end = end;
                 pre->dup = i->second->dup + 1;
-                sb.map.insert(std::make_pair(start,pre));
 
                 // insert the third element
                 SACK_REGION *post = new SACK_REGION();
                 pre->end = i->second->end;
                 pre->dup = 1;
-                sb.map.insert(std::make_pair(end + 1,post));
+
+                uint32 new_start = i->second->end + 1;
+                while(i != sb.map.end()){
+                  if((start< i->second->end) && (end >= i->second->end)){
+                      i->second->dup++;
+                      new_start = i->second->end + 1;
+                  }
+                  else break;
+                  i++;
+                }
+                sb.map.insert(std::make_pair(start,pre));
+                sb.map.insert(std::make_pair(new_start,post));
 
                 // correct the first element
                 i->second->end = start -1;
@@ -282,6 +335,7 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
     TCPOption option;
     uint options_len = 0;
     uint used_options_len = tcpseg->getOptionsArrayLength();
+//    TODO DSACK
     bool dsack_inserted = false; // set if dsack is subsets of a bigger sack block recently reported
 
     uint32 start = state->start_seqno;
@@ -313,7 +367,7 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
          ASSERT(false && "Not enough space for ACKS");
          return tcpseg;
     }
-    uint key = 0;
+
     if (start != end)
     {
         if (state->snd_dsack) // SequenceNo < rcv_nxt
@@ -325,7 +379,7 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
             // the last sequence in the duplicate contiguous sequence."
             if (seqLess(start, state->rcv_nxt) && seqLess(state->rcv_nxt, end))
                 end = state->rcv_nxt;
-            key = start;
+
             dsack_inserted = true;
         }
         else

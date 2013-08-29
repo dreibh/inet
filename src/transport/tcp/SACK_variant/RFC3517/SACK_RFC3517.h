@@ -42,6 +42,7 @@ typedef struct _scoreboard{
     uint32 pipe;
     uint32 recoveryPoint;
     SACK_MAP map;
+    uint32 old_nxt;
 } SCOREBOARD;
 
 class SACK_RFC3517 : public SACKHandler{
@@ -51,8 +52,8 @@ private:
     SCOREBOARD sb;
 
     virtual void _setPipe();
-    uint32 _nextSeg(uint32 offset);
-    virtual SACK_REGION* _isLost(uint32 seg);
+    uint32 _nextSeg(uint32 *offset);
+    virtual SACK_REGION* _isLost(SACK_MAP::iterator *i, uint32 seg);
     void _createIsLostTag();
 
     void _cntDup(uint32 start, uint32 end);
