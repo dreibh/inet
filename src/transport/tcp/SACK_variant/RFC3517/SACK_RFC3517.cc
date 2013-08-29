@@ -13,16 +13,22 @@ SACK_RFC3517::SACK_RFC3517(TCPConnection *conn): SACKHandler(conn->getState()){
    this->con = conn;
    // rexmitQueue = new TCPNewSACKRexmitQueue();
    updateStatus();
+   sb.high_rtx = 0;
+   sb.recoveryPoint = 0;
 //   rexmitQueue->setConnection(conn);
 }
 
 SACK_RFC3517::~SACK_RFC3517() {
     // TODO Auto-generated destructor stub
+    SACK_MAP::iterator i;
+       for(i = sb.map.begin();i != sb.map.end();i++){
+                  delete i->second;
+       }
 }
 
 void SACK_RFC3517::initial(){
     updateStatus();
-    sb.high_rtx  = state->snd_una;
+    sb.high_rtx = 0;
     sb.recoveryPoint = 0;
 }
 
@@ -69,13 +75,13 @@ bool SACK_RFC3517::statusChanged(){
 void SACK_RFC3517::discardUpTo(uint32 to){
     SACK_MAP::iterator i;
     for(i = sb.map.begin();i != sb.map.end();i++){
-               if(to > i->second->end){
+               if(to >= i->second->end){
                    delete i->second;
                    sb.map.erase(i->first);
                    continue;
                }
                // if we are here it could only be partial
-               if((i->first < to) && (to < i->second->end)){
+               if((i->first <= to) && (to <= i->second->end)){
                    sb.map.insert(std::make_pair(to+1,i->second));
                    sb.map.erase(i->first);
                }
@@ -92,6 +98,11 @@ void SACK_RFC3517::reset(){
     //rexmitQueue->resetSackedBit();
 
     //rexmitQueue->resetRexmittedBit();
+    SACK_MAP::iterator i = sb.map.begin();
+    while(i != sb.map.end()){
+        delete i->second;
+        i++;
+    }
 }
 
 void SACK_RFC3517::setNewRecoveryPoint(uint32 r){
@@ -119,6 +130,8 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
             con->sendSegment(wnd - (sb.pipe+offset));
             sb.high_rtx = state->snd_nxt -1;
             offset += state->snd_nxt - new_nxt;
+            if(state->snd_nxt == new_nxt)
+                break;
             (len > (state->snd_nxt - new_nxt))? len -(state->snd_nxt - new_nxt):len = 0;
             std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->snd_nxt << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
 
@@ -143,13 +156,22 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
     // check if it is not in a SACK Block
         i2++;
         for(i = sb.map.begin();i != sb.map.end();i++,i2++){
+            if(s2 < i->first){
+                rule = 1;
+                break;
+            }
             if(i2 == sb.map.end()){
                 if((s2 > i->second->end) && (s2 < state->snd_nxt)){
                     rule = 1;
                     break;
                 }
+                else
+                    if((s2 > i->second->end) && (s2 < state->snd_nxt)){
+                        rule = 1;
+                        break;
+                    }
                 // i is last segment, we have to go to rule 2
-                rule = 2;
+                rule = 1;
                 break;
             }
             if((s2 > i->second->end) && (s2 < i2->first)){  // it is between two SACK Blocks, so we use it for retransmit
@@ -158,10 +180,12 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
                 break;
             }
          }
+
     }
     switch(rule){
     case 1:{
             SACK_MAP::iterator it = sb.map.begin();
+            i = sb.map.end();
             if( (s2 > sb.high_rtx) &&
                 (s2 < (--i)->second->end) &&
                 (_isLost(&it,s2)->lost)){
@@ -176,7 +200,7 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
     case 2:{
             sb.high_rtx = sb.high_acked;
             *offset =  i->second->end - i->first;
-            return 0; // sb.high_acked + 1;
+            return sb.high_acked +1; // sb.high_acked + 1;
     }break;
 // TODO Rule 3 und Rule 4
     case 3:
@@ -231,6 +255,7 @@ void SACK_RFC3517::_createIsLostTag(){
 
 SACK_REGION* SACK_RFC3517::_isLost(SACK_MAP::iterator *it, uint32 seg){
 
+
     // Perhaps we have a direct access
     if(sb.map.empty())
         return NULL;
@@ -247,24 +272,26 @@ SACK_REGION* SACK_RFC3517::_isLost(SACK_MAP::iterator *it, uint32 seg){
 void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
     // Full known DUP
     // We know exact this Sack
+
     SACK_MAP::iterator i;
     bool know_start = false;
-    if(start == 1218967)
-        std::cerr << "for debug" << std::endl;
+    discardUpTo(state->snd_una);
+
     if((!sb.map.empty()) ){
 
         if((i =sb.map.find(start)) != sb.map.end()){
             know_start = true;
             if(i->second->end == end){
                 i->second->dup++;
+                _print_and_check_sb();
                 return;
             }
         }
         if(know_start){
             // Partial DUP less
-            SACK_REGION *par = new SACK_REGION();
-            par->end = end;
-            par->lost = 1;
+            SACK_REGION *ent = (SACK_REGION *) malloc(sizeof(SACK_REGION));
+            ent->end = end;
+            ent->dup = 1;
 
 
             uint32 new_start = i->second->end + 1;
@@ -276,60 +303,142 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
                 else break;
                 i++;
             }
-            sb.map.insert(std::make_pair(new_start,par));
+            if(new_start - 1 == end){
+                // we don t need a new pair... everything is known
+                delete ent;
+            }
+            else
+                sb.map.insert(std::make_pair(new_start,ent));
+            _print_and_check_sb();
             return;
         }
+
         for(i = sb.map.begin();i != sb.map.end();i++){
-            if(i->second->end <= end){
-                if(i->second->end == end){
-                    SACK_REGION *par = new SACK_REGION();
-                    par->end = i->first - 1 ;
-                    par->dup = 1;
-                    i->second->dup += 1;
-                    sb.map.insert(std::make_pair(start,par));
-                    return;
-                }
-                if(i->second->end < start){
-                    // it is a new above
+            SACK_MAP::iterator l = i;
+
+            SACK_REGION *par = NULL;
+            while(i != sb.map.end()){
+                if(!i->second->end >= start){
+                    if(par != NULL)
+                        sb.map.insert(std::make_pair(start,par));
+                    i = l;
                     break;
                 }
-                // worst case
-                // overlapping element; we have to split
-                SACK_REGION *pre = new SACK_REGION();
-                pre->end = end;
-                pre->dup = i->second->dup + 1;
 
-                // insert the third element
-                SACK_REGION *post = new SACK_REGION();
-                pre->end = i->second->end;
-                pre->dup = 1;
-
-                uint32 new_start = i->second->end + 1;
-                while(i != sb.map.end()){
-                  if((start< i->second->end) && (end >= i->second->end)){
-                      i->second->dup++;
-                      new_start = i->second->end + 1;
-                  }
-                  else break;
-                  i++;
+                if(i->first > start){
+                    // we have a diff
+                    if(par == NULL)
+                       par = (SACK_REGION *) malloc(sizeof(SACK_REGION));
+                    par->dup =1;
+                    par->end = i->first - 1;
                 }
-                sb.map.insert(std::make_pair(start,pre));
-                sb.map.insert(std::make_pair(new_start,post));
 
-                // correct the first element
-                i->second->end = start -1;
-                return;
+
+                l = i;
+                i++;
             }
-
+            if(i == sb.map.end()) break; // new
+            bool create_new_entry = false;
+            while(i != sb.map.end()){
+                if(i->second->end < end){
+                    create_new_entry = true;
+                    break;
+                }
+                i->second->dup += 1;
+                l = i;
+                i++;
+            }
+            if(create_new_entry){
+                uint32 new_s = sb.map.begin()->second->end + 1;
+                if(i != sb.map.begin()){
+                    // we are somewhere in the middle
+                    new_s = (--i)->second->end + 1;
+                }
+                par = (SACK_REGION *) malloc(sizeof(SACK_REGION));
+                par->dup =1;
+                par->end = end;
+                sb.map.insert(std::make_pair(new_s,par));
+            }
+            _print_and_check_sb();
+            return;
         }
+
+
+//
+//            if(i->second->end <= end){
+//                if(i->second->end == end){
+//                    SACK_REGION *par = (SACK_REGION *) malloc(sizeof(SACK_REGION));
+//                    par->end = i->first - 1 ;
+//                    par->dup = 1;
+//                    i->second->dup += 1;
+//                    sb.map.insert(std::make_pair(start,par));
+//                    _print_and_check_sb();
+//                    return;
+//                }
+//                if(i->second->end < start){
+//                    // it is a new above
+//                    break;
+//                }
+//                // worst case
+//                // overlapping element; we have to split
+//                SACK_REGION *pre = new SACK_REGION();
+//                pre->end = end;
+//                pre->dup = i->second->dup + 1;
+//
+//                // insert the third element
+//                SACK_REGION *post = (SACK_REGION *) malloc(sizeof(SACK_REGION));
+//                post->end = i->second->end;
+//                post->dup = 1;
+//
+//                uint32 new_start = i->second->end + 1;
+//                while(i != sb.map.end()){
+//                  if((start< i->second->end) && (end >= i->second->end)){
+//                      i->second->dup++;
+//                      new_start = i->second->end + 1;
+//                  }
+//                  else break;
+//                  i++;
+//                }
+//                sb.map.insert(std::make_pair(start,pre));
+//                sb.map.insert(std::make_pair(new_start,post));
+//
+//                // correct the first element
+//                i->second->end = start -1;
+//                _print_and_check_sb();
+//                return;
+//            }
+
+ //       }
     }
+
     // New Dup
-    SACK_REGION *pre = new SACK_REGION();
+    SACK_REGION *pre = (SACK_REGION *) malloc(sizeof(SACK_REGION));
     pre->end = end;
     pre->dup = 1;
     sb.map.insert(std::make_pair(start,pre));
+    _print_and_check_sb();
     return;
 }
+void SACK_RFC3517::_print_and_check_sb(){
+
+    return;
+
+    uint32 last_end = state->snd_una;
+    std::cerr << "========================================" << std::endl;
+    for(SACK_MAP::iterator i = sb.map.begin();i != sb.map.end();i++){
+        if(i->first < state->snd_una)
+            ASSERT(false && "Start to small");
+        if(i->second->end > state->snd_max)
+            ASSERT(false && "End to big");
+// FIXME
+//        if(last_end > i->first)
+//            ASSERT(false && "Not in Order");
+        last_end =  i->second->end;
+        std::cerr << "SACKed " << i->second->dup << "times : [" <<  i->first << ".." << i->second->end << "]" << std::endl;
+    }
+    std::cerr << "========================================" << std::endl;
+}
+
 TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
 
     TCPOption option;
@@ -596,7 +705,6 @@ bool SACK_RFC3517::processSACKOption(TCPSegment *tcpseg, const TCPOption& option
               && con->getFsmState()  != TCP_S_FIN_WAIT_1 && con->getFsmState()  != TCP_S_FIN_WAIT_2)
       {
           tcpEV << "ERROR: TCP Header Option SACK received, but in unexpected state\n";
-          ASSERT(false && "SACKS NOT IN THIS STATE");
           return false;
       }
 

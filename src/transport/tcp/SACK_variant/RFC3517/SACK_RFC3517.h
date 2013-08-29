@@ -57,6 +57,7 @@ private:
     void _createIsLostTag();
 
     void _cntDup(uint32 start, uint32 end);
+    void _print_and_check_sb();
 public:
     SACK_RFC3517( TCPConnection *conn);
     virtual ~SACK_RFC3517();

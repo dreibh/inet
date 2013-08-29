@@ -179,11 +179,11 @@ void TCPNewReno::receivedDuplicateAck()
         // Deflating
         increaseCWND(state->snd_mss, false);
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
-//        if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
-//        {
-//            this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
-//        }
-        sendData(false);
+        if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
+        {
+            this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
+        }
+//        sendData(false);
     }
     else if (state->dupacks == DUPTHRESH && (!state->lossRecovery)) // DUPTHRESH = 3
     {

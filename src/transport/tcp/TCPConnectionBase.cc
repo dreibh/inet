@@ -428,10 +428,10 @@ TCPConnection::~TCPConnection()
         delete sndNxtVector;
         sndNxtVector = NULL;
     }
-//    if(sndAckVector){
-//        delete sndAckVector;
-//        sndAckVector = NULL;
-//    }
+    if(sndAckVector){
+        delete sndAckVector;
+        sndAckVector = NULL;
+    }
     if(rcvSeqVector){
         delete rcvSeqVector;
         rcvSeqVector = NULL;
@@ -495,19 +495,28 @@ TCPConnection::~TCPConnection()
         if(isSubflow){
               flow->removeSubflow(this);
           }
+        // FIXME - Who is responsible for delete tmp_msg_buf
+        tmp_msg_buf = NULL;
+        delete scheduledBytesVector;
+        scheduledBytesVector = NULL;
+        isSubflow = false;
+        joinToAck = false;
+        joinToSynAck = false;
+        isQueueAble = false;
+        todelete = false;
+        inlist = false;
+        randomA = 0;
+        randomB = 0;
     }
-    // FIXME - Who is responsible for delete tmp_msg_buf
-    tmp_msg_buf = NULL;
-    delete scheduledBytesVector;
-    scheduledBytesVector = NULL;
-    isSubflow = false;
-    joinToAck = false;
-    joinToSynAck = false;
-    isQueueAble = false;
-    todelete = false;
-    inlist = false;
-    randomA = 0;
-    randomB = 0;
+    else
+    {
+        while(!tmp_msg_buf->empty()){
+            cPacket* pkt = tmp_msg_buf->front();
+            delete pkt;
+            tmp_msg_buf->pop();
+        }
+    }
+
 
 
 #endif // PRIVATE
@@ -628,7 +637,12 @@ TCPEventCode TCPConnection::preanalyseAppCommandEvent(int commandCode)
 
 bool TCPConnection::performStateTransition(const TCPEventCode& event)
 {
+#ifndef PRIVATE
     ASSERT(fsm.getState() != TCP_S_CLOSED); // closed connections should be deleted immediately
+#else
+    if(fsm.getState() == TCP_S_CLOSED)
+        return false;
+#endif
     if (event == TCP_E_IGNORE)  // e.g. discarded segment
     {
         tcpEV << "Staying in state: " << stateName(fsm.getState()) << " (no FSM event)\n";
