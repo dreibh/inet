@@ -146,7 +146,7 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
         while(toSend){
 
             state->snd_nxt = new_nxt;
-            std::cerr << "Open window: "<< wnd - (sb.pipe+offset) << std::endl;
+      //      std::cerr << "Open window: "<< wnd - (sb.pipe+offset) << std::endl;
             con->sendSegment(wnd - (sb.pipe+offset));
 
             sb.high_rtx = state->snd_nxt - 1;
