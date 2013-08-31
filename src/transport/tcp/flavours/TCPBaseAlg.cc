@@ -295,6 +295,7 @@ void TCPBaseAlg::processRexmitTimer(TCPEventCode& event)
         {
 #ifdef PRIVATE
             state->sackhandler->setNewRecoveryPoint(state->snd_max);
+
 #else
             state->recoveryPoint = state->snd_max; // HighData = snd_max
 #endif

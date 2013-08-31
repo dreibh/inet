@@ -122,18 +122,27 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             setCWND(std::min(state->ssthresh, bytesInFlight() + state->snd_mss));
             state->lossRecovery = false;
             state->firstPartialACK = false;
+            state->dupacks = 0;
             // A)
-            this->conn->getState()->sackhandler->discardUpTo(state->snd_una);
             tcpEV << "End Loss Recovery\n";
+            if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
+            {
+                this->conn->getState()->sackhandler->discardUpTo(state->snd_una);
+                this->conn->getState()->sackhandler->setNewRecoveryPoint(state->snd_una);
+            }
         }
         else{
 
             tcpEV << "Fast Recovery - Partial ACK received: retransmitting the first unacknowledged segment\n";
 
-            // deflate cwnd by amount of new data acknowledged by cumulative acknowledgement field
+           // deflate cwnd by amount of new data acknowledged by cumulative acknowledgement field
             // FIXME deflate ?? -> Try a probe
             if(state->snd_una < firstSeqAcked)
                 throw cRuntimeError("This is not possible");
+
+
+            // Retransmit
+            conn->retransmitOneSegment(false); // It doesn t matter if here or somewhere esle ...
 
             // Do the indow stuff
             decreaseCWND(std::min(state->snd_una - firstSeqAcked,state->snd_mss), false); // Fixe ME -> How to do deflating
@@ -141,10 +150,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
             increaseCWND(state->snd_mss, false); // Is this correct ?
 
-
-            conn->sendAck(); // Fixme ...needed?
-            // Retransmit
-            conn->retransmitOneSegment(false); // It doesn t matter if here or somewhere esle ...
+            //conn->sendAck(); // Fixme ...needed?
 
             if (state->sack_enabled  && (!state->snd_fin_seq)) // FIXME... IT should be OK, even with fin. But we have to look on the sqn
             {
@@ -153,18 +159,19 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
                 // B.2 & C
                 this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
             }
+            sendData(true);
             return;
         }
     }else{
         updateCWND(firstSeqAcked);
     }
 
-
-    // Retransmit Timer
-    if ( state->lossRecovery && (!state->firstPartialACK) && (!state->fin_rcvd)) // TODO Unacked date => Correct? ... overwork check Fin state
-    {
-        restartRexmitTimer();
-    }
+//
+//    // Retransmit Timer
+//    if ( state->lossRecovery && (!state->firstPartialACK) && (!state->fin_rcvd)) // TODO Unacked date => Correct? ... overwork check Fin state
+//    {
+//        restartRexmitTimer();
+//    }
 
     sendData(true);
 }
@@ -173,46 +180,43 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 void TCPNewReno::receivedDuplicateAck()
 {
     // Overworked....
-    //TCPTahoeRenoFamily::receivedDuplicateAck();
-    if (state->lossRecovery)
+    if (state->dupacks == DUPTHRESH && (!state->lossRecovery)) // DUPTHRESH = 3
     {
-        // Deflating
-        increaseCWND(state->snd_mss, false);
-        tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
-        //if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
-        //{
-        //    this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
-        //}
-        sendData(false);
-    }
-    else if (state->dupacks == DUPTHRESH && (!state->lossRecovery)) // DUPTHRESH = 3
-    {
+        state->lossRecovery = true;
         if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
         {
-            state->lossRecovery = true;
-
             this->conn->getState()->sackhandler->updateStatus();    // Update after reach of DUPTACK
             // 1. Step RecoveryPoint = HighData
             this->conn->getState()->sackhandler->setNewRecoveryPoint(state->snd_nxt);
-            state->recover = state->snd_nxt;
+
         }
+        state->recover = state->snd_nxt;
 
         // 2. Recalculate Window
         recalculateSlowStartThreshold();
         setCWND(state->ssthresh + (3 * state->snd_mss));
         state->firstPartialACK = false;
         // 3. Retansmit
+
         conn->retransmitOneSegment(false);
+        this->restartRexmitTimer();
+
         if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
         {
             // Run SetPipe
             this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
         }
     }
-    else if((!state->lossRecovery) && state->limited_transmit_enabled){
+    else if (state->lossRecovery)
+    {
+        // Deflating
+        increaseCWND(state->snd_mss, false);
+        tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
+        sendData(false);
+    } else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0,false); // Just for Debug
-        //conn->sendOneNewSegment(false, state->snd_cwnd);
-        sendData(false); // conn->sendOneNewSegment(false, state->snd_cwnd);
+        conn->sendOneNewSegment(false, state->snd_cwnd);
+        //sendData(true);
     }
     else{
         increaseCWND(0,false); // Just for Debug
@@ -232,8 +236,8 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
     // After a retransmit timeout, record the highest sequence number
     // transmitted in the variable "recover" and exit the Fast Recovery
     // procedure if applicable."
-    state->recover = 0;
-    tcpEV << "recover=" << state->recover << "\n";
+    state->recover = state->snd_max;
+    state->dupacks = 0;
 
     state->lossRecovery = false;
     state->firstPartialACK = false;
@@ -259,7 +263,7 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
     tcpEV << "Begin Slow Start: resetting cwnd to " << state->snd_cwnd
           << ", ssthresh=" << state->ssthresh << "\n";
     state->afterRto = true;
-
+    state->isRTX = true;
     conn->retransmitOneSegment(true);
     state->isRTX = false;
 }
