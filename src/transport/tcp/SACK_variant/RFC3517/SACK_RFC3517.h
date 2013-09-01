@@ -50,9 +50,10 @@ private:
     TCPConnection* con;
    //  TCPNewSACKRexmitQueue *rexmitQueue;
     SCOREBOARD sb;
-
+    static int ID_COUNTER;
+    int ID;
     virtual void _setPipe();
-    uint32 _nextSeg(uint32 *offset);
+    uint32 _nextSeg();
     virtual SACK_REGION* _isLost(SACK_MAP::iterator *i, uint32 seg);
     void _createIsLostTag();
 
@@ -69,8 +70,6 @@ public:
 
     virtual uint32 getHighRxt();    // RFC 3517, page 3: ""HighRxt" is the highest sequence number which has been retransmitted during the current loss recovery phase."
     virtual uint32 do_forward();
-    virtual uint32 getSizeOfRtxPkt();
-    virtual void enqueueSACKSenderSide(uint32 bytes);
     virtual bool statusChanged();
     virtual void discardUpTo(uint32 to);
     virtual void flush();

@@ -298,7 +298,7 @@ class INET_API TCPStateVariables : public cObject
 #else
     SackMap sack_map;
 #endif
-
+    uint32 highRxt;          // RFC 3517, page 3: ""HighRxt" is the highest sequence number which has been retransmitted during the current loss recovery phase."
     SACKHandler       *sackhandler;
 #ifndef PRIVATE
     uint32 highRxt;          // RFC 3517, page 3: ""HighRxt" is the highest sequence number which has been retransmitted during the current loss recovery phase."

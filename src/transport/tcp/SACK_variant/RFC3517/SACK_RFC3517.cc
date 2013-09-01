@@ -7,8 +7,12 @@
 
 #include "SACK_RFC3517.h"
 
+
+int SACK_RFC3517::ID_COUNTER = 0;
+
 SACK_RFC3517::SACK_RFC3517(TCPConnection *conn): SACKHandler(conn->getState()){
    ASSERT(state!=NULL);
+   ID =ID_COUNTER++;
    // create SACK retransmit queue
    this->con = conn;
    // rexmitQueue = new TCPNewSACKRexmitQueue();
@@ -49,23 +53,6 @@ uint32 SACK_RFC3517::do_forward(){
     updateStatus();
     sb.recoveryPoint =  sb.high_data;
     return forward;
-}
-
-uint32 SACK_RFC3517::getSizeOfRtxPkt(){
-    // Do we know packet?
-//    if(state->snd_nxt < rexmitQueue->getHighestSackedSeqNum()){
-        // we know this
-//        uint32 end = rexmitQueue->getEndOfRegion(state->snd_nxt);
-//        return (end - state->snd_nxt);
-//    }
-//    sb.map.
-    return 0;
-}
-
-void SACK_RFC3517::enqueueSACKSenderSide(uint32 bytes){
-//    if((!state->fin_rcvd) && (!state->send_fin) && (!state->isRTX))
-//            rexmitQueue->enqueueSentData(state->snd_nxt, state->snd_nxt + bytes);
-    //?????
 }
 
 bool SACK_RFC3517::statusChanged(){
@@ -118,66 +105,76 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
     static int counter = 0;
     counter++; // for debug
     uint32 offset = 0;
-    uint32 len = 0;
-    // FIXME HOw to set high rtx?
-    sb.high_rtx = state->snd_una -1;
 
-    //std::cerr << "############ IF GAPS SEND SACK ####################" << std::endl;
-    //std::cerr << "Round "  << counter << std::endl;
-    //std::cerr << "snd_una: " << state->snd_una << std::endl;
-    //std::cerr << "snd_nxt: " << state->snd_nxt << std::endl;
-    //std::cerr << "highest rtx: " << sb.high_rtx << std::endl;
+    // FIXME HOw to set high rtx?
+    this->discardUpTo(state->snd_una);
+    sb.high_rtx =  state->highRxt;
+    std::cerr << "ID: " << ID << std::endl;
+    std::cerr << "Conn ID: " << con->connId << std::endl;
+    std::cerr << "############ IF GAPS SEND SACK ####################" << std::endl;
+    std::cerr << "Round "  << counter << std::endl;
+    std::cerr << "snd_una: " << state->snd_una << std::endl;
+    std::cerr << "snd_nxt: " << state->snd_nxt << std::endl;
+    std::cerr << "highest rtx: " << sb.high_rtx << std::endl;
 
     _print_and_check_sb();
 
     _setPipe();
-    bool isFirst = true;
-    while((wnd - (sb.pipe + offset))>= state->snd_mss){
-
-        uint32 new_nxt = _nextSeg(&len);
-        if((new_nxt == 0) || (len < 1)){
-            if(isFirst)
-                con->sendOneNewSegment(false, wnd - (sb.pipe + offset));
-            return offset;
-        }
-        isFirst = false;
+    std::cerr << "pipe" << sb.pipe << "wnd" << wnd << std::endl;
+    std::cerr << "######################## <> ##################" << std::endl;
         sb.old_nxt = state->snd_nxt;
-        uint32 toSend = len;
-        while(toSend){
+
+        while( uint32 new_nxt = _nextSeg()){
 
             state->snd_nxt = new_nxt;
-      //      std::cerr << "Open window: "<< wnd - (sb.pipe+offset) << std::endl;
-            con->sendSegment(wnd - (sb.pipe+offset));
+            con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
 
+            if((state->snd_nxt - new_nxt) == 0)
+                break;
+            offset += state->snd_nxt - new_nxt;
             sb.high_rtx = state->snd_nxt - 1;
 
-            offset += state->snd_nxt - new_nxt;
+
             if(state->snd_nxt == new_nxt)
                 break;
+            std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->snd_nxt - 1 << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
 
-      //      std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->snd_nxt << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
-            toSend -= std::min(state->snd_nxt-new_nxt,toSend);
-            new_nxt =  state->snd_nxt;
-            if((new_nxt >=  sb.old_nxt) || ((sb.pipe+offset) > wnd)){
+            if(state->snd_nxt < sb.old_nxt){
+
                 state->snd_nxt = sb.old_nxt;
-                return offset;
+            }
+            if(((sb.pipe+offset) > wnd)){
+                break;
             }
         }
-        state->snd_nxt = sb.old_nxt;
-        if(sb.pipe+offset > wnd)
-            break;
-    }
-    return offset;
+
+    return 0;
 }
 
+uint32 SACK_RFC3517::_nextSeg(){
+// 1)
+    SACK_MAP::iterator it = sb.map.begin();
+    for(SACK_MAP::iterator i = sb.map.begin();i != sb.map.end();i++){
+        if((sb.high_rtx + 1) >= i->first){
+            if((sb.high_rtx + 1) < i->second->end)
+                sb.high_rtx = i->second->end;
+            continue;
+        }
+        if(((sb.high_rtx + 1) < (--sb.map.end())->second->end) &&
+           (_isLost(&it,(sb.high_rtx + 1))->lost))
+            return (sb.high_rtx + 1);
+    }
+    // no more in SACK lists
+    return state->snd_nxt;
+}
+#ifndef PRIVATE
 uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
     SACK_MAP::iterator i = sb.map.end();
     int rule = 2;
-    uint32 s2 = state->snd_una;
+
     if(sb.map.empty()) return 0;
-    if(*offset){
-        s2 = sb.high_rtx + 1;
-    }
+    uint32 s2 = sb.high_rtx;
+
     SACK_MAP::iterator i2 = sb.map.begin();
     if(s2 < state->snd_nxt){
     // check if it is not in a SACK Block
@@ -188,7 +185,7 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
             }
             if(i2 == sb.map.end()){
                 // NOT in SACK BLOCKS
-                if((s2 > i->second->end) && (s2 < state->snd_nxt)){
+                if((s2 > (--(sb.map.end()))->first) && (s2 < state->snd_nxt)){
                     rule = 1;
                     break;
                 }
@@ -227,6 +224,7 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
                     continue; // still the block
                 }
                 if(s2 < it->first){
+                    s2 = it->second->end + 1;
                     tryAgain = true;
                     break;
                 }
@@ -243,8 +241,8 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
     }break;
     case 2:{
             sb.high_rtx = sb.high_acked;
-            *offset =  i->second->end - i->first;
-            return 0;// state->snd_nxt; // sb.high_acked + 1;
+             *offset =  1;
+            return sb.high_acked + 1;
     }break;
 // TODO Rule 3 und Rule 4
     case 3:
@@ -254,6 +252,8 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
     ASSERT(false && "Should never be reached");
     return 0;
 }
+#endif
+
 void SACK_RFC3517::_setPipe(){
     _createIsLostTag();
     SACK_MAP::iterator i = sb.map.begin();
@@ -274,9 +274,9 @@ void SACK_RFC3517::_setPipe(){
             sb.pipe +=  (i->first - 1)  - seg;
         }
         if(seg <= sb.high_rtx){
-            sb.pipe += (i->first - 1) -seg;
+            sb.pipe += (i->first - 1) - seg;
         }
-        seg = i->second->end  +1;
+        seg = i->second->end  + 1;
     }
 }
 
@@ -361,7 +361,6 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
             }
             else
                 sb.map.insert(std::make_pair(new_start,ent));
-            _print_and_check_sb();
             return;
         }
 
@@ -472,14 +471,14 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
     return;
 }
 void SACK_RFC3517::_print_and_check_sb(){
-    return;
+
     uint32 last_end = state->snd_una;
     std::cerr << "========================================" << std::endl;
     for(SACK_MAP::iterator i = sb.map.begin();i != sb.map.end();i++){
         if(i->first < state->snd_una)
             ASSERT(false && "Start to small");
-        if(i->second->end > state->snd_max)
-            ASSERT(false && "End to big");
+//        if(i->second->end > state->snd_nxt)
+//            ASSERT(false && "End to big");
 // FIXME
 //        if(last_end > i->first)
 //            ASSERT(false && "Not in Order");

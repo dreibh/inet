@@ -1430,8 +1430,9 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
                 doit = false;
         if(doit)    // First try
 #endif // PRIVATE
-        sendSegment(bytes);
 
+        sendSegment(bytes);
+        state->highRxt = state->snd_nxt + 1;
         if (!called_at_rto)
         {
             if (seqGreater(old_snd_nxt, state->snd_nxt))

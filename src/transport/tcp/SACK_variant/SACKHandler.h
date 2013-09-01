@@ -33,9 +33,7 @@ public:
 
     virtual uint32 getHighRxt() = 0;    // RFC 3517, page 3: ""HighRxt" is the highest sequence number which has been retransmitted during the current loss recovery phase."
    virtual uint32 do_forward() = 0;
-    virtual uint32 getSizeOfRtxPkt() = 0;
-    virtual void enqueueSACKSenderSide(uint32 bytes) = 0;
-    virtual bool statusChanged() = 0;
+   virtual bool statusChanged() = 0;
     virtual void discardUpTo(uint32 to) = 0;
     virtual void flush() = 0;
     virtual void reset() = 0;
