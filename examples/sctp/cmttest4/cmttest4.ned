@@ -40,6 +40,8 @@ import inet.linklayer.queue.DropTailQueue;
 import inet.linklayer.queue.FIFOQueue;
 import inet.linklayer.queue.REDDropper;
 
+import inet.world.scenario.ScenarioManager;
+
 module REDQueue like IOutputQueue
 {
    gates:
@@ -113,6 +115,10 @@ module Core
 
    // ====== Network Components =============================================
    submodules:
+      scenarioManager: ScenarioManager {
+            parameters:
+                @display("p=50,50");
+      }
       // ------ Routers -----------------------------------------------------
       westernBorderRouter[disjointTrails * (1 + bottleneckTrails)] : StandardHost {
          parameters:
