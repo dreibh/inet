@@ -822,7 +822,7 @@ int MPTCP_Flow::_writeJoinHandshakeHeader(uint t,
         tcpseg->setOptions(t, *option);
         t++;
 
-        subflow->startMPTCPACKRexmitTimer();
+        //  subflow->startMPTCPACKRexmitTimer();
 
         DEBUGPRINT(
                 "[MPTCP][HANDSHAKE][MP_JOIN] Established after enqueue of SYN%s",

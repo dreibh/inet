@@ -337,7 +337,7 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         // Add (First) Subflow of the connection
         subflow->flow->addSubflow(connId, subflow);
 
-        subflow->sendAck();
+        //subflow->sendAck();
 
     } else {
         // SYN
