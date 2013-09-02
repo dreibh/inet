@@ -2061,7 +2061,7 @@ void TCPConnection::updateWndInfo(TCPSegment *tcpseg, bool doAlways)
 
 void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWindow)
 {
-    ASSERT(state->limited_transmit_enabled);
+    // FIXME ASSERT(state->limited_transmit_enabled);
 
     // RFC 3042, page 3:
     // "When a TCP sender has previously unsent data queued for transmission
