@@ -44,7 +44,7 @@ uint32 SACK_RFC3517::getHighRxt(){
 
 void SACK_RFC3517::updateStatus() {
     sb.high_acked = state->snd_una - 1;
-    sb.high_data = state->snd_max;
+    sb.high_data = state->snd_nxt;
     discardUpTo(state->snd_una);
 }
 
@@ -117,13 +117,14 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
     std::cerr << "snd_nxt: " << state->snd_nxt << std::endl;
     std::cerr << "highest rtx: " << sb.high_rtx << std::endl;
 
-    _print_and_check_sb();
+    // _print_and_check_sb();
 
     _setPipe();
     std::cerr << "pipe" << sb.pipe << "wnd" << wnd << std::endl;
     std::cerr << "######################## <> ##################" << std::endl;
         sb.old_nxt = state->snd_nxt;
-
+        if(sb.pipe > wnd)
+            return 0;
         while( uint32 new_nxt = _nextSeg()){
 
             state->snd_nxt = new_nxt;
@@ -258,26 +259,34 @@ void SACK_RFC3517::_setPipe(){
     _createIsLostTag();
     SACK_MAP::iterator i = sb.map.begin();
     sb.pipe = 0;
-    for(uint32 seg = sb.high_acked; seg <= sb.high_data; seg++){
+    for(uint32 seg = sb.high_acked + 1; seg <= sb.high_data; seg++){
         if(seg > i->first) {
-            if(i == sb.map.end()) return;
-            seg  = i->second->end + 1;
+            if(i == sb.map.end()) break;
+            seg  = i->second->end;
             i++;
             continue;
         }
         // a)
         if(_isLost(&i, seg)==NULL)
-            return; // no SACKs
+            break;; // no SACKs
 
         if(!(i->second->lost)){
             // not sacked not lost
-            sb.pipe +=  (i->first - 1)  - seg;
+            sb.pipe +=  i->first  - seg;
         }
         if(seg <= sb.high_rtx){
-            sb.pipe += (i->first - 1) - seg;
+            sb.pipe += i->first - seg;
         }
-        seg = i->second->end  + 1;
+        seg = i->second->end;
+        i++;
     }
+    if(!sb.map.empty())
+        sb.pipe +=  sb.high_data -  (--sb.map.end())->second->end;
+    else
+        sb.pipe = state->snd_nxt - state->snd_una;
+    //_print_and_check_sb();
+    //std::cerr << "PIPE: " << sb.pipe << std::endl;
+    //std::cerr << "#############################" << std::endl;
 }
 
 void SACK_RFC3517::_createIsLostTag(){
