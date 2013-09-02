@@ -115,10 +115,7 @@ module Core
 
    // ====== Network Components =============================================
    submodules:
-      scenarioManager: ScenarioManager {
-            parameters:
-                @display("p=50,50");
-      }
+
       // ------ Routers -----------------------------------------------------
       westernBorderRouter[disjointTrails * (1 + bottleneckTrails)] : StandardHost {
          parameters:
@@ -335,6 +332,10 @@ network cmttest4
 
     // ====== Network Components ============================================
     submodules:
+          scenarioManager: ScenarioManager {
+                parameters:
+                    @display("p=50,50");
+          }
         // ------ Routing Auto-Configuration --------------------------------
         configurator: MultihomedFlatNetworkConfigurator {
             parameters:
