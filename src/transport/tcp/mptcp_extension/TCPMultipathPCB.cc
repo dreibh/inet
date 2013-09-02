@@ -295,6 +295,8 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         subflow->flow->setRemoteKey(key); // Could be generated every time -> important is key of ACK
         // We set state Established, when we send the ACK
         subflow->flow->addSubflow(connId, subflow);
+       // subflow->sendAck();
+
         return MPTCP_STATEFULL;
     } else if (tcpseg->getAckBit()) {
         // ACK: We aspect the sender key in the MP_CAPABLE Option
@@ -334,6 +336,8 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
 
         // Add (First) Subflow of the connection
         subflow->flow->addSubflow(connId, subflow);
+
+        subflow->sendAck();
 
     } else {
         // SYN
@@ -421,6 +425,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
     else if((!tcpseg->getSynBit()) && (tcpseg->getAckBit()) ) {
         DEBUGPRINT("[MPTCP][ESTABLISHED][JOIN] process ACK%s","\0");
         subflow->isQueueAble = true;
+        subflow->cancelMPTCPACKRexmitTimer();
 //      unsigned char mac160[160];
 //      int offset = 0;
         // FIXME Interprete MP_JOIN ACK

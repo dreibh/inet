@@ -1467,6 +1467,20 @@ void TCPConnection::startSynRexmitTimer()
     scheduleTimeout(synRexmitTimer, state->syn_rexmit_timeout);
 }
 
+#ifdef PRIVATE
+void TCPConnection::startMPTCPACKRexmitTimer()
+{
+    if (mptcpAckRexTimer->isScheduled())
+        cancelEvent(mptcpAckRexTimer);
+
+    scheduleTimeout(mptcpAckRexTimer, 10);
+}
+void TCPConnection::cancelMPTCPACKRexmitTimer(){
+    if (mptcpAckRexTimer->isScheduled())
+        cancelEvent(mptcpAckRexTimer);
+}
+#endif
+
 void TCPConnection::process_TIMEOUT_SYN_REXMIT(TCPEventCode& event)
 {
     if (++state->syn_rexmit_count > MAX_SYN_REXMIT_COUNT)

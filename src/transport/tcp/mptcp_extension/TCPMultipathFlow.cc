@@ -355,7 +355,6 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
     // TODO Better error handling
     // TODO Generate a extra message e.g. an duplicate ACK (see draft section 2)
     // TODO CHECK FLOW FLAGS, eg. report or delete address
-
     // Initiate some helper
     uint options_len = 0;
     TCPOption option;
@@ -822,6 +821,8 @@ int MPTCP_Flow::_writeJoinHandshakeHeader(uint t,
         tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
         tcpseg->setOptions(t, *option);
         t++;
+
+        subflow->startMPTCPACKRexmitTimer();
 
         DEBUGPRINT(
                 "[MPTCP][HANDSHAKE][MP_JOIN] Established after enqueue of SYN%s",
@@ -1333,6 +1334,7 @@ TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
     /**
      * TODO TEST
      */
+
     MPTCP_SchedulerI* scheduler = TCPSchedulerManager::getMPTCPScheduler(save->getTcpMain(),this);
     scheduler->schedule(save, msg);
     return save;

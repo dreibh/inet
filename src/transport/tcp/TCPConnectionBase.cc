@@ -197,6 +197,7 @@ TCPConnection::TCPConnection()
 	dss_dataMapofSubflow.clear();
 	bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
     tmp_msg_buf = new Tmp_Buffer_t();
+    sendJOINACK = false;
 #endif // PRIVATE
 
     // Note: this ctor is NOT used to create live connections, only
@@ -214,6 +215,7 @@ TCPConnection::TCPConnection()
     dupAcksVector = sndSacksVector = rcvSacksVector = rcvOooSegVector = rcvNASegVector =
     tcpRcvQueueBytesVector = tcpRcvQueueDropsVector = pipeVector = sackedBytesVector = NULL;
 #ifdef PRIVATE
+    mptcpAckRexTimer = NULL;
     scheduledBytesVector = NULL;
 #endif // PRIVATE
 }
@@ -323,6 +325,10 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
         char name[255];   // In cOutVector opp_strdup is called - make a copy of char array (no problem)
         static int cnt = 0;
         cnt++;
+
+        mptcpAckRexTimer = new cMessage("MPTCP-ACK-REXMIT");
+        mptcpAckRexTimer->setContextPointer(this);
+
         sprintf(name,"[subflow][I0-%i] send window",cnt);
         sndWndVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
@@ -550,6 +556,13 @@ bool TCPConnection::processTimer(cMessage *msg)
         event = TCP_E_IGNORE;
         process_TIMEOUT_SYN_REXMIT(event);
     }
+#ifdef PRIVATE
+    else if (msg == mptcpAckRexTimer)
+    {
+        event = TCP_E_IGNORE;
+        this->sendAck();
+    }
+#endif
     else
     {
         event = TCP_E_IGNORE;

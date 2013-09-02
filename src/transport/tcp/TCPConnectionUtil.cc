@@ -199,7 +199,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn = (active)?(new TCPConnection(tcpMain,appGateIndex,connId)):(new TCPConnection(tcpMain,0,0));
 		conn->remoteAddr = raddr;
 		conn->remotePort = remotePort;
-
+		selectInitialSeqNum();
 		// MBE: in every case in INIT
         TCPOpenCommand *openCmd = new TCPOpenCommand();
         openCmd->setSendQueueClass(
@@ -1076,14 +1076,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     writeHeaderOptions(tcpseg_temp);
 #endif // PRIVATE
     uint options_len = tcpseg_temp->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
-#ifdef PRIVATE
-    if(getTcpMain()->multipath){
-        // MBe: A first try of a fix
-		if (state->sack_enabled){
-			 bytes = bytes - options_len; // std::min(bytes,SACK_BLOCK->getSizeOfRtxPkt());	// FIXME: In this case we overwrite for a retransmission the sending window
-		}
-    }
-#endif // PRIVATE
+
 
     ASSERT(options_len < state->snd_mss);
 

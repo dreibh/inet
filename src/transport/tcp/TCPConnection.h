@@ -410,6 +410,7 @@ class INET_API TCPConnection
 
 #ifdef PRIVATE // // MBe: MPTCP private variables
     bool isSubflow;         // notify if is a subflow.
+    bool sendJOINACK;
     bool joinToAck;         // status marker
     bool joinToSynAck;      // status marker
 
@@ -457,6 +458,9 @@ class INET_API TCPConnection
     TCPAlgorithm *tcpAlgorithm;
 
     // timers
+#ifdef PRIVATE
+    cMessage *mptcpAckRexTimer;
+#endif
     cMessage *the2MSLTimer;
     cMessage *connEstabTimer;
     cMessage *finWait2Timer;
@@ -648,6 +652,11 @@ public:
     /** Utility: start a timer */
     void scheduleTimeout(cMessage *msg, simtime_t timeout);
 
+#ifdef PRIVATE
+  public:
+    virtual void startMPTCPACKRexmitTimer();
+    virtual void cancelMPTCPACKRexmitTimer();
+#endif
   protected:
     /** Utility: cancel a timer */
     cMessage *cancelEvent(cMessage *msg);

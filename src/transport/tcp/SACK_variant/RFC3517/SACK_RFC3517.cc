@@ -109,19 +109,19 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
     // FIXME HOw to set high rtx?
     this->discardUpTo(state->snd_una);
     sb.high_rtx =  state->highRxt;
-    std::cerr << "ID: " << ID << std::endl;
-    std::cerr << "Conn ID: " << con->connId << std::endl;
-    std::cerr << "############ IF GAPS SEND SACK ####################" << std::endl;
-    std::cerr << "Round "  << counter << std::endl;
-    std::cerr << "snd_una: " << state->snd_una << std::endl;
-    std::cerr << "snd_nxt: " << state->snd_nxt << std::endl;
-    std::cerr << "highest rtx: " << sb.high_rtx << std::endl;
+//    std::cerr << "ID: " << ID << std::endl;
+//    std::cerr << "Conn ID: " << con->connId << std::endl;
+//    std::cerr << "############ IF GAPS SEND SACK ####################" << std::endl;
+//    std::cerr << "Round "  << counter << std::endl;
+//    std::cerr << "snd_una: " << state->snd_una << std::endl;
+//    std::cerr << "snd_nxt: " << state->snd_nxt << std::endl;
+//    std::cerr << "highest rtx: " << sb.high_rtx << std::endl;
 
     // _print_and_check_sb();
 
     _setPipe();
-    std::cerr << "pipe" << sb.pipe << "wnd" << wnd << std::endl;
-    std::cerr << "######################## <> ##################" << std::endl;
+//    std::cerr << "pipe" << sb.pipe << "wnd" << wnd << std::endl;
+//    std::cerr << "######################## <> ##################" << std::endl;
         sb.old_nxt = state->snd_nxt;
         if(sb.pipe > wnd)
             return 0;
@@ -138,7 +138,7 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
 
             if(state->snd_nxt == new_nxt)
                 break;
-            std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->snd_nxt - 1 << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
+//            std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->snd_nxt - 1 << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
 
             if(state->snd_nxt < sb.old_nxt){
 
@@ -480,7 +480,7 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
     return;
 }
 void SACK_RFC3517::_print_and_check_sb(){
-
+    return;
     uint32 last_end = state->snd_una;
     std::cerr << "========================================" << std::endl;
     for(SACK_MAP::iterator i = sb.map.begin();i != sb.map.end();i++){

@@ -86,7 +86,7 @@ void TCPConnection::process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpComm
             selectInitialSeqNum();
             sendSyn();
             startSynRexmitTimer();
-            scheduleTimeout(connEstabTimer, TCP_TIMEOUT_CONN_ESTAB);
+            scheduleTimeout(connEstabTimer, 1);
             break;
 
         default:
