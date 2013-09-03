@@ -5,9 +5,8 @@
 
 ####################### Config  Runs ##################### 
 
-RUNS="experiments/Basic_CC/CMT_SCTP
-#      TCP_FIF0_100_Netperfmeter 
-"
+RUNS="experiments/Basic_CC/CMT_SCTP \
+      experiments/Basic_CC/Basic_SCTP"
 
 ####################### Prepare Runs ######################
 echo "Get Parameter"
