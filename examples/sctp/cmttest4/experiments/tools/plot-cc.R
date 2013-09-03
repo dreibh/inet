@@ -225,7 +225,7 @@ data <- loadResults("cc.data")
 sdata <- subset(data, grepl("server", data$Object))   # --- Plot only client side ---
 cdata <- subset(data, grepl("client", data$Object))   # --- Plot only client side ---
 
-pdf("cc.pdf", width=width, height=height, family="Helvetica", pointsize=24)
+pdf("cc.pdf", width=width, height=height, family="Helvetica", pointsize=40)
 # png("cc%02d.png", type="cairo", width=72*width, height=72*height, pointsize=22)
 openPDFMetadata("cc")
 
