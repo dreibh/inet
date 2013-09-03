@@ -153,7 +153,7 @@ class INET_API TCPBaseAlg : public TCPAlgorithm
     /**
      * Send data, observing Nagle's algorithm and congestion window
      */
-    virtual bool sendData(bool sendCommandInvoked);
+    virtual bool sendData(bool sendCommandInvoked, bool mptcp=false);
 
     /** Utility function */
     cMessage *cancelEvent(cMessage *msg) {return conn->getTcpMain()->cancelEvent(msg);}
@@ -183,7 +183,7 @@ class INET_API TCPBaseAlg : public TCPAlgorithm
      */
     virtual void processTimer(cMessage *timer, TCPEventCode& event);
 
-    virtual void sendCommandInvoked();
+    virtual void sendCommandInvoked(bool mptcp=false);
 
     virtual void receivedOutOfOrderSegment();
 

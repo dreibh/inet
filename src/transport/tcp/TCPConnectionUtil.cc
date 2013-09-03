@@ -199,7 +199,8 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn = (active)?(new TCPConnection(tcpMain,appGateIndex,connId)):(new TCPConnection(tcpMain,0,0));
 		conn->remoteAddr = raddr;
 		conn->remotePort = remotePort;
-		selectInitialSeqNum();
+
+
 		// MBE: in every case in INIT
         TCPOpenCommand *openCmd = new TCPOpenCommand();
         openCmd->setSendQueueClass(
@@ -472,7 +473,8 @@ void TCPConnection::sendToIP(TCPSegment *tcpseg)
     ASSERT(tcpseg->getHeaderLength() <= TCP_MAX_HEADER_OCTETS); // TCP_MAX_HEADER_OCTETS = 60
     tcpseg->setByteLength(tcpseg->getHeaderLength() + tcpseg->getPayloadLength());
     state->sentBytes = tcpseg->getPayloadLength(); // resetting sentBytes to 0 if sending a segment without data (e.g. ACK)
-
+    if(state->sentBytes == 1)
+        std::cerr << "Just for debug" << std::endl;
     tcpEV << "Sending: ";
     printSegmentBrief(tcpseg);
 
@@ -581,9 +583,6 @@ void TCPConnection::sendIndicationToApp(int code, const int id)
 void TCPConnection::sendEstabIndicationToApp()
 {
 #ifdef PRIVATE
-    // The application only need one notification, otherwise he work on more than one connection
-    // this->getState()->requested = 3*state->snd_mss;
-    // sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
     isQueueAble = true;
     if(tcpMain->multipath){
 
@@ -1054,10 +1053,14 @@ void TCPConnection::sendSegment(uint32 bytes)
         }
     }
 #endif
+    ulong buffered = 0;
+    uint start_offset = 0;
+    if(state->snd_nxt == state->snd_una)
+        start_offset = 1;
+    buffered = sendQueue->getBytesAvailable(state->snd_nxt + start_offset);
 
-    ulong buffered = sendQueue->getBytesAvailable(state->snd_nxt);
+
     if(buffered == 0){
-        fprintf(stderr,"Why have we not buffered any data?\n");
         return;
     }
     if (bytes > buffered) // last segment?
@@ -1191,20 +1194,24 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         if(buffered < bytesToSend){
             // check if there are pre-buffered Data
             int enq = 0;
-            while(!tmp_msg_buf->empty()){
-                cPacket* pkt = tmp_msg_buf->front();
-                if(enq <= bytesToSend){ // ONLY COMPLETE MESSAGES -> We don t fragment user Messages
-                    enq += pkt->getByteLength();
-                    getSendQueue()->enqueueAppData(PK(pkt));
-                    if(getState()->enqueued >= pkt->getByteLength())
-                        getState()->enqueued -= pkt->getByteLength();
-                    else // Overbooked
-                        sendIndicationToApp(TCP_I_SEND_MSG, pkt->getByteLength());
-                    tmp_msg_buf->pop();
-                }
-                else break;
+            if(tmp_msg_buf->empty()){
+                // sendKeepAlive(); FIXME Works not as expected
             }
-
+            else{
+                while(!tmp_msg_buf->empty()){
+                    cPacket* pkt = tmp_msg_buf->front();
+                    if(enq <= bytesToSend){ // ONLY COMPLETE MESSAGES -> We don t fragment user Messages
+                        enq += pkt->getByteLength();
+                        getSendQueue()->enqueueAppData(PK(pkt));
+                        if(getState()->enqueued >= pkt->getByteLength())
+                            getState()->enqueued -= pkt->getByteLength();
+                        else // Overbooked
+                            sendIndicationToApp(TCP_I_SEND_MSG, pkt->getByteLength());
+                        tmp_msg_buf->pop();
+                    }
+                    else break;
+                }
+            }
 
         }
     }
@@ -1342,6 +1349,14 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
+    return true;
+}
+
+bool TCPConnection::sendKeepAlive(){
+    uint32 old = state->snd_nxt;
+    state->snd_nxt = state->snd_una - 1;
+    sendAck();
+    state->snd_nxt = old;
     return true;
 }
 

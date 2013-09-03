@@ -72,7 +72,7 @@ void DumbTCP::processTimer(cMessage *timer, TCPEventCode& event)
     conn->scheduleTimeout(rexmitTimer, REXMIT_TIMEOUT);
 }
 
-void DumbTCP::sendCommandInvoked()
+void DumbTCP::sendCommandInvoked(bool mptcp)
 {
     // start sending
     conn->sendData(false, 65535);

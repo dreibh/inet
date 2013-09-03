@@ -1062,11 +1062,13 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
         if (tcpseg->getAckBit())
         {
             state->snd_una = tcpseg->getAckNo();
-            sendQueue->discardUpTo(state->snd_una);
 #ifndef PRIVATE
+            // How could it be, that we have to discard in SYN
+
+            sendQueue->discardUpTo(state->snd_una);
             if (state->sack_enabled)
                 rexmitQueue->discardUpTo(state->snd_una);
-#else
+
             if (state->sack_enabled)
                 SACK_BLOCK->discardUpTo(state->snd_una);
 #endif

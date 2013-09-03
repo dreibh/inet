@@ -609,7 +609,10 @@ public:
      * Returns true if some data was actually sent.
      */
     virtual bool sendData(bool fullSegmentsOnly, uint32 congestionWindow);
+#ifdef PRIVATE
 
+    virtual bool  sendKeepAlive();
+#endif
     /** Utility: sends 1 bytes as "probe", called by the "persist" mechanism */
     virtual bool sendProbe();
 

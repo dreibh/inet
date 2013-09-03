@@ -107,7 +107,7 @@ class INET_API TCPAlgorithm : public cObject
     /**
      * Called after user sent TCP_C_SEND command to us.
      */
-    virtual void sendCommandInvoked() = 0;
+    virtual void sendCommandInvoked(bool mptcp=false) = 0;
 
     /**
      * Called after receiving data which are in the window, but not at its

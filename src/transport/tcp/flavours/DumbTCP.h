@@ -67,7 +67,7 @@ class INET_API DumbTCP : public TCPAlgorithm
 
     virtual void processTimer(cMessage *timer, TCPEventCode& event);
 
-    virtual void sendCommandInvoked();
+    virtual void sendCommandInvoked(bool mptcp);
 
     virtual void receivedOutOfOrderSegment();
 

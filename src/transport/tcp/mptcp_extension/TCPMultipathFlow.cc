@@ -146,6 +146,12 @@ void MPTCP_Flow::removeSubflow(TCPConnection* subflow){
             break;
         }
     }
+    // clean for non used entry
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+            i != subflow_list.end(); i++){
+        if((*i)==NULL)
+            i = subflow_list.erase(i);
+    }
 }
 
 /**
@@ -500,7 +506,7 @@ bool  MPTCP_Flow::close(){
 
 bool MPTCP_Flow::sendCommandInvoked(){
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                  i != subflow_list.end(); ++i) {
+                  i != subflow_list.end(); i++) {
               TCP_subflow_t* entry = (*i);
               if(entry->subflow->isQueueAble)
                   entry->subflow->getTcpAlgorithm()->sendCommandInvoked();
@@ -1547,6 +1553,12 @@ MPTCP_State MPTCP_Flow::getState() {
 }
 
 const TCP_SubFlowVector_t* MPTCP_Flow::getSubflows() {
+    // clean for non used entry
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+            i != subflow_list.end(); i++){
+        if((*i)==NULL)
+            i = subflow_list.erase(i);
+    }
     return &subflow_list;
 }
 

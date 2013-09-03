@@ -435,7 +435,7 @@ void TCPBaseAlg::rttMeasurementCompleteUsingTS(uint32 echoedTS)
     rttMeasurementComplete(tSent, tAcked);
 }
 
-bool TCPBaseAlg::sendData(bool sendCommandInvoked)
+bool TCPBaseAlg::sendData(bool sendCommandInvoked, bool mptcp)
 {
     //
     // Nagle's algorithm: when a TCP connection has outstanding data that has not
@@ -478,18 +478,16 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked)
             tcpEV << "Restarting idle connection, CWND is set to " << state->snd_cwnd << "\n";
         }
     }
-    //fprintf(stderr, "Send  %s:%d to %s:%d Queued: %i in fly %i \n",conn->localAddr.str().c_str(),conn->localPort,  conn->remoteAddr.str().c_str(),conn->remotePort, conn->getSendQueue()->getBytesAvailable(conn->getSendQueue()->getBufferStartSeq()), conn->getState()->snd_nxt - conn->getState()->snd_una );
 
-    bool ret = conn->sendData(fullSegmentsOnly, state->snd_cwnd);
+    return conn->sendData(fullSegmentsOnly, state->snd_cwnd);
 
-    return ret;
 }
 
 
-void TCPBaseAlg::sendCommandInvoked()
+void TCPBaseAlg::sendCommandInvoked(bool mptcp)
 {
     // try sending
-    sendData(true);
+    sendData(true, mptcp);
 }
 
 void TCPBaseAlg::receivedOutOfOrderSegment()
