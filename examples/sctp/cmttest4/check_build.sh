@@ -6,6 +6,7 @@
 ####################### Config  Runs ##################### 
 
 RUNS="experiments/Basic_CC/CMT_SCTP \
+      experiments/Basic_CC/Basic_TCP \
       experiments/Basic_CC/Basic_SCTP"
 
 ####################### Prepare Runs ######################
