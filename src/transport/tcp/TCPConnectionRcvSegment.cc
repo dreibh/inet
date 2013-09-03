@@ -1501,8 +1501,18 @@ void TCPConnection::process_TIMEOUT_SYN_REXMIT(TCPEventCode& event)
         case TCP_S_SYN_SENT: sendSyn(); break;
         case TCP_S_SYN_RCVD: sendSynAck(); break;
         default:
+#ifdef PRIVATE
+    if(!this->getTcpMain()->multipath)
+#endif
             throw cRuntimeError(tcpMain, "Internal error: SYN-REXMIT timer expired while in state %s",
                     stateName(fsm.getState()));
+#ifdef PRIVATE
+        if(state->snd_mptcp_syn)
+            sendSynAck();
+        else
+            sendSyn();
+        break;
+#endif
     }
 
     // reschedule timer

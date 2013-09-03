@@ -473,8 +473,7 @@ void TCPConnection::sendToIP(TCPSegment *tcpseg)
     ASSERT(tcpseg->getHeaderLength() <= TCP_MAX_HEADER_OCTETS); // TCP_MAX_HEADER_OCTETS = 60
     tcpseg->setByteLength(tcpseg->getHeaderLength() + tcpseg->getPayloadLength());
     state->sentBytes = tcpseg->getPayloadLength(); // resetting sentBytes to 0 if sending a segment without data (e.g. ACK)
-    if(state->sentBytes == 1)
-        std::cerr << "Just for debug" << std::endl;
+
     tcpEV << "Sending: ";
     printSegmentBrief(tcpseg);
 
@@ -606,6 +605,8 @@ void TCPConnection::sendEstabIndicationToApp()
 
     msg->setControlInfo(ind);
     sendToApp(msg);
+    // FIXME
+    sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
 }
 
 void TCPConnection::sendToApp(cMessage *msg)
@@ -847,7 +848,7 @@ void TCPConnection::sendSyn()
     tcpseg->setWindow(state->rcv_wnd);
 
     state->snd_max = state->snd_nxt = state->iss + 1;
-
+    state->snd_mptcp_syn = true;
     // write header options
 #ifdef PRIVATE
     // Redirect

@@ -105,6 +105,7 @@ TCPStateVariables::TCPStateVariables()
     recoveryPoint = 0;
     sackedBytes = 0;
     sackedBytes_old = 0;
+    snd_mptcp_syn = false;
 #endif
 
     lossRecovery = false;
@@ -543,8 +544,17 @@ bool TCPConnection::processTimer(cMessage *msg)
     }
     else if (msg == connEstabTimer)
     {
+#ifdef PRIVATE
+        if(this->getTcpMain()->multipath){
+            event = TCP_E_IGNORE;
+        }
+        else{
+#endif
         event = TCP_E_TIMEOUT_CONN_ESTAB;
         process_TIMEOUT_CONN_ESTAB();
+#ifdef PRIVATE
+        }
+#endif
     }
     else if (msg == finWait2Timer)
     {

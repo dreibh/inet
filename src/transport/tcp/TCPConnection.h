@@ -199,6 +199,7 @@ class INET_API TCPStateVariables : public cObject
     virtual std::string info() const;
     virtual std::string detailedInfo() const;
   public:
+    bool snd_mptcp_syn;
     bool active;         // set if the connection was initiated by an active open
     bool fork;           // if passive and in LISTEN: whether to fork on an incoming connection
 
