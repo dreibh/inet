@@ -605,7 +605,7 @@ void TCPConnection::sendEstabIndicationToApp()
 
     msg->setControlInfo(ind);
     sendToApp(msg);
-    // FIXME
+    // FIXME - Work around bis add_addr
     sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
 }
 
