@@ -42,8 +42,8 @@ fi
 for JOB in $RUNS
 do
 	echo "run Szenario " $JOB
-	time ../../../0/gcc-debug/src/inet -r 0 -u Cmdenv -n ../..:../../../simulations:./:../../../src  $JOB/run.ini 	
+	time ../../../0/gcc-debug/src/inet -r 0 -u Cmdenv -n ../..:../../../simulations:./:../../../src  $JOB/run.ini
+    $JOB/plot $JOB/vectors/vectors.vec $JOB/pdf/result.pdf
     echo $JOB
 done
 
-$JOB/plot $JOB/vectors/vectors.vec $JOB/pdf/result.pdf
