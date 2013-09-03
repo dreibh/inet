@@ -5,9 +5,7 @@
 
 ####################### Config  Runs ##################### 
 
-RUNS="experiments/Basic_CC/CMT_SCTP \
-      experiments/Basic_CC/Basic_TCP \
-      experiments/Basic_CC/Basic_SCTP"
+RUNS="experiments/Basic_CC/CMT_SCTP experiments/Basic_CC/MPTCP experiments/Basic_CC/Basic_SCTP experiments/Basic_CC/Basic_TCP"
 
 ####################### Prepare Runs ######################
 echo "Get Parameter"
@@ -16,7 +14,7 @@ then
 	tmp=$RUNS
 	if [ $1 == "ALL" ];
 	then
-		echo "Do ALL"
+		echo "todo"
 	fi
 	if [ $1 == "help" ];
 	then
