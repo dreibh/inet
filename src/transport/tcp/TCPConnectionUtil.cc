@@ -192,8 +192,7 @@ cMessage *TCPConnection::cancelEvent(cMessage *msg) {
 /* Clone a connection for MPTCP */
 TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPvXAddress laddr, IPvXAddress raddr){
     TCPConnection *conn = NULL;
-    static int _count_active_a = 0;
-    static int _count_passiv_a = 0;
+
     if(tcpMain->multipath){
 
 		conn = (active)?(new TCPConnection(tcpMain,appGateIndex,connId)):(new TCPConnection(tcpMain,0,0));
@@ -218,7 +217,6 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
         conn->flow = flow;
         conn->inlist = false;
 		if(!active){
-			_count_passiv_a++;
 			cMessage *msg = new cMessage("PassiveOPEN", TCP_E_OPEN_PASSIVE); // Passive Server Side
 		    conn->localAddr = localAddr;
 		    conn->localPort = localPort;
@@ -237,9 +235,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 			// Leave in status LISTEN
 		}
 		else{
-			_count_active_a++;
 			cMessage *msg = new cMessage("ActiveOPEN", TCP_C_OPEN_ACTIVE); // Client Side Connection
-
 			// setup the subflow
 			openCmd->setLocalAddr(laddr);
 			openCmd->setLocalPort(localPort);
@@ -256,14 +252,8 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn->removeVectors();
 
 		// rename
-		char name[255];
-		int _cnt = this->flow->getSubflows()->size();
-		if(active)
-			sprintf(name,"A%i-%i",_cnt,_count_active_a);
-		else
-			sprintf(name,"A%i-%i",_cnt,_count_passiv_a);
 
-		conn->renameMPTCPVectors(name);
+		conn->renameMPTCPVectors();
 
 		// check some configuration stuff
 		conn->getState()->nagle_enabled = this->getState()->nagle_enabled;
@@ -341,59 +331,59 @@ void TCPConnection::removeVectors(){
 
 }
 
-void TCPConnection::renameMPTCPVectors(char* cnt){
+void TCPConnection::renameMPTCPVectors(){
 	char name[255];
-	sprintf(name,"[subflow][%s] send window",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] send window", connId, subflowID);
 	sndWndVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] receive window",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] receive window",connId, subflowID);
 	rcvWndVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] advertised window",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] advertised window",connId, subflowID);
 	rcvAdvVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] sent seq",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] sent seq",connId, subflowID);
 	sndNxtVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] sent ack",cnt);
-	sndAckVector = new cOutVector("sent ack");
+	sprintf(name,"[subflow][%i] sent ack",connId, subflowID);
+	sndAckVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] rcvd seq",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] rcvd seq",connId, subflowID);
 	rcvSeqVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] rcvd ack",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] rcvd ack",connId, subflowID);
 	rcvAckVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] unacked bytes",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] unacked bytes",connId, subflowID);
 	unackedVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] rcvd dupAcks",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] rcvd dupAcks",connId, subflowID);
 	dupAcksVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] pipe",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] pipe",connId, subflowID);
 	pipeVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] sent sacks",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] sent sacks",connId, subflowID);
 	sndSacksVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] rcvd sacks",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] rcvd sacks",connId, subflowID);
 	rcvSacksVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] rcvd oooseg",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] rcvd oooseg",connId, subflowID);
 	rcvOooSegVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] rcvd sackedBytes",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] rcvd sackedBytes",connId, subflowID);
 	sackedBytesVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] tcpRcvQueueBytes",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] tcpRcvQueueBytes",connId, subflowID);
 	tcpRcvQueueBytesVector = new cOutVector(name);
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] tcpRcvQueueDrops",cnt);
+	sprintf(name,"[subflow][conn ID %i][%i] tcpRcvQueueDrops",connId, subflowID);
 	tcpRcvQueueDropsVector = new cOutVector(name);
 
 	// MPTCP Vectors
 	memset(name,'\0',sizeof(name));
-	sprintf(name,"[subflow][%s] scheduledBytes",cnt);
+	sprintf(name,"[subflow][conn ID %i] [%i] scheduledBytes",connId, subflowID);
 	scheduledBytesVector = new cOutVector(name);
 
 }
@@ -436,16 +426,9 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 #ifdef PRIVATE
     // We don t need it, and it is overhead, but rename it when multipath
     if(tcpMain->multipath){
-		static int _count_passiv_b = 0; // only for identification
-		char name[255];
-		int _cnt = 0;
-		if(flow!= NULL)
-			_cnt = this->flow->getSubflows()->size();
-		sprintf(name,"A%i-%i",_cnt,_count_passiv_b);
-
 		// Clean up stuff
 		conn->removeVectors();
-		conn->renameMPTCPVectors(name);
+		conn->renameMPTCPVectors();
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
 		conn->inlist = false;
@@ -625,6 +608,7 @@ void TCPConnection::sendToApp(cMessage *msg)
 void TCPConnection::initConnection(TCPOpenCommand *openCmd)
 {
     transferMode = TCP_TRANSFER_OBJECT; // FIXME Merge (TCPDataTransferMode)(openCmd->getDataTransferMode());
+
     // create send queue
     sendQueue = tcpMain->createSendQueue(transferMode);
     sendQueue->setConnection(this);
@@ -639,6 +623,7 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
 #endif
     // create algorithm
 #ifdef PRIVATE
+
     if(this->getTcpMain()->multipath){
         if(this->getTcpMain()->isRFC6356){
                tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne("MPTCP_RFC6356"));

@@ -199,6 +199,7 @@ TCPConnection::TCPConnection()
 	bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
     tmp_msg_buf = new Tmp_Buffer_t();
     sendJOINACK = false;
+    this->subflowID = getTcpMain()->subflowCounter++;
 #endif // PRIVATE
 
     // Note: this ctor is NOT used to create live connections, only
@@ -242,7 +243,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     bzero(MAC160,160);
     dss_dataMapofSubflow.clear();
     bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
-
+    this->subflowID = getTcpMain()->subflowCounter++;
     tmp_msg_buf = new Tmp_Buffer_t();
 #endif
 
@@ -324,62 +325,61 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
 #else
         // MBe: For MPTCP we need more different vectors
         char name[255];   // In cOutVector opp_strdup is called - make a copy of char array (no problem)
-        static int cnt = 0;
-        cnt++;
+
 
         mptcpAckRexTimer = new cMessage("MPTCP-ACK-REXMIT");
         mptcpAckRexTimer->setContextPointer(this);
 
-        sprintf(name,"[subflow][I0-%i] send window",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][send window]", connId, subflowID);
         sndWndVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] receive window",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][receive window]", connId, subflowID);
         rcvWndVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] advertised window",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][advertised window]", connId, subflowID);
         rcvAdvVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] sent seq",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][sent seq]", connId, subflowID);
         sndNxtVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] sent ack",cnt);
-        sndAckVector = new cOutVector("sent ack");
+        sprintf(name,"[subflow][conn ID %i][%i][sent ack]", connId, subflowID);
+        sndAckVector = new cOutVector("name");
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] rcvd seq",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][rcvd seq]", connId, subflowID);
         rcvSeqVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] rcvd ack",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][rcvd ack]", connId, subflowID);
         rcvAckVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] unacked bytes",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][unacked bytes]", connId, subflowID);
         unackedVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] rcvd dupAcks",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][rcvd dupAcks]", connId, subflowID);
         dupAcksVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] pipe",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][pipe]", connId, subflowID);
         pipeVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] sent sacks",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][sent sacks]", connId, subflowID);
         sndSacksVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] rcvd sacks",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][rcvd sacks]", connId, subflowID);
         rcvSacksVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] rcvd oooseg",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][rcvd oooseg]", connId, subflowID);
         rcvOooSegVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] rcvd sackedBytes",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][rcvd sackedBytes]", connId, subflowID);
         sackedBytesVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] tcpRcvQueueBytes",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][tcpRcvQueueBytes]", connId, subflowID);
         tcpRcvQueueBytesVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] tcpRcvQueueDrops",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][tcpRcvQueueDrops]", connId, subflowID);
         tcpRcvQueueDropsVector = new cOutVector(name);
         // MPTCP Vector
         memset(name,'\0',sizeof(name));
-        sprintf(name,"[subflow][I0-%i] scheduledBytes",cnt);
+        sprintf(name,"[subflow][conn ID %i][%i][scheduledBytes]", connId, subflowID);
         scheduledBytesVector = new cOutVector(name);
 #endif
     }

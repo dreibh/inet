@@ -181,6 +181,8 @@ class INET_API TCP : public cSimpleModule
 #ifdef PRIVATE
     MPTCP_SchedulerI* scheduler;    // For scheduler see TCPSchedulerManager::getMPTCPScheduler(...)
     MPTCP_Flow* flow;
+    // DEBUG and Statistic
+    static int subflowCounter;
     /* MBe : General multipath settings */
     bool multipath;                 // turn on/off
     bool isRFC6356;

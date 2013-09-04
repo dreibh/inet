@@ -410,6 +410,8 @@ class INET_API TCPConnection
     int remotePort;
 
 #ifdef PRIVATE // // MBe: MPTCP private variables
+
+    int subflowID;          //
     bool isSubflow;         // notify if is a subflow.
     bool sendJOINACK;
     bool joinToAck;         // status marker
@@ -593,7 +595,7 @@ public:
 #ifdef PRIVATE // MBe: MPTCP public methods
     virtual TCPConnection *cloneMPTCPConnection(bool active, uint64 token, IPvXAddress laddr, IPvXAddress raddr);
     virtual void removeVectors();
-    virtual void renameMPTCPVectors(char* cnt);
+    virtual void renameMPTCPVectors();
 
     virtual bool SCTPlikeBufferSplittingGlobecom();
     virtual bool MPTCPlikeBufferSplitting(uint32 bytes);

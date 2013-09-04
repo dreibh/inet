@@ -43,6 +43,8 @@
 // MBe include Multipath Header
 #include "TCPMultipathPCB.h"
 #include "TCPMultipathFlow.h"
+
+int TCP::subflowCounter=0;
 #endif // PRIVATE
 
 Define_Module(TCP);
