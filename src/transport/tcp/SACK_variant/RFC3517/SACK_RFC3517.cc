@@ -510,13 +510,25 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
 
     // delete old sacks (below rcv_nxt), delete duplicates and print previous status of sacks_array:
     SackMap::iterator it = state->sack_map.begin();
+    int pos = 1;
     while(it!=state->sack_map.end()){
+        int map_size = state->sack_map.size();
         if(state->rcv_nxt > it->first){
             if(state->rcv_nxt < it->second){
                 state->sack_map.insert(std::make_pair(state->rcv_nxt+1,it->second));
             }
             state->sack_map.erase(it->first);
+            if(state->sack_map.size() != map_size){
+                it = state->sack_map.begin();
+                for(int pos_c = 0; pos_c < pos; pos_c++){
+                    if(it==state->sack_map.end()) break;
+                    it++;
+                }
+                if(it==state->sack_map.end()) break;
+            }
+
             it++;
+            pos++;
             continue;
         }
         break;

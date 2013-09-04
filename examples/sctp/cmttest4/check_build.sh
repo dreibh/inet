@@ -44,6 +44,7 @@ do
 	echo "run Szenario " $JOB
 	time ../../../0/gcc-debug/src/inet -r 0 -u Cmdenv -n ../..:../../../simulations:./:../../../src  $JOB/run.ini
     $JOB/plot $JOB/vectors/vectors.vec $JOB/pdf/result.pdf
+    convert $JOB/pdf/result.pdf result.pdf.png
     echo $JOB
 done
 

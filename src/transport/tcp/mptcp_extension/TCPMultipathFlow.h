@@ -21,6 +21,8 @@ class TCPStateVariables;
 class TCPMultipathReceiveQueue;
 class TCPConnection;
 
+enum MPTCP_PATH_SCHEDULER{OFF=0,Linux_like=1};
+
 typedef struct _subflow{
   TCPConnection* subflow;
   bool active;

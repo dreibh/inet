@@ -143,11 +143,11 @@ pdf("cc.pdf", width=width, height=height, family="Helvetica", pointsize=40)
 openPDFMetadata("cc")
 
 ## Plot CWND
-plotCwnd( subset(cdata, grepl("[subflow][cwnd]", cdata$Vector)), "TCP Congestion Window" )
+plotCwnd( subset(cdata, grepl("[cwnd]", cdata$Vector)), "TCP Congestion Window" )
 ## Plot RTT
-plotRTTorRTO( subset(cdata, grepl("[subflow][measured RTT]", cdata$Vector)), "Round Trip Time (RTT)" )
+plotRTTorRTO( subset(cdata, grepl("[measured RTT]", cdata$Vector)), "Round Trip Time (RTT)" )
 ## Plot RTO
-plotRTTorRTO( subset(cdata, grepl("[subflow][RTO]", cdata$Vector)), "Retransmission Timeout (RTO)" )
+# PROBLEM plotRTTorRTO( subset(cdata, grepl("[subflow][RTO]", cdata$Vector)), "Retransmission Timeout (RTO)" )
 
 closePDFMetadata()
 dev.off()

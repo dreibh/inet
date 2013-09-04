@@ -147,7 +147,7 @@ plotCwnd( subset(cdata, grepl("[subflow][cwnd]", cdata$Vector)), "TCP Congestion
 ## Plot RTT
 plotRTTorRTO( subset(cdata, grepl("[subflow][measured RTT]", cdata$Vector)), "Round Trip Time (RTT)" )
 ## Plot RTO
-plotRTTorRTO( subset(cdata, grepl("[subflow][RTO]", cdata$Vector)), "Retransmission Timeout (RTO)" )
+# PROBLEM plotRTTorRTO( subset(cdata, grepl("[subflow][RTO]", cdata$Vector)), "Retransmission Timeout (RTO)" )
 
 closePDFMetadata()
 dev.off()

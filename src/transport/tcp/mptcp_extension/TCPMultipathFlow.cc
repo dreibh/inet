@@ -23,6 +23,10 @@
 #include "TCPSchedulerManager.h"
 #include "TCPAlgorithm.h"
 
+
+#include "TCPTahoeRenoFamily.h"
+
+#include <map>
 #if defined(__APPLE__)
 #define COMMON_DIGEST_FOR_OPENSSL
 #include <CommonCrypto/CommonDigest.h>
@@ -505,11 +509,55 @@ bool  MPTCP_Flow::close(){
 }
 
 bool MPTCP_Flow::sendCommandInvoked(){
-    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                  i != subflow_list.end(); i++) {
-              TCP_subflow_t* entry = (*i);
-              if(entry->subflow->isQueueAble)
-                  entry->subflow->getTcpAlgorithm()->sendCommandInvoked();
+
+    // Here is the System Scheduler
+    // To rephrase it, here we decide how to schedule over the paths.
+
+    MPTCP_PATH_SCHEDULER scheuler = Linux_like;
+
+    // First alternative: we fill the window depending on the RTT - TCP like
+
+    switch(scheuler){
+    case Linux_like:{
+        // start always with the path with the smallest RTT
+        // map should insert in order
+        std::map<double,int> path_order;
+        int c = 0;
+        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                        i != subflow_list.end(); i++,c++) {
+                    TCP_subflow_t* entry = (*i);
+                    if(entry->subflow->isQueueAble){
+
+                        TCPTahoeRenoFamilyStateVariables* another_state =
+                                check_and_cast<TCPTahoeRenoFamilyStateVariables*> (entry->subflow->getTcpAlgorithm()->getStateVariables());
+                        double sRTT = GET_SRTT(another_state->srtt.dbl());
+                        while(true){
+                            if(path_order.end() == path_order.find(sRTT)){
+                                path_order.insert(std::make_pair(sRTT,c));
+                                break;
+                            }
+                            else
+                               sRTT += 0.001;
+                        }
+                    }
+          }
+        //std::cerr << "##" << std::endl;
+        for ( std::map<double,int>::iterator o = path_order.begin();
+                               o != path_order.end(); o++) {
+            //std::cerr << o->second << std::endl;
+            (*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->sendCommandInvoked();
+        }
+
+    }
+    default:{
+        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                      i != subflow_list.end(); i++) {
+                  TCP_subflow_t* entry = (*i);
+                  if(entry->subflow->isQueueAble)
+                      entry->subflow->getTcpAlgorithm()->sendCommandInvoked();
+        }
+        break;
+    }
     }
     return true;
 }
