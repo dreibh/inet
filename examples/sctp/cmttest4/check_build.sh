@@ -5,9 +5,7 @@
 
 ####################### Config  Runs ##################### 
 
-RUNS="experiments/Basic_CC/CMT_SCTP
-#      TCP_FIF0_100_Netperfmeter 
-"
+RUNS="experiments/Basic_CC/CMT_SCTP experiments/Basic_CC/MPTCP experiments/Basic_CC/Basic_SCTP experiments/Basic_CC/Basic_TCP"
 
 ####################### Prepare Runs ######################
 echo "Get Parameter"
@@ -16,7 +14,7 @@ then
 	tmp=$RUNS
 	if [ $1 == "ALL" ];
 	then
-		echo "Do ALL"
+		echo "todo"
 	fi
 	if [ $1 == "help" ];
 	then
@@ -44,8 +42,8 @@ fi
 for JOB in $RUNS
 do
 	echo "run Szenario " $JOB
-	time ../../../0/gcc-debug/src/inet -r 0 -u Cmdenv -n ../..:../../../simulations:./:../../../src  $JOB/run.ini 	
+	time ../../../0/gcc-debug/src/inet -r 0 -u Cmdenv -n ../..:../../../simulations:./:../../../src  $JOB/run.ini
+    $JOB/plot $JOB/vectors/vectors.vec $JOB/pdf/result.pdf
     echo $JOB
 done
 
-$JOB/plot $JOB/vectors/vectors.vec $JOB/pdf/result.pdf

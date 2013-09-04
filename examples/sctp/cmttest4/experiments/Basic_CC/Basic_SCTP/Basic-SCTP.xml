@@ -1,0 +1,8 @@
+<!-- Scenario example for toolchain -->
+<scenario>
+<set-channel-attr t="80s" src-module="basic.core[0].westernCoreRouter[*]" src-gate="pppg$o[0]" attr="delay" value="10 ms"/>
+<set-channel-attr t="80s" src-module="basic.core[0].westernCoreRouter[*]" src-gate="pppg$o[0]" attr="per" value="0.05"/>
+<set-channel-attr t="90s" src-module="basic.core[0].westernCoreRouter[*]" src-gate="pppg$o[0]" attr="per" value="0.10"/>
+<set-channel-attr t="100s" src-module="basic.core[0].westernCoreRouter[*]" src-gate="pppg$o[0]" attr="per" value="0.05"/>
+<set-channel-attr t="110s" src-module="basic.core[0].westernCoreRouter[*]" src-gate="pppg$o[0]" attr="per" value="0.00"/>
+</scenario>
