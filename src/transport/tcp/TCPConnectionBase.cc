@@ -343,7 +343,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
         sndNxtVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
         sprintf(name,"[subflow][sent ack]%i%i", connId, subflowID);
-        sndAckVector = new cOutVector("name");
+        sndAckVector = new cOutVector(name);
         memset(name,'\0',sizeof(name));
         sprintf(name,"[subflow][rcvd seq]%i%i", connId, subflowID);
         rcvSeqVector = new cOutVector(name);
