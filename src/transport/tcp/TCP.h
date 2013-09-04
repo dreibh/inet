@@ -59,7 +59,9 @@ class TCPReceiveQueue;
 // testingEV writes log that automated test cases can check (*.test files)
 #define testingEV (ev.isDisabled()||!TCP::testing)?ev:ev
 
-
+#ifdef PRIVATE
+enum MPTCP_PATH_SCHEDULER{OFF=0,Linux_like=1};
+#endif
 
 /**
  * Implements the TCP protocol. This section describes the internal
@@ -185,6 +187,7 @@ class INET_API TCP : public cSimpleModule
     static int subflowCounter;
     /* MBe : General multipath settings */
     bool multipath;                 // turn on/off
+    MPTCP_PATH_SCHEDULER multipath_path_scheduler;
     bool isRFC6356;
     bool multipath_DSSDataACK8;     // kind of ack length
     bool multipath_DSSSeqNo8;       // kind of seq no length

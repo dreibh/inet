@@ -512,8 +512,8 @@ bool MPTCP_Flow::sendCommandInvoked(){
 
     // Here is the System Scheduler
     // To rephrase it, here we decide how to schedule over the paths.
-
-    MPTCP_PATH_SCHEDULER scheuler = Linux_like;
+    if(subflow_list.empty()) return false;
+    MPTCP_PATH_SCHEDULER scheuler = (*(subflow_list.begin()))->subflow->getTcpMain()->multipath_path_scheduler;
 
     // First alternative: we fill the window depending on the RTT - TCP like
 

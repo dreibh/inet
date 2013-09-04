@@ -61,19 +61,30 @@ bool SACK_RFC3517::statusChanged(){
 
 void SACK_RFC3517::discardUpTo(uint32 to){
     SACK_MAP::iterator i;
+    int pos = 1;
     for(i = sb.map.begin();i != sb.map.end();i++){
+               int map_size = sb.map.size();
                if(to >= i->second->end){
                    delete i->second;
                    sb.map.erase(i->first);
-                   continue;
                }
                // if we are here it could only be partial
-               if((i->first <= to) && (to <= i->second->end)){
+               else if((i->first <= to) && (to <= i->second->end)){
                    sb.map.insert(std::make_pair(to+1,i->second));
                    sb.map.erase(i->first);
                }
                else
                    break;
+
+               if(sb.map.size() != map_size){
+                    i = sb.map.begin();
+                    for(int pos_c = 0; pos_c < pos; pos_c++){
+                        if(i==sb.map.end()) return;
+                        i++;
+                    }
+                }
+               if(sb.map.empty()) return;
+               pos++;
     }
 }
 
@@ -605,9 +616,10 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
         // already included in the SACK option being constructed."
 
 
-
+        int pos = 1;
         for (SackMap::iterator it2 = state->sack_map.begin(); it2 != state->sack_map.end(); it2++)
         {
+            int map_size = state->sack_map.size();
             if(start <= it2->first){
                 // OK this is the smallest we know
                 if(end< it2->first){
@@ -623,6 +635,15 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
                     }
                  // it2 is overlapped ....delete
                  state->sack_map.erase(it2->first);
+                 if(state->sack_map.size() != map_size){
+                      it = state->sack_map.begin();
+                      for(int pos_c = 0; pos_c < pos; pos_c++){
+                          if(it==state->sack_map.end()) break;
+                          it++;
+                      }
+                      if(it==state->sack_map.end()) break;
+                  }
+                 pos++;
                  it2++;
                 }
                 if(found_end){
@@ -634,6 +655,7 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
                  // nothing to do... overlapped are erased above
                     break;
                 }
+                pos++;
             }
         }
         std::pair<SackMap::iterator, bool> pair = state->sack_map.insert(std::make_pair(start,end));

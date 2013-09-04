@@ -227,7 +227,7 @@ simple TCP like ITCP
         string multipath_receiveQueueClass = default("TCPMultipathVirtualDataRcvQueue");	// Set scheduler for the subflows of multipath
         bool multipath_ordered = default(true); // endable and disable ordered multipath transmission -> just for testing
 
-
+		string multipath_path_scheduler = default("off");
         @display("i=block/wheelbarrow");
     gates:
         input appIn[] @labels(TCPCommand/down);

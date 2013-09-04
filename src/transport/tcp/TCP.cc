@@ -100,6 +100,17 @@ void TCP::initialize()
                  (const char*)par("cmtCCVariant"));
      }
 
+     if(strcmp((const char*)par("multipath_path_scheduler"), "off") == 0) {
+         multipath_path_scheduler = OFF;
+     }
+     else if(strcmp((const char*)par("multipath_path_scheduler"), "Linux_like") == 0) {
+         multipath_path_scheduler = Linux_like;
+     }else {
+         throw cRuntimeError("Bad setting for multipath_path_scheduler: %s\n",
+                 (const char*)par("multipath_path_scheduler"));
+     }
+
+
      // MBe: setup the multipath context
 	if(multipath){
 		multipath_subflow_id = 0;

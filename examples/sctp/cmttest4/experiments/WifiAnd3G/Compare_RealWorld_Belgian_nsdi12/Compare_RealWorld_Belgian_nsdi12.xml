@@ -1,20 +1,11 @@
 <!-- Scenario example for toolchain -->
 <scenario>
 
-<!--
-<set-channel-attr t="60s" src-module="basic.core[0].westernCoreRouter[0]" src-gate="pppg$o[0]" attr="datarate" value="8e+06 bps"/>
-<set-channel-attr t="60s" src-module="basic.core[0].westernCoreRouter[0]" src-gate="pppg$o[0]" attr="delay" value="50 ms"/>
+<set-channel-attr t="40s" src-module="basic.core[0].westernCoreRouter[1]" src-gate="pppg$o[0]" attr="datarate" value="8e+06 bps"/>
+<set-channel-attr t="40s" src-module="basic.core[0].westernCoreRouter[1]" src-gate="pppg$o[0]" attr="delay" value="10 ms"/>
 
-<set-channel-attr t="60s" src-module="basic.core[0].westernCoreRouter[1]" src-gate="pppg$o[0]" attr="datarate" value="2e+06 bps"/>
-<set-channel-attr t="60s" src-module="basic.core[0].westernCoreRouter[1]" src-gate="pppg$o[0]" attr="delay" value="76 ms"/>
--->
-
-
-<set-channel-attr t="60s" src-module="basic.core[0].westernCoreRouter[0]" src-gate="pppg$o[0]" attr="datarate" value="8e+06 bps"/>
-<set-channel-attr t="60s" src-module="basic.core[0].westernCoreRouter[0]" src-gate="pppg$o[0]" attr="delay" value="76 ms"/>
-
-<set-channel-attr t="60s" src-module="basic.core[0].westernCoreRouter[1]" src-gate="pppg$o[0]" attr="datarate" value="2e+06 bps"/>
-<set-channel-attr t="60s" src-module="basic.core[0].westernCoreRouter[1]" src-gate="pppg$o[0]" attr="delay" value="50 ms"/>
+<set-channel-attr t="40s" src-module="basic.core[0].westernCoreRouter[0]" src-gate="pppg$o[0]" attr="datarate" value="2e+06 bps"/>
+<set-channel-attr t="40s" src-module="basic.core[0].westernCoreRouter[0]" src-gate="pppg$o[0]" attr="delay" value="75 ms"/>
 
 
 </scenario>
