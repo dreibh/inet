@@ -893,15 +893,19 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
         state->rcv_nxt = tcpseg->getSequenceNo() + 1;
 #ifdef PRIVATE
             if(this->getTcpMain()->multipath && (flow != NULL)){
-                state->rcv_adv = state->rcv_nxt + flow->mptcp_rcv_wnd;
+                flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + flow->mptcp_rcv_wnd;
+                if (rcvAdvVector)
+                    rcvAdvVector->record(flow->mptcp_rcv_adv);
             }
-            else
+            else{
 #endif
         state->rcv_adv = state->rcv_nxt + state->rcv_wnd;
 
         if (rcvAdvVector)
             rcvAdvVector->record(state->rcv_adv);
-
+#ifdef PRIVATE
+        }
+#endif
         state->irs = tcpseg->getSequenceNo();
         receiveQueue->init(state->rcv_nxt);   // FIXME may init twice...
         selectInitialSeqNum();
@@ -1064,15 +1068,19 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
         state->rcv_nxt = tcpseg->getSequenceNo() + 1;
 #ifdef PRIVATE
             if(this->getTcpMain()->multipath){
-                state->rcv_adv = state->rcv_nxt + flow->mptcp_rcv_wnd;
+                flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + flow->mptcp_rcv_wnd;
+                if (rcvAdvVector)
+                    rcvAdvVector->record(flow->mptcp_rcv_adv);
             }
-            else
+            else{
 #endif
         state->rcv_adv = state->rcv_nxt + state->rcv_wnd;
 
         if (rcvAdvVector)
             rcvAdvVector->record(state->rcv_adv);
-
+#ifdef PRIVATE
+            }
+#endif
         state->irs = tcpseg->getSequenceNo();
         receiveQueue->init(state->rcv_nxt);
 

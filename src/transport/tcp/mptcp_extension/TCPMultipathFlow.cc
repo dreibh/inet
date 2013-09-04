@@ -83,7 +83,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     mptcp_rcv_nxt = 0;
     // Firt connection sets the rcwnd for complete MPTCP connection
     mptcp_rcv_wnd = subflow->getState()->rcv_wnd;
-
+    mptcp_rcv_adv = subflow->getState()->rcv_adv;                       // B.1.2
     isPassive = false;
     isFIN = false;
     // Init the flow

@@ -671,22 +671,30 @@ void TCPConnection::configureStateVariables()
 #ifdef PRIVATE
             if(this->getTcpMain()->multipath && (flow!=NULL)){
                flow->mptcp_rcv_wnd = advertisedWindowPar;
+               flow->mptcp_rcv_adv = advertisedWindowPar;
+
             }
-            else
+            else{
 #endif
     state->rcv_wnd = advertisedWindowPar;
     state->rcv_adv = advertisedWindowPar;
-
+#ifdef PRIVATE
+            }
+#endif
     if (state->ws_support && advertisedWindowPar > TCP_MAX_WIN)
     {
 #ifdef PRIVATE
             if(this->getTcpMain()->multipath && (flow!=NULL)){
                flow->mptcp_rcv_wnd = TCP_MAX_WIN;
+               flow->mptcp_rcv_adv = TCP_MAX_WIN;
             }
-            else
+            else{
 #endif
         state->rcv_wnd = TCP_MAX_WIN; // we cannot to guarantee that the other end is also supporting the Window Scale (header option) (RFC 1322)
         state->rcv_adv = TCP_MAX_WIN; // therefore TCP_MAX_WIN is used as initial value for rcv_wnd and rcv_adv
+#ifdef PRIVATE
+            }
+#endif
     }
 
     state->maxRcvBuffer = advertisedWindowPar;
@@ -1035,10 +1043,23 @@ bool TCPConnection::SCTPlikeBufferSplittingGlobecom(){
             (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_BothSides) ) ) {
 
           // Limit is 1/n of current receiver-side buffer allocation
-          const uint32 limit = (state->rcv_adv + (state->snd_max + state->snd_una)) / this->flow->getSubflows()->size();
+          uint32 limit = 0;
+#ifdef PRIVATE
+          if(this->getTcpMain()->multipath && (flow!=NULL)){
+              limit = (flow->mptcp_rcv_adv + (flow->mptcp_snd_nxt + flow->mptcp_snd_una));
+               if((flow->mptcp_snd_nxt + flow->mptcp_snd_una) + state->snd_mss > limit + state->snd_mss) {
+                   return false; // Yes, even if there is a open window we avoid to occupy more from the send buffer
+               }
+          }
+          else{
+#endif
+          limit = (state->rcv_adv + (state->snd_max + state->snd_una)) / this->flow->getSubflows()->size();
           if((state->snd_max + state->snd_una) + state->snd_mss > limit + state->snd_mss) {
               return false; // Yes, even if there is a open window we avoid to occupy more from the send buffer
           }
+#ifdef PRIVATE
+          }
+#endif
       }
       return true;
 }
@@ -2044,7 +2065,13 @@ unsigned short TCPConnection::updateRcvWnd()
     // Don't advertise less than one full-sized segment to avoid SWS
     if (win < (state->maxRcvBuffer / 4) && win < state->snd_mss)
         win = 0;
-
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow!=NULL)){
+        if (win < flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt)
+            win = flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt;
+    }
+    else
+#endif
     // Do not shrink window
     // (rcv_adv minus rcv_nxt) is the amount of space still available to the sender that was previously advertised
     if (win < state->rcv_adv - state->rcv_nxt)
@@ -2056,6 +2083,18 @@ unsigned short TCPConnection::updateRcvWnd()
 
     // Note: The order of the "Do not shrink window" and "Observe upper limit" parts has been changed to the order used in FreeBSD Release 7.1
 
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow!=NULL)){
+        if (win > 0 && seqGE(flow->mptcp_rcv_nxt + win, flow->mptcp_rcv_adv))
+        {
+            flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + win;
+
+            if (rcvAdvVector)
+                rcvAdvVector->record(state->rcv_adv);
+        }
+    }
+    else{
+#endif
     // update rcv_adv if needed
     if (win > 0 && seqGE(state->rcv_nxt + win, state->rcv_adv))
     {
@@ -2065,6 +2104,7 @@ unsigned short TCPConnection::updateRcvWnd()
             rcvAdvVector->record(state->rcv_adv);
     }
 #ifdef PRIVATE
+    }
     if(this->getTcpMain()->multipath && (flow!=NULL))
         flow->mptcp_rcv_wnd = win;
     else
