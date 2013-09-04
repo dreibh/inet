@@ -50,7 +50,7 @@ experiments/tools/extractvectors $VECTOR_FILE cc.data \
    "Queued Sent Bytes" \
    "Queued Received Bytes" \
     || exit 1
-R --vanilla <experiments/tools/plot-cc.R || exit 1
+R --vanilla <experiments/Basic_CC/CMT_SCTP/plot-CMTSCTP.R|| exit 1
 
 cp cc.pdf $PDF_FILE
 
