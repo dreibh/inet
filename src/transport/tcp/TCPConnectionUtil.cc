@@ -668,12 +668,23 @@ void TCPConnection::configureStateVariables()
 
     if (!state->ws_support && (advertisedWindowPar > TCP_MAX_WIN || advertisedWindowPar <= 0))
         throw cRuntimeError("Invalid advertisedWindow parameter: %ld", advertisedWindowPar);
-
+#ifdef PRIVATE
+            if(this->getTcpMain()->multipath && (flow!=NULL)){
+               flow->mptcp_rcv_wnd = advertisedWindowPar;
+            }
+            else
+#endif
     state->rcv_wnd = advertisedWindowPar;
     state->rcv_adv = advertisedWindowPar;
 
     if (state->ws_support && advertisedWindowPar > TCP_MAX_WIN)
     {
+#ifdef PRIVATE
+            if(this->getTcpMain()->multipath && (flow!=NULL)){
+               flow->mptcp_rcv_wnd = TCP_MAX_WIN;
+            }
+            else
+#endif
         state->rcv_wnd = TCP_MAX_WIN; // we cannot to guarantee that the other end is also supporting the Window Scale (header option) (RFC 1322)
         state->rcv_adv = TCP_MAX_WIN; // therefore TCP_MAX_WIN is used as initial value for rcv_wnd and rcv_adv
     }
@@ -778,24 +789,60 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
     uint32 len = tcpseg->getPayloadLength();
     uint32 seqNo = tcpseg->getSequenceNo();
     uint32 ackNo = tcpseg->getAckNo();
-    uint32 rcvWndEnd = state->rcv_nxt + state->rcv_wnd;
+    uint32 rcvWndEnd = 0;
+#ifdef PRIVATE
+            if(tcpMain->multipath && (flow!=NULL)){
+                rcvWndEnd = state->rcv_nxt + flow->mptcp_rcv_wnd;
+            }
+            else
+#endif
+    rcvWndEnd = state->rcv_nxt + state->rcv_wnd;
     bool ret;
 
     if (len == 0)
     {
+#ifdef PRIVATE
+            if(tcpMain->multipath && (flow!=NULL)){
+                  if (flow->mptcp_rcv_wnd == 0)
+                      ret = (seqNo == state->rcv_nxt);
+                  else // rcv_wnd > 0
+          //            ret = seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd);
+                      ret = seqLE(state->rcv_nxt, seqNo) && seqLE(seqNo, rcvWndEnd); // Accept an ACK on end of window
+            }
+            else{
+#endif
         if (state->rcv_wnd == 0)
             ret = (seqNo == state->rcv_nxt);
         else // rcv_wnd > 0
 //            ret = seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd);
             ret = seqLE(state->rcv_nxt, seqNo) && seqLE(seqNo, rcvWndEnd); // Accept an ACK on end of window
+#ifdef PRIVATE
+            }
+#endif
     }
     else // len > 0
     {
+#ifdef PRIVATE
+            if(tcpMain->multipath && (flow!=NULL)){
+                  if (flow->mptcp_rcv_wnd == 0)
+                                 ret = false;
+                      else // rcv_wnd > 0
+                         ret = (seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd))
+                                 || (seqLess(state->rcv_nxt, seqNo + len) && seqLE(seqNo + len, rcvWndEnd)); // Accept an ACK on end of window
+            }
+            else{
+#endif
+
         if (state->rcv_wnd == 0)
             ret = false;
         else // rcv_wnd > 0
             ret = (seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd))
                     || (seqLess(state->rcv_nxt, seqNo + len) && seqLE(seqNo + len, rcvWndEnd)); // Accept an ACK on end of window
+#ifdef PRIVATE
+            }
+#endif
+
+
     }
 
     // RFC 793, page 25:
@@ -809,11 +856,17 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
         else
             ret = (seqLess(state->snd_una, ackNo) && seqLE(ackNo, state->snd_max)); // after RTO snd_nxt is reduced therefore we need to use snd_max instead of snd_nxt here
     }
-
+#ifdef PRIVATE
+    if(tcpMain->multipath && (flow!=NULL)){
+              if (!ret)
+                 tcpEV << "Not Acceptable segment. seqNo=" << seqNo << " ackNo=" << ackNo << " len=" << len << " rcv_nxt="
+                       << state->rcv_nxt  << " rcv_wnd=" << flow->mptcp_rcv_wnd << " afterRto=" << state->afterRto << "\n";
+    }
+    else
+#endif
     if (!ret)
         tcpEV << "Not Acceptable segment. seqNo=" << seqNo << " ackNo=" << ackNo << " len=" << len << " rcv_nxt="
               << state->rcv_nxt  << " rcv_wnd=" << state->rcv_wnd << " afterRto=" << state->afterRto << "\n";
-
     return ret;
 }
 
@@ -830,6 +883,11 @@ void TCPConnection::sendSyn()
     tcpseg->setSequenceNo(state->iss);
     tcpseg->setSynBit(true);
     updateRcvWnd();
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow!=NULL))
+        tcpseg->setWindow(flow->mptcp_rcv_wnd);
+    else
+#endif
     tcpseg->setWindow(state->rcv_wnd);
 
     state->snd_max = state->snd_nxt = state->iss + 1;
@@ -855,6 +913,11 @@ void TCPConnection::sendSynAck()
     tcpseg->setSynBit(true);
     tcpseg->setAckBit(true);
     updateRcvWnd();
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow!=NULL))
+        tcpseg->setWindow(flow->mptcp_rcv_wnd);
+    else
+#endif
     tcpseg->setWindow(state->rcv_wnd);
 
     state->snd_max = state->snd_nxt = state->iss + 1;
@@ -2001,14 +2064,30 @@ unsigned short TCPConnection::updateRcvWnd()
         if (rcvAdvVector)
             rcvAdvVector->record(state->rcv_adv);
     }
-
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow!=NULL))
+        flow->mptcp_rcv_wnd = win;
+    else
+#endif
     state->rcv_wnd = win;
 
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow!=NULL)){
+        if (rcvWndVector)
+            rcvWndVector->record(flow->mptcp_rcv_wnd);
+    }
+    else
+#endif
     if (rcvWndVector)
         rcvWndVector->record(state->rcv_wnd);
-
+    uint32 scaled_rcv_wnd = 0;
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow!=NULL))
+        scaled_rcv_wnd = flow->mptcp_rcv_wnd;
+    else
+#endif
     // scale rcv_wnd:
-    uint32 scaled_rcv_wnd = state->rcv_wnd;
+    scaled_rcv_wnd = state->rcv_wnd;
     state->rcv_wnd_scale = 0;
 
     if (state->ws_enabled)
