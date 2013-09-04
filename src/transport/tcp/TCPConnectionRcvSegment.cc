@@ -892,7 +892,7 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
         //"
         state->rcv_nxt = tcpseg->getSequenceNo() + 1;
 #ifdef PRIVATE
-            if(this->getTcpMain()->multipath){
+            if(this->getTcpMain()->multipath && (flow != NULL)){
                 state->rcv_adv = state->rcv_nxt + flow->mptcp_rcv_wnd;
             }
             else
