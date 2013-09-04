@@ -146,25 +146,25 @@ void TCPBaseAlg::initialize()
         numRtosVector = new cOutVector("numRTOs");
 #else
         char name[255];
-        sprintf(name,"[subflow][conn ID %i][%i][cwnd]",this->conn->connId,this->conn->subflowID);
+        sprintf(name,"[subflow][cwnd] %i%i",this->conn->connId,this->conn->subflowID);
         cwndVector = new cOutVector(name);
 
-        sprintf(name,"[subflow][conn ID %i][%i][ssthresh]",this->conn->connId,this->conn->subflowID);
+        sprintf(name,"[subflow][ssthresh] %i%i",this->conn->connId,this->conn->subflowID);
         ssthreshVector = new cOutVector(name);
 
-        sprintf(name,"[subflow][conn ID %i][%i][measured RTT]",this->conn->connId,this->conn->subflowID);
+        sprintf(name,"[subflow][measured RTT] %i%i",this->conn->connId,this->conn->subflowID);
         rttVector = new cOutVector(name);
 
-        sprintf(name,"[subflow][conn ID %i][%i][smoothed RTT]",this->conn->connId,this->conn->subflowID);
+        sprintf(name,"[subflow][smoothed RTT] %i%i",this->conn->connId,this->conn->subflowID);
         srttVector = new cOutVector(name);
 
-        sprintf(name,"[subflow][conn ID %i][%i][RTTVAR]",this->conn->connId,this->conn->subflowID);
+        sprintf(name,"[subflow][RTTVAR] %i%i",this->conn->connId,this->conn->subflowID);
         rttvarVector = new cOutVector(name);
 
-        sprintf(name,"[subflow][conn ID %i][%i][RTO]",this->conn->connId,this->conn->subflowID);
+        sprintf(name,"[subflow][RTO] %i%i",this->conn->connId,this->conn->subflowID);
         rtoVector = new cOutVector(name);
 
-        sprintf(name,"[subflow][conn ID %i][%i][numRTOs]",this->conn->connId,this->conn->subflowID);
+        sprintf(name,"[subflow][numRTOs] %i%i",this->conn->connId,this->conn->subflowID);
         numRtosVector = new cOutVector(name);
 
 #endif
