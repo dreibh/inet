@@ -172,7 +172,10 @@ ulong TCPMultipathVirtualDataRcvQueue::extractTo(uint64 seq)
     {
         // full 1st region
         ulong octets = i->end - i->begin;
+        if(i->begin != old_end )
+            std::cerr << "i->begin: " << i->begin  << " old_end:" << old_end << std::cerr;
         ASSERT(i->begin == old_end && "UPS....not in order");
+
         old_end = i->end;
         DEBUGPRINT("[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %x%x ...%x%x", (uint32)(i->begin>>32),(uint32)i->begin,(uint32) (i->end>>32),(uint32) i->end );
         regionList.erase(i);
@@ -187,9 +190,10 @@ uint64 TCPMultipathVirtualDataRcvQueue::getAmountOfBufferedBytes()
     RegionList::iterator i = regionList.begin();
     if (i==regionList.end()) // is queue empty?
         return 0;
-
+    //std::cerr << "in MPTCP Queue" << std::endl;
     while (i!=regionList.end())
     {
+       // std::cerr << i->begin << "..." << i->end << std::endl;
         bytes = bytes + (i->end - i->begin);
         i++;
     }

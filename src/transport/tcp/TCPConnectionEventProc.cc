@@ -260,10 +260,11 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 void TCPConnection::process_CLOSE(){
 #ifdef PRIVATE
 
-        state->snd_nxt = state->snd_max;
+        state->setSndNxt(state->snd_max);
         sendFin();
         tcpAlgorithm->restartRexmitTimer();
-        state->snd_max = ++state->snd_nxt;
+        state->setSndNxt(state->getSndNxt() + 1);
+        state->snd_max = state->getSndNxt();
 
         if (unackedVector)
             unackedVector->record(state->snd_max - state->snd_una);
@@ -309,10 +310,11 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
             if (state->snd_max == sendQueue->getBufferEndSeq())
             {
                 tcpEV << "No outstanding SENDs, sending FIN right away, advancing snd_nxt over the FIN\n";
-                state->snd_nxt = state->snd_max;
+                state->setSndNxt(state->snd_max);
                 sendFin();
                 tcpAlgorithm->restartRexmitTimer();
-                state->snd_max = ++state->snd_nxt;
+                state->setSndNxt((state->getSndNxt() + 1));
+                state->snd_max = state->getSndNxt();
 
                 if (unackedVector)
                     unackedVector->record(state->snd_max - state->snd_una);
@@ -355,7 +357,7 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
 #ifdef PRIVATE
     if(state)
 #endif
-    sendRst(getState()->snd_nxt);
+    sendRst(getState()->getSndNxt());
 }
 
 void TCPConnection::process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg)
@@ -384,7 +386,7 @@ void TCPConnection::process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, c
             //
             //   <SEQ=SND.NXT><CTL=RST>
             //"
-            sendRst(state->snd_nxt);
+            sendRst(state->getSndNxt());
             break;
     }
 
@@ -409,7 +411,7 @@ void TCPConnection::process_STATUS(TCPEventCode& event, TCPCommand *tcpCommand, 
 
     statusInfo->setSnd_mss(state->snd_mss);
     statusInfo->setSnd_una(state->snd_una);
-    statusInfo->setSnd_nxt(state->snd_nxt);
+    statusInfo->setSnd_nxt(state->getSndNxt());
     statusInfo->setSnd_max(state->snd_max);
     statusInfo->setSnd_wnd(state->snd_wnd);
     statusInfo->setSnd_up(state->snd_up);

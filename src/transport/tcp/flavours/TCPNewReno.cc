@@ -188,10 +188,10 @@ void TCPNewReno::receivedDuplicateAck()
         {
             this->conn->getState()->sackhandler->updateStatus();    // Update after reach of DUPTACK
             // 1. Step RecoveryPoint = HighData
-            this->conn->getState()->sackhandler->setNewRecoveryPoint(state->snd_nxt);
+            this->conn->getState()->sackhandler->setNewRecoveryPoint(state->getSndNxt());
 
         }
-        state->recover = state->snd_nxt;
+        state->recover = state->getSndNxt();
 
         // 2. Recalculate Window
         recalculateSlowStartThreshold();

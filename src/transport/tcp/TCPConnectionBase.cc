@@ -76,7 +76,7 @@ TCPStateVariables::TCPStateVariables()
     time_last_data_sent = 0;
 
     ws_support = false;       // will be set from configureStateVariables()
-    ws_enabled = false;
+    ws_enabled = true;
     snd_ws = false;
     rcv_ws = false;
     rcv_wnd_scale = 0;        // will be set from configureStateVariables()
@@ -179,6 +179,16 @@ std::string TCPStateVariables::detailedInfo() const
     out << "rcv_naseg=" << rcv_naseg << "\n";
     return out.str();
 }
+void TCPStateVariables::setSndNxt(uint32 new_snd_nxt){
+//    if(new_snd_nxt >89709)
+//        std::cerr << std::endl;
+
+    snd_nxt = new_snd_nxt;
+}
+uint32 TCPStateVariables::getSndNxt(){
+    return snd_nxt;
+}
+
 
 TCPConnection::TCPConnection()
 {
@@ -528,6 +538,8 @@ TCPConnection::~TCPConnection()
 
 #endif // PRIVATE
 }
+
+
 
 bool TCPConnection::processTimer(cMessage *msg)
 {

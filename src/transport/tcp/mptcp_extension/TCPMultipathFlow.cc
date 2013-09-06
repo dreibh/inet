@@ -81,9 +81,12 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     mptcp_snd_wnd = 0;
     // Receiver Side
     mptcp_rcv_nxt = 0;
+    mptcp_rcv_nxt = 0;
     // Firt connection sets the rcwnd for complete MPTCP connection
     mptcp_rcv_wnd = subflow->getState()->rcv_wnd;
-    mptcp_rcv_adv = subflow->getState()->rcv_adv;                       // B.1.2
+                      // B.1.2
+    // mptcp_rcv_adv be set in setBaseSQN
+    mptcp_rcv_adv = 0; //mptcp_rcv_nxt + mptcp_rcv_wnd;
     isPassive = false;
     isFIN = false;
     // Init the flow
@@ -503,7 +506,7 @@ bool  MPTCP_Flow::close(){
           TCP_subflow_t* entry = (*i);
               if(!entry->subflow->getState()->send_fin){
                     entry->subflow->process_CLOSE();
-                    entry->subflow->sendRst(entry->subflow->getState()->snd_nxt);     // FIXME RSt should not used here,... but we have to tear down the connextion
+                    entry->subflow->sendRst(entry->subflow->getState()->getSndNxt());     // FIXME RSt should not used here,... but we have to tear down the connextion
 
               }
       }
@@ -557,6 +560,7 @@ bool MPTCP_Flow::sendCommandInvoked(){
                   TCP_subflow_t* entry = (*i);
                   if(entry->subflow->isQueueAble)
                       entry->subflow->getTcpAlgorithm()->sendCommandInvoked();
+                  this->refreshSendMPTCPWindow();
         }
         break;
     }
@@ -1078,12 +1082,12 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 	// get Start DSS
 	uint64 dss_start = this->mptcp_snd_una;		// will be manipulated in process_dss of the pcb
 	subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una;
-	subflow->base_una_dss_info.subflow_seq = subflow->getState()->snd_una;
+	//subflow->base_una_dss_info.subflow_seq = subflow->getState()->snd_una;
 
 
 	// fill the dss seq nr map
 	// FIXME -> Perhaps it is enough to hold list like on SACK
-	uint32 snd_nxt_tmp = subflow->getState()->snd_nxt;
+	uint32 snd_nxt_tmp = subflow->getState()->getSndNxt();
 	uint32 bytes_tmp = bytes;
 
     if(bytes_tmp > subflow->getState()->snd_mss)
@@ -1231,7 +1235,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     first_bits |= l_seq<<16;
 
     // Offset of sequence number
-    l_seq = flow_seq = subflow->getState()->snd_nxt - subflow->getState()->iss;
+    l_seq = flow_seq = subflow->getState()->getSndNxt() - subflow->getState()->iss;
     first_bits |= l_seq>>16;
 
     option->setValues(array_cnt++, first_bits);
@@ -1252,11 +1256,11 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
     DEBUGPRINT("[FLOW][DSS][INFO][SND] Ack Seq: %ld \t SND Seq: %ld \t Subflow Seq: %d \t Data length: %d", ack_seq, snd_seq, flow_seq, data_len);
 
-    DEBUGPRINT("[FLOW][SND][DSS][STATUS] snd_una: %ld", mptcp_snd_una);
-   	DEBUGPRINT("[FLOW][SND][DSS][STATUS] snd_nxt: %ld", mptcp_snd_nxt);
-   	DEBUGPRINT("[FLOW][SND][DSS][STATUS] snd_wnd: %d",  mptcp_snd_wnd);
-   	DEBUGPRINT("[FLOW][SND][DSS][STATUS] rcv_nxt: %ld", mptcp_rcv_nxt);
-   	DEBUGPRINT("[FLOW][SND][DSS][STATUS] rcv_wnd: %ld", mptcp_rcv_wnd);
+    //std::cerr << "[FLOW][SND][DSS][STATUS] snd_una:" << mptcp_snd_una << std::endl;
+    //std::cerr << this->ID << "[FLOW][SND][DSS][STATUS] snd_nxt:" << mptcp_snd_nxt << std::endl;
+    //std::cerr << "[FLOW][SND][DSS][STATUS] snd_wnd:" << mptcp_snd_wnd << std::endl;
+    //std::cerr << "[FLOW][SND][DSS][STATUS] rcv_nxt:" << mptcp_rcv_nxt << std::endl;
+    //std::cerr << "[FLOW][SND][DSS][STATUS] rcv_wnd: "<< mptcp_rcv_wnd << std::endl;
 
     return 0;
 }
@@ -1280,6 +1284,7 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 
     // we try to organize the DSS List in a Map with offsets of in order sequence of DSS
 	TCP_subflow_t* entry = NULL;
+	uint64 lastMPTCPSeq = 0;
 	for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
 			i != subflow_list.end(); i++) {
 		entry = (*i);
@@ -1289,50 +1294,56 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 			continue;	// Nothing to do
 		// Clear sending memory (DSS MAP)
 		TCPConnection* conn = entry->subflow;
-
-		if(conn->base_una_dss_info.subflow_seq ==conn->getState()->snd_una)
+		uint32 offset = 0;
+		if(conn->base_una_dss_info.subflow_seq + 1 == conn->getState()->snd_una){
 		    continue; // no changes
-
-		uint32 start = conn->base_una_dss_info.subflow_seq;
-		uint32 bytes = 0;
-		// ignore fin
-		if(conn->getState()->send_fin)
-		    bytes = conn->getState()->snd_una - start -1;
-		else
-		    bytes = conn->getState()->snd_una - start;
-
-		uint64 cum = 0;
-		for(; cum < bytes; this->mptcp_snd_una++){
-		    TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.find(start+cum);
-		    if(it==conn->dss_dataMapofSubflow.end()){
-		        // Fixme Is something wrong when I get here...
-		        break;
-		    }
-		    DSS_INFO* dss_info = it->second;
-		    DEBUGPRINT("[MPTCP][DSS INFO] del dss %ld flow seq: %d offset:%d", this->mptcp_snd_una, start+cum, dss_info->seq_offset);
-		    if(dss_info->seq_offset > 0){
-                ASSERT(!dss_info->section_end && "we must be on the start of a section");  //
-            }
-		    conn->dss_dataMapofSubflow.erase(start+cum);
-
-		    // Have we to split? Not a complete section?
-		    if(dss_info->seq_offset > bytes){
-		        dss_info->seq_offset =   dss_info->seq_offset - bytes;
-		        conn->dss_dataMapofSubflow[start] = dss_info; //because of split add dss_info
-
-		        cum += (dss_info->seq_offset);
-                conn->base_una_dss_info.subflow_seq += dss_info->seq_offset;
-                conn->base_una_dss_info.dss_seq += dss_info->seq_offset;
-		    }
-		    else{
-		        delete dss_info;
-		    }
-
 		}
-		if(conn->base_una_dss_info.dss_seq >  this->mptcp_snd_una)
-		    this->mptcp_snd_una = conn->base_una_dss_info.dss_seq;
+		TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.end();
+		while(conn->base_una_dss_info.subflow_seq + 1  < conn->getState()->snd_una){
+
+            while(true){
+                 TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.find(conn->base_una_dss_info.subflow_seq + 1);
+                 if(it==conn->dss_dataMapofSubflow.end()){
+                  // it is possible the link which established the multipath link
+                 conn->base_una_dss_info.subflow_seq++;
+                 break;
+                }
+                else
+                {
+                    conn->base_una_dss_info.subflow_seq += it->second->seq_offset;
+                    uint32 split = conn->base_una_dss_info.subflow_seq - (conn->getState()->snd_una - 1);
+                    if(mptcp_snd_una < it->second->seq_offset + it->second->dss_seq){
+                        //std::cerr << "[FLOW][SND][DSS][STATUS] snd_una:" << mptcp_snd_una << "snd_nxt" << mptcp_snd_nxt << "DIFF "<< mptcp_snd_nxt - mptcp_snd_una  << std::endl;
+                        mptcp_snd_una = it->second->seq_offset + it->second->dss_seq + 1 - split;
+                    }
+                    it->second->delivered = true;
+
+                    break;
+                }
+            }
+
+            //conn->base_una_dss_info.dss_seq  = it->second->dss_seq;
+		}
+		uint32 split_offset = 0;
+		if( conn->base_una_dss_info.subflow_seq + 1 != conn->getState()->snd_una){
+		    //std::cerr << "here is a splitting, because to less window " << std::endl;
+		    conn->base_una_dss_info.subflow_seq = conn->getState()->snd_una - 1 ;
+		    split_offset = conn->base_una_dss_info.subflow_seq = conn->getState()->snd_una;
+		}
+		for(TCPMultipathDSSStatus::iterator dit = conn->dss_dataMapofSubflow.begin(); dit != conn->dss_dataMapofSubflow.end(); dit++){
+		    if(dit->second->delivered){
+	            conn->dss_dataMapofSubflow.erase(dit->first);
+	            dit = conn->dss_dataMapofSubflow.begin();
+		    }
+
+		    break;
+		}
+
+		// std::cerr << "[FLOW][SND][DSS][STATUS] snd_una:" << mptcp_snd_una << std::endl;
 	}
 }
+
+
 void MPTCP_Flow::sendToApp(cMessage* msg, TCPConnection* conn){
     bool found = true;  // TODO ...what happens if we remove our communication flow
     // 1) Add data in MPTCP Receive Queue
@@ -1346,16 +1357,18 @@ void MPTCP_Flow::sendToApp(cMessage* msg, TCPConnection* conn){
        // 3) OK we got a valid connection to an app, check if there data
        TCP_SubFlowVector_t::iterator i = subflow_list.begin();
        if(!(subflow_list.size() > 1)){
-           conn->getTcpMain()->send(msg, "appOut",  conn->appGateIndex);
+           if(msg!=NULL)conn->getTcpMain()->send(msg, "appOut",  conn->appGateIndex);
        }
        else if(ordered){	// Ordered is just for debugging, makes things more easy
-           uint32 kind = msg->getKind();
-           if((!(kind&TCP_I_DATA)) || (kind&TCP_I_ESTABLISHED) || (kind&TCP_I_SEND_MSG)){
-               (*i)->subflow->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
-               return;
-           }
+           if(msg != NULL){
+               uint32 kind = msg->getKind();
+               if((!(kind&TCP_I_DATA)) || (kind&TCP_I_ESTABLISHED) || (kind&TCP_I_SEND_MSG)){
+                   (*i)->subflow->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
+                   return;
+               }
 
-    	   delete msg; // this message is not needed anymore
+               delete msg; // this message is not needed anymore
+           }
     	   // Correction parameter
 		   while ((msg=mptcp_receiveQueue->extractBytesUpTo(mptcp_rcv_nxt))!=NULL)
 		   {
@@ -1581,6 +1594,10 @@ void MPTCP_Flow::_hmac_md5(unsigned char* text, int text_len,
 
 // ########################################### Getter Setter #########################################
 
+uint64_t MPTCP_Flow::getAmountOfFreeBytesInReceiveQueue(uint64 maxRcvBuffer){
+    return  this->mptcp_receiveQueue->getAmountOfFreeBytes(maxRcvBuffer);
+}
+
 /**
  * getter function sender_key
  */
@@ -1668,6 +1685,7 @@ void MPTCP_Flow::setBaseSQN(uint64_t s) {
     mptcp_snd_una = seq;
     mptcp_snd_nxt = seq +1;
     mptcp_rcv_nxt = seq;
+    mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
     mptcp_receiveQueue->init(seq);
 }
 

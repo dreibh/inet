@@ -512,7 +512,7 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked, bool mptcp)
 void TCPBaseAlg::sendCommandInvoked(bool mptcp)
 {
     // try sending
-    sendData(true, mptcp);
+        sendData(true, mptcp);
 }
 
 void TCPBaseAlg::receivedOutOfOrderSegment()
@@ -543,6 +543,12 @@ void TCPBaseAlg::receiveSeqChanged()
         if (!state->delayed_acks_enabled) // delayed ACK disabled
         {
             tcpEV << "rcv_nxt changed to " << state->rcv_nxt << ", (delayed ACK disabled) sending ACK now\n";
+#ifdef PRIVATE
+//           if(this->conn->getTcpMain()->multipath && (this->conn->flow != NULL)){
+//           if(state->snd_wnd > this->conn->flow->mptcp_rcv_nxt - this->conn->flow->mptcp_snd_una)
+//               conn->sendAck();
+//           }else
+#endif
             conn->sendAck();
         }
         else // delayed ACK enabled

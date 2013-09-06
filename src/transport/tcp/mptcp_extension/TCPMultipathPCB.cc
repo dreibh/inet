@@ -269,9 +269,10 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
                     break;
                 }
             }
-            subflow->flow->refreshSendMPTCPWindow();
+
         }
     }
+    subflow->flow->refreshSendMPTCPWindow();
     return 1;
 }
 

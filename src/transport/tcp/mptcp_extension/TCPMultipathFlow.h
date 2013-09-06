@@ -103,6 +103,9 @@ class INET_API MPTCP_Flow
     uint64_t getHighestCumSQN();
     uint64_t getBaseSQN();          // Base of Offset SQN calculation
     uint64_t getSQN();
+
+    uint64_t getAmountOfFreeBytesInReceiveQueue(uint64 maxRcvBuffer);
+
     void setBaseSQN(uint64_t s);
     int  setState(MPTCP_State s);
     void setSendQueueLimit(int limit);

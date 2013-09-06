@@ -209,8 +209,12 @@ class INET_API TCPStateVariables : public cObject
 
     // send sequence number variables (see RFC 793, "3.2. Terminology")
     uint32 snd_una;      // send unacknowledged
-
+private:
     uint32 snd_nxt;      // send next (drops back on retransmission)
+public:
+    virtual void setSndNxt(uint32 new_snd_nxt);
+    virtual uint32 getSndNxt();
+
     uint32 snd_max;      // max seq number sent (needed because snd_nxt is re-set on retransmission)
     uint32 snd_wnd;      // send window
     uint32 snd_up;       // send urgent pointer
@@ -685,6 +689,7 @@ public:
     virtual void sendIndicationToApp(int code, const int id = 0);   // shifted from protected
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_CLOSE();
+
 #endif // PRIVATE
     /** Utility: prints local/remote addr/port and app gate index/connId */
     virtual void printConnBrief() const;
