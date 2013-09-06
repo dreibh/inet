@@ -1235,6 +1235,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     long effectiveWin = 0;
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath && (flow != NULL)){
+        if(!this->isQueueAble)
+            return false;
         // effectiveWindow: number of bytes we're allowed to send now
         if(((flow->mptcp_snd_nxt - flow->mptcp_snd_una) + congestionWindow) > maxWindow){
             // Ok, we should send less cwnd
