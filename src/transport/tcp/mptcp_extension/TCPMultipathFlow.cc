@@ -101,6 +101,16 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 
     ordered = subflow->getTcpMain()->par("multipath_ordered");
 
+    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_link_uitlization"), "cross") == 0) {
+        path_utilization     = CROSS;
+    }
+    else if(strcmp((const char*)subflow->getTcpMain()->par("multipath_link_uitlization"), "linear") == 0) {
+        path_utilization     = LINEAR;
+    }else {
+        throw cRuntimeError("Bad setting for multipath_path_scheduler: %s\n",
+                (const char*)subflow->getTcpMain()->par("multipath_path_scheduler"));
+    }
+
     char name[255]; // opp_dup will be called
 	sprintf(name,"[FLOW-%d][RCV-QUEUE] size",ID);
 	mptcpRcvBufferSize = new cOutVector(name);
@@ -516,6 +526,27 @@ bool  MPTCP_Flow::close(){
 
 bool MPTCP_Flow::sendCommandInvoked(){
 
+    std::map<IPvXAddress,int> (ad_queue);
+    //set parameter how many flows we want utilize
+    switch(path_utilization){
+    case LINEAR:
+        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                   i != subflow_list.end(); i++) {
+               TCP_subflow_t* entry = (*i);
+
+               if(ad_queue.end() == ad_queue.find(entry->subflow->remoteAddr)){
+                   ad_queue.insert(std::make_pair(entry->subflow->remoteAddr,0));
+               }
+               else{
+                   entry->subflow->isQueueAble = false;
+               }
+
+        }
+    default:
+            // cross ...nothing to do
+            break;
+    }
+    ad_queue.clear();
     // Here is the System Scheduler
     // To rephrase it, here we decide how to schedule over the paths.
     if(subflow_list.empty()) return false;
@@ -551,7 +582,9 @@ bool MPTCP_Flow::sendCommandInvoked(){
         for ( std::map<double,int>::iterator o = path_order.begin();
                                o != path_order.end(); o++) {
             //std::cerr << o->second << std::endl;
-            (*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->sendCommandInvoked();
+            if((*(subflow_list.begin() + o->second))->subflow->isQueueAble)
+                (*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->sendCommandInvoked();
+            this->refreshSendMPTCPWindow();
         }
 
     }

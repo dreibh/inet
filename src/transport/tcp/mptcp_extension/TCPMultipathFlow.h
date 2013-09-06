@@ -43,7 +43,7 @@ typedef struct _addr_combi{
 typedef std::vector <AddrCombi_t*>           TCP_JoinVector_t;
 
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
-
+enum PATH_U {CROSS, LINEAR};
 #ifdef PRIVATE
 #include <queue>
 typedef std::queue<cPacket*>         Tmp_Buffer_t;
@@ -155,6 +155,7 @@ class INET_API MPTCP_Flow
     bool checksum;
     bool isPassive;
     bool ordered;
+    PATH_U path_utilization;
     InterfaceTableAccess interfaceTableAccess;
 
     // Vector and Scalar
