@@ -898,9 +898,9 @@ TCPEventCode TCPConnection::processSegmentInListen(TCPSegment *tcpseg, IPvXAddre
         state->rcv_nxt = tcpseg->getSequenceNo() + 1;
 #ifdef PRIVATE
             if(this->getTcpMain()->multipath && (flow != NULL) && flow->mptcp_rcv_nxt){
-                flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + flow->mptcp_rcv_wnd;
+                ;
                 if (rcvAdvVector)
-                    rcvAdvVector->record(flow->mptcp_rcv_adv);
+                    rcvAdvVector->record(flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt);
             }
             else{
 #endif
@@ -1073,9 +1073,8 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
         state->rcv_nxt = tcpseg->getSequenceNo() + 1;
 #ifdef PRIVATE
             if(this->getTcpMain()->multipath && (flow != NULL) && flow->mptcp_rcv_nxt){
-                flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + flow->mptcp_rcv_wnd;
                 if (rcvAdvVector)
-                    rcvAdvVector->record(flow->mptcp_rcv_adv);
+                    rcvAdvVector->record(flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt);
             }
             else{
 #endif
@@ -1163,10 +1162,13 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
 
             // notify tcpAlgorithm (it has to send ACK of SYN) and app layer
             state->ack_now = true;
-            tcpAlgorithm->established(true);
 
             // MBE MPTCP subflows should not be notified to the app, we fix this in the method
-            sendEstabIndicationToApp();
+              sendEstabIndicationToApp();
+
+              tcpAlgorithm->established(true);
+
+
 
             // This will trigger transition to ESTABLISHED. Timers and notifying
             // app will be taken care of in stateEntered().

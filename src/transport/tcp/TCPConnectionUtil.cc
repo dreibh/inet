@@ -285,6 +285,8 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
 		conn->inlist = false;
+
+		conn->flow->mptcp_rcv_adv = conn->flow->mptcp_rcv_nxt + conn->getState()->maxRcvBuffer;
 		return conn;    // this is our new connection
     }
     else return NULL;
@@ -568,7 +570,7 @@ void TCPConnection::sendEstabIndicationToApp()
 #ifdef PRIVATE
     isQueueAble = true;
     if(tcpMain->multipath){
-
+        this->flow->mptcp_rcv_adv = this->flow->mptcp_rcv_nxt + this->getState()->maxRcvBuffer;
         if(flow->sendEstablished){
             return; // we need no notification message
         }
@@ -669,12 +671,6 @@ void TCPConnection::configureStateVariables()
 
     if (!state->ws_support && (advertisedWindowPar > TCP_MAX_WIN || advertisedWindowPar <= 0))
         throw cRuntimeError("Invalid advertisedWindow parameter: %ld", advertisedWindowPar);
-#ifdef PRIVATE
-            if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
-               flow->mptcp_rcv_wnd = advertisedWindowPar;
-               flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + advertisedWindowPar;
-            }
-#endif
     state->rcv_wnd = advertisedWindowPar;
     state->rcv_adv = advertisedWindowPar;
 
@@ -684,6 +680,8 @@ void TCPConnection::configureStateVariables()
             if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
                flow->mptcp_rcv_wnd = TCP_MAX_WIN;
                flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + TCP_MAX_WIN;
+               if(flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt  > 190000)
+                                  std::cerr << "PROBLEM";
             }
 #endif
         state->rcv_wnd = TCP_MAX_WIN; // we cannot to guarantee that the other end is also supporting the Window Scale (header option) (RFC 1322)
@@ -1719,13 +1717,13 @@ bool TCPConnection::processWSOption(TCPSegment *tcpseg, const TCPOption& option)
     state->ws_enabled = state->ws_support && state->snd_ws && state->rcv_ws;
     state->snd_wnd_scale = option.getValues(0);
     tcpEV << "TCP Header Option WS(=" << state->snd_wnd_scale << ") received, WS (ws_enabled) is set to " << state->ws_enabled << "\n";
-#ifndef PRIVATE
+
     if (state->snd_wnd_scale > 14) // RFC 1323, page 11: "the shift count must be limited to 14"
     {
         tcpEV << "ERROR: TCP Header Option WS received but shift count value is exceeding 14\n";
         state->snd_wnd_scale = 14;
     }
-#endif
+
     return true;
 }
 
@@ -2094,7 +2092,7 @@ unsigned short TCPConnection::updateRcvWnd()
     // update receive queue related state variables and statistics
     updateRcvQueueVars();
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
+    if(this->getTcpMain()->multipath && (flow!=NULL) &&  this->isQueueAble){
         // std::cerr << "########## check receive queues #############" << std::endl;
         win = state->maxRcvBuffer;
         TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
@@ -2107,6 +2105,7 @@ unsigned short TCPConnection::updateRcvWnd()
         // we must calc over the complete flow...
         // check how much is buffered in flow mptcp_receiveQueue
         // std::cerr << "Flow rcv nxt" << flow->mptcp_rcv_nxt << ".." << flow->mptcp_rcv_adv << std::endl;
+
         win -= state->maxRcvBuffer - flow->getAmountOfFreeBytesInReceiveQueue(state->maxRcvBuffer);
 //        if(win+5 < TCP_MAX_WIN)
 //            std::cerr << "err";
@@ -2120,16 +2119,24 @@ unsigned short TCPConnection::updateRcvWnd()
     if (win < (state->maxRcvBuffer) && win < state->snd_mss)
         win = 0;
 #ifdef PRIVATE
+    win = this->getState()->maxRcvBuffer;
     if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
-        if (win < flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt)
+        if (win > flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt){
             win = flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt;
+            flow->mptcp_rcv_wnd = flow->mptcp_rcv_nxt - flow->mptcp_rcv_adv;
+
+        }
     }
-    else
+    else{
 #endif
     // Do not shrink window
     // (rcv_adv minus rcv_nxt) is the amount of space still available to the sender that was previously advertised
     if (win < state->rcv_adv - state->rcv_nxt)
         win = state->rcv_adv - state->rcv_nxt;
+#ifdef PRIVATE
+    }
+#endif
+
 
     // Observe upper limit for advertised window on this connection
     if (win > TCP_MAX_WIN && !state->ws_enabled) // TCP_MAX_WIN = 65535 (16 bit)
@@ -2138,13 +2145,12 @@ unsigned short TCPConnection::updateRcvWnd()
     // Note: The order of the "Do not shrink window" and "Observe upper limit" parts has been changed to the order used in FreeBSD Release 7.1
 
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
+    if(this->getTcpMain()->multipath && (flow!=NULL) && this->isQueueAble ){
         if (win > 0 && seqGE(flow->mptcp_rcv_nxt + win, flow->mptcp_rcv_adv))
         {
             flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + win;
-
             if (rcvAdvVector)
-                rcvAdvVector->record(flow->mptcp_rcv_adv);
+                rcvAdvVector->record(flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt);
         }
     }
     else{
@@ -2189,7 +2195,7 @@ unsigned short TCPConnection::updateRcvWnd()
 
     if (state->ws_enabled)
     {
-        while (scaled_rcv_wnd > TCP_MAX_WIN && state->rcv_wnd_scale < scalefactor) // RFC 1323, page 11: "the shift count must be limited to 14"
+        while (scaled_rcv_wnd > TCP_MAX_WIN && (state->rcv_wnd_scale < scalefactor)) // RFC 1323, page 11: "the shift count must be limited to 14"
         {
             scaled_rcv_wnd = scaled_rcv_wnd >> 1;
             state->rcv_wnd_scale++;

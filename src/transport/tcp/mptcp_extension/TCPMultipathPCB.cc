@@ -296,7 +296,6 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         subflow->flow->setRemoteKey(key); // Could be generated every time -> important is key of ACK
         // We set state Established, when we send the ACK
         subflow->flow->addSubflow(connId, subflow);
-
         subflow->isQueueAble = true;
 
         return MPTCP_STATEFULL;

@@ -273,6 +273,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
             t->subflow->tmp_msg_buf = tmp_msg_buf;
         }
         subflow_list.push_back(t);
+        subflow->flow->mptcp_rcv_adv = subflow->flow->mptcp_rcv_nxt + subflow->getState()->maxRcvBuffer;
     }
     // ###################################
     // Check for further possible subflows
@@ -619,7 +620,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
             DEBUGPRINT(
                     "[MPTCP][HANDSHAKE][MP_CAPABLE] IDLE working for sending a SYN%s",
                     "\0");
-            addSubflow(0, subflow); // OK this is the first subflow and should be add
+
             // Prepare
             option->setLength(MP_CAPABLE_SIZE_SYN);
             option->setValuesArraySize(3);
@@ -628,12 +629,16 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
             // generate local_key(!!) Section 3.1 => only time the key will send in clear
 
             _generateLocalKey();
+
+
+
             ASSERT(local_key != 0 && "Something is wrong with the local key");
             // set 64 bit value
             uint32_t value = (uint32_t) _getLocalKey();
             option->setValues(1, value);
             value = _getLocalKey() >> 32;
             option->setValues(2, value);
+            addSubflow(0, subflow); // OK this is the first subflow and should be add
             this->MPTCP_FSM(PRE_ESTABLISHED);DEBUGPRINT(
                     "[FLOW][OUT] Generate Sender Key in IDLE for SYN: %ld",
                     _getLocalKey());
@@ -651,6 +656,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
 
             // generate receiver_key -> important is key of ACK
             _generateLocalKey();
+
             ASSERT(local_key != 0 && "Something is wrong with the local key");
             // set 64 bit value
             uint32_t value = (uint32_t) _getLocalKey();
@@ -664,7 +670,6 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
             this->MPTCP_FSM(ESTABLISHED); //TEST
             tcpEV
                          << "[MPTCP][HANDSHAKE][MP_CAPABLE] PRE_ESTABLISHED after send SYN-ACK";
-
         } else
             ASSERT(false);
         // FIXME Just for Testing
@@ -1394,7 +1399,7 @@ void MPTCP_Flow::sendToApp(cMessage* msg, TCPConnection* conn){
 }
 
 void MPTCP_Flow::enqueueMPTCPData(TCPSegment *mptcp_tcpseg, uint64 dss_start_seq, uint32 data_len){
-	this->mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(mptcp_tcpseg,dss_start_seq,data_len);
+	mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(mptcp_tcpseg,dss_start_seq,data_len);
 }
 
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
@@ -1685,7 +1690,6 @@ void MPTCP_Flow::setBaseSQN(uint64_t s) {
     mptcp_snd_una = seq;
     mptcp_snd_nxt = seq +1;
     mptcp_rcv_nxt = seq;
-    mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
     mptcp_receiveQueue->init(seq);
 }
 
