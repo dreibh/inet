@@ -582,16 +582,16 @@ bool MPTCP_Flow::sendCommandInvoked(){
                         }
                     }
           }
-        std::cerr << "##" << std::endl;
+        //std::cerr << "##" << std::endl;
         for ( std::map<double,int>::iterator o = path_order.begin();
                                o != path_order.end(); o++) {
             //std::cerr << o->second << std::endl;
             if((*(subflow_list.begin() + o->second))->subflow->isQueueAble){
                 (*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->sendCommandInvoked();
-                std::cerr << "send"  << (*(subflow_list.begin() + o->second))->subflow->localAddr.str() << "<->" << (*(subflow_list.begin() + o->second))->subflow->remoteAddr.str() << " RTT:  "<< o->first << std::endl;
+                //std::cerr << "send"  << (*(subflow_list.begin() + o->second))->subflow->localAddr.str() << "<->" << (*(subflow_list.begin() + o->second))->subflow->remoteAddr.str() << " RTT:  "<< o->first << std::endl;
             }//this->refreshSendMPTCPWindow();
         }
-
+        path_order.clear();
     }
     break;
     default:{

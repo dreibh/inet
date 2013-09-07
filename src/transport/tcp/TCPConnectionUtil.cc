@@ -592,7 +592,8 @@ void TCPConnection::sendEstabIndicationToApp()
     msg->setControlInfo(ind);
     sendToApp(msg);
     // FIXME - Work around bis add_addr
-    sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
+    //sendIndicationToApp(TCP_I_SEND_MSG, 3*state->snd_mss);
+    sendAck();
 }
 
 void TCPConnection::sendToApp(cMessage *msg)
@@ -1234,18 +1235,18 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     uint32 maxWindow = state->snd_wnd;
     long effectiveWin = 0;
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow != NULL)){
-        if(!this->isQueueAble)
-            return false;
-        // effectiveWindow: number of bytes we're allowed to send now
-        if(((flow->mptcp_snd_nxt - flow->mptcp_snd_una) + congestionWindow) > maxWindow){
-            // Ok, we should send less cwnd
-            if((flow->mptcp_snd_nxt - flow->mptcp_snd_una) < maxWindow)
-                maxWindow = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una);
-            else
-                maxWindow = 0;
-        }
-    }
+//    if(this->getTcpMain()->multipath && (flow != NULL)){
+//        if(!this->isQueueAble)
+//            return false;
+//        // effectiveWindow: number of bytes we're allowed to send now
+//        if(((flow->mptcp_snd_nxt - flow->mptcp_snd_una) + congestionWindow) > maxWindow){
+//            // Ok, we should send less cwnd
+//            if((flow->mptcp_snd_nxt - flow->mptcp_snd_una) < maxWindow)
+//                maxWindow = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una);
+//            else
+//                maxWindow = 0;
+//        }
+//    }
 #endif
     maxWindow = std::min(congestionWindow, maxWindow);
     // effectiveWindow: number of bytes we're allowed to send now
@@ -2094,25 +2095,25 @@ unsigned short TCPConnection::updateRcvWnd()
     // update receive queue related state variables and statistics
     updateRcvQueueVars();
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow!=NULL) &&  this->isQueueAble){
-        // std::cerr << "########## check receive queues #############" << std::endl;
-        win = state->maxRcvBuffer;
-        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
-
-         for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
-               TCP_subflow_t* entry = (*it);
-               win -= state->maxRcvBuffer - entry->subflow->getState()->maxRcvBuffer;
-               // std::cerr <<  entry->subflow->getState()->rcv_nxt << std::endl;
-         }
-        // we must calc over the complete flow...
-        // check how much is buffered in flow mptcp_receiveQueue
-        // std::cerr << "Flow rcv nxt" << flow->mptcp_rcv_nxt << ".." << flow->mptcp_rcv_adv << std::endl;
-
-        win -= state->maxRcvBuffer - flow->getAmountOfFreeBytesInReceiveQueue(state->maxRcvBuffer);
-//        if(win+5 < TCP_MAX_WIN)
-//            std::cerr << "err";
-    }
-    else
+//    if(this->getTcpMain()->multipath && (flow!=NULL) &&  this->isQueueAble){
+//        // std::cerr << "########## check receive queues #############" << std::endl;
+//        win = state->maxRcvBuffer;
+//        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
+//
+//         for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
+//               TCP_subflow_t* entry = (*it);
+//               win -= state->maxRcvBuffer - entry->subflow->getState()->maxRcvBuffer;
+//               // std::cerr <<  entry->subflow->getState()->rcv_nxt << std::endl;
+//         }
+//        // we must calc over the complete flow...
+//        // check how much is buffered in flow mptcp_receiveQueue
+//        // std::cerr << "Flow rcv nxt" << flow->mptcp_rcv_nxt << ".." << flow->mptcp_rcv_adv << std::endl;
+//
+//        win -= state->maxRcvBuffer - flow->getAmountOfFreeBytesInReceiveQueue(state->maxRcvBuffer);
+////        if(win+5 < TCP_MAX_WIN)
+////            std::cerr << "err";
+//    }
+//    else
 #endif
     win = state->freeRcvBuffer;
 
@@ -2121,22 +2122,22 @@ unsigned short TCPConnection::updateRcvWnd()
     if (win < (state->maxRcvBuffer) && win < state->snd_mss)
         win = 0;
 #ifdef PRIVATE
-    win = this->getState()->maxRcvBuffer;
-    if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
-        if (win > flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt){
-            win = flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt;
-            flow->mptcp_rcv_wnd = flow->mptcp_rcv_nxt - flow->mptcp_rcv_adv;
-
-        }
-    }
-    else{
+//    win = this->getState()->maxRcvBuffer;
+//    if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
+//        if (win > flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt){
+//            win = flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt;
+//            flow->mptcp_rcv_wnd = flow->mptcp_rcv_nxt - flow->mptcp_rcv_adv;
+//
+//        }
+//    }
+//    else{
 #endif
     // Do not shrink window
     // (rcv_adv minus rcv_nxt) is the amount of space still available to the sender that was previously advertised
     if (win < state->rcv_adv - state->rcv_nxt)
         win = state->rcv_adv - state->rcv_nxt;
 #ifdef PRIVATE
-    }
+//    }
 #endif
 
 
@@ -2147,15 +2148,15 @@ unsigned short TCPConnection::updateRcvWnd()
     // Note: The order of the "Do not shrink window" and "Observe upper limit" parts has been changed to the order used in FreeBSD Release 7.1
 
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow!=NULL) && this->isQueueAble ){
-        if (win > 0 && seqGE(flow->mptcp_rcv_nxt + win, flow->mptcp_rcv_adv))
-        {
-            flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + win;
-            if (rcvAdvVector)
-                rcvAdvVector->record(flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt);
-        }
-    }
-    else{
+//    if(this->getTcpMain()->multipath && (flow!=NULL) && this->isQueueAble ){
+//        if (win > 0 && seqGE(flow->mptcp_rcv_nxt + win, flow->mptcp_rcv_adv))
+//        {
+//            flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + win;
+//            if (rcvAdvVector)
+//                rcvAdvVector->record(flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt);
+//        }
+//    }
+//    else{
 #endif
     // update rcv_adv if needed
     if (win > 0 && seqGE(state->rcv_nxt + win, state->rcv_adv))
@@ -2166,29 +2167,29 @@ unsigned short TCPConnection::updateRcvWnd()
             rcvAdvVector->record(state->rcv_adv);
     }
 #ifdef PRIVATE
-    }
-    if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt)
-        flow->mptcp_rcv_wnd = win;
-    else
+//    }
+//    if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt)
+//        flow->mptcp_rcv_wnd = win;
+//    else
 #endif
     state->rcv_wnd = win;
 
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow!=NULL)){
-        if (rcvWndVector)
-            rcvWndVector->record(flow->mptcp_rcv_wnd);
-    }
-    else
+//    if(this->getTcpMain()->multipath && (flow!=NULL)){
+//        if (rcvWndVector)
+//            rcvWndVector->record(flow->mptcp_rcv_wnd);
+//    }
+//    else
 #endif
     if (rcvWndVector)
         rcvWndVector->record(state->rcv_wnd);
     uint32 scaled_rcv_wnd = 0;
     int scalefactor = 14;
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
-        scaled_rcv_wnd = flow->mptcp_rcv_adv -flow->mptcp_rcv_nxt;
-    }
-    else
+//    if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
+//        scaled_rcv_wnd = flow->mptcp_rcv_adv -flow->mptcp_rcv_nxt;
+//    }
+//    else
 #endif
     // scale rcv_wnd:
     scaled_rcv_wnd = state->rcv_wnd;
@@ -2229,15 +2230,15 @@ void TCPConnection::updateWndInfo(TCPSegment *tcpseg, bool doAlways)
         state->snd_wnd = true_window;
 
 #ifdef PRIVATE
-        if(this->getTcpMain()->multipath && (flow != NULL)){
-        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
-
-           for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
-                 TCP_subflow_t* entry = (*it);
-                 entry->subflow->getState()->snd_wnd = true_window;
-//                 std::cerr <<  entry->subflow->getState()->snd_una << ".." << entry->subflow->getState()->getSndNxt() << std::endl;
-           }
-        }
+//        if(this->getTcpMain()->multipath && (flow != NULL)){
+//        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
+//
+//           for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
+//                 TCP_subflow_t* entry = (*it);
+//                 entry->subflow->getState()->snd_wnd = true_window;
+////                 std::cerr <<  entry->subflow->getState()->snd_una << ".." << entry->subflow->getState()->getSndNxt() << std::endl;
+//           }
+//        }
 #endif
         tcpEV << "Updating send window from segment: new wnd=" << state->snd_wnd << "\n";
         state->snd_wl1 = tcpseg->getSequenceNo();
