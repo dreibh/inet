@@ -764,12 +764,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
         // if rcv_nxt changed, either because we received segment text or we
         // received a FIN that needs to be acked (or both), we need to send or
         // schedule an ACK.
-#ifdef PRIVATE
-        //check if any thing changed for the MPTCP Flow
-        if(this->getTcpMain()->multipath && (flow != NULL)){
-            flow->sendToApp(NULL, this);
-        }
-#endif
+
         if (state->sack_enabled)
         {
             if (receiveQueue->getQueueLength() != 0)

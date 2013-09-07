@@ -988,6 +988,8 @@ void TCPConnection::sendAck()
 
     // write header options
 #ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow!=NULL) && !isQueueAble)
+        return;
     // Redirect
     writeHeaderOptionsWithMPTCP(tcpseg, 0);
 #else
