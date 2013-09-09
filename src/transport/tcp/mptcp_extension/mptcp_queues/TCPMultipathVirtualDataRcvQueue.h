@@ -32,6 +32,7 @@
 class INET_API TCPMultipathVirtualDataRcvQueue : public TCPMultipathReceiveQueue
 {
   protected:
+    uint64 start;
     uint64 rcv_nxt;
 
     struct Region
@@ -84,6 +85,10 @@ class INET_API TCPMultipathVirtualDataRcvQueue : public TCPMultipathReceiveQueue
      */
     virtual uint64 getAmountOfBufferedBytes();
 
+
+    virtual uint64 getOccupiedMemory();
+
+    virtual void printInfo();
     /**
      * Returns the number of bytes currently free (=available) in queue. freeRcvBuffer = maxRcvBuffer - usedRcvBuffer
      */

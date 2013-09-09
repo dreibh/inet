@@ -71,6 +71,8 @@ class INET_API TCPMultipathReceiveQueue : public cPolymorphic
      */
     virtual void init(uint64 startSeq) = 0;
 
+    virtual void printInfo() = 0;
+
     /**
      * Called when a TCP segment arrives, it should extract the payload
      * from the segment and store it in the receive queue. The segment
@@ -97,7 +99,7 @@ class INET_API TCPMultipathReceiveQueue : public cPolymorphic
      * Returns the number of bytes currently free (=available) in queue. freeRcvBuffer = maxRcvBuffer - usedRcvBuffer
      */
     virtual uint64 getAmountOfFreeBytes(uint64 maxRcvBuffer) = 0;
-
+    virtual uint64  getOccupiedMemory() = 0;
     /**
      * Returns the number of blocks currently buffered in queue.
      */

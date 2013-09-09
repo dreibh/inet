@@ -180,8 +180,8 @@ std::string TCPStateVariables::detailedInfo() const
     return out.str();
 }
 void TCPStateVariables::setSndNxt(uint32 new_snd_nxt){
-//    if(new_snd_nxt >89709)
-//        std::cerr << std::endl;
+    if(new_snd_nxt == 13246299)
+        std::cerr << std::endl;
 
     snd_nxt = new_snd_nxt;
 }

@@ -450,6 +450,9 @@ void TCPConnection::sendToIP(TCPSegment *tcpseg)
     if (sndAckVector)
         sndAckVector->record(tcpseg->getAckNo());
 
+    if(tcpseg->getSequenceNo() == 144075)
+        std::cerr << "found";
+
     // final touches on the segment before sending
     tcpseg->setSrcPort(localPort);
     tcpseg->setDestPort(remotePort);
@@ -597,7 +600,7 @@ void TCPConnection::sendToApp(cMessage *msg)
 {
 #ifdef PRIVATE
     if((tcpMain->multipath) && (flow != NULL)){
-        flow->sendToApp(msg,this);
+        flow->sendToApp(msg);
     }
     else
 #endif // PRIVATE
@@ -787,54 +790,29 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
     uint32 seqNo = tcpseg->getSequenceNo();
     uint32 ackNo = tcpseg->getAckNo();
     uint32 rcvWndEnd = 0;
-#warning "Should we adapt here the coupled arwnd?"
+#ifdef PRIVATE
+    if(tcpMain->multipath && flow != NULL && isQueueAble){
+        rcvWndEnd = state->rcv_nxt +flow->mptcp_rcv_wnd;
+
+    }else
+#endif
     rcvWndEnd = state->rcv_nxt + state->rcv_wnd;
     bool ret;
 
     if (len == 0)
     {
-#ifdef PRIVATE
-            if(tcpMain->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
-                  if (flow->mptcp_rcv_wnd == 0)
-                      ret = (seqNo == state->rcv_nxt);
-                  else // rcv_wnd > 0
-          //            ret = seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd);
-                      ret = seqLE(state->rcv_nxt, seqNo) && seqLE(seqNo, rcvWndEnd); // Accept an ACK on end of window
-            }
-            else{
-#endif
         if (state->rcv_wnd == 0)
             ret = (seqNo == state->rcv_nxt);
         else // rcv_wnd > 0
-//            ret = seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd);
             ret = seqLE(state->rcv_nxt, seqNo) && seqLE(seqNo, rcvWndEnd); // Accept an ACK on end of window
-#ifdef PRIVATE
-            }
-#endif
     }
     else // len > 0
     {
-#ifdef PRIVATE
-            if(tcpMain->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
-                  if (flow->mptcp_rcv_wnd == 0)
-                                 ret = false;
-                      else // rcv_wnd > 0
-                         ret = (seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd))
-                                 || (seqLess(state->rcv_nxt, seqNo + len) && seqLE(seqNo + len, rcvWndEnd)); // Accept an ACK on end of window
-            }
-            else{
-#endif
-
         if (state->rcv_wnd == 0)
             ret = false;
         else // rcv_wnd > 0
             ret = (seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd))
                     || (seqLess(state->rcv_nxt, seqNo + len) && seqLE(seqNo + len, rcvWndEnd)); // Accept an ACK on end of window
-#ifdef PRIVATE
-            }
-#endif
-
-
     }
 
     // RFC 793, page 25:
@@ -848,14 +826,7 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
         else
             ret = (seqLess(state->snd_una, ackNo) && seqLE(ackNo, state->snd_max)); // after RTO snd_nxt is reduced therefore we need to use snd_max instead of snd_nxt here
     }
-#ifdef PRIVATE
-    if(tcpMain->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
-              if (!ret)
-                 tcpEV << "Not Acceptable segment. seqNo=" << seqNo << " ackNo=" << ackNo << " len=" << len << " rcv_nxt="
-                       << state->rcv_nxt  << " rcv_wnd=" << flow->mptcp_rcv_wnd << " afterRto=" << state->afterRto << "\n";
-    }
-    else
-#endif
+
     if (!ret)
         tcpEV << "Not Acceptable segment. seqNo=" << seqNo << " ackNo=" << ackNo << " len=" << len << " rcv_nxt="
               << state->rcv_nxt  << " rcv_wnd=" << state->rcv_wnd << " afterRto=" << state->afterRto << "\n";
@@ -1046,28 +1017,13 @@ bool TCPConnection::SCTPlikeBufferSplittingGlobecom(){
           ( (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_ReceiverOnly) ||
             (state->cmtBufferSplitVariant == TCPStateVariables::C_SCTPlikeGlobecom_BothSides) ) ) {
 
-          // Limit is 1/n of current receiver-side buffer allocation
-          uint32 limit = 0;
-#ifdef PRIVATE
-          if(this->getTcpMain()->multipath && (flow!=NULL) && flow->mptcp_rcv_nxt){
-              limit = (flow->mptcp_rcv_adv + (flow->mptcp_snd_nxt + flow->mptcp_snd_una));
-               if((flow->mptcp_snd_nxt + flow->mptcp_snd_una) + state->snd_mss > limit + state->snd_mss) {
-                   return false; // Yes, even if there is a open window we avoid to occupy more from the send buffer
-               }
-          }
-          else{
-#endif
-          limit = (state->rcv_adv + (state->snd_max + state->snd_una)) / this->flow->getSubflows()->size();
-          if((state->snd_max + state->snd_una) + state->snd_mss > limit + state->snd_mss) {
-              return false; // Yes, even if there is a open window we avoid to occupy more from the send buffer
-          }
-#ifdef PRIVATE
-          }
-#endif
+          // TODO
+          ASSERT(false && "TODO");
+
       }
       return true;
 }
-
+#endif
 
 bool TCPConnection::MPTCPlikeBufferSplitting(uint32 bytes){
     // Is there a message marked for retransmission
@@ -1083,15 +1039,25 @@ bool TCPConnection::MPTCPlikeBufferSplitting(uint32 bytes){
 
     return false;
 }
-#endif
 
-void TCPConnection::sendSegment(uint32 bytes)
+
+bool TCPConnection::sendSegment(uint32 bytes)
 {
+
+//#ifdef PRIVATE
+//    if(this->getTcpMain()->multipath && (flow != NULL)){
+//        if((flow->mptcp_snd_nxt - flow->mptcp_snd_una) + bytes > flow->mptcp_snd_wnd){
+//            return false;
+//        }
+//    }
+//#endif
+
     if (state->sack_enabled && state->afterRto)
     {
-        uint32 forward = 0;
+
         // check rexmitQ and try to forward snd_nxt before sending new data
 #ifndef PRIVATE
+        uint32 forward = 0;
         if(rexmitQueue->getQueueLength() > 0)
             forward = rexmitQueue->checkRexmitQueueForSackedOrRexmittedSegments(state->snd_nxt);
 
@@ -1116,10 +1082,10 @@ void TCPConnection::sendSegment(uint32 bytes)
             // turn all Bufferoptimization off
             break;
         case TCPStateVariables::C_SCTPlikeGlobecom:
-            if(!SCTPlikeBufferSplittingGlobecom()) return; // avoid of buffer blocking by buffer splitting
+            if(!SCTPlikeBufferSplittingGlobecom()) return false; // avoid of buffer blocking by buffer splitting
             break;
         case TCPStateVariables::C_MPTCPlike:
-            if(!MPTCPlikeBufferSplitting(bytes)) return; // avoid of buffer blocking by buffer splitting
+            if(!MPTCPlikeBufferSplitting(bytes)) return false; // avoid of buffer blocking by buffer splitting
             break;
         default:
             throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
@@ -1133,7 +1099,7 @@ void TCPConnection::sendSegment(uint32 bytes)
 
 
     if(buffered == 0){
-        return;
+        return false;
     }
     if (bytes > buffered) // last segment?
         bytes = buffered;
@@ -1158,6 +1124,8 @@ void TCPConnection::sendSegment(uint32 bytes)
 
     if (bytes + options_len > state->snd_mss)
         bytes = std::min(bytes,(state->snd_mss - options_len));
+
+    if(bytes == 0) return false;
 
     state->sentBytes = bytes;
 
@@ -1223,7 +1191,7 @@ void TCPConnection::sendSegment(uint32 bytes)
     // send it
     sendToIP(tcpseg);
 
-
+    return true;
 }
 
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
@@ -1231,7 +1199,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // we'll start sending from snd_max, if not after RTO
     if (!state->afterRto)
         state->setSndNxt(state->snd_max);
-
+    uint32 old_mptcp_snd_wnd = 0;
     uint32 old_highRxt = 0;
 #ifndef PRIVATE
     if (state->sack_enabled && (rexmitQueue->getQueueLength() > 0 ))
@@ -1246,22 +1214,37 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // maxWindow is minimum of snd_wnd and congestionWindow (snd_cwnd)
     uint32 maxWindow = state->snd_wnd;
     long effectiveWin = 0;
+
 #ifdef PRIVATE
+   // store old snd_next for later snd window correction
+
    if(this->getTcpMain()->multipath && (flow != NULL)){
+       old_mptcp_snd_wnd = flow->mptcp_snd_wnd;
+
+       if(164367 == state->getSndNxt())
+           std::cerr << "found";
+       if(old_mptcp_snd_wnd == 0)
+           std::cerr << "found";
+       // if not isQueueAble we are not allowed to send anywhere
        if(!this->isQueueAble)
            return false;
-       if(maxWindow > (flow->mptcp_snd_nxt - flow->mptcp_snd_una))
-           maxWindow = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una);
-       if(maxWindow > flow->mptcp_rcv_wnd)
-           maxWindow = flow->mptcp_rcv_wnd;
-//        // effectiveWindow: number of bytes we're allowed to send now
-//        if(((flow->mptcp_snd_nxt - flow->mptcp_snd_una) + congestionWindow) > maxWindow){
-//            // Ok, we should send less cwnd
-//            if((flow->mptcp_snd_nxt - flow->mptcp_snd_una) < maxWindow)
-//                maxWindow = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una);
-//            else
-//                maxWindow = 0;
-//        }
+       // overwrite window with mptcp snd window
+       // (keep in mind, we have to korrect this later, that is why we store old snd_nxt)
+       maxWindow = flow->mptcp_snd_wnd;  //- (2 * state->snd_mss);
+
+       // we have to check similar as in send one msg
+
+       if(flow->mptcp_snd_nxt - flow->mptcp_snd_una + state->snd_mss <= maxWindow  &&
+               (flow->mptcp_snd_nxt - flow->mptcp_snd_una) +  congestionWindow  <= maxWindow - (2 * state->snd_mss)){
+           ; // oK we have nothing to correct
+       }else if (flow->mptcp_snd_nxt - flow->mptcp_snd_una + state->snd_mss > maxWindow - (2 * state->snd_mss) ){
+           // No space left
+           maxWindow = 0;
+       }else if((flow->mptcp_snd_nxt - flow->mptcp_snd_una) +  congestionWindow + 2 * state->snd_mss > maxWindow){
+           // we have to correct the window
+           if(maxWindow > (flow->mptcp_snd_nxt - flow->mptcp_snd_una))
+               maxWindow = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una); // - (2 * state->snd_mss);
+       }
     }
 #endif
     maxWindow = std::min(congestionWindow, maxWindow);
@@ -1269,24 +1252,30 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     if(maxWindow > (state->getSndNxt() - state->snd_una))
       effectiveWin = maxWindow - (state->getSndNxt() - state->snd_una);
 
-    if (effectiveWin <= 0)
+    uint32 border = 0;
+    if(fullSegmentsOnly){
+        border = state->snd_mss;
+    }
+
+    if (effectiveWin <= border)
     {
         tcpEV << "Effective window is zero (advertised window " << state->snd_wnd <<
             ", congestion window " << congestionWindow << "), cannot send.\n";
         return false;
     }
+    if(effectiveWin < state->snd_mss){
+        std::cerr << "Are you sure we want sent non full packets" << std::endl;
+    }
 
-    ulong bytesToSend = effectiveWin;
+
+    uint32 bytesToSend = effectiveWin;
 #ifdef PRIVATE
-    //fullSegmentsOnly = true; // In Multipath TCP we try to send only full packets FIXME
-   // fullSegmentsOnly = true;
+
     // OK for Multipath
      if(this->getTcpMain()->multipath){
-
-
         if(buffered < bytesToSend){
             // check if there are pre-buffered Data
-            int enq = 0;
+            uint32 enq = 0;
             if(tmp_msg_buf->empty()){
                 // sendKeepAlive(); FIXME Works not as expected
             }
@@ -1333,7 +1322,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     if (bytesToSend > buffered)
         bytesToSend = buffered;
 
-    uint32 effectiveMaxBytesSend = state->snd_mss;
+    uint32 effectiveMaxBytesSend = std::min(bytesToSend,state->snd_mss);
 
     if (state->ts_enabled)
         effectiveMaxBytesSend -= TCP_OPTION_TS_SIZE;
@@ -1397,7 +1386,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 #ifndef PRIVATE
             sendSegment(state->snd_mss);
 #else
-            sendSegment(effectiveMaxBytesSend);
+            if(!sendSegment(effectiveMaxBytesSend))
+                break;
 #endif // PRIVATE
             const ulong b1 = sendQueue->getBytesAvailable(state->getSndNxt());
 
@@ -1442,19 +1432,14 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
-//#ifdef PRIVATE
-//        if(this->getTcpMain()->multipath && (flow != NULL)){
-//        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
-//        uint32 dec = state->snd_nxt - old_snd_nxt;
-//           for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
-//                 TCP_subflow_t* entry = (*it);
-//                 if(entry->subflow->getState()->snd_wnd > dec)
-//                     entry->subflow->getState()->snd_wnd -= dec;
-//                 else
-//                     entry->subflow->getState()->snd_wnd = 0;
-//           }
-//        }
-//#endif
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow != NULL)){
+        if(old_mptcp_snd_wnd == flow->mptcp_snd_wnd && (flow->mptcp_snd_wnd >= state->snd_nxt - old_snd_nxt))
+               flow->mptcp_snd_wnd -= state->snd_nxt - old_snd_nxt;
+        else
+            ASSERT(false && "Send more as window");
+    }
+#endif
 
     return true;
 }
@@ -1586,7 +1571,8 @@ void TCPConnection::retransmitData()
     {
         uint32 bytes = std::min(bytesToSend, state->snd_mss);
         bytes = std::min(bytes, (uint32)(sendQueue->getBytesAvailable(state->getSndNxt())));
-        sendSegment(bytes);
+        if(!sendSegment(bytes))
+            break;
 
         // Do not send packets after the FIN.
         // fixes bug that occurs in examples/inet/bulktransfer at event #64043  T=13.861159213744
@@ -1858,12 +1844,6 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
         if (state->ws_support && (state->rcv_ws || (fsm.getState() == TCP_S_INIT
                 || (fsm.getState() == TCP_S_SYN_SENT && state->syn_rexmit_count > 0))))
         {
-            // 1 padding byte
-            option.setKind(TCPOPTION_NO_OPERATION); // NOP
-            option.setLength(1);
-            option.setValuesArraySize(0);
-            tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-            tcpseg->setOptions(t++, option);
 
             option.setKind(TCPOPTION_WINDOW_SCALE);
             option.setLength(3);
@@ -1919,6 +1899,14 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
             tcpEV << "TCP Header Option SACK_PERMITTED sent, SACK (sack_enabled) is set to " << state->sack_enabled << "\n";
             tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
             tcpseg->setOptions(t++, option);
+
+            // 1 padding byte
+            option.setKind(TCPOPTION_NO_OPERATION); // NOP
+            option.setLength(1);
+            option.setValuesArraySize(0);
+            tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
+            tcpseg->setOptions(t++, option);
+
         }
 
         // TS header option
@@ -2140,9 +2128,9 @@ unsigned short TCPConnection::updateRcvWnd()
             rcvAdvVector->record(state->rcv_adv);
     }
     if(tcpMain->multipath && (flow!=NULL) && isQueueAble){
-        if (win > 0 && seqGE(flow->mptcp_rcv_nxt + win, flow->mptcp_rcv_adv))
+        if (win > 0 && seqGreater(win, flow->mptcp_rcv_wnd))
         {
-                win = (flow->mptcp_rcv_adv - flow->mptcp_rcv_nxt);
+                win = flow->mptcp_rcv_wnd;
         }
 
     }
@@ -2152,18 +2140,15 @@ unsigned short TCPConnection::updateRcvWnd()
     if (rcvWndVector)
         rcvWndVector->record(state->rcv_wnd);
     uint32 scaled_rcv_wnd = 0;
-    int scalefactor = 14;
-
     // scale rcv_wnd:
     scaled_rcv_wnd = state->rcv_wnd;
-
-
 
     if (state->ws_enabled)
     {
 
 // Don t understand this line - we set it by SYM
 #ifndef PRIVATE
+        int scalefactor = 14;
         while (scaled_rcv_wnd > TCP_MAX_WIN && (state->rcv_wnd_scale < scalefactor)) // RFC 1323, page 11: "the shift count must be limited to 14"
         {
             scaled_rcv_wnd = scaled_rcv_wnd >> 1;
@@ -2198,29 +2183,19 @@ void TCPConnection::updateWndInfo(TCPSegment *tcpseg, bool doAlways)
         // send window should be updated
         state->snd_wnd = true_window;
 
-#ifdef PRIVATE
-        if(this->getTcpMain()->multipath && (flow != NULL)){
 
-          flow->mptcp_snd_wnd = true_window;
-          flow->mptcp_rcv_adv = flow->mptcp_rcv_nxt + flow->mptcp_snd_wnd;
-//        TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*) flow->getSubflows();
-//
-//           for (TCP_SubFlowVector_t::iterator it = subflow_list->begin(); it != subflow_list->end(); it++) {
-//                 TCP_subflow_t* entry = (*it);
-//                 entry->subflow->getState()->snd_wnd = true_window;
-////                 std::cerr <<  entry->subflow->getState()->snd_una << ".." << entry->subflow->getState()->getSndNxt() << std::endl;
-//           }
-        }
-#endif
         tcpEV << "Updating send window from segment: new wnd=" << state->snd_wnd << "\n";
         state->snd_wl1 = tcpseg->getSequenceNo();
         state->snd_wl2 = tcpseg->getAckNo();
 
-
-
         if (sndWndVector)
             sndWndVector->record(state->snd_wnd);
     }
+#ifdef PRIVATE
+    if(this->getTcpMain()->multipath && (flow != NULL)){
+      flow->mptcp_snd_wnd = true_window;
+    }
+#endif
 }
 
 void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWindow)
@@ -2270,10 +2245,10 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
 
             ulong outstandingData = 0;
 #ifdef PRIVATE
-//            if(this->getTcpMain()->multipath && (flow!=NULL)){
-//               outstandingData = flow->mptcp_snd_nxt - flow->mptcp_snd_una;
-//            }
-//            else
+            if(this->getTcpMain()->multipath && (flow!=NULL)){
+               outstandingData = flow->mptcp_snd_nxt - flow->mptcp_snd_una;
+            }
+            else
 #endif
             outstandingData = state->snd_max - state->snd_una;
 

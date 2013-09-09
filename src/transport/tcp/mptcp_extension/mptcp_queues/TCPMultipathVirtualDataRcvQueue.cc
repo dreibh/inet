@@ -33,6 +33,7 @@ TCPMultipathVirtualDataRcvQueue::~TCPMultipathVirtualDataRcvQueue()
 
 void TCPMultipathVirtualDataRcvQueue::init(uint64 startSeq)
 {
+    start = startSeq;
     rcv_nxt = startSeq;
 }
 
@@ -161,26 +162,41 @@ ulong TCPMultipathVirtualDataRcvQueue::extractTo(uint64 seq)
         // part of 1st region
         ulong octets = seq - i->begin;
         i->begin = seq;
-        ASSERT(i->begin == old_end && "UPS....not in order");
         old_end = i->end;
         regionList.erase(i);
-//        fprintf(stderr,"[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %x%x ...%x%x\n", (uint32)(i->begin>>32),(uint32)i->begin,(uint32) (i->end>>32),(uint32) i->end );
-//        fprintf(stderr,"[MPTCP][RCV QUEUE][OUT IN SEQUENCE] check old  %x%x for seq %x%x", (uint32)(old_end>>32),(uint32)old_end,(uint32)(seq>>32),(uint32)seq );
         return octets;
     }
     else
     {
         // full 1st region
         ulong octets = i->end - i->begin;
-        if(i->begin != old_end )
-            std::cerr << "i->begin: " << i->begin  << " old_end:" << old_end << std::cerr;
-        ASSERT(i->begin == old_end && "UPS....not in order");
-
         old_end = i->end;
-        DEBUGPRINT("[MPTCP][RCV QUEUE][OUT IN SEQUENCE] %x%x ...%x%x", (uint32)(i->begin>>32),(uint32)i->begin,(uint32) (i->end>>32),(uint32) i->end );
         regionList.erase(i);
         return octets;
     }
+}
+void TCPMultipathVirtualDataRcvQueue::printInfo(){
+      RegionList::iterator i = regionList.begin();
+
+       std::cerr << "In MPTCP Queue" << std::endl;
+       while (i!=regionList.end())
+         {
+             std::cerr << i->begin << "..." << i->end << "Offset View: " <<  (uint32)i->begin << "..." << (uint32)i->end <<  std::endl;
+             i++;
+         }
+}
+uint64 TCPMultipathVirtualDataRcvQueue::getOccupiedMemory(){
+   RegionList::iterator i = regionList.begin();
+   uint64 start_buffer = i->begin;
+   uint64 end_buffer = i->end;
+   // std::cerr << "In MPTCP Queue" << std::endl;
+    while (i!=regionList.end())
+      {
+          // std::cerr << i->begin << "..." << i->end << std::endl;
+          end_buffer = i->end;
+          i++;
+      }
+    return end_buffer - start_buffer;
 }
 
 uint64 TCPMultipathVirtualDataRcvQueue::getAmountOfBufferedBytes()
@@ -190,10 +206,10 @@ uint64 TCPMultipathVirtualDataRcvQueue::getAmountOfBufferedBytes()
     RegionList::iterator i = regionList.begin();
     if (i==regionList.end()) // is queue empty?
         return 0;
-    //std::cerr << "in MPTCP Queue" << std::endl;
+    std::cerr << "In MPTCP Queue" << std::endl;
     while (i!=regionList.end())
     {
-       // std::cerr << i->begin << "..." << i->end << std::endl;
+        std::cerr << i->begin << "..." << i->end << std::endl;
         bytes = bytes + (i->end - i->begin);
         i++;
     }
@@ -203,6 +219,10 @@ uint64 TCPMultipathVirtualDataRcvQueue::getAmountOfBufferedBytes()
 uint64 TCPMultipathVirtualDataRcvQueue::getAmountOfFreeBytes(uint64 maxRcvBuffer)
 {
     uint64 usedRcvBuffer = getAmountOfBufferedBytes();
+    if(maxRcvBuffer < usedRcvBuffer){
+        std::cerr << "To much Data in Queueu: " << usedRcvBuffer << " - Allowed are: "  << maxRcvBuffer << std::endl;
+     //   ASSERT(false && "To much data in Queue");
+    }
     uint64 freeRcvBuffer = maxRcvBuffer - usedRcvBuffer;
     return freeRcvBuffer;
 }

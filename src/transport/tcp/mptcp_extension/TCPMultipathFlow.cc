@@ -75,18 +75,17 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     // Identifier
     local_token = 0;
     remote_token = 0;
+
     // Sending side
-    mptcp_snd_una = 0;
-    mptcp_snd_nxt = 0;
-    mptcp_snd_wnd = 0;
+    mptcp_snd_una = subflow->getState()->snd_una;
+    mptcp_snd_nxt = subflow->getState()->snd_nxt;
+    mptcp_snd_wnd =subflow->getState()->snd_wnd;
     // Receiver Side
-    mptcp_rcv_nxt = 0;
-    mptcp_rcv_nxt = 0;
-    // Firt connection sets the rcwnd for complete MPTCP connection
+    mptcp_rcv_nxt = subflow->getState()->rcv_nxt;
     mptcp_rcv_wnd = subflow->getState()->rcv_wnd;
-                      // B.1.2
-    // mptcp_rcv_adv be set in setBaseSQN
-    mptcp_rcv_adv = 0; //mptcp_rcv_nxt + mptcp_rcv_wnd;
+    mptcp_rcv_adv = subflow->getState()->rcv_adv;
+    maxBuffer = subflow->getState()->maxRcvBuffer;
+
     isPassive = false;
     isFIN = false;
     // Init the flow
@@ -531,22 +530,22 @@ bool MPTCP_Flow::sendCommandInvoked(){
     case LINEAR:
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                    i != subflow_list.end(); i++) {
-               TCP_subflow_t* entry = (*i);
-               if(entry->subflow->isQueueAble){
-                   if(ad_queue.end() == ad_queue.find(entry->subflow->remoteAddr.str())){
-                       ad_queue.insert(std::make_pair(entry->subflow->remoteAddr.str(),0));
-                      // std::cerr << "use"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
-                   }
-                   else{
-                       entry->subflow->isQueueAble = false;
-                     //  std::cerr << "disable"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
-                   }
+           TCP_subflow_t* entry = (*i);
+           if(entry->subflow->isQueueAble){
+               if(ad_queue.end() == ad_queue.find(entry->subflow->remoteAddr.str())){
+                   ad_queue.insert(std::make_pair(entry->subflow->remoteAddr.str(),0));
+                  // std::cerr << "use"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
                }
+               else{
+                   entry->subflow->isQueueAble = false;
+                 //  std::cerr << "disable"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
+               }
+           }
         }
         break;
     default:
-            // cross ...nothing to do
-            break;
+        // cross ...nothing to do
+        break;
     }
     ad_queue.clear();
     // Here is the System Scheduler
@@ -1124,7 +1123,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 	// get Start DSS
 	uint64 dss_start = this->mptcp_snd_una;		// will be manipulated in process_dss of the pcb
 	subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una;
-	//subflow->base_una_dss_info.subflow_seq = subflow->getState()->snd_una;
+
 
 
 	// fill the dss seq nr map
@@ -1134,7 +1133,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
     if(bytes_tmp > subflow->getState()->snd_mss)
         bytes_tmp = subflow->getState()->snd_mss;
-	for(uint64 cnt = 0; cnt < bytes;cnt++,this->mptcp_snd_nxt++,snd_nxt_tmp++){
+	for(uint64 cnt = 0; cnt < bytes;cnt++){
 		// check if there is any in the list
 	    // FIXME Check if it is still in the queue, overflow
 	        TCPMultipathDSSStatus::const_iterator it = subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
@@ -1164,7 +1163,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 snd_nxt_tmp += bytes_tmp;
 
                 cnt += bytes_tmp;
-                this->mptcp_snd_nxt += bytes_tmp-1;
+                this->mptcp_snd_nxt += bytes_tmp;
             }
 
 //		}
@@ -1304,6 +1303,9 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     //std::cerr << "[FLOW][SND][DSS][STATUS] rcv_nxt:" << mptcp_rcv_nxt << std::endl;
     //std::cerr << "[FLOW][SND][DSS][STATUS] rcv_wnd: "<< mptcp_rcv_wnd << std::endl;
 
+    //if(mptcp_snd_wnd < (mptcp_snd_nxt - mptcp_snd_una))
+    //    ASSERT(false && "Why I m sending too much data for the receiver buffer?");
+    //std::cerr << "Send MPTCP: " << mptcp_snd_nxt << " On flight " << mptcp_snd_nxt - mptcp_snd_una << " Window " << mptcp_snd_wnd << std::endl;
     return 0;
 }
 void MPTCP_Flow::DEBUGprintDSSInfo() {
@@ -1386,58 +1388,50 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 }
 
 
-void MPTCP_Flow::sendToApp(cMessage* msg, TCPConnection* conn){
-    bool found = true;  // TODO ...what happens if we remove our communication flow
-    // 1) Add data in MPTCP Receive Queue
-    // 	(Not here => This is done when we got DSS Information pcb->processDSS)
-    //  (Here is just the trigger if there is something to deliver on the app)
-    // 2) Check if Data in Order for Application
-    // 3) Send Data to Connection
-    // TODO For first try we use the app of the first connection we have with an appGateIndex
-    // We have to think about what will happen if we delete this
-    if(found){
-       // 3) OK we got a valid connection to an app, check if there data
-       TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-       if(!(subflow_list.size() > 1)){
-           if(msg!=NULL)conn->getTcpMain()->send(msg, "appOut",  conn->appGateIndex);
-       }
-       else if(ordered){	// Ordered is just for debugging, makes things more easy
-           if(msg != NULL){
-               uint32 kind = msg->getKind();
-               if((!(kind&TCP_I_DATA)) || (kind&TCP_I_ESTABLISHED) || (kind&TCP_I_SEND_MSG)){
-                   (*i)->subflow->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
-                   return;
-               }
+void MPTCP_Flow::sendToApp(cMessage* msg){
+    uint32 kind = 0;
+    // some checks
+    if(msg != NULL) kind = msg->getKind();
+    if(subflow_list.empty()) return;
 
-               delete msg; // this message is not needed anymore
-           }
-    	   // Correction parameter
-		   while ((msg=mptcp_receiveQueue->extractBytesUpTo(mptcp_rcv_nxt))!=NULL)
-		   {
-				// 4) Send Data to Connection
-				msg->setKind(TCP_I_DATA);
-				TCPCommand *cmd = new TCPCommand();
-				cmd->setConnId((*i)->subflow->connId);
-				msg->setControlInfo(cmd);
-				(*i)->subflow->getTcpMain()->send(msg, "appOut", (*i)->subflow->appGateIndex);
+    // Send non data direct to app
+    if((kind) && (kind !=TCP_I_DATA))
+       (*(subflow_list.begin()))->subflow->getTcpMain()->send(msg, "appOut",  (*(subflow_list.begin()))->subflow->appGateIndex);
 
-			}
-		   if (mptcpRcvBufferSize)
-			   mptcpRcvBufferSize->record(mptcp_receiveQueue->getAmountOfBufferedBytes());
-    	}
-       else{
-           (*i)->subflow->getTcpMain()->send(msg, "appOut",  (*i)->subflow->appGateIndex);
-       }
+    // Correction parameter
+    while ((msg=mptcp_receiveQueue->extractBytesUpTo(mptcp_rcv_nxt))!=NULL)
+    {
+        // 4) Send Data to Connection
+        msg->setKind(TCP_I_DATA);
+        TCPCommand *cmd = new TCPCommand();
+        cmd->setConnId((*(subflow_list.begin()))->subflow->connId);
+        msg->setControlInfo(cmd);
+        (*(subflow_list.begin()))->subflow->getTcpMain()->send(msg, "appOut", (*(subflow_list.begin()))->subflow->appGateIndex);
+
     }
-    else
-    	ASSERT(false && "Ups...we find nothing?");
-
     return;
 }
 
 void MPTCP_Flow::enqueueMPTCPData(TCPSegment *mptcp_tcpseg, uint64 dss_start_seq, uint32 data_len){
+    uint32 old_mptcp_rcv_adv = mptcp_rcv_adv;
 	mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(mptcp_tcpseg,dss_start_seq,data_len);
-	mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_snd_wnd;
+	if(maxBuffer < mptcp_receiveQueue->getOccupiedMemory()){
+	    std::cerr << "RECEIVER occupied: " << mptcp_receiveQueue->getOccupiedMemory() << " - Allowed are: "  << maxBuffer << std::endl;
+	    // ASSERT(false && "What is wrong here");
+	}
+
+    if( maxBuffer  >  mptcp_receiveQueue->getOccupiedMemory())
+        mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
+    else{
+        mptcp_receiveQueue->printInfo();
+        mptcp_rcv_wnd = 0;
+    }
+	mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
+	if(mptcp_rcv_adv < old_mptcp_rcv_adv){
+	    ASSERT(false && "What is wrong here");
+	}
+
+	sendToApp(mptcp_tcpseg);
 }
 
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
@@ -1727,8 +1721,10 @@ void MPTCP_Flow::setBaseSQN(uint64_t s) {
     mptcp_receiveQueue->init(seq);
     mptcp_snd_una = seq;
     mptcp_snd_nxt = seq +1;
+
     mptcp_rcv_nxt = seq;
-    mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_snd_wnd;
+    mptcp_rcv_adv = mptcp_rcv_nxt + maxBuffer;
+
     mptcp_receiveQueue->init(seq);
 }
 

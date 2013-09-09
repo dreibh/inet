@@ -209,7 +209,6 @@ class INET_API TCPStateVariables : public cObject
 
     // send sequence number variables (see RFC 793, "3.2. Terminology")
     uint32 snd_una;      // send unacknowledged
-private:
     uint32 snd_nxt;      // send next (drops back on retransmission)
 public:
     virtual void setSndNxt(uint32 new_snd_nxt);
@@ -643,7 +642,7 @@ public:
      * Utility: sends one segment of 'bytes' bytes from snd_nxt, and advances snd_nxt.
      * sendData(), sendProbe() and retransmitData() internally all rely on this one.
      */
-    virtual void sendSegment(uint32 bytes);
+    virtual bool sendSegment(uint32 bytes);
 
     /** Utility: adds control info to segment and sends it to IP */
     virtual void sendToIP(TCPSegment *tcpseg);
