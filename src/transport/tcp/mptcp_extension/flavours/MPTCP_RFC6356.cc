@@ -39,10 +39,7 @@ MPTCP_RFC6356::MPTCP_RFC6356() : TCPNewReno()
 {
     isCA = false;
 }
-static inline double GET_SRTT(const double srtt)
-{
-    return (floor(1000.0 * srtt * 8.0));
-}
+
 
 void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
     // it is necessary to calculate all flow information

@@ -79,7 +79,7 @@ channel coreChannel extends DatarateChannel
 channel accessChannel extends DatarateChannel
 {
    int netID = default(1);
-   datarate  = default(1 Gbps);   // NOTE: 1 Gbit/s access channel!
+   datarate  = default(10 Gbps);   // NOTE: 1 Gbit/s access channel!
    delay     = default(0.1ms);
    ber       = default(0);
    per       = default(0);

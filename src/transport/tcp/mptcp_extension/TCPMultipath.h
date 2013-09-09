@@ -68,7 +68,10 @@ using std::vector;
 // ###############################################################################################################
 
 
-
+static inline double GET_SRTT(const double srtt)
+{
+    return (floor(1000.0 * srtt * 8.0));
+}
 
 
 // compare Section 8. IANA Considerations

@@ -44,7 +44,7 @@ uint32 SACK_RFC3517::getHighRxt(){
 
 void SACK_RFC3517::updateStatus() {
     sb.high_acked = state->snd_una - 1;
-    sb.high_data = state->snd_nxt;
+    sb.high_data = state->getSndNxt();
     discardUpTo(state->snd_una);
 }
 
@@ -61,19 +61,30 @@ bool SACK_RFC3517::statusChanged(){
 
 void SACK_RFC3517::discardUpTo(uint32 to){
     SACK_MAP::iterator i;
+    int pos = 1;
     for(i = sb.map.begin();i != sb.map.end();i++){
+               int map_size = sb.map.size();
                if(to >= i->second->end){
                    delete i->second;
                    sb.map.erase(i->first);
-                   continue;
                }
                // if we are here it could only be partial
-               if((i->first <= to) && (to <= i->second->end)){
+               else if((i->first <= to) && (to <= i->second->end)){
                    sb.map.insert(std::make_pair(to+1,i->second));
                    sb.map.erase(i->first);
                }
                else
                    break;
+
+               if(sb.map.size() != map_size){
+                    i = sb.map.begin();
+                    for(int pos_c = 0; pos_c < pos; pos_c++){
+                        if(i==sb.map.end()) return;
+                        i++;
+                    }
+                }
+               if(sb.map.empty()) return;
+               pos++;
     }
 }
 
@@ -88,9 +99,9 @@ void SACK_RFC3517::reset(){
     SACK_MAP::iterator i = sb.map.begin();
     while(i != sb.map.end()){
         delete i->second;
-        sb.map.erase(i->first);
         i++;
     }
+    sb.map.clear();
     this->updateStatus();
 }
 
@@ -122,27 +133,27 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
     _setPipe();
 //    std::cerr << "pipe" << sb.pipe << "wnd" << wnd << std::endl;
 //    std::cerr << "######################## <> ##################" << std::endl;
-        sb.old_nxt = state->snd_nxt;
+        sb.old_nxt = state->getSndNxt();
         if(sb.pipe > wnd)
             return 0;
         while( uint32 new_nxt = _nextSeg()){
 
-            state->snd_nxt = new_nxt;
+            state->setSndNxt(new_nxt);
             con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
 
-            if((state->snd_nxt - new_nxt) == 0)
+            if((state->getSndNxt() - new_nxt) == 0)
                 break;
-            offset += state->snd_nxt - new_nxt;
-            sb.high_rtx = state->snd_nxt - 1;
+            offset += state->getSndNxt() - new_nxt;
+            sb.high_rtx = state->getSndNxt() - 1;
 
 
-            if(state->snd_nxt == new_nxt)
+            if(state->getSndNxt() == new_nxt)
                 break;
 //            std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->snd_nxt - 1 << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
 
-            if(state->snd_nxt < sb.old_nxt){
+            if(state->getSndNxt() < sb.old_nxt){
 
-                state->snd_nxt = sb.old_nxt;
+                state->setSndNxt(sb.old_nxt);
             }
             if(((sb.pipe+offset) > wnd)){
                 break;
@@ -166,7 +177,7 @@ uint32 SACK_RFC3517::_nextSeg(){
             return (sb.high_rtx + 1);
     }
     // no more in SACK lists
-    return state->snd_nxt;
+    return state->getSndNxt();
 }
 #ifndef PRIVATE
 uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
@@ -283,7 +294,7 @@ void SACK_RFC3517::_setPipe(){
     if(!sb.map.empty())
         sb.pipe +=  sb.high_data -  (--sb.map.end())->second->end;
     else
-        sb.pipe = state->snd_nxt - state->snd_una;
+        sb.pipe = state->getSndNxt() - state->snd_una;
     //_print_and_check_sb();
     //std::cerr << "PIPE: " << sb.pipe << std::endl;
     //std::cerr << "#############################" << std::endl;
@@ -482,7 +493,7 @@ void SACK_RFC3517::_cntDup(uint32 start, uint32 end){
 void SACK_RFC3517::_print_and_check_sb(){
     return;
     uint32 last_end = state->snd_una;
-    std::cerr << "========================================" << std::endl;
+//    std::cerr << "========================================" << std::endl;
     for(SACK_MAP::iterator i = sb.map.begin();i != sb.map.end();i++){
         if(i->first < state->snd_una)
             ASSERT(false && "Start to small");
@@ -491,8 +502,8 @@ void SACK_RFC3517::_print_and_check_sb(){
 // FIXME
 //        if(last_end > i->first)
 //            ASSERT(false && "Not in Order");
-        last_end =  i->second->end;
-        std::cerr << "SACKed " << i->second->dup << "times : [" <<  i->first << ".." << i->second->end << "]" << std::endl;
+//        last_end =  i->second->end;
+//        std::cerr << "SACKed " << i->second->dup << "times : [" <<  i->first << ".." << i->second->end << "]" << std::endl;
     }
     std::cerr << "========================================" << std::endl;
 }
@@ -510,13 +521,25 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
 
     // delete old sacks (below rcv_nxt), delete duplicates and print previous status of sacks_array:
     SackMap::iterator it = state->sack_map.begin();
+    int pos = 1;
     while(it!=state->sack_map.end()){
+        int map_size = state->sack_map.size();
         if(state->rcv_nxt > it->first){
             if(state->rcv_nxt < it->second){
                 state->sack_map.insert(std::make_pair(state->rcv_nxt+1,it->second));
             }
             state->sack_map.erase(it->first);
+            if(state->sack_map.size() != map_size){
+                it = state->sack_map.begin();
+                for(int pos_c = 0; pos_c < pos; pos_c++){
+                    if(it==state->sack_map.end()) break;
+                    it++;
+                }
+                if(it==state->sack_map.end()) break;
+            }
+
             it++;
+            pos++;
             continue;
         }
         break;
@@ -593,9 +616,10 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
         // already included in the SACK option being constructed."
 
 
-
+        int pos = 1;
         for (SackMap::iterator it2 = state->sack_map.begin(); it2 != state->sack_map.end(); it2++)
         {
+            int map_size = state->sack_map.size();
             if(start <= it2->first){
                 // OK this is the smallest we know
                 if(end< it2->first){
@@ -611,6 +635,15 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
                     }
                  // it2 is overlapped ....delete
                  state->sack_map.erase(it2->first);
+                 if(state->sack_map.size() != map_size){
+                      it = state->sack_map.begin();
+                      for(int pos_c = 0; pos_c < pos; pos_c++){
+                          if(it==state->sack_map.end()) break;
+                          it++;
+                      }
+                      if(it==state->sack_map.end()) break;
+                  }
+                 pos++;
                  it2++;
                 }
                 if(found_end){
@@ -622,6 +655,7 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
                  // nothing to do... overlapped are erased above
                     break;
                 }
+                pos++;
             }
         }
         std::pair<SackMap::iterator, bool> pair = state->sack_map.insert(std::make_pair(start,end));

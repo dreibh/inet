@@ -46,7 +46,7 @@ void TCPReno::recalculateSlowStartThreshold()
     // (the formula below practically amounts to ssthresh = cwnd / 2 most of the time)
 //FIXME MBe    uint32 flight_size = std::min(state->snd_cwnd, state->snd_wnd); // FIXME TODO - Does this formula computes the amount of outstanding data?
 //    uint32 flight_size = state->snd_max - state->snd_una;
-    uint32 flight_size = state->snd_nxt - state->snd_una;
+    uint32 flight_size = state->getSndNxt() - state->snd_una;
     state->ssthresh = std::max(flight_size / 2, 2 * state->snd_mss);
 
     if (ssthreshVector)

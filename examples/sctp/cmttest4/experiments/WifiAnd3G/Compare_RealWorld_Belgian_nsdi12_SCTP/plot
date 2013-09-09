@@ -50,7 +50,7 @@ experiments/tools/extractvectors $VECTOR_FILE cc.data \
    "Queued Sent Bytes" \
    "Queued Received Bytes" \
     || exit 1
-R --vanilla <experiments/Basic_CC/MPTCP/plot-MPTCP.R || exit 1
+R --vanilla <experiments/WifiAnd3G/Compare_RealWorld_Belgian_nsdi12_SCTP/plot-Compare_RealWorld_Belgian_nsdi12.R || exit 1
 
 cp cc.pdf $PDF_FILE
 

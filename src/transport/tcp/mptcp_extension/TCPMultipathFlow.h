@@ -21,6 +21,8 @@ class TCPStateVariables;
 class TCPMultipathReceiveQueue;
 class TCPConnection;
 
+
+
 typedef struct _subflow{
   TCPConnection* subflow;
   bool active;
@@ -41,7 +43,7 @@ typedef struct _addr_combi{
 typedef std::vector <AddrCombi_t*>           TCP_JoinVector_t;
 
 enum MPTCP_State {IDLE, PRE_ESTABLISHED, ESTABLISHED, SHUTDOWN};
-
+enum PATH_U {CROSS, LINEAR};
 #ifdef PRIVATE
 #include <queue>
 typedef std::queue<cPacket*>         Tmp_Buffer_t;
@@ -101,6 +103,9 @@ class INET_API MPTCP_Flow
     uint64_t getHighestCumSQN();
     uint64_t getBaseSQN();          // Base of Offset SQN calculation
     uint64_t getSQN();
+
+    uint64_t getAmountOfFreeBytesInReceiveQueue(uint64 maxRcvBuffer);
+
     void setBaseSQN(uint64_t s);
     int  setState(MPTCP_State s);
     void setSendQueueLimit(int limit);
@@ -132,6 +137,7 @@ class INET_API MPTCP_Flow
     // Receiver Side
     uint64_t mptcp_rcv_nxt;                       // B.1.2
     uint64_t mptcp_rcv_wnd;                       // B.1.2
+    uint64_t mptcp_rcv_adv;                       // B.1.2
     uint64_t seq;                           	  // start seq-no generated after getting keys for the first flow
     uint64_t start_seq;
 
@@ -149,6 +155,7 @@ class INET_API MPTCP_Flow
     bool checksum;
     bool isPassive;
     bool ordered;
+    PATH_U path_utilization;
     InterfaceTableAccess interfaceTableAccess;
 
     // Vector and Scalar
