@@ -283,7 +283,6 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
             t->subflow->tmp_msg_buf = tmp_msg_buf;
         }
         subflow_list.push_back(t);
-        subflow->flow->mptcp_rcv_adv = subflow->flow->mptcp_rcv_nxt + subflow->getState()->maxRcvBuffer;
     }
     // ###################################
     // Check for further possible subflows
@@ -1438,6 +1437,7 @@ void MPTCP_Flow::sendToApp(cMessage* msg, TCPConnection* conn){
 
 void MPTCP_Flow::enqueueMPTCPData(TCPSegment *mptcp_tcpseg, uint64 dss_start_seq, uint32 data_len){
 	mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(mptcp_tcpseg,dss_start_seq,data_len);
+	mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_snd_wnd;
 }
 
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
@@ -1728,6 +1728,7 @@ void MPTCP_Flow::setBaseSQN(uint64_t s) {
     mptcp_snd_una = seq;
     mptcp_snd_nxt = seq +1;
     mptcp_rcv_nxt = seq;
+    mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_snd_wnd;
     mptcp_receiveQueue->init(seq);
 }
 

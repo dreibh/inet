@@ -1,0 +1,75 @@
+#!/bin/sh
+# $Id: extract-cc 928 2011-08-01 17:18:07Z dreibh $
+# ###########################################################################
+#             Thomas Dreibholz's R Simulation Scripts Collection
+#                  Copyright (C) 2005-2009 Thomas Dreibholz
+#
+#               Author: Thomas Dreibholz, dreibh@iem.uni-due.de
+# ###########################################################################
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Contact: dreibh@iem.uni-due.de
+
+if [ $# -ne 2 ] ; then
+   echo >&2 "Usage: $0 [Vector File] [PDF file]"
+   exit 1
+fi
+
+
+VECTOR_FILE="$1"
+PDF_FILE="$2"
+
+
+experiments/tools/extractvectors $VECTOR_FILE cc.data \
+   -splitall \
+   "Congestion Window" \
+   "Slow Start Threshold" \
+   "Fast Recovery State" \
+   "Sender Blocking Fraction" \
+   "Receiver Blocking Fraction" \
+  "Advertised Receiver Window" \
+   "Blocking TSNs Moved" \
+   "Partial Bytes Acked " \
+   "Number of Gap " \
+   "RTT" \
+   "RTO" \
+   "TSN " \
+   "Outstanding Bytes" \
+   "Queued Sent Bytes" \
+   "Queued Received Bytes" \
+    || exit 1
+R --vanilla <experiments/WifiAnd3G/Compare_RealWorld_Belgian_nsdi12_SCTP/plot-Compare_RealWorld_Belgian_nsdi12.R || exit 1
+
+cp cc.pdf $PDF_FILE
+
+#pdfmetadata cc.pdf cc.meta cc2.pdf || mv cc.pdf cc2.pdf
+#pdfembedfonts cc2.pdf cc3.pdf -optimize || mv cc2.pdf cc3.pdf
+#cp cc3.pdf $PDF_FILE
+#\
+#   "Congestion Window"    \
+#   "Slow Start Threshold" \
+#   "Fast Recovery State" \
+#   "Sender Blocking Fraction" \
+#   "Receiver Blocking Fraction" \
+#   "Advertised Receiver Window" \
+#   "Blocking TSNs Moved" \
+#   "Partial Bytes Acked " \
+#   "Number of Gap " \
+#   "RTT" \
+#   "RTO" \
+#   "TSN " \
+#   "Outstanding Bytes" \
+#   "Queued Sent Bytes" \
+#   "Queued Received Bytes" \
