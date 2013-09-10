@@ -596,7 +596,7 @@ void TCPConnection::sendEstabIndicationToApp()
 void TCPConnection::sendToApp(cMessage *msg)
 {
 #ifdef PRIVATE
-    if((tcpMain->multipath) && (flow != NULL)){
+    if((tcpMain->multipath) && (flow != NULL) && flow->getSubflows()->size() > 1){
         flow->sendToApp(msg);
     }
     else

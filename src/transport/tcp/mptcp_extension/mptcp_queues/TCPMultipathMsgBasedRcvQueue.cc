@@ -73,7 +73,7 @@ uint64 TCPMultipathMsgBasedRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg, 
         if(payload.msg!=NULL){
             // insert, avoiding duplicates
             PayloadList::iterator i = payloadList.find(dss_start_seq);
-            if (i!=payloadList.end()) {delete payload.msg; continue;}
+            if (i!=payloadList.end()) { payload_counter++; continue;} // FIXME must something deleted
             payloadList[dss_start_seq] = new cPacket(*payload.msg);
             payload_counter++;
         }

@@ -1396,10 +1396,12 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
     // some checks
     if(msg != NULL) kind = msg->getKind();
     if(subflow_list.empty()) return;
+    TCP_SubFlowVector_t::iterator it = subflow_list.begin();
+    TCPConnection *conn = (*it)->subflow;
 
     // Send non data direct to app
     if((kind) && (kind !=TCP_I_DATA))
-       (*(subflow_list.begin()))->subflow->getTcpMain()->send(msg, "appOut",  (*(subflow_list.begin()))->subflow->appGateIndex);
+        conn->getTcpMain()->send(msg, "appOut",  conn->appGateIndex);
 
 
     cMessage* tmp = NULL;
@@ -1411,7 +1413,7 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
         TCPCommand *cmd = new TCPCommand();
         cmd->setConnId((*(subflow_list.begin()))->subflow->connId);
         tmp->setControlInfo(cmd);
-        (*(subflow_list.begin()))->subflow->getTcpMain()->send(tmp, "appOut", (*(subflow_list.begin()))->subflow->appGateIndex);
+        conn->getTcpMain()->send(tmp, "appOut", conn->appGateIndex);
     }
     return;
 }
