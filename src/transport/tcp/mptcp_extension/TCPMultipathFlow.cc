@@ -1169,11 +1169,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 //		}
 //		else ASSERT (false);
 	}
-	static int debug_counter = 0;
-	if((this->mptcp_snd_nxt > 437371525042714326) && (this->mptcp_snd_nxt < 437371525042722870)){
-	    std::cerr << debug_counter << " SEQ: " << subflow->getState()->getSndNxt() <<  " Should sent " << this->mptcp_snd_nxt << " " << subflow->localAddr.str() << "<->" << subflow->remoteAddr.str() << std::endl;
-	    debug_counter++;
-	}
+
 	// this->mptcp_snd_nxt += bytesToSend;
 	uint64 dss_end = this->mptcp_snd_nxt-1;
 	if(dss_end == dss_start)
