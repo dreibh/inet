@@ -47,6 +47,8 @@ class INET_API TCPMultipathMsgBasedRcvQueue : public TCPMultipathVirtualDataRcvQ
      */
     virtual ~TCPMultipathMsgBasedRcvQueue();
 
+    virtual void clear();
+
     /**
      * Set initial receive sequence number.
      */

@@ -450,9 +450,6 @@ void TCPConnection::sendToIP(TCPSegment *tcpseg)
     if (sndAckVector)
         sndAckVector->record(tcpseg->getAckNo());
 
-    if(tcpseg->getSequenceNo() == 144075)
-        std::cerr << "found";
-
     // final touches on the segment before sending
     tcpseg->setSrcPort(localPort);
     tcpseg->setDestPort(remotePort);
@@ -791,7 +788,7 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
     uint32 ackNo = tcpseg->getAckNo();
     uint32 rcvWndEnd = 0;
 #ifdef PRIVATE
-    if(tcpMain->multipath && flow != NULL && isQueueAble){
+    if(tcpMain->multipath && flow != NULL){
         rcvWndEnd = state->rcv_nxt +flow->mptcp_rcv_wnd;
 
     }else
@@ -968,8 +965,8 @@ void TCPConnection::sendAck()
 
     // write header options
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow!=NULL) && !isQueueAble)
-        return;
+    //if(this->getTcpMain()->multipath && (flow!=NULL) && !isQueueAble)
+    //    return;
     // Redirect
     writeHeaderOptionsWithMPTCP(tcpseg, 0);
 #else
@@ -1117,15 +1114,25 @@ bool TCPConnection::sendSegment(uint32 bytes)
 #else
     writeHeaderOptions(tcpseg_temp);
 #endif // PRIVATE
-    uint options_len = tcpseg_temp->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
 
+    uint options_len = tcpseg_temp->getHeaderLength() - TCP_HEADER_OCTETS; // TCP_HEADER_OCTETS = 20
 
     ASSERT(options_len < state->snd_mss);
 
     if (bytes + options_len > state->snd_mss)
         bytes = std::min(bytes,(state->snd_mss - options_len));
 
-    if(bytes == 0) return false;
+    if(bytes == 0){
+        // OH, option written but nothing send;  Ok we have to correct the mptcp staff
+        if(tcpMain->multipath && (flow!=NULL)){
+            TCPMultipathDSSStatus::const_iterator it = dss_dataMapofSubflow.find(state->getSndNxt());
+            if(it != dss_dataMapofSubflow.end()){
+                dss_dataMapofSubflow.erase(state->getSndNxt());
+            }
+        }
+
+        return false;
+    }
 
     state->sentBytes = bytes;
 
@@ -1133,7 +1140,6 @@ bool TCPConnection::sendSegment(uint32 bytes)
     // send one segment of 'bytes' bytes from snd_nxt, and advance snd_nxt
     TCPSegment *tcpseg  = sendQueue->createSegmentWithBytes(state->snd_nxt, bytes);
 #else // FIXME Something goes wrong here
-#warning "HERE THE ERROR COMES UP"
     TCPSegment* tcpseg  = sendQueue->createSegmentWithBytes(state->getSndNxt(), bytes);
     cMessage*   msg_tmp = check_and_cast<cMessage*> (tcpseg);
         // OK if we send it over another module, we have to dup this message
@@ -1221,10 +1227,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
    if(this->getTcpMain()->multipath && (flow != NULL)){
        old_mptcp_snd_wnd = flow->mptcp_snd_wnd;
 
-       if(164367 == state->getSndNxt())
-           std::cerr << "found";
-       if(old_mptcp_snd_wnd == 0)
-           std::cerr << "found";
        // if not isQueueAble we are not allowed to send anywhere
        if(!this->isQueueAble)
            return false;
@@ -1813,9 +1815,9 @@ bool TCPConnection::processSACKPermittedOption(TCPSegment *tcpseg, const TCPOpti
 }
 
 #ifdef PRIVATE
-TCPSegment TCPConnection::writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 bytes){
+TCPSegment* TCPConnection::writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 bytes){
 #else
-TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
+TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why not a pointer back, why dup?
 {
 #endif // PRIVATE
     TCPOption option;
@@ -2048,7 +2050,7 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
             tcpEV << "ERROR: Options length exceeded! Segment will be sent without options" << "\n";
         }
     }
-    return *tcpseg;
+    return tcpseg;
 }
 
 uint32 TCPConnection::getTSval(TCPSegment *tcpseg) const
@@ -2127,7 +2129,7 @@ unsigned short TCPConnection::updateRcvWnd()
         if (rcvAdvVector)
             rcvAdvVector->record(state->rcv_adv);
     }
-    if(tcpMain->multipath && (flow!=NULL) && isQueueAble){
+    if(tcpMain->multipath && (flow!=NULL)){
         if (win > 0 && seqGreater(win, flow->mptcp_rcv_wnd))
         {
                 win = flow->mptcp_rcv_wnd;

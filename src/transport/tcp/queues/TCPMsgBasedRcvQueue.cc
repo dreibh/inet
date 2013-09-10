@@ -39,6 +39,11 @@ TCPMsgBasedRcvQueue::~TCPMsgBasedRcvQueue()
                 " Queue: offset=" << payloadList.front().seqNo <<
                ", length=" << payloadList.front().packet->getByteLength() << endl;
 #endif
+
+        cPacket *tmp =  payloadList.front().packet->getEncapsulatedPacket();
+         if(tmp!=NULL){
+             delete tmp;
+         }
         delete payloadList.front().packet;
         payloadList.pop_front();
     }

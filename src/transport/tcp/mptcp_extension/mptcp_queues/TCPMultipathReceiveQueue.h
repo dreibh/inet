@@ -73,6 +73,7 @@ class INET_API TCPMultipathReceiveQueue : public cPolymorphic
 
     virtual void printInfo() = 0;
 
+    virtual void clear() = 0;
     /**
      * Called when a TCP segment arrives, it should extract the payload
      * from the segment and store it in the receive queue. The segment

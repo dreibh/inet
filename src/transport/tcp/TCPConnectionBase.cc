@@ -499,7 +499,8 @@ TCPConnection::~TCPConnection()
     }
 
 #ifdef PRIVATE
-
+    if(mptcpAckRexTimer!= NULL)
+        delete mptcpAckRexTimer;
     if(getTcpMain()->multipath){
         // FIXME - Who is responsible for delete messages as structure inside
 

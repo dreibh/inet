@@ -164,8 +164,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
         readHeaderOptions(tcpseg);
 
     }
-    if(tcpseg->getSequenceNo() == 265115)
-        std::cerr << "found";
+
     if (acceptable)
         acceptable = isSegmentAcceptable(tcpseg);
 
@@ -611,6 +610,10 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 
                     while ((msg = receiveQueue->extractBytesUpTo(state->rcv_nxt)) != NULL)
                     {
+                        if(tcpMain->multipath){
+                            delete msg;
+                            continue;
+                        }
                         msg->setKind(TCP_I_DATA);  // TBD currently we never send TCP_I_URGENT_DATA
                         TCPCommand *cmd = new TCPCommand();
                         cmd->setConnId(connId);

@@ -33,6 +33,7 @@ class INET_API TCPMultipathVirtualDataRcvQueue : public TCPMultipathReceiveQueue
 {
   protected:
     uint64 start;
+    uint64 virtual_start;
     uint64 rcv_nxt;
 
     struct Region
@@ -69,6 +70,8 @@ class INET_API TCPMultipathVirtualDataRcvQueue : public TCPMultipathReceiveQueue
      * Returns a string with region stored.
      */
     virtual std::string info() const;
+
+    virtual void clear();
 
     /**
      * Called when a TCP segment arrives. Returns sequence number for ACK.

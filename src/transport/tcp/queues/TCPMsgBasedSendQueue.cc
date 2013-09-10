@@ -29,8 +29,13 @@ TCPMsgBasedSendQueue::TCPMsgBasedSendQueue() : TCPSendQueue()
 
 TCPMsgBasedSendQueue::~TCPMsgBasedSendQueue()
 {
-    for (PayloadQueue::iterator it = payloadQueue.begin(); it != payloadQueue.end(); ++it)
+    for (PayloadQueue::iterator it = payloadQueue.begin(); it != payloadQueue.end(); ++it){
+        cPacket *tmp =  it->msg->getEncapsulatedPacket();
+        if(tmp!=NULL){
+            delete tmp;
+        }
         delete it->msg;
+    }
 }
 
 void TCPMsgBasedSendQueue::init(uint32 startSeq)
@@ -81,6 +86,9 @@ TCPSegment *TCPMsgBasedSendQueue::createSegmentWithBytes(uint32 fromSeq, ulong n
 {
     //tcpEV << "sendQ: " << info() << " createSeg(seq=" << fromSeq << " len=" << numBytes << ")\n";
     ASSERT(seqLE(begin -1, fromSeq) && seqLE(fromSeq + numBytes, end)); // FIXME Sometimes this happend.. after one seq to less that is is why I add -1
+
+    if(numBytes == 0)
+        return NULL;
 
     TCPSegment *tcpseg = new TCPSegment(NULL);
 

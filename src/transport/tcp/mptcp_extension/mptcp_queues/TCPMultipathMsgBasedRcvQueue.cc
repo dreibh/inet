@@ -28,17 +28,20 @@ TCPMultipathMsgBasedRcvQueue::TCPMultipathMsgBasedRcvQueue() : TCPMultipathVirtu
 
 TCPMultipathMsgBasedRcvQueue::~TCPMultipathMsgBasedRcvQueue()
 {
-    for(PayloadList::iterator i = payloadList.begin();i == payloadList.end();i++){
-        cPacket *msg = i->second;
-        cPacket *tmp = msg->getEncapsulatedMsg();
-        if(tmp!=NULL){
-            delete tmp;
-        }
-        // TODO Documentation
-        delete msg;
-    }
+    clear();
 }
 
+void TCPMultipathMsgBasedRcvQueue::clear()
+{
+    PayloadList::iterator i = payloadList.begin();
+    while(i != payloadList.end()){
+        cPacket *msg = i->second;
+        // TODO Documentation
+        delete msg;
+        payloadList.erase(i->first);
+        i = payloadList.begin();
+    }
+}
 void TCPMultipathMsgBasedRcvQueue::init(uint64 startSeq)
 {
     TCPMultipathVirtualDataRcvQueue::init(startSeq);

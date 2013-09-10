@@ -31,9 +31,14 @@ TCPMultipathVirtualDataRcvQueue::~TCPMultipathVirtualDataRcvQueue()
 {
 }
 
+void TCPMultipathVirtualDataRcvQueue::clear(){
+
+}
+
 void TCPMultipathVirtualDataRcvQueue::init(uint64 startSeq)
 {
     start = startSeq;
+    virtual_start = startSeq;
     rcv_nxt = startSeq;
 }
 
@@ -54,8 +59,14 @@ std::string TCPMultipathVirtualDataRcvQueue::info() const
 
 uint64 TCPMultipathVirtualDataRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg,  uint64 dss_start_seq, uint32 data_len)
 {
+    uint32 old_size = regionList.size();
     merge(dss_start_seq, dss_start_seq+data_len);
-    if (rcv_nxt >= regionList.begin()->begin)
+
+    if(virtual_start > regionList.begin()->begin)
+        return rcv_nxt;
+    if (rcv_nxt >= regionList.begin()->end)
+        rcv_nxt = regionList.begin()->end;
+    if(old_size != regionList.size())
         rcv_nxt = regionList.begin()->end;
     DEBUGPRINT("[MPTCP][RCV QUEUE] size after insert %lu",regionList.size());
     return rcv_nxt;
@@ -154,24 +165,22 @@ ulong TCPMultipathVirtualDataRcvQueue::extractTo(uint64 seq)
     // seq below 1st region
     if ((seq <= i->begin))
         return 0;
-    // Just for debug
-    static uint64 old_end = i->begin;
 
     if ((seq < i->end))
     {
         // part of 1st region
         ulong octets = seq - i->begin;
         i->begin = seq;
-        old_end = i->end;
         regionList.erase(i);
+        virtual_start = i->end;
         return octets;
     }
     else
     {
         // full 1st region
         ulong octets = i->end - i->begin;
-        old_end = i->end;
         regionList.erase(i);
+        virtual_start = i->end;
         return octets;
     }
 }

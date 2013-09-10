@@ -513,7 +513,7 @@ public:
     virtual void process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
 #ifdef PRIVATE  // // MBe: MPTCP protected methods
     virtual void process_MPTCPSEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
-    virtual TCPSegment writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 bytes);
+    virtual TCPSegment* writeHeaderOptionsWithMPTCP(TCPSegment *tcpseg,uint32 bytes);
 #else
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     /** Utility: writeHeaderOptions (Currently only EOL, NOP, MSS, WS, SACK_PERMITTED, SACK and TS are implemented) */
