@@ -179,8 +179,9 @@ ulong TCPMultipathVirtualDataRcvQueue::extractTo(uint64 seq)
     {
         // full 1st region
         ulong octets = i->end - i->begin;
-        regionList.erase(i);
         virtual_start = i->end;
+        regionList.erase(i);
+
         return octets;
     }
 }
@@ -196,6 +197,9 @@ void TCPMultipathVirtualDataRcvQueue::printInfo(){
 }
 uint64 TCPMultipathVirtualDataRcvQueue::getOccupiedMemory(){
    RegionList::iterator i = regionList.begin();
+   if(regionList.empty()){
+       return 0;
+   }
    uint64 start_buffer = i->begin;
    uint64 end_buffer = i->end;
    // std::cerr << "In MPTCP Queue" << std::endl;
