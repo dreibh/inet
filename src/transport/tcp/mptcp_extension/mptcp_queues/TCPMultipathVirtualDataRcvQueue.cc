@@ -209,7 +209,7 @@ uint64 TCPMultipathVirtualDataRcvQueue::getOccupiedMemory(){
           end_buffer = i->end;
           i++;
       }
-    return end_buffer - start_buffer;
+    return virtual_start - start_buffer;
 }
 
 uint64 TCPMultipathVirtualDataRcvQueue::getAmountOfBufferedBytes()
