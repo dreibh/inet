@@ -116,6 +116,9 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
             i = data.begin();
             continue;
         }
+        // Just to be sure
+        ASSERT(i->first - i->second->begin == i->second->len);
+
         if(in_order && (highest_in_order + 1 > i->second->begin))
             continue;
 
@@ -164,11 +167,18 @@ void TCPMultipathDataRcvQueue::printInfo(){
 }
 
 uint64 TCPMultipathDataRcvQueue::getOccupiedMemory(){
-
+#ifdef Relativ
    if(data.empty()){
        return 0;
    }
    return (--(data.end()))->first - virtual_start;
+#else
+   uint32 len = 0;
+   for(MPTCP_DataMap::iterator i = data.begin(); i != data.end(); i++){
+       len += i->second->len;
+   }
+   return len;
+#endif
 }
 
 uint64 TCPMultipathDataRcvQueue::getAmountOfBufferedBytes()
