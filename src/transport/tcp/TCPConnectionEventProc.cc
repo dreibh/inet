@@ -239,12 +239,6 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue, plus "
                  << (state->snd_max-state->snd_una) << " bytes unacknowledged\n";
-
-#ifdef PRIVATE
-            if(getTcpMain()->multipath)
-                this->flow->sendCommandInvoked();
-            else
-#endif
             tcpAlgorithm->sendCommandInvoked();
             break;
         case TCP_S_LAST_ACK:

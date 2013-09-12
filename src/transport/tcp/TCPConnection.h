@@ -615,6 +615,8 @@ public:
      * Returns true if some data was actually sent.
      */
     virtual bool sendData(bool fullSegmentsOnly, uint32 congestionWindow);
+
+    virtual bool sendMPTCPData(bool fullSegmentsOnly, uint32 congestionWindow);
 #ifdef PRIVATE
 
     virtual bool  sendKeepAlive();
