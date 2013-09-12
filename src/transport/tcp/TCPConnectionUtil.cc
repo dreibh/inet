@@ -443,6 +443,10 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 
 void TCPConnection::sendToIP(TCPSegment *tcpseg)
 {
+
+    if(tcpseg->getSequenceNo() == 11951444)
+        std::cerr << "found";
+
     // record seq (only if we do send data) and ackno
     if (sndNxtVector && tcpseg->getPayloadLength() != 0)
         sndNxtVector->record(tcpseg->getSequenceNo());
@@ -1255,7 +1259,7 @@ bool TCPConnection::sendMPTCPData(bool fullSegmentsOnly, uint32 congestionWindow
         border = state->snd_mss;
     }
 
-    if (effectiveWin <= border)
+    if (effectiveWin < border)
     {
         tcpEV << "Effective window is zero (advertised window " << state->snd_wnd <<
             ", congestion window " << congestionWindow << "), cannot send.\n";

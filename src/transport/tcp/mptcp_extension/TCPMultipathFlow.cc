@@ -526,7 +526,7 @@ bool  MPTCP_Flow::close(){
 }
 
 bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
-
+    fullSegmentsOnly = true;
     std::map<std::string,int> (ad_queue);
     //set parameter how many flows we want utilize
     switch(path_utilization){
@@ -535,7 +535,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                    i != subflow_list.end(); i++) {
            TCP_subflow_t* entry = (*i);
            if(entry->subflow->isQueueAble){
-               if(ad_queue.end() != ad_queue.find(entry->subflow->remoteAddr.str())){
+               if(ad_queue.end() == ad_queue.find(entry->subflow->remoteAddr.str())){
                    ad_queue.insert(std::make_pair(entry->subflow->remoteAddr.str(),0));
                   // std::cerr << "use"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
                }
