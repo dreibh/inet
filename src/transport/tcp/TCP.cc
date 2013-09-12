@@ -308,7 +308,7 @@ void TCP::handleMessage(cMessage *msg)
 #endif
 
 
-
+                // std::cerr << "Work on..." << conn->localAddr.str() << ".." << conn->remoteAddr.str() << std::endl;
                 bool ret = conn->processTCPSegment(tcpseg, srcAddr, destAddr);
                 if (!ret){
                     removeConnection(conn);

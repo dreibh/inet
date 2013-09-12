@@ -140,6 +140,11 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
 
 TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 {
+
+    //if(tcpseg->getSequenceNo() == 2155255){
+    //    std::cerr << "found";
+    //}
+
     //
     // RFC 793: first check sequence number
     //
@@ -547,10 +552,12 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                 // section 2.5).
 
                 uint32 old_usedRcvBuffer = state->usedRcvBuffer;
-                state->rcv_nxt = receiveQueue->insertBytesFromSegment(tcpseg);
 
-                if(state->rcv_nxt == 51331910)
-                       std::cerr << "lets debug" << std::endl;
+                if(getTcpMain()->multipath && (flow != NULL)){
+                    flow->enqueueMPTCPData(tcpseg->getSndSeq(),tcpseg->getLen());
+                }
+
+                state->rcv_nxt = receiveQueue->insertBytesFromSegment(tcpseg);
 
                 if (seqGreater(state->snd_una, old_snd_una))
                 {
@@ -610,15 +617,12 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 
                     while ((msg = receiveQueue->extractBytesUpTo(state->rcv_nxt)) != NULL)
                     {
-                        if(tcpMain->multipath){
-                            delete msg;
-                            continue;
-                        }
                         msg->setKind(TCP_I_DATA);  // TBD currently we never send TCP_I_URGENT_DATA
                         TCPCommand *cmd = new TCPCommand();
                         cmd->setConnId(connId);
                         msg->setControlInfo(cmd);
                         sendToApp(msg);
+
                     }
 
                     // if this segment "filled the gap" until the previously arrived segment

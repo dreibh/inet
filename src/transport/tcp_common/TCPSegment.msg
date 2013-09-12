@@ -191,6 +191,10 @@ packet TCPSegment
     // that the receiving TCP passes up the message object to its client
     // when the last byte of the message has arrived.
     abstract TCPPayloadMessage payload[];
+    
+    // MPTCP values
+    uint64 sndSeq;
+    unsigned short len; 
 
     // Message bytes that travel in this segment as data.
     // This field is used only when the ~TCPDataTransferMode is TCP_TRANSFER_BYTESTREAM.
