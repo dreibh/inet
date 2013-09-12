@@ -1425,7 +1425,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath && (flow != NULL)){
         if(old_mptcp_snd_wnd == flow->mptcp_snd_wnd && (sent + (state->snd_nxt - old_snd_nxt) <  flow->mptcp_snd_wnd )){
-               flow->mptcp_snd_wnd -= state->snd_nxt - old_snd_nxt;
+            ;
         }
         else{
             std::cerr << "send more than window" << (state->snd_nxt - old_snd_nxt) - flow->mptcp_snd_wnd << std::endl;

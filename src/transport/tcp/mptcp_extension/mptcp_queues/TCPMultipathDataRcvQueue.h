@@ -66,7 +66,7 @@ class INET_API TCPMultipathDataRcvQueue : public TCPMultipathReceiveQueue
     /**
      * Returns a string with region stored.
      */
-    virtual std::string info() const;
+    virtual void info();
 
     void shiftPayloadTo(TCPSegment *n, TCPSegment *d);
     virtual void clear();

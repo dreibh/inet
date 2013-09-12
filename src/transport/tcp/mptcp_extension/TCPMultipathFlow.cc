@@ -1418,12 +1418,12 @@ void MPTCP_Flow::sendToApp(){
         buffer_blocked = false;
     }else{
         mptcp_receiveQueue->printInfo();
-//        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-//                    i != subflow_list.end(); i++) {
-//                TCPConnection *sub = (*i)->subflow;
-//                std::cerr << "ID" << sub->connId << " Amount of Buffered Bytes "  << sub->getReceiveQueue()->getAmountOfBufferedBytes() << std::endl;
-//                std::cerr << "rcv nxt "  << sub->getState()->rcv_nxt << " rcv adv  "  << sub->getState()->rcv_adv << " diff " << sub->getState()->rcv_adv-sub->getState()->rcv_nxt << std::endl;
-//        }
+        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                    i != subflow_list.end(); i++) {
+                TCPConnection *sub = (*i)->subflow;
+                std::cerr << "ID" << sub->connId << " Amount of Buffered Bytes "  << sub->getReceiveQueue()->getAmountOfBufferedBytes() << std::endl;
+                std::cerr << "rcv nxt "  << sub->getState()->rcv_nxt << " rcv adv  "  << sub->getState()->rcv_adv << " diff " << sub->getState()->rcv_adv-sub->getState()->rcv_nxt << std::endl;
+        }
         mptcp_rcv_wnd = 0;
         buffer_blocked = true;
     }

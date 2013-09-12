@@ -49,18 +49,14 @@ void TCPMultipathDataRcvQueue::init(uint64 startSeq)
     data.clear();
 }
 
-std::string TCPMultipathDataRcvQueue::info() const
+void TCPMultipathDataRcvQueue::info()
 {
-    std::string res;
-    char buf[1024];
-    sprintf(buf, "rcv_nxt=%ld ", virtual_start);
-    res = buf;
-
+    std::cerr << "#################" << std::endl;
     for(MPTCP_DataMap::const_iterator i = data.begin(); i != data.end(); i++){
-        sprintf(buf, "[%ld..%ld) ", i->second->begin, i->first);
-        res+=buf;
+           std::cerr << "Base: " << virtual_start << " Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
+            << " - send " << (uint32) i->second->begin << ".." << (uint32) i->first  << std::endl;
     }
-    return res;
+    std::cerr << "Occupied Memory" << getOccupiedMemory() << std::endl;
 }
 
 uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, uint32 data_len)
@@ -135,23 +131,6 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
     return virtual_start;
 }
 
-//void TCPMultipathDataRcvQueue::shiftPayloadTo(TCPSegment *n, TCPSegment *d){
-//    PayloadList::iterator i = payloadList.begin();
-//    while (NULL != (msg = tcpseg->removeFirstPayloadMessage(endSeqNo)))
-//    {
-//        while (i != payloadList.end() && seqLess(i->seqNo, endSeqNo))
-//            ++i;
-//
-//        // insert, avoiding duplicates
-//        if (i != payloadList.end() && i->seqNo == endSeqNo)
-//            delete msg;
-//        else
-//        {
-//            i = payloadList.insert(i,PayloadItem(endSeqNo, msg));
-//            ASSERT(seqLE(payloadList.front().seqNo, payloadList.back().seqNo));
-//        }
-//    }
-//}
 
 cPacket *TCPMultipathDataRcvQueue::extractBytesUpTo(uint64 seq)
 {
@@ -178,8 +157,8 @@ cPacket *TCPMultipathDataRcvQueue::extractBytesUpTo(uint64 seq)
 }
 
 void TCPMultipathDataRcvQueue::printInfo(){
-#ifdef DEBUG
-    std::cerr << info() << std::endl;
+#ifndef DEBUG
+    std::cerr << "#########" << std::endl;
 #endif
 }
 
@@ -213,6 +192,6 @@ uint64 TCPMultipathDataRcvQueue::getQueueLength()
 
 void TCPMultipathDataRcvQueue::getQueueStatus()
 {
-    tcpEV << "receiveQLength=" << data.size() << " " << info() << "\n";
+    //tcpEV << "receiveQLength=" << data.size() << " " << info() << "\n";
 }
 
