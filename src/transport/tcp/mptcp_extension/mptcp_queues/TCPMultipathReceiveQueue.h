@@ -81,7 +81,7 @@ class INET_API TCPMultipathReceiveQueue : public cPolymorphic
      *
      * The method should return the sequence number to be ACKed.
      */
-    virtual uint64 insertBytesFromSegment(TCPSegment *tcpseg,  uint64 dss_start_seq, uint32 data_len) = 0;
+    virtual uint64 insertBytesFromSegment(uint64 dss_start_seq, uint32 data_len) = 0;
 
     /**
      * Should create a packet to be passed up to the app, up to (but NOT
@@ -111,15 +111,7 @@ class INET_API TCPMultipathReceiveQueue : public cPolymorphic
      */
     virtual void getQueueStatus() = 0;
 
-    /**
-     * Returns left edge of enqueued region.
-     */
-    virtual uint64 getLE(uint64 fromSeqNum) = 0;
 
-    /**
-     * Returns right edge of enqueued region.
-     */
-    virtual uint64 getRE(uint64 toSeqNum) = 0;
 };
 
 #endif

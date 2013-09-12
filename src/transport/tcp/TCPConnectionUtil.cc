@@ -485,6 +485,7 @@ void TCPConnection::sendToIP(TCPSegment *tcpseg)
 
         tcpMain->send(tcpseg, "ipv6Out");
     }
+    // std::cerr << "Send Over..." << localAddr.str() << ".." << remoteAddr.str() << std::endl;
 }
 
 void TCPConnection::sendToIP(TCPSegment *tcpseg, IPvXAddress src, IPvXAddress dest)
@@ -596,12 +597,12 @@ void TCPConnection::sendEstabIndicationToApp()
 void TCPConnection::sendToApp(cMessage *msg)
 {
 #ifdef PRIVATE
-    if((tcpMain->multipath) && (flow != NULL) && flow->getSubflows()->size() > 1){
-        flow->sendToApp(msg);
+    if((tcpMain->multipath) && (flow != NULL) &&  (msg->getKind()==TCP_I_DATA)){
+        delete msg;
     }
     else
-#endif // PRIVATE
-    tcpMain->send(msg, "appOut", appGateIndex);
+#endif
+        tcpMain->send(msg, "appOut", appGateIndex);
 }
 
 
@@ -787,26 +788,23 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
     uint32 seqNo = tcpseg->getSequenceNo();
     uint32 ackNo = tcpseg->getAckNo();
     uint32 rcvWndEnd = 0;
-#ifdef PRIVATE
-    if(tcpMain->multipath && flow != NULL){
-        rcvWndEnd = state->rcv_nxt +flow->mptcp_rcv_wnd;
 
-    }else
-#endif
     rcvWndEnd = state->rcv_nxt + state->rcv_wnd;
     bool ret;
 
     if (len == 0)
     {
-        if (state->rcv_wnd == 0)
-            ret = (seqNo == state->rcv_nxt);
+        if (state->rcv_wnd == 0){
+            std::cerr << "Too high sqn for arwn = 0: " <<  seqNo - state->rcv_nxt << std::endl;
+            ret = false; // FIXME (seqNo == state->rcv_nxt);
+        }
         else // rcv_wnd > 0
             ret = seqLE(state->rcv_nxt, seqNo) && seqLE(seqNo, rcvWndEnd); // Accept an ACK on end of window
     }
     else // len > 0
     {
         if (state->rcv_wnd == 0)
-            ret = false;
+            ret = false; // FIXME false;
         else // rcv_wnd > 0
             ret = (seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd))
                     || (seqLess(state->rcv_nxt, seqNo + len) && seqLE(seqNo + len, rcvWndEnd)); // Accept an ACK on end of window
@@ -965,9 +963,6 @@ void TCPConnection::sendAck()
 
     // write header options
 #ifdef PRIVATE
-    //if(this->getTcpMain()->multipath && (flow!=NULL) && !isQueueAble)
-    //    return;
-    // Redirect
     writeHeaderOptionsWithMPTCP(tcpseg, 0);
 #else
     writeHeaderOptions(tcpseg);
@@ -1040,15 +1035,6 @@ bool TCPConnection::MPTCPlikeBufferSplitting(uint32 bytes){
 
 bool TCPConnection::sendSegment(uint32 bytes)
 {
-
-//#ifdef PRIVATE
-//    if(this->getTcpMain()->multipath && (flow != NULL)){
-//        if((flow->mptcp_snd_nxt - flow->mptcp_snd_una) + bytes > flow->mptcp_snd_wnd){
-//            return false;
-//        }
-//    }
-//#endif
-
     if (state->sack_enabled && state->afterRto)
     {
 
@@ -1205,6 +1191,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // we'll start sending from snd_max, if not after RTO
     if (!state->afterRto)
         state->setSndNxt(state->snd_max);
+    uint32 sent = 0;
     uint32 old_mptcp_snd_wnd = 0;
     uint32 old_highRxt = 0;
 #ifndef PRIVATE
@@ -1230,23 +1217,24 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
        // if not isQueueAble we are not allowed to send anywhere
        if(!this->isQueueAble)
            return false;
+
        // overwrite window with mptcp snd window
        // (keep in mind, we have to korrect this later, that is why we store old snd_nxt)
-       maxWindow = flow->mptcp_snd_wnd;  //- (2 * state->snd_mss);
+       maxWindow = flow->mptcp_snd_wnd;
 
-       // we have to check similar as in send one msg
-
-       if(flow->mptcp_snd_nxt - flow->mptcp_snd_una + state->snd_mss <= maxWindow  &&
-               (flow->mptcp_snd_nxt - flow->mptcp_snd_una) +  congestionWindow  <= maxWindow - (2 * state->snd_mss)){
-           ; // oK we have nothing to correct
-       }else if (flow->mptcp_snd_nxt - flow->mptcp_snd_una + state->snd_mss > maxWindow - (2 * state->snd_mss) ){
-           // No space left
-           maxWindow = 0;
-       }else if((flow->mptcp_snd_nxt - flow->mptcp_snd_una) +  congestionWindow + 2 * state->snd_mss > maxWindow){
-           // we have to correct the window
-           if(maxWindow > (flow->mptcp_snd_nxt - flow->mptcp_snd_una))
-               maxWindow = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una); // - (2 * state->snd_mss);
+       // we have to check similar as for one flow, but above all
+       const TCP_SubFlowVector_t *subflow_list = flow->getSubflows();
+       for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
+                  i != subflow_list->end(); i++) {
+              TCPConnection *conn = (*i)->subflow;
+              sent += conn->getState()->snd_nxt - conn->getState()->snd_una;
        }
+
+
+       if(maxWindow > sent){
+           maxWindow = maxWindow - sent;
+       }else
+           maxWindow = 0;
     }
 #endif
     maxWindow = std::min(congestionWindow, maxWindow);
@@ -1436,10 +1424,14 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath && (flow != NULL)){
-        if(old_mptcp_snd_wnd == flow->mptcp_snd_wnd && (flow->mptcp_snd_wnd >= state->snd_nxt - old_snd_nxt))
+        if(old_mptcp_snd_wnd == flow->mptcp_snd_wnd && (sent + (state->snd_nxt - old_snd_nxt) <  flow->mptcp_snd_wnd )){
                flow->mptcp_snd_wnd -= state->snd_nxt - old_snd_nxt;
-        else
-            ASSERT(false && "Send more as window");
+        }
+        else{
+            std::cerr << "send more than window" << (state->snd_nxt - old_snd_nxt) - flow->mptcp_snd_wnd << std::endl;
+            // FIXME ASSERT(false && "Send more as window");
+            flow->mptcp_snd_wnd = 0;
+        }
     }
 #endif
 
@@ -1846,6 +1838,12 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
         if (state->ws_support && (state->rcv_ws || (fsm.getState() == TCP_S_INIT
                 || (fsm.getState() == TCP_S_SYN_SENT && state->syn_rexmit_count > 0))))
         {
+            // 1 padding byte
+            option.setKind(TCPOPTION_NO_OPERATION); // NOP
+            option.setLength(1);
+            option.setValuesArraySize(0);
+            tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
+            tcpseg->setOptions(t++, option);
 
             option.setKind(TCPOPTION_WINDOW_SCALE);
             option.setLength(3);
@@ -1901,14 +1899,6 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
             tcpEV << "TCP Header Option SACK_PERMITTED sent, SACK (sack_enabled) is set to " << state->sack_enabled << "\n";
             tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
             tcpseg->setOptions(t++, option);
-
-            // 1 padding byte
-            option.setKind(TCPOPTION_NO_OPERATION); // NOP
-            option.setLength(1);
-            option.setValuesArraySize(0);
-            tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-            tcpseg->setOptions(t++, option);
-
         }
 
         // TS header option
@@ -1996,6 +1986,7 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
             tcpEV << "TCP Header Option TS(TSval=" << option.getValues(0) << ", TSecr=" << option.getValues(1) << ") sent\n";
             tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
             tcpseg->setOptions(t++, option);
+
         }
 
         // SACK header option
@@ -2129,21 +2120,31 @@ unsigned short TCPConnection::updateRcvWnd()
         if (rcvAdvVector)
             rcvAdvVector->record(state->rcv_adv);
     }
+    uint32 scaled_rcv_wnd = 0;
+    state->rcv_wnd = win;
+    scaled_rcv_wnd = state->rcv_wnd;
+#ifdef PRIVATE
     if(tcpMain->multipath && (flow!=NULL)){
-        if (win > 0 && seqGreater(win, flow->mptcp_rcv_wnd))
-        {
-                win = flow->mptcp_rcv_wnd;
+        if(tcpMain->multipath && (flow != NULL)){
+           flow->sendToApp();
         }
 
-    }
+        if (win > 0 && seqGreater(win, flow->mptcp_rcv_wnd))
+        {
 
-    state->rcv_wnd = win;
+            win = flow->mptcp_rcv_wnd;
+
+        }
+        scaled_rcv_wnd = flow->mptcp_rcv_wnd;
+    }
+#endif
+
 
     if (rcvWndVector)
         rcvWndVector->record(state->rcv_wnd);
-    uint32 scaled_rcv_wnd = 0;
+
     // scale rcv_wnd:
-    scaled_rcv_wnd = state->rcv_wnd;
+
 
     if (state->ws_enabled)
     {

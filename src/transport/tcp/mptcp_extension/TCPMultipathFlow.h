@@ -80,8 +80,8 @@ class INET_API MPTCP_Flow
     // 7) Congestion & Flow Control ->Open
 
     // for 2 -> Omnet Interface
-    void enqueueMPTCPData(TCPSegment *tcpseg, uint64 dss_start_seq, uint32 data_len);
-    void sendToApp(cMessage* msg);
+    void enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len);
+    void sendToApp();
     // for 1 & 3
     int writeMPTCPHeaderOptions(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32, TCPConnection* subflow);
     // for 6
@@ -141,6 +141,7 @@ class INET_API MPTCP_Flow
     uint64_t maxBuffer;
     uint64_t seq;                           	  // start seq-no generated after getting keys for the first flow
     uint64_t start_seq;
+    bool buffer_blocked;
 
     //######################################################
     // MPTCP CC stuff

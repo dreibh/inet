@@ -125,6 +125,8 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 //    totalCwndBasedBandwidth = 0;
     cmtCC_alpha = 0;
     tmp_msg_buf = subflow->tmp_msg_buf;
+
+    buffer_blocked = false;
 }
 /**
  * Destructor
@@ -1131,6 +1133,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 	// FIXME -> Perhaps it is enough to hold list like on SACK
 	uint32 snd_nxt_tmp = subflow->getState()->getSndNxt();
 	uint32 bytes_tmp = bytes;
+	uint32 to_report_sqn = this->mptcp_snd_nxt;
 
     if(bytes_tmp > subflow->getState()->snd_mss)
        ASSERT(false && "Expect only segments with size less that path mss");
@@ -1145,6 +1148,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 DSS_INFO* dss_info = it->second;
                 rtx_msg_length = dss_info->seq_offset;
                 rtx_snd_seq = dss_info->dss_seq;
+                to_report_sqn = dss_info->dss_seq;
                 // FIXME check if it really could be only one message
                 break;
             }
@@ -1152,7 +1156,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 DSS_INFO* dss_info = new DSS_INFO;// (DSS_INFO*) malloc(sizeof(DSS_INFO));
                 dss_info->dss_seq = this->mptcp_snd_nxt;
                 dss_info->seq_offset = bytes;
-                mptcp_snd_nxt += bytes;
+                mptcp_snd_nxt += bytes + 1;
                 dss_info->section_end = false;
                 // we work wit a offset parameter if we have numbers in sequence
                 // I think it is more easy to handle this in mss sections
@@ -1264,10 +1268,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     }
 
     // Data seq no.
-    if(isRetranmission)
-        l_seq = snd_seq = rtx_snd_seq - 1;
-    else
-        l_seq = snd_seq = this->mptcp_snd_nxt-1 - bytes;
+    l_seq = snd_seq = to_report_sqn;
 
     first_bits |= l_seq>>16;
     option->setValues(array_cnt++, first_bits);
@@ -1391,17 +1392,12 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 }
 
 
-void MPTCP_Flow::sendToApp(cMessage* msg){
-    uint32 kind = 0;
+void MPTCP_Flow::sendToApp(){
+
     // some checks
-    if(msg != NULL) kind = msg->getKind();
     if(subflow_list.empty()) return;
     TCP_SubFlowVector_t::iterator it = subflow_list.begin();
     TCPConnection *conn = (*it)->subflow;
-
-    // Send non data direct to app
-    if((kind) && (kind !=TCP_I_DATA))
-        conn->getTcpMain()->send(msg, "appOut",  conn->appGateIndex);
 
 
     cMessage* tmp = NULL;
@@ -1414,40 +1410,43 @@ void MPTCP_Flow::sendToApp(cMessage* msg){
         cmd->setConnId((*(subflow_list.begin()))->subflow->connId);
         tmp->setControlInfo(cmd);
         conn->getTcpMain()->send(tmp, "appOut", conn->appGateIndex);
+
+    }
+
+    if( maxBuffer  >=  mptcp_receiveQueue->getOccupiedMemory()){
+        mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
+        buffer_blocked = false;
+    }else{
+        mptcp_receiveQueue->printInfo();
+//        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+//                    i != subflow_list.end(); i++) {
+//                TCPConnection *sub = (*i)->subflow;
+//                std::cerr << "ID" << sub->connId << " Amount of Buffered Bytes "  << sub->getReceiveQueue()->getAmountOfBufferedBytes() << std::endl;
+//                std::cerr << "rcv nxt "  << sub->getState()->rcv_nxt << " rcv adv  "  << sub->getState()->rcv_adv << " diff " << sub->getState()->rcv_adv-sub->getState()->rcv_nxt << std::endl;
+//        }
+        mptcp_rcv_wnd = 0;
+        buffer_blocked = true;
     }
     return;
 }
 
-void MPTCP_Flow::enqueueMPTCPData(TCPSegment *mptcp_tcpseg, uint64 dss_start_seq, uint32 data_len){
+void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len){
     uint32 old_mptcp_rcv_adv = mptcp_rcv_adv;
-	mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(mptcp_tcpseg,dss_start_seq,data_len);
-    sendToApp(mptcp_tcpseg); // free Buffer up to mptcp_rcv_nxt
+	mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(dss_start_seq,data_len);
 
 	if(maxBuffer < mptcp_receiveQueue->getOccupiedMemory()){
-	    std::cerr << "RECEIVER occupied: " << mptcp_receiveQueue->getOccupiedMemory() << " - Allowed are: "  << maxBuffer << std::endl;
+	    std::cerr << "RECEIVER occupied more than allowed: " << mptcp_receiveQueue->getOccupiedMemory() << " - Allowed are: "  << maxBuffer << std::endl;
 	    // ASSERT(false && "What is wrong here");
 	}
 
-    if( maxBuffer  >  mptcp_receiveQueue->getOccupiedMemory())
-        mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
-    else{
-        mptcp_receiveQueue->printInfo();
-        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                    i != subflow_list.end(); i++) {
-                TCPConnection *sub = (*i)->subflow;
-                std::cerr << "ID" << sub->connId << " Amount of Buffered Bytes "  << sub->getReceiveQueue()->getAmountOfBufferedBytes() << std::endl;
-                std::cerr << "rcv nxt "  << sub->getState()->rcv_nxt << " rcv adv  "  << sub->getState()->rcv_adv << " diff " << sub->getState()->rcv_adv-sub->getState()->rcv_nxt << std::endl;
 
-        }
-        mptcp_rcv_wnd = 0;
-    }
 	mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
 	if(mptcp_rcv_adv < old_mptcp_rcv_adv){
 	    ASSERT(false && "What is wrong here");
 	}
-
-
 }
+
+
 
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
     // easy scheduler
@@ -1735,7 +1734,7 @@ void MPTCP_Flow::setBaseSQN(uint64_t s) {
     seq = s;
     mptcp_receiveQueue->init(seq);
     mptcp_snd_una = seq;
-    mptcp_snd_nxt = seq +1;
+    mptcp_snd_nxt = seq;
 
     mptcp_rcv_nxt = seq;
     mptcp_rcv_adv = mptcp_rcv_nxt + maxBuffer;

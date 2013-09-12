@@ -550,8 +550,10 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
 
         // we know everything ...lets queue in if data > 0
         if(data_len > 0){
-        	//TCPSegment *mptcp_tcpseg =  new TCPSegment(*tcpseg);
-        	subflow->flow->enqueueMPTCPData(tcpseg, snd_seq, data_len);
+
+          tcpseg->setLen(data_len);
+          tcpseg->setSndSeq(snd_seq);
+
         }
 
         DEBUGPRINT("[FLOW][DSS][INFO][RCV] Ack Seq: %ld \t SND Seq: %ld \t Subflow Seq: %d \t Data length: %d", ack_seq, snd_seq, flow_seq, data_len);

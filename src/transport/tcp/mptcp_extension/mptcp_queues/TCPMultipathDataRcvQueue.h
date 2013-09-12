@@ -16,11 +16,12 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_TCPMULTIPATHVIRTUALDATARCVQUEUE_H
-#define __INET_TCPMULTIPATHVIRTUALDATARCVQUEUE_H
+#ifndef __INET_TCPMultipathDataRcvQueue_H
+#define __INET_TCPMultipathDataRcvQueue_H
 
 #include <list>
 #include <string>
+#include <map>
 #include "TCPSegment.h"
 #include "TCPMultipathReceiveQueue.h"
 
@@ -29,23 +30,19 @@
  *
  * @see TCPVirtualDataSendQueue
  */
-class INET_API TCPMultipathVirtualDataRcvQueue : public TCPMultipathReceiveQueue
+
+class INET_API TCPMultipathDataRcvQueue : public TCPMultipathReceiveQueue
 {
   protected:
-    uint64 start;
-    uint64 virtual_start;
-    uint64 rcv_nxt;
 
-    struct Region
-    {
+    typedef struct _data_pair{
         uint64 begin;
-        uint64 end;
-    };
-    typedef std::list<Region> RegionList;
-    RegionList regionList;
+        uint32 len;
+    } Data_Pair;
+    typedef std::map<uint64,Data_Pair*> MPTCP_DataMap;
 
-    // merges segment byte range into regionList
-    void merge(uint64 segmentBegin, uint64 segmentEnd);
+    MPTCP_DataMap data;
+    uint64 virtual_start;
 
     // returns number of bytes extracted
     ulong extractTo(uint64 toSeq);
@@ -54,12 +51,12 @@ class INET_API TCPMultipathVirtualDataRcvQueue : public TCPMultipathReceiveQueue
     /**
      * Ctor.
      */
-    TCPMultipathVirtualDataRcvQueue();
+    TCPMultipathDataRcvQueue();
 
     /**
      * Virtual dtor.
      */
-    virtual ~TCPMultipathVirtualDataRcvQueue();
+    virtual ~TCPMultipathDataRcvQueue();
 
     /**
      * Set initial receive sequence number.
@@ -71,12 +68,13 @@ class INET_API TCPMultipathVirtualDataRcvQueue : public TCPMultipathReceiveQueue
      */
     virtual std::string info() const;
 
+    void shiftPayloadTo(TCPSegment *n, TCPSegment *d);
     virtual void clear();
 
     /**
      * Called when a TCP segment arrives. Returns sequence number for ACK.
      */
-    virtual uint64 insertBytesFromSegment(TCPSegment *tcpseg,  uint64 dss_start_seq, uint32 data_len);
+    virtual uint64 insertBytesFromSegment(uint64 dss_start_seq, uint32 data_len);
 
     /**
      *
@@ -107,15 +105,7 @@ class INET_API TCPMultipathVirtualDataRcvQueue : public TCPMultipathReceiveQueue
      */
     virtual void getQueueStatus();
 
-    /**
-     *
-     */
-    virtual uint64 getLE(uint64 fromSeqNum);
 
-    /**
-     *
-     */
-    virtual uint64 getRE(uint64 toSeqNum);
 };
 
 #endif

@@ -505,17 +505,16 @@ void SACK_RFC3517::_print_and_check_sb(){
 //        last_end =  i->second->end;
 //        std::cerr << "SACKed " << i->second->dup << "times : [" <<  i->first << ".." << i->second->end << "]" << std::endl;
     }
-    std::cerr << "========================================" << std::endl;
+//    std::cerr << "========================================" << std::endl;
 }
 
 TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
 
     TCPOption option;
-    uint options_len = 0;
-    uint used_options_len = tcpseg->getOptionsArrayLength();
+    short options_len = 0;
 //    TODO DSACK
     bool dsack_inserted = false; // set if dsack is subsets of a bigger sack block recently reported
-
+    short used_options_len = tcpseg->getOptionsArrayLength();
     uint32 start = state->start_seqno;
     uint32 end = state->end_seqno;
 
