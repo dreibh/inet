@@ -96,7 +96,7 @@ class INET_API MPTCP_Flow
     void     setLocalKey(uint64_t key);
     uint32_t getRemoteToken();              // unique per PCB
     uint32_t getLocalToken();               // unique per PCB
-    bool sendCommandInvoked();
+    bool sendData(bool fullSegmentsOnly);
     bool close();
     //######################################################
     // SQN and buffer

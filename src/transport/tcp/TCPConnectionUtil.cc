@@ -1186,7 +1186,15 @@ bool TCPConnection::sendSegment(uint32 bytes)
     return true;
 }
 
-bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
+bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow){
+    if(tcpMain->multipath && (flow != NULL))
+        return flow->sendData(fullSegmentsOnly);
+    else
+        return sendMPTCPData(fullSegmentsOnly, congestionWindow);
+}
+
+
+bool TCPConnection::sendMPTCPData(bool fullSegmentsOnly, uint32 congestionWindow)
 {
     // we'll start sending from snd_max, if not after RTO
     if (!state->afterRto)

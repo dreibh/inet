@@ -525,7 +525,7 @@ bool  MPTCP_Flow::close(){
     return true;
 }
 
-bool MPTCP_Flow::sendCommandInvoked(){
+bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
 
     std::map<std::string,int> (ad_queue);
     //set parameter how many flows we want utilize
@@ -535,7 +535,7 @@ bool MPTCP_Flow::sendCommandInvoked(){
                    i != subflow_list.end(); i++) {
            TCP_subflow_t* entry = (*i);
            if(entry->subflow->isQueueAble){
-               if(ad_queue.end() == ad_queue.find(entry->subflow->remoteAddr.str())){
+               if(ad_queue.end() != ad_queue.find(entry->subflow->remoteAddr.str())){
                    ad_queue.insert(std::make_pair(entry->subflow->remoteAddr.str(),0));
                   // std::cerr << "use"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
                }
@@ -587,7 +587,10 @@ bool MPTCP_Flow::sendCommandInvoked(){
                                o != path_order.end(); o++) {
             //std::cerr << o->second << std::endl;
             if((*(subflow_list.begin() + o->second))->subflow->isQueueAble){
-                (*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->sendCommandInvoked();
+                TCPTahoeRenoFamilyStateVariables* another_state =
+                                              check_and_cast<TCPTahoeRenoFamilyStateVariables*> ((*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->getStateVariables());
+
+                (*(subflow_list.begin() + o->second))->subflow->sendMPTCPData(fullSegmentsOnly, another_state->snd_cwnd);
                 //std::cerr << "send"  << (*(subflow_list.begin() + o->second))->subflow->localAddr.str() << "<->" << (*(subflow_list.begin() + o->second))->subflow->remoteAddr.str() << " RTT:  "<< o->first << std::endl;
             }//this->refreshSendMPTCPWindow();
         }
@@ -598,13 +601,17 @@ bool MPTCP_Flow::sendCommandInvoked(){
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                       i != subflow_list.end(); i++) {
                   TCP_subflow_t* entry = (*i);
-                  if(entry->subflow->isQueueAble)
-                      entry->subflow->getTcpAlgorithm()->sendCommandInvoked();
+                  if(entry->subflow->isQueueAble){
+                      TCPTahoeRenoFamilyStateVariables* another_state =
+                                          check_and_cast<TCPTahoeRenoFamilyStateVariables*> (entry->subflow->getTcpAlgorithm()->getStateVariables());
+                      entry->subflow->sendMPTCPData(fullSegmentsOnly, another_state->snd_cwnd);
+                  }
                   this->refreshSendMPTCPWindow();
         }
         break;
     }
     }
+
     return true;
 }
 /*
