@@ -159,6 +159,7 @@ cPacket *TCPMultipathDataRcvQueue::extractBytesUpTo(uint64 seq)
 void TCPMultipathDataRcvQueue::printInfo(){
 #ifndef DEBUG
     std::cerr << "#########" << std::endl;
+    info();
 #endif
 }
 
