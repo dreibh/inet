@@ -1222,7 +1222,7 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend){
     // In every case we should request for more data if needed
     buffered = sendQueue->getBytesAvailable(state->getSndNxt());
     uint32 abated = 0;
-    if(getTcpMain()->request_for_data && (buffered  < (bytesToSend + getState()->snd_mss))){
+    if(getTcpMain()->request_for_data && (buffered  < (bytesToSend + getState()->snd_mss)) &&  (getState()->requested < (3*getState()->snd_mss)) && tmp_msg_buf->empty()){
         if(this->isSubflow)
             abated  = (getState()->sendQueueLimit >  (getState()->enqueued/flow->getSubflows()->size())) ? getState()->sendQueueLimit - (getState()->enqueued/flow->getSubflows()->size()) : 0;
         else{
@@ -1238,6 +1238,7 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend){
               sendIndicationToApp(TCP_I_SEND_MSG, abated);
           }
         }
+        getTcpMain()->request_for_data  = false;
     }
     if(!buffered)
         return false;
