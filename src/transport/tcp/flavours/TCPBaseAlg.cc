@@ -511,7 +511,10 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked, bool mptcp)
 
 void TCPBaseAlg::sendCommandInvoked(bool mptcp)
 {
-    // try sending
+        // try sending
+    if(conn->getTcpMain()->multipath && (conn->flow != NULL)){
+        conn->flow->sendData(true);
+    }else
         sendData(true, mptcp);
 }
 

@@ -98,6 +98,10 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     printSegmentBrief(tcpseg);
     tcpEV << "TCB: " << state->info() << "\n";
 
+    if(tcpseg->getSequenceNo() == 272235){
+           std::cerr << "found";
+       }
+
     if (rcvSeqVector)
         rcvSeqVector->record(tcpseg->getSequenceNo());
 
@@ -141,9 +145,10 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
 TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 {
 
-    //if(tcpseg->getSequenceNo() == 2155255){
-    //    std::cerr << "found";
-    //}
+    if(tcpseg->getSequenceNo() == 3741887){
+        std::cerr << "Work on..." <<  localAddr.str() << ".." <<  remoteAddr.str() << std::endl;
+        std::cerr << "found";
+    }
 
     //
     // RFC 793: first check sequence number

@@ -209,6 +209,7 @@ class INET_API TCPStateVariables : public cObject
 
     // send sequence number variables (see RFC 793, "3.2. Terminology")
     uint32 snd_una;      // send unacknowledged
+private:
     uint32 snd_nxt;      // send next (drops back on retransmission)
 public:
     virtual void setSndNxt(uint32 new_snd_nxt);
@@ -616,9 +617,8 @@ public:
      */
     virtual bool sendData(bool fullSegmentsOnly, uint32 congestionWindow);
 
-    virtual bool sendMPTCPData(bool fullSegmentsOnly, uint32 congestionWindow);
 #ifdef PRIVATE
-
+    virtual bool orderBytesForQueue(uint32 bytesToSend);
     virtual bool  sendKeepAlive();
 #endif
     /** Utility: sends 1 bytes as "probe", called by the "persist" mechanism */
