@@ -2,7 +2,7 @@
 # OMNeT++/OMNEST Makefile for inet
 #
 # This file was generated with the command:
-#  opp_makemake -f --deep -pg -lpcap -lssl -lcrypto -DPRIVATE -DPRIVATE_DEBUG -DHAVE_PCAP -DUSE_TF -Xapplications/voipstream -Xtransport/tcp_lwip -Xtransport/tcp_nsc -DWITH_TCP_COMMON -DWITH_TCP_INET -DWITH_IPv4 -DWITH_xMIPv6 -DWITH_UDP -DWITH_RTP -DWITH_SCTP -DWITH_DHCP -DWITH_ETHERNET -DWITH_PPP -DWITH_EXT_IF -DWITH_MPLS -DWITH_OSPFv2 -DWITH_BGPv4 -DWITH_TRACI -DWITH_MANET -O0 -o inet
+#  opp_makemake -f --deep -lpcap -lssl -lcrypto -DPRIVATE -DPRIVATE_DEBUG -DHAVE_PCAP -DUSE_TF -Xapplications/voipstream -Xtransport/tcp_lwip -Xtransport/tcp_nsc -DWITH_TCP_COMMON -DWITH_TCP_INET -DWITH_IPv4 -DWITH_xMIPv6 -DWITH_UDP -DWITH_RTP -DWITH_SCTP -DWITH_DHCP -DWITH_ETHERNET -DWITH_PPP -DWITH_EXT_IF -DWITH_MPLS -DWITH_OSPFv2 -DWITH_BGPv4 -DWITH_TRACI -DWITH_MANET -O0 -o inet
 #
 
 # Name of target to be created (-o option)
@@ -115,6 +115,9 @@ INCLUDE_PATH = \
     -Itransport/tcp/mptcp_extension/mptcp_queues \
     -Itransport/tcp/mptcp_extension/mptcp_scheduler \
     -Itransport/tcp/queues \
+    -Itransport/tcp/SACK_variant \
+    -Itransport/tcp/SACK_variant/Reschka \
+    -Itransport/tcp/SACK_variant/RFC3517 \
     -Itransport/tcp_common \
     -Itransport/udp \
     -Iutil \
@@ -519,9 +522,7 @@ OBJS = \
     $O/transport/tcp/TCPConnectionBase.o \
     $O/transport/tcp/TCPConnectionEventProc.o \
     $O/transport/tcp/TCPConnectionRcvSegment.o \
-    $O/transport/tcp/TCPConnectionSackUtil.o \
     $O/transport/tcp/TCPConnectionUtil.o \
-    $O/transport/tcp/TCPSACKRexmitQueue.o \
     $O/transport/tcp/flavours/DumbTCP.o \
     $O/transport/tcp/flavours/TCPBaseAlg.o \
     $O/transport/tcp/flavours/TCPNewReno.o \
@@ -532,8 +533,7 @@ OBJS = \
     $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o \
     $O/transport/tcp/mptcp_extension/TCPMultipathPCB.o \
     $O/transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.o \
-    $O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathMsgBasedRcvQueue.o \
-    $O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathVirtualDataRcvQueue.o \
+    $O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathDataRcvQueue.o \
     $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler.o \
     $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.o \
     $O/transport/tcp/queues/TCPByteStreamRcvQueue.o \
@@ -542,6 +542,8 @@ OBJS = \
     $O/transport/tcp/queues/TCPMsgBasedSendQueue.o \
     $O/transport/tcp/queues/TCPVirtualDataRcvQueue.o \
     $O/transport/tcp/queues/TCPVirtualDataSendQueue.o \
+    $O/transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.o \
+    $O/transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.o \
     $O/transport/tcp_common/TCPSegment.o \
     $O/transport/tcp_common/TCPSpoof.o \
     $O/transport/udp/UDP.o \
@@ -803,7 +805,7 @@ COPTS = $(CFLAGS) \
     -DWITH_BGPv4 \
     -DWITH_TRACI \
     -DWITH_MANET $(INCLUDE_PATH) -I$(OMNETPP_INCL_DIR)
-MSGCOPTS = $(INCLUDE_PATH) -Pg_API
+MSGCOPTS = $(INCLUDE_PATH)
 
 # we want to recompile everything if COPTS changes,
 # so we store COPTS into $COPTS_FILE and have object
@@ -877,8 +879,7 @@ all: $O/$(TARGET)
 $O/$(TARGET): $(OBJS)  $(wildcard $(EXTRA_OBJS)) Makefile
 	@$(MKPATH) $O
 	@echo Creating executable: $@
-#	$(Q)$(CXX) $(LDFLAGS) -o $O/$(TARGET)  $(OBJS) $(EXTRA_OBJS) $(AS_NEEDED_OFF) $(WHOLE_ARCHIVE_ON) $(LIBS) $(WHOLE_ARCHIVE_OFF) $(OMNETPP_LIBS)
-	/usr/bin/g++ $(LDFLAGS) -pg -o $O/$(TARGET)  $(OBJS) $(EXTRA_OBJS) $(AS_NEEDED_OFF) $(WHOLE_ARCHIVE_ON) $(LIBS) $(WHOLE_ARCHIVE_OFF) $(OMNETPP_LIBS)
+	$(Q)$(CXX) $(LDFLAGS) -o $O/$(TARGET)  $(OBJS) $(EXTRA_OBJS) $(AS_NEEDED_OFF) $(WHOLE_ARCHIVE_ON) $(LIBS) $(WHOLE_ARCHIVE_OFF) $(OMNETPP_LIBS)
 
 .PHONY: all clean cleanall depend msgheaders
 
@@ -999,6 +1000,9 @@ clean:
 	$(Q)-rm -f transport/tcp/mptcp_extension/mptcp_queues/*_m.cc transport/tcp/mptcp_extension/mptcp_queues/*_m.h
 	$(Q)-rm -f transport/tcp/mptcp_extension/mptcp_scheduler/*_m.cc transport/tcp/mptcp_extension/mptcp_scheduler/*_m.h
 	$(Q)-rm -f transport/tcp/queues/*_m.cc transport/tcp/queues/*_m.h
+	$(Q)-rm -f transport/tcp/SACK_variant/*_m.cc transport/tcp/SACK_variant/*_m.h
+	$(Q)-rm -f transport/tcp/SACK_variant/Reschka/*_m.cc transport/tcp/SACK_variant/Reschka/*_m.h
+	$(Q)-rm -f transport/tcp/SACK_variant/RFC3517/*_m.cc transport/tcp/SACK_variant/RFC3517/*_m.h
 	$(Q)-rm -f transport/tcp_common/*_m.cc transport/tcp_common/*_m.h
 	$(Q)-rm -f transport/udp/*_m.cc transport/udp/*_m.h
 	$(Q)-rm -f util/*_m.cc util/*_m.h
@@ -1026,7 +1030,7 @@ cleanall: clean
 
 depend:
 	$(qecho) Creating dependencies...
-	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES)  ./*.cc applications/*.cc applications/dhcp/*.cc applications/ethernet/*.cc applications/generic/*.cc applications/httptools/*.cc applications/netperfmeter/*.cc applications/pingapp/*.cc applications/rtpapp/*.cc applications/sctpapp/*.cc applications/tcpapp/*.cc applications/traci/*.cc applications/udpapp/*.cc applications/voip/*.cc base/*.cc battery/*.cc battery/models/*.cc linklayer/*.cc linklayer/common/*.cc linklayer/contract/*.cc linklayer/ethernet/*.cc linklayer/ethernet/switch/*.cc linklayer/etherswitch/*.cc linklayer/ext/*.cc linklayer/idealwireless/*.cc linklayer/ieee80211/*.cc linklayer/ieee80211/mac/*.cc linklayer/ieee80211/mgmt/*.cc linklayer/ieee80211/radio/*.cc linklayer/ieee80211/radio/errormodel/*.cc linklayer/ppp/*.cc linklayer/queue/*.cc linklayer/radio/*.cc linklayer/radio/propagation/*.cc mobility/*.cc mobility/models/*.cc networklayer/*.cc networklayer/arp/*.cc networklayer/autorouting/*.cc networklayer/autorouting/ipv4/*.cc networklayer/autorouting/ipv6/*.cc networklayer/bgpv4/*.cc networklayer/bgpv4/BGPMessage/*.cc networklayer/common/*.cc networklayer/contract/*.cc networklayer/diffserv/*.cc networklayer/extras/*.cc networklayer/icmpv6/*.cc networklayer/internetcloud/*.cc networklayer/ipv4/*.cc networklayer/ipv6/*.cc networklayer/ipv6tunneling/*.cc networklayer/ldp/*.cc networklayer/manetrouting/*.cc networklayer/manetrouting/aodv/*.cc networklayer/manetrouting/aodv/aodv-uu/*.cc networklayer/manetrouting/base/*.cc networklayer/manetrouting/batman/*.cc networklayer/manetrouting/batman/batmand/*.cc networklayer/manetrouting/batman/batmand/orig/*.cc networklayer/manetrouting/dsdv/*.cc networklayer/manetrouting/dsr/*.cc networklayer/manetrouting/dsr/dsr-uu/*.cc networklayer/manetrouting/dymo/*.cc networklayer/manetrouting/dymo/dymoum/*.cc networklayer/manetrouting/dymo_fau/*.cc networklayer/manetrouting/olsr/*.cc networklayer/mpls/*.cc networklayer/ospfv2/*.cc networklayer/ospfv2/interface/*.cc networklayer/ospfv2/messagehandler/*.cc networklayer/ospfv2/neighbor/*.cc networklayer/ospfv2/router/*.cc networklayer/rsvp_te/*.cc networklayer/ted/*.cc networklayer/xmipv6/*.cc nodes/*.cc nodes/bgp/*.cc nodes/ethernet/*.cc nodes/httptools/*.cc nodes/inet/*.cc nodes/internetcloud/*.cc nodes/ipv6/*.cc nodes/mpls/*.cc nodes/ospfv2/*.cc nodes/wireless/*.cc nodes/xmipv6/*.cc transport/*.cc transport/contract/*.cc transport/rtp/*.cc transport/rtp/profiles/*.cc transport/rtp/profiles/avprofile/*.cc transport/sctp/*.cc transport/tcp/*.cc transport/tcp/flavours/*.cc transport/tcp/mptcp_extension/*.cc transport/tcp/mptcp_extension/flavours/*.cc transport/tcp/mptcp_extension/mptcp_queues/*.cc transport/tcp/mptcp_extension/mptcp_scheduler/*.cc transport/tcp/queues/*.cc transport/tcp_common/*.cc transport/udp/*.cc util/*.cc util/headerserializers/*.cc util/headerserializers/headers/*.cc util/headerserializers/ipv4/*.cc util/headerserializers/ipv4/headers/*.cc util/headerserializers/sctp/*.cc util/headerserializers/sctp/headers/*.cc util/headerserializers/tcp/*.cc util/headerserializers/tcp/headers/*.cc util/headerserializers/udp/*.cc util/headerserializers/udp/headers/*.cc world/*.cc world/annotations/*.cc world/httptools/*.cc world/obstacles/*.cc world/powercontrol/*.cc world/radio/*.cc world/scenario/*.cc world/traci/*.cc
+	$(Q)$(MAKEDEPEND) $(INCLUDE_PATH) -f Makefile -P\$$O/ -- $(MSG_CC_FILES)  ./*.cc applications/*.cc applications/dhcp/*.cc applications/ethernet/*.cc applications/generic/*.cc applications/httptools/*.cc applications/netperfmeter/*.cc applications/pingapp/*.cc applications/rtpapp/*.cc applications/sctpapp/*.cc applications/tcpapp/*.cc applications/traci/*.cc applications/udpapp/*.cc applications/voip/*.cc base/*.cc battery/*.cc battery/models/*.cc linklayer/*.cc linklayer/common/*.cc linklayer/contract/*.cc linklayer/ethernet/*.cc linklayer/ethernet/switch/*.cc linklayer/etherswitch/*.cc linklayer/ext/*.cc linklayer/idealwireless/*.cc linklayer/ieee80211/*.cc linklayer/ieee80211/mac/*.cc linklayer/ieee80211/mgmt/*.cc linklayer/ieee80211/radio/*.cc linklayer/ieee80211/radio/errormodel/*.cc linklayer/ppp/*.cc linklayer/queue/*.cc linklayer/radio/*.cc linklayer/radio/propagation/*.cc mobility/*.cc mobility/models/*.cc networklayer/*.cc networklayer/arp/*.cc networklayer/autorouting/*.cc networklayer/autorouting/ipv4/*.cc networklayer/autorouting/ipv6/*.cc networklayer/bgpv4/*.cc networklayer/bgpv4/BGPMessage/*.cc networklayer/common/*.cc networklayer/contract/*.cc networklayer/diffserv/*.cc networklayer/extras/*.cc networklayer/icmpv6/*.cc networklayer/internetcloud/*.cc networklayer/ipv4/*.cc networklayer/ipv6/*.cc networklayer/ipv6tunneling/*.cc networklayer/ldp/*.cc networklayer/manetrouting/*.cc networklayer/manetrouting/aodv/*.cc networklayer/manetrouting/aodv/aodv-uu/*.cc networklayer/manetrouting/base/*.cc networklayer/manetrouting/batman/*.cc networklayer/manetrouting/batman/batmand/*.cc networklayer/manetrouting/batman/batmand/orig/*.cc networklayer/manetrouting/dsdv/*.cc networklayer/manetrouting/dsr/*.cc networklayer/manetrouting/dsr/dsr-uu/*.cc networklayer/manetrouting/dymo/*.cc networklayer/manetrouting/dymo/dymoum/*.cc networklayer/manetrouting/dymo_fau/*.cc networklayer/manetrouting/olsr/*.cc networklayer/mpls/*.cc networklayer/ospfv2/*.cc networklayer/ospfv2/interface/*.cc networklayer/ospfv2/messagehandler/*.cc networklayer/ospfv2/neighbor/*.cc networklayer/ospfv2/router/*.cc networklayer/rsvp_te/*.cc networklayer/ted/*.cc networklayer/xmipv6/*.cc nodes/*.cc nodes/bgp/*.cc nodes/ethernet/*.cc nodes/httptools/*.cc nodes/inet/*.cc nodes/internetcloud/*.cc nodes/ipv6/*.cc nodes/mpls/*.cc nodes/ospfv2/*.cc nodes/wireless/*.cc nodes/xmipv6/*.cc transport/*.cc transport/contract/*.cc transport/rtp/*.cc transport/rtp/profiles/*.cc transport/rtp/profiles/avprofile/*.cc transport/sctp/*.cc transport/tcp/*.cc transport/tcp/flavours/*.cc transport/tcp/mptcp_extension/*.cc transport/tcp/mptcp_extension/flavours/*.cc transport/tcp/mptcp_extension/mptcp_queues/*.cc transport/tcp/mptcp_extension/mptcp_scheduler/*.cc transport/tcp/queues/*.cc transport/tcp/SACK_variant/*.cc transport/tcp/SACK_variant/Reschka/*.cc transport/tcp/SACK_variant/RFC3517/*.cc transport/tcp_common/*.cc transport/udp/*.cc util/*.cc util/headerserializers/*.cc util/headerserializers/headers/*.cc util/headerserializers/ipv4/*.cc util/headerserializers/ipv4/headers/*.cc util/headerserializers/sctp/*.cc util/headerserializers/sctp/headers/*.cc util/headerserializers/tcp/*.cc util/headerserializers/tcp/headers/*.cc util/headerserializers/udp/*.cc util/headerserializers/udp/headers/*.cc world/*.cc world/annotations/*.cc world/httptools/*.cc world/obstacles/*.cc world/powercontrol/*.cc world/radio/*.cc world/scenario/*.cc world/traci/*.cc
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 $O/applications/dhcp/DHCPClient.o: applications/dhcp/DHCPClient.cc \
@@ -7518,14 +7522,14 @@ $O/networklayer/ospfv2/OSPFRouting.o: networklayer/ospfv2/OSPFRouting.cc \
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
   base/NotifierConsts.h \
+  networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
   base/NotificationBoard.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ospfv2/router/LSA.h \
   networklayer/ipv4/IPv4Route.h \
-  networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
+  networklayer/ospfv2/router/LSA.h \
   base/INETDefs.h \
+  networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
   networklayer/ospfv2/OSPFPacket_m.h \
@@ -7948,15 +7952,15 @@ $O/networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.o: network
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  base/NotifierConsts.h \
   networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
+  base/NotifierConsts.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ipv4/IPv4Route.h \
   networklayer/ospfv2/router/LSA.h \
+  networklayer/ipv4/IPv4Route.h \
   networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   base/INETDefs.h \
-  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
+  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
   networklayer/ospfv2/router/OSPFcommon.h \
@@ -7989,8 +7993,8 @@ $O/networklayer/ospfv2/messagehandler/LinkStateRequestHandler.o: networklayer/os
   networklayer/ospfv2/router/LSA.h \
   networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   base/INETDefs.h \
-  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
+  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
   networklayer/ospfv2/router/OSPFcommon.h \
@@ -8062,8 +8066,8 @@ $O/networklayer/ospfv2/messagehandler/MessageHandler.o: networklayer/ospfv2/mess
   networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
-  networklayer/ospfv2/messagehandler/IMessageHandler.h \
   networklayer/ospfv2/router/OSPFcommon.h \
+  networklayer/ospfv2/messagehandler/IMessageHandler.h \
   networklayer/ipv4/ICMPMessage.h \
   networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.h \
   networklayer/ospfv2/router/OSPFArea.h
@@ -8537,19 +8541,19 @@ $O/networklayer/ospfv2/router/OSPFRouter.o: networklayer/ospfv2/router/OSPFRoute
   networklayer/ipv4/IRoutingTable.h \
   base/ModuleAccess.h \
   networklayer/contract/IPv4ControlInfo.h \
-  base/NotifierConsts.h \
   networklayer/ospfv2/messagehandler/LinkStateRequestHandler.h \
+  base/NotifierConsts.h \
   networklayer/ospfv2/router/OSPFRoutingTableEntry.h \
-  networklayer/ipv4/IPv4Route.h \
   networklayer/ospfv2/router/LSA.h \
-  networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
+  networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
-  networklayer/contract/IPv4ControlInfo_m.h \
+  networklayer/ospfv2/messagehandler/DatabaseDescriptionHandler.h \
   networklayer/ospfv2/interface/OSPFInterface.h \
+  networklayer/contract/IPv4ControlInfo_m.h \
   networklayer/ospfv2/OSPFPacket_m.h \
   networklayer/contract/IPvXAddress.h \
-  networklayer/ospfv2/messagehandler/IMessageHandler.h \
   networklayer/ospfv2/router/OSPFcommon.h \
+  networklayer/ospfv2/messagehandler/IMessageHandler.h \
   networklayer/ospfv2/messagehandler/LinkStateAcknowledgementHandler.h \
   networklayer/ospfv2/router/OSPFArea.h
 $O/networklayer/ospfv2/router/OSPFRoutingTableEntry.o: networklayer/ospfv2/router/OSPFRoutingTableEntry.cc \
@@ -9767,8 +9771,8 @@ $O/transport/tcp/TCP.o: transport/tcp/TCP.cc \
   transport/tcp/queues/TCPByteStreamRcvQueue.h \
   networklayer/common/IInterfaceTable.h \
   networklayer/contract/IPv4Address.h \
-  networklayer/common/InterfaceTableAccess.h \
   linklayer/contract/MACAddress.h \
+  networklayer/common/InterfaceTableAccess.h \
   base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
   transport/tcp_common/TCPSegment_m.h \
@@ -9794,6 +9798,7 @@ $O/transport/tcp/TCP.o: transport/tcp/TCP.cc \
   networklayer/icmpv6/ICMPv6Message_m.h \
   networklayer/ipv4/ICMPMessage_m.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   transport/tcp/queues/TCPVirtualDataSendQueue.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
@@ -9804,7 +9809,8 @@ $O/transport/tcp/TCP.o: transport/tcp/TCP.cc \
   transport/tcp/queues/TCPMsgBasedRcvQueue.h \
   networklayer/contract/IPv6ControlInfo.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/TCPConnectionBase.o: transport/tcp/TCPConnectionBase.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -9816,9 +9822,9 @@ $O/transport/tcp/TCPConnectionBase.o: transport/tcp/TCPConnectionBase.cc \
   networklayer/contract/IPv4Address.h \
   linklayer/contract/MACAddress.h \
   networklayer/common/InterfaceTableAccess.h \
-  transport/tcp/TCPSACKRexmitQueue.h \
   base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
+  transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
   networklayer/common/InterfaceToken.h \
@@ -9835,12 +9841,14 @@ $O/transport/tcp/TCPConnectionBase.o: transport/tcp/TCPConnectionBase.cc \
   transport/tcp/TCPReceiveQueue.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/TCPConnectionEventProc.o: transport/tcp/TCPConnectionEventProc.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -9870,12 +9878,14 @@ $O/transport/tcp/TCPConnectionEventProc.o: transport/tcp/TCPConnectionEventProc.
   transport/tcp/TCPReceiveQueue.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/TCPConnectionRcvSegment.o: transport/tcp/TCPConnectionRcvSegment.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -9887,9 +9897,9 @@ $O/transport/tcp/TCPConnectionRcvSegment.o: transport/tcp/TCPConnectionRcvSegmen
   networklayer/contract/IPv4Address.h \
   linklayer/contract/MACAddress.h \
   networklayer/common/InterfaceTableAccess.h \
-  transport/tcp/TCPSACKRexmitQueue.h \
   base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
+  transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
   networklayer/common/InterfaceToken.h \
@@ -9906,48 +9916,14 @@ $O/transport/tcp/TCPConnectionRcvSegment.o: transport/tcp/TCPConnectionRcvSegmen
   transport/tcp/TCPReceiveQueue.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
-$O/transport/tcp/TCPConnectionSackUtil.o: transport/tcp/TCPConnectionSackUtil.cc \
-  networklayer/ipv6/IPv6InterfaceData.h \
-  networklayer/ipv4/IPv4InterfaceData.h \
-  transport/tcp_common/TCPSegment.h \
-  networklayer/contract/IPv6Address.h \
-  transport/tcp/TCPAlgorithm.h \
-  transport/tcp/mptcp_extension/TCPMultipathPCB.h \
-  networklayer/common/IInterfaceTable.h \
-  networklayer/contract/IPv4Address.h \
-  linklayer/contract/MACAddress.h \
-  networklayer/common/InterfaceTableAccess.h \
-  transport/tcp/TCPSACKRexmitQueue.h \
-  base/ByteArray_m.h \
-  networklayer/common/InterfaceEntry.h \
-  transport/tcp_common/TCPSegment_m.h \
-  networklayer/ipv4/RoutingTableAccess.h \
-  networklayer/common/InterfaceToken.h \
-  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
-  transport/tcp/mptcp_extension/TCPMultipath.h \
-  base/INotifiable.h \
-  networklayer/ipv4/IRoutingTable.h \
-  transport/tcp/TCPSendQueue.h \
-  networklayer/ipv4/RoutingTable.h \
-  base/ModuleAccess.h \
-  base/ByteArray.h \
-  base/NotifierConsts.h \
-  transport/tcp/mptcp_extension/TCPMultipathFlow.h \
-  transport/tcp/TCPReceiveQueue.h \
-  base/NotificationBoard.h \
-  transport/contract/TCPCommand_m.h \
-  networklayer/ipv4/IPv4Route.h \
-  base/INETDefs.h \
-  transport/tcp/TCPConnection.h \
-  networklayer/common/InterfaceTable.h \
-  networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/TCPConnectionUtil.o: transport/tcp/TCPConnectionUtil.cc \
   networklayer/contract/IPv6ControlInfo_m.h \
   networklayer/ipv6/IPv6InterfaceData.h \
@@ -9961,9 +9937,9 @@ $O/transport/tcp/TCPConnectionUtil.o: transport/tcp/TCPConnectionUtil.cc \
   transport/tcp/mptcp_extension/TCPMultipathSchedulerI.h \
   linklayer/contract/MACAddress.h \
   networklayer/common/InterfaceTableAccess.h \
-  transport/tcp/TCPSACKRexmitQueue.h \
   base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
+  transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
   networklayer/common/InterfaceToken.h \
@@ -9983,6 +9959,7 @@ $O/transport/tcp/TCPConnectionUtil.o: transport/tcp/TCPConnectionUtil.cc \
   transport/tcp/TCPReceiveQueue.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
@@ -9990,40 +9967,8 @@ $O/transport/tcp/TCPConnectionUtil.o: transport/tcp/TCPConnectionUtil.cc \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPv6ControlInfo.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
-$O/transport/tcp/TCPSACKRexmitQueue.o: transport/tcp/TCPSACKRexmitQueue.cc \
-  networklayer/ipv4/IPv4InterfaceData.h \
-  networklayer/ipv6/IPv6InterfaceData.h \
-  transport/tcp_common/TCPSegment.h \
-  networklayer/contract/IPv6Address.h \
-  transport/tcp/mptcp_extension/TCPMultipathPCB.h \
-  networklayer/common/IInterfaceTable.h \
-  networklayer/contract/IPv4Address.h \
-  networklayer/common/InterfaceTableAccess.h \
-  linklayer/contract/MACAddress.h \
-  transport/tcp/TCPSACKRexmitQueue.h \
-  networklayer/common/InterfaceEntry.h \
-  base/ByteArray_m.h \
-  transport/tcp_common/TCPSegment_m.h \
-  networklayer/ipv4/RoutingTableAccess.h \
-  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
-  networklayer/common/InterfaceToken.h \
-  base/INotifiable.h \
-  transport/tcp/mptcp_extension/TCPMultipath.h \
-  networklayer/ipv4/IRoutingTable.h \
-  networklayer/ipv4/RoutingTable.h \
-  base/ModuleAccess.h \
-  base/NotifierConsts.h \
-  base/ByteArray.h \
-  transport/tcp/mptcp_extension/TCPMultipathFlow.h \
-  base/NotificationBoard.h \
-  transport/contract/TCPCommand_m.h \
-  networklayer/ipv4/IPv4Route.h \
-  base/INETDefs.h \
-  transport/tcp/TCPConnection.h \
-  networklayer/common/InterfaceTable.h \
-  networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/flavours/DumbTCP.o: transport/tcp/flavours/DumbTCP.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10049,15 +9994,18 @@ $O/transport/tcp/flavours/DumbTCP.o: transport/tcp/flavours/DumbTCP.cc \
   transport/tcp/flavours/DumbTCP.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/flavours/TCPBaseAlg.o: transport/tcp/flavours/TCPBaseAlg.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10069,9 +10017,9 @@ $O/transport/tcp/flavours/TCPBaseAlg.o: transport/tcp/flavours/TCPBaseAlg.cc \
   networklayer/contract/IPv4Address.h \
   linklayer/contract/MACAddress.h \
   networklayer/common/InterfaceTableAccess.h \
-  transport/tcp/TCPSACKRexmitQueue.h \
   base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
+  transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
   networklayer/common/InterfaceToken.h \
@@ -10085,15 +10033,18 @@ $O/transport/tcp/flavours/TCPBaseAlg.o: transport/tcp/flavours/TCPBaseAlg.cc \
   base/ModuleAccess.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/flavours/TCPNewReno.o: transport/tcp/flavours/TCPNewReno.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10120,16 +10071,19 @@ $O/transport/tcp/flavours/TCPNewReno.o: transport/tcp/flavours/TCPNewReno.cc \
   base/ModuleAccess.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   transport/tcp/flavours/TCPTahoeRenoFamily.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/flavours/TCPNoCongestionControl.o: transport/tcp/flavours/TCPNoCongestionControl.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/ipv6/IPv6InterfaceData.h \
@@ -10156,15 +10110,18 @@ $O/transport/tcp/flavours/TCPNoCongestionControl.o: transport/tcp/flavours/TCPNo
   transport/tcp/flavours/TCPNoCongestionControl.h \
   base/NotifierConsts.h \
   base/ByteArray.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/flavours/TCPReno.o: transport/tcp/flavours/TCPReno.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10191,16 +10148,19 @@ $O/transport/tcp/flavours/TCPReno.o: transport/tcp/flavours/TCPReno.cc \
   base/ModuleAccess.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   transport/tcp/flavours/TCPTahoeRenoFamily.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/flavours/TCPTahoe.o: transport/tcp/flavours/TCPTahoe.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10227,16 +10187,19 @@ $O/transport/tcp/flavours/TCPTahoe.o: transport/tcp/flavours/TCPTahoe.cc \
   base/ModuleAccess.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   transport/tcp/flavours/TCPTahoeRenoFamily.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/flavours/TCPTahoeRenoFamily.o: transport/tcp/flavours/TCPTahoeRenoFamily.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/ipv6/IPv6InterfaceData.h \
@@ -10262,16 +10225,19 @@ $O/transport/tcp/flavours/TCPTahoeRenoFamily.o: transport/tcp/flavours/TCPTahoeR
   base/ModuleAccess.h \
   base/NotifierConsts.h \
   base/ByteArray.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   transport/tcp/flavours/TCPTahoeRenoFamily.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o: transport/tcp/mptcp_extension/TCPMultipathFlow.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10284,13 +10250,14 @@ $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o: transport/tcp/mptcp_extensi
   transport/tcp/mptcp_extension/TCPMultipathSchedulerI.h \
   linklayer/contract/MACAddress.h \
   networklayer/common/InterfaceTableAccess.h \
-  transport/tcp/TCPSACKRexmitQueue.h \
   base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
+  transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
   networklayer/common/InterfaceToken.h \
   transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
+  transport/tcp/flavours/TCPBaseAlg.h \
   transport/tcp/mptcp_extension/TCPMultipath.h \
   base/INotifiable.h \
   networklayer/ipv4/IRoutingTable.h \
@@ -10299,15 +10266,19 @@ $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o: transport/tcp/mptcp_extensi
   transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.h \
   base/ByteArray.h \
   base/NotifierConsts.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
+  transport/tcp/flavours/TCPTahoeRenoFamily.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/mptcp_extension/TCPMultipathPCB.o: transport/tcp/mptcp_extension/TCPMultipathPCB.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10334,12 +10305,14 @@ $O/transport/tcp/mptcp_extension/TCPMultipathPCB.o: transport/tcp/mptcp_extensio
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.o: transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.cc \
   transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10367,57 +10340,37 @@ $O/transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.o: transport/tcp/mptcp_e
   base/ModuleAccess.h \
   base/NotifierConsts.h \
   base/ByteArray.h \
+  transport/tcp/TCPReceiveQueue.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   transport/tcp/flavours/TCPTahoeRenoFamily.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
-$O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathMsgBasedRcvQueue.o: transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathMsgBasedRcvQueue.cc \
-  networklayer/ipv4/IPv4InterfaceData.h \
-  networklayer/ipv6/IPv6InterfaceData.h \
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
+$O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathDataRcvQueue.o: transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathDataRcvQueue.cc \
   transport/tcp_common/TCPSegment.h \
-  networklayer/contract/IPv6Address.h \
-  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathVirtualDataRcvQueue.h \
   networklayer/common/IInterfaceTable.h \
-  networklayer/contract/IPv4Address.h \
   networklayer/common/InterfaceTableAccess.h \
   linklayer/contract/MACAddress.h \
+  base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
-  base/ByteArray_m.h \
   transport/tcp_common/TCPSegment_m.h \
-  networklayer/ipv4/RoutingTableAccess.h \
+  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
   networklayer/common/InterfaceToken.h \
-  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
-  base/INotifiable.h \
   transport/tcp/mptcp_extension/TCPMultipath.h \
-  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathMsgBasedRcvQueue.h \
-  networklayer/ipv4/IRoutingTable.h \
-  networklayer/ipv4/RoutingTable.h \
   base/ModuleAccess.h \
+  base/ByteArray.h \
   base/NotifierConsts.h \
-  base/ByteArray.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
-  base/NotificationBoard.h \
-  transport/contract/TCPCommand_m.h \
-  networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
-  networklayer/common/InterfaceTable.h \
-  networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
-$O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathVirtualDataRcvQueue.o: transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathVirtualDataRcvQueue.cc \
-  transport/tcp_common/TCPSegment.h \
-  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathVirtualDataRcvQueue.h \
-  base/ByteArray_m.h \
-  transport/tcp_common/TCPSegment_m.h \
-  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
-  base/ByteArray.h \
-  transport/tcp/mptcp_extension/TCPMultipathFlow.h \
-  base/INETDefs.h
+  transport/tcp/TCPConnection.h \
+  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathDataRcvQueue.h
 $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler.o: transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/ipv6/IPv6InterfaceData.h \
@@ -10429,8 +10382,8 @@ $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler
   transport/tcp/mptcp_extension/TCPMultipathSchedulerI.h \
   networklayer/common/InterfaceTableAccess.h \
   linklayer/contract/MACAddress.h \
-  base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
+  base/ByteArray_m.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
   transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
@@ -10442,17 +10395,19 @@ $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler
   transport/tcp/TCPSendQueue.h \
   networklayer/ipv4/RoutingTable.h \
   base/ModuleAccess.h \
-  base/ByteArray.h \
   base/NotifierConsts.h \
+  base/ByteArray.h \
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.o: transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/ipv6/IPv6InterfaceData.h \
@@ -10462,14 +10417,14 @@ $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.o: transpor
   networklayer/common/IInterfaceTable.h \
   networklayer/contract/IPv4Address.h \
   transport/tcp/mptcp_extension/TCPMultipathSchedulerI.h \
-  networklayer/common/InterfaceTableAccess.h \
   linklayer/contract/MACAddress.h \
+  networklayer/common/InterfaceTableAccess.h \
   base/ByteArray_m.h \
   networklayer/common/InterfaceEntry.h \
   transport/tcp_common/TCPSegment_m.h \
   networklayer/ipv4/RoutingTableAccess.h \
-  networklayer/common/InterfaceToken.h \
   transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
+  networklayer/common/InterfaceToken.h \
   transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler.h \
   base/INotifiable.h \
   transport/tcp/mptcp_extension/TCPMultipath.h \
@@ -10482,12 +10437,14 @@ $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.o: transpor
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/queues/TCPByteStreamRcvQueue.o: transport/tcp/queues/TCPByteStreamRcvQueue.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/ipv6/IPv6InterfaceData.h \
@@ -10518,13 +10475,15 @@ $O/transport/tcp/queues/TCPByteStreamRcvQueue.o: transport/tcp/queues/TCPByteStr
   transport/tcp/TCPReceiveQueue.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   transport/tcp/TCPConnection.h \
   base/INETDefs.h \
   transport/tcp/queues/TCPVirtualDataRcvQueue.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/queues/TCPByteStreamSendQueue.o: transport/tcp/queues/TCPByteStreamSendQueue.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10556,12 +10515,14 @@ $O/transport/tcp/queues/TCPByteStreamSendQueue.o: transport/tcp/queues/TCPByteSt
   transport/tcp/queues/TCPByteStreamSendQueue.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/queues/TCPMsgBasedRcvQueue.o: transport/tcp/queues/TCPMsgBasedRcvQueue.cc \
   networklayer/ipv4/IPv4InterfaceData.h \
   networklayer/ipv6/IPv6InterfaceData.h \
@@ -10589,6 +10550,7 @@ $O/transport/tcp/queues/TCPMsgBasedRcvQueue.o: transport/tcp/queues/TCPMsgBasedR
   transport/tcp/TCPReceiveQueue.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
@@ -10596,7 +10558,8 @@ $O/transport/tcp/queues/TCPMsgBasedRcvQueue.o: transport/tcp/queues/TCPMsgBasedR
   networklayer/common/InterfaceTable.h \
   transport/tcp/queues/TCPMsgBasedRcvQueue.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/queues/TCPMsgBasedSendQueue.o: transport/tcp/queues/TCPMsgBasedSendQueue.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10625,12 +10588,14 @@ $O/transport/tcp/queues/TCPMsgBasedSendQueue.o: transport/tcp/queues/TCPMsgBased
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   transport/tcp/TCPConnection.h \
   base/INETDefs.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/queues/TCPVirtualDataRcvQueue.o: transport/tcp/queues/TCPVirtualDataRcvQueue.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10658,13 +10623,15 @@ $O/transport/tcp/queues/TCPVirtualDataRcvQueue.o: transport/tcp/queues/TCPVirtua
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
   transport/tcp/queues/TCPVirtualDataRcvQueue.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp/queues/TCPVirtualDataSendQueue.o: transport/tcp/queues/TCPVirtualDataSendQueue.cc \
   networklayer/ipv6/IPv6InterfaceData.h \
   networklayer/ipv4/IPv4InterfaceData.h \
@@ -10692,13 +10659,55 @@ $O/transport/tcp/queues/TCPVirtualDataSendQueue.o: transport/tcp/queues/TCPVirtu
   transport/tcp/mptcp_extension/TCPMultipathFlow.h \
   base/NotificationBoard.h \
   transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
   transport/tcp/queues/TCPVirtualDataSendQueue.h \
   networklayer/ipv4/IPv4Route.h \
   transport/tcp/TCPConnection.h \
   base/INETDefs.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
-  transport/tcp/TCP.h
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
+$O/transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.o: transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.cc \
+  networklayer/ipv4/IPv4InterfaceData.h \
+  networklayer/ipv6/IPv6InterfaceData.h \
+  transport/tcp_common/TCPSegment.h \
+  networklayer/contract/IPv6Address.h \
+  transport/tcp/mptcp_extension/TCPMultipathPCB.h \
+  networklayer/common/IInterfaceTable.h \
+  networklayer/contract/IPv4Address.h \
+  networklayer/common/InterfaceTableAccess.h \
+  linklayer/contract/MACAddress.h \
+  networklayer/common/InterfaceEntry.h \
+  base/ByteArray_m.h \
+  transport/tcp/SACK_variant/Reschka/TCPSACKRexmitQueue.h \
+  transport/tcp_common/TCPSegment_m.h \
+  networklayer/ipv4/RoutingTableAccess.h \
+  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
+  networklayer/common/InterfaceToken.h \
+  base/INotifiable.h \
+  transport/tcp/mptcp_extension/TCPMultipath.h \
+  networklayer/ipv4/IRoutingTable.h \
+  networklayer/ipv4/RoutingTable.h \
+  base/ModuleAccess.h \
+  base/NotifierConsts.h \
+  base/ByteArray.h \
+  transport/tcp/mptcp_extension/TCPMultipathFlow.h \
+  base/NotificationBoard.h \
+  transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
+  networklayer/ipv4/IPv4Route.h \
+  base/INETDefs.h \
+  transport/tcp/TCPConnection.h \
+  networklayer/common/InterfaceTable.h \
+  networklayer/contract/IPvXAddress.h \
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
+$O/transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.o: transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.cc \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
+  base/INETDefs.h \
+  transport/tcp/TCPConnection.h \
+  transport/tcp/SACK_variant/SACKHandler.h
 $O/transport/tcp_common/TCPSegment.o: transport/tcp_common/TCPSegment.cc \
   transport/tcp_common/TCPSegment.h \
   base/ByteArray_m.h \

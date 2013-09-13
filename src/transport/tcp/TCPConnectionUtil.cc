@@ -1216,23 +1216,29 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend){
         }
     }
     else{
-        getState()->enqueued -= bytesToSend;
+        if(getState()->enqueued > bytesToSend)
+            getState()->enqueued -= bytesToSend;
     }
     // In every case we should request for more data if needed
     buffered = sendQueue->getBytesAvailable(state->getSndNxt());
     uint32 abated = 0;
-    if(getTcpMain()->request_for_data && (buffered  < (bytesToSend + getState()->snd_mss))){
+    if(getTcpMain()->request_for_data && (buffered  < (bytesToSend + getState()->snd_mss)) &&  (getState()->requested < (3*getState()->snd_mss)) && tmp_msg_buf->empty()){
         if(this->isSubflow)
             abated  = (getState()->sendQueueLimit >  (getState()->enqueued/flow->getSubflows()->size())) ? getState()->sendQueueLimit - (getState()->enqueued/flow->getSubflows()->size()) : 0;
-        else
-            abated  = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
+        else{
+            if(getState()->sendQueueLimit > buffered)
+                abated  = (getState()->sendQueueLimit > buffered) ? getState()->sendQueueLimit - buffered : 0;
+            else
+                abated = 0;
+        }
         if(abated && getState()->sendQueueLimit){
           abated = std::min(getState()->sendQueueLimit, abated);
           if( ((getState()->requested == 0) && (abated > (uint32)state->snd_mss))){
-              getState()->requested += abated;              // Request
-              sendIndicationToApp(TCP_I_SEND_MSG, abated);
+              getState()->requested += 5e+07;              // Request
+              sendIndicationToApp(TCP_I_SEND_MSG, 5e+07);
           }
         }
+        getTcpMain()->request_for_data  = false;
     }
     if(!buffered)
         return false;

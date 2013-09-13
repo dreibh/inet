@@ -169,7 +169,7 @@ void TCPMultipathDataRcvQueue::printInfo(){
 }
 
 uint64 TCPMultipathDataRcvQueue::getOccupiedMemory(){
-#ifdef Relativ
+#ifndef Relativ
    if(data.empty()){
        return 0;
    }
