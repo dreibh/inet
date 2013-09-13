@@ -33,6 +33,7 @@ TCPMultipathDataRcvQueue::~TCPMultipathDataRcvQueue()
 }
 
 void TCPMultipathDataRcvQueue::clear(){
+    if(data.empty()) return;
     std::cerr <<  "Stop with filled queue" << std::endl;
     for(MPTCP_DataMap::iterator i = data.begin(); i != data.end(); i++){
         std::cerr << "Base: " << virtual_start << "Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
@@ -56,13 +57,12 @@ void TCPMultipathDataRcvQueue::info()
            std::cerr << "Base: " << virtual_start << " Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
             << " - send " << (uint32) i->second->begin << ".." << (uint32) i->first  << std::endl;
     }
-    std::cerr << "Occupied Memory" << getOccupiedMemory() << std::endl;
+    std::cerr << "Occupied Memory" << getOccupiedMemory() << " complete up to " << (uint32) virtual_start << " On Time " <<  simTime() << std::endl;
 }
 
 uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, uint32 data_len)
 {
     MPTCP_DataMap::iterator i = data.begin();
-
     Data_Pair *p = (Data_Pair *) malloc(sizeof(Data_Pair));
     p->begin = dss_start_seq;
     p->len = data_len;
@@ -87,7 +87,8 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
     uint64 next_start= virtual_start + 1;
     uint64 highest_in_order = virtual_start;
     bool in_order = true;
-
+    if(virtual_start + 1 != p->begin)
+        return virtual_start;   // I only sort the list, if I have everything
     // Now check the queue for Overlapping
     for(i = data.begin();i != data.end();i++){
 
@@ -131,6 +132,7 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
      }
 
     virtual_start = highest_in_order;
+
     return virtual_start;
 }
 

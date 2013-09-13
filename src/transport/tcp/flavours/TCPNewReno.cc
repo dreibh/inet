@@ -160,7 +160,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
                 this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
             }
 
-            sendData(true);
+            sendData(true, false);
             return;
         }
     }else{

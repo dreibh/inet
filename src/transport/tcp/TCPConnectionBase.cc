@@ -180,6 +180,13 @@ std::string TCPStateVariables::detailedInfo() const
     return out.str();
 }
 void TCPStateVariables::setSndNxt(uint32 new_snd_nxt){
+    if(new_snd_nxt == 3740463){
+        std::cerr << "found";
+    }
+
+    if(seqGreater(new_snd_nxt, snd_max)){
+        snd_max = new_snd_nxt;
+    }
     snd_nxt = new_snd_nxt;
 }
 uint32 TCPStateVariables::getSndNxt(){

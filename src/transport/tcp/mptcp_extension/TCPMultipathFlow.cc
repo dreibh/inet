@@ -78,7 +78,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 
     // Sending side
     mptcp_snd_una = subflow->getState()->snd_una;
-    mptcp_snd_nxt = subflow->getState()->snd_nxt;
+    mptcp_snd_nxt = subflow->getState()->getSndNxt();
     mptcp_snd_wnd =subflow->getState()->snd_wnd;
     // Receiver Side
     mptcp_rcv_nxt = subflow->getState()->rcv_nxt;
@@ -526,7 +526,7 @@ bool  MPTCP_Flow::close(){
 }
 
 bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
-    fullSegmentsOnly = true;
+    fullSegmentsOnly = true; // FIXME
     std::map<std::string,int> (ad_queue);
     //set parameter how many flows we want utilize
     switch(path_utilization){
@@ -590,7 +590,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> ((*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->getStateVariables());
 
-                (*(subflow_list.begin() + o->second))->subflow->sendMPTCPData(fullSegmentsOnly, another_state->snd_cwnd);
+                (*(subflow_list.begin() + o->second))->subflow->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 //std::cerr << "send"  << (*(subflow_list.begin() + o->second))->subflow->localAddr.str() << "<->" << (*(subflow_list.begin() + o->second))->subflow->remoteAddr.str() << " RTT:  "<< o->first << std::endl;
             }//this->refreshSendMPTCPWindow();
         }
@@ -604,7 +604,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                   if(entry->subflow->isQueueAble){
                       TCPTahoeRenoFamilyStateVariables* another_state =
                                           check_and_cast<TCPTahoeRenoFamilyStateVariables*> (entry->subflow->getTcpAlgorithm()->getStateVariables());
-                      entry->subflow->sendMPTCPData(fullSegmentsOnly, another_state->snd_cwnd);
+                      entry->subflow->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                   }
                   this->refreshSendMPTCPWindow();
         }
