@@ -526,7 +526,7 @@ bool  MPTCP_Flow::close(){
 }
 
 bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
-    fullSegmentsOnly = true; // FIXME
+    //fullSegmentsOnly = true; // FIXME
     std::map<std::string,int> (ad_queue);
     //set parameter how many flows we want utilize
     switch(path_utilization){
@@ -1425,13 +1425,15 @@ void MPTCP_Flow::sendToApp(){
         buffer_blocked = false;
     }else{
         mptcp_receiveQueue->printInfo();
+        mptcp_rcv_wnd = 0;
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                     i != subflow_list.end(); i++) {
                 TCPConnection *sub = (*i)->subflow;
                 std::cerr << "ID" << sub->connId << " Amount of Buffered Bytes "  << sub->getReceiveQueue()->getAmountOfBufferedBytes() << std::endl;
                 std::cerr << "rcv nxt "  << sub->getState()->rcv_nxt << " rcv adv  "  << sub->getState()->rcv_adv << " diff " << sub->getState()->rcv_adv-sub->getState()->rcv_nxt << std::endl;
+                sub->sendAck();
         }
-        mptcp_rcv_wnd = 0;
+
         buffer_blocked = true;
     }
     return;

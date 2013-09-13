@@ -2112,7 +2112,7 @@ unsigned short TCPConnection::updateRcvWnd()
             win = flow->mptcp_rcv_wnd;
 
         }
-        scaled_rcv_wnd = flow->mptcp_rcv_wnd;
+        scaled_rcv_wnd = std::min((uint32)flow->mptcp_rcv_wnd,state->rcv_wnd);
     }
 #endif
 
