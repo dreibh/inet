@@ -1234,8 +1234,8 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend){
         if(abated && getState()->sendQueueLimit){
           abated = std::min(getState()->sendQueueLimit, abated);
           if( ((getState()->requested == 0) && (abated > (uint32)state->snd_mss))){
-              getState()->requested += abated;              // Request
-              sendIndicationToApp(TCP_I_SEND_MSG, abated);
+              getState()->requested += 5e+07;              // Request
+              sendIndicationToApp(TCP_I_SEND_MSG, 5e+07);
           }
         }
         getTcpMain()->request_for_data  = false;
