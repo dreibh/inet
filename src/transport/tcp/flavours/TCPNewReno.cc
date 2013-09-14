@@ -207,15 +207,14 @@ void TCPNewReno::receivedDuplicateAck()
             // Run SetPipe
             this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
         }
-        state->setSndNxt(state->snd_max);
-
     }
     else if (state->lossRecovery)
     {
         // Deflating
         increaseCWND(state->snd_mss, false);
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
-        conn->sendOneNewSegment(true, state->snd_cwnd);
+       // conn->sendOneNewSegment(true, state->snd_cwnd);
+        this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
         //sendData(true);
     } else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0,false); // Just for Debug
