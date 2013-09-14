@@ -1292,7 +1292,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
             maxWindow = 0;
     }
 #endif
-    maxWindow = 50000000;
     maxWindow = std::min(congestionWindow, maxWindow);
     // effectiveWindow: number of bytes we're allowed to send now
 
@@ -2128,7 +2127,6 @@ unsigned short TCPConnection::updateRcvWnd()
         rcvWndVector->record(state->rcv_wnd);
 
     // scale rcv_wnd:
-    scaled_rcv_wnd = 50000000;
 
     if (state->ws_enabled)
     {
