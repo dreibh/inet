@@ -2216,7 +2216,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
     // can generate such ACKs to trigger inappropriate transmission of data
     // segments.  See [SCWA99] for a discussion of attacks by misbehaving
     // receivers."
-     state->setSndNxt(state->snd_max);
+
 
 #ifndef PRIVATE
     if (!state->sack_enabled || (state->sack_enabled && state->sackedBytes_old != state->sackedBytes))

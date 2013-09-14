@@ -173,7 +173,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 //    {
 //        restartRexmitTimer();
 //    }
-
+    state->setSndNxt(state->snd_max);
     sendData(true);
 }
 
@@ -207,6 +207,8 @@ void TCPNewReno::receivedDuplicateAck()
             // Run SetPipe
             this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
         }
+        state->setSndNxt(state->snd_max);
+
     }
     else if (state->lossRecovery)
     {

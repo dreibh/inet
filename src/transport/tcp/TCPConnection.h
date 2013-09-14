@@ -283,7 +283,6 @@ public:
     // SACK related variables
     bool sack_support;       // set if the host supports selective acknowledgment (header option) (RFC 2018, 2883, 3517)
     bool sack_enabled;       // set if the connection uses selective acknowledgment (header option)
-
     bool snd_sack_perm;      // set if SACK_PERMITTED has been sent
     bool rcv_sack_perm;      // set if SACK_PERMITTED has been received
 
