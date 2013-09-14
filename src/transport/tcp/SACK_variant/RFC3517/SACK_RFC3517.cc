@@ -158,9 +158,9 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
             if(((sb.pipe+offset) > wnd)){
                 break;
             }
-            state->snd_nxt = state->snd_max;
-        }
 
+        }
+    state->snd_nxt = state->snd_max;
     return 0;
 }
 
