@@ -44,7 +44,7 @@ uint32 SACK_RFC3517::getHighRxt(){
 
 void SACK_RFC3517::updateStatus() {
     sb.high_acked = state->snd_una - 1;
-    sb.high_data = state->snd_nxt;
+    sb.high_data = state->getSndNxt();
     discardUpTo(state->snd_una);
 }
 
@@ -125,7 +125,7 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
 //    std::cerr << "############ IF GAPS SEND SACK ####################" << std::endl;
 //    std::cerr << "Round "  << counter << std::endl;
 //    std::cerr << "snd_una: " << state->snd_una << std::endl;
-//    std::cerr << "snd_nxt: " << state->snd_nxt << std::endl;
+//    std::cerr << "snd_nxt: " << state->getSndNxt() << std::endl;
 //    std::cerr << "highest rtx: " << sb.high_rtx << std::endl;
 
     // _print_and_check_sb();
@@ -133,34 +133,36 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
      _setPipe();
 //    std::cerr << "pipe" << sb.pipe << "wnd" << wnd << std::endl;
 //    std::cerr << "######################## <> ##################" << std::endl;
-        sb.old_nxt = state->snd_nxt;
+        sb.old_nxt = state->getSndNxt();
         if(sb.pipe > wnd)
             return 0;
         while( uint32 new_nxt = _nextSeg()){
 
-            state->snd_nxt = new_nxt;
+            state->setSndNxt(new_nxt);
             con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
 
-            if((state->snd_nxt - new_nxt) == 0)
+            if((state->getSndNxt() - new_nxt) == 0)
                 break;
-            offset += state->snd_nxt - new_nxt;
-            sb.high_rtx = state->snd_nxt - 1;
+            offset += state->getSndNxt() - new_nxt;
+            sb.high_rtx = state->getSndNxt() - 1;
 
 
-            if(state->snd_nxt == new_nxt)
+            if(state->getSndNxt() == new_nxt)
                 break;
-//            std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->snd_nxt - 1 << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
+//            std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->getSndNxt() - 1 << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
 
-            if(state->snd_nxt < sb.old_nxt){
+            if(state->getSndNxt() < sb.old_nxt){
 
-                state->snd_nxt = sb.old_nxt;
+                state->setSndNxt(sb.old_nxt);
             }
             if(((sb.pipe+offset) > wnd)){
                 break;
             }
 
         }
-    state->snd_nxt = state->snd_max;
+    state->setSndNxt(sb.old_nxt);
+    con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
+
     return 0;
 }
 
@@ -178,7 +180,7 @@ uint32 SACK_RFC3517::_nextSeg(){
             return (sb.high_rtx + 1);
     }
     // no more in SACK lists
-    return state->snd_nxt;
+    return state->getSndNxt();
 }
 #ifndef PRIVATE
 uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
@@ -189,7 +191,7 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
     uint32 s2 = sb.high_rtx;
 
     SACK_MAP::iterator i2 = sb.map.begin();
-    if(s2 < state->snd_nxt){
+    if(s2 < state->getSndNxt()){
     // check if it is not in a SACK Block
         i2++;
         for(i = sb.map.begin();i != sb.map.end();i++,i2++){
@@ -198,7 +200,7 @@ uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
             }
             if(i2 == sb.map.end()){
                 // NOT in SACK BLOCKS
-                if((s2 > (--(sb.map.end()))->first) && (s2 < state->snd_nxt)){
+                if((s2 > (--(sb.map.end()))->first) && (s2 < state->getSndNxt())){
                     rule = 1;
                     break;
                 }
@@ -295,7 +297,7 @@ void SACK_RFC3517::_setPipe(){
     if(!sb.map.empty())
         sb.pipe +=  sb.high_data -  (--sb.map.end())->second->end;
     else
-        sb.pipe = state->snd_nxt - state->snd_una;
+        sb.pipe = state->getSndNxt() - state->snd_una;
     //_print_and_check_sb();
     //std::cerr << "PIPE: " << sb.pipe << std::endl;
     //std::cerr << "#############################" << std::endl;
@@ -498,7 +500,7 @@ void SACK_RFC3517::_print_and_check_sb(){
     for(SACK_MAP::iterator i = sb.map.begin();i != sb.map.end();i++){
         if(i->first < state->snd_una)
             ASSERT(false && "Start to small");
-//        if(i->second->end > state->snd_nxt)
+//        if(i->second->end > state->getSndNxt())
 //            ASSERT(false && "End to big");
 // FIXME
 //        if(last_end > i->first)

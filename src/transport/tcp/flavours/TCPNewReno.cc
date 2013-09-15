@@ -173,7 +173,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 //    {
 //        restartRexmitTimer();
 //    }
-    state->setSndNxt(state->snd_max);
+//    state->setSndNxt(state->snd_max);
     sendData(true);
 }
 
