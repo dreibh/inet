@@ -130,6 +130,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
                 this->conn->getState()->sackhandler->discardUpTo(state->snd_una);
                 this->conn->getState()->sackhandler->setNewRecoveryPoint(state->snd_una);
             }
+            sendData(true);
         }
         else{
 
@@ -148,7 +149,6 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             decreaseCWND(std::min(state->snd_una - firstSeqAcked,state->snd_mss), false); // Fixe ME -> How to do deflating
             tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
-            increaseCWND(state->snd_mss, false); // Is this correct ?
 
             //conn->sendAck(); // Fixme ...needed?
 
@@ -160,11 +160,12 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
                 this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
             }
 
-            sendData(true, false);
+            //sendData(true, false);
             return;
         }
     }else{
         updateCWND(firstSeqAcked);
+        sendData(true);
     }
 
 //
@@ -174,7 +175,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 //        restartRexmitTimer();
 //    }
 //    state->setSndNxt(state->snd_max);
-    sendData(true);
+
 }
 
 

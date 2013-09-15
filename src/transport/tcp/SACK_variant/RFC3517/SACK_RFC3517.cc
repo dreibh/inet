@@ -161,7 +161,7 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
 
         }
     state->setSndNxt(sb.old_nxt);
-    con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
+    //con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
 
     return 0;
 }
