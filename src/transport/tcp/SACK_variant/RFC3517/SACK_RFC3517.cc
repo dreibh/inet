@@ -160,8 +160,10 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
             }
 
         }
-    state->setSndNxt(sb.old_nxt);
-    //con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
+    if(state->getSndNxt() < sb.old_nxt)
+        state->setSndNxt(sb.old_nxt);
+    if(((sb.pipe+offset) <= wnd))
+        con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
 
     return 0;
 }
@@ -186,92 +188,6 @@ uint32 SACK_RFC3517::_nextSeg(){
     // no more in SACK lists
     return state->getSndNxt();
 }
-#ifndef PRIVATE
-uint32 SACK_RFC3517::_nextSeg(uint32 *offset){
-    SACK_MAP::iterator i = sb.map.end();
-    int rule = 2;
-
-    if(sb.map.empty()) return 0;
-    uint32 s2 = sb.high_rtx;
-
-    SACK_MAP::iterator i2 = sb.map.begin();
-    if(s2 < state->getSndNxt()){
-    // check if it is not in a SACK Block
-        i2++;
-        for(i = sb.map.begin();i != sb.map.end();i++,i2++){
-            while((s2 >= i->first) && (i != sb.map.end())){
-                i++;
-            }
-            if(i2 == sb.map.end()){
-                // NOT in SACK BLOCKS
-                if((s2 > (--(sb.map.end()))->first) && (s2 < state->getSndNxt())){
-                    rule = 1;
-                    break;
-                }
-                rule = 2;
-                break;
-            }
-            rule = 1;
-            break;
-         }
-
-    }
-    switch(rule){
-    case 1:{
-        SACK_MAP::iterator it = sb.map.begin();
-
-        for(;;){
-            i = sb.map.end();
-            if( (s2 > sb.high_rtx) &&
-                (s2 < (--i)->second->end) &&
-                (_isLost(&it,s2)->lost)){
-                if(i2 != sb.map.end())
-                    *offset =  it->first - (s2);
-                else
-                    *offset =  (sb.old_nxt - 1) - s2;
-                return s2;
-            }
-
-            // possible cap
-            bool tryAgain = false;
-            while(it!=sb.map.end()){
-                SACK_MAP::iterator tmp = it;
-                tmp++;
-                if(tmp == sb.map.end()) break;
-                if((it->second->end + 1) == tmp->first){
-                    it++;
-                    continue; // still the block
-                }
-                if(s2 < it->first){
-                    s2 = it->second->end + 1;
-                    tryAgain = true;
-                    break;
-                }
-                it++;
-            }
-            if(tryAgain){
-                it++;
-                if(it == sb.map.end())
-                    break;
-                continue;
-            }
-            return 0;
-            }
-    }break;
-    case 2:{
-            sb.high_rtx = sb.high_acked;
-             *offset =  1;
-            return sb.high_acked + 1;
-    }break;
-// TODO Rule 3 und Rule 4
-    case 3:
-    default:
-        return 0;
-    }
-    ASSERT(false && "Should never be reached");
-    return 0;
-}
-#endif
 
 void SACK_RFC3517::_setPipe(){
     _createIsLostTag();
