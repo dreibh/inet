@@ -167,15 +167,6 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
         updateCWND(firstSeqAcked);
         sendData(true);
     }
-
-//
-//    // Retransmit Timer
-//    if ( state->lossRecovery && (!state->firstPartialACK) && (!state->fin_rcvd)) // TODO Unacked date => Correct? ... overwork check Fin state
-//    {
-//        restartRexmitTimer();
-//    }
-//    state->setSndNxt(state->snd_max);
-
 }
 
 
@@ -221,7 +212,6 @@ void TCPNewReno::receivedDuplicateAck()
     } else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0,false); // Just for Debug
         conn->sendOneNewSegment(false, state->snd_cwnd);
-        //sendData(true);
     }
     else{
         increaseCWND(0,false); // Just for Debug

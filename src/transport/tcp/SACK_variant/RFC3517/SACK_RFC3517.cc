@@ -175,9 +175,13 @@ uint32 SACK_RFC3517::_nextSeg(){
                 sb.high_rtx = i->second->end;
             continue;
         }
-        if(((sb.high_rtx + 1) < (--sb.map.end())->second->end) &&
-           (_isLost(&it,(sb.high_rtx + 1))->lost))
-            return (sb.high_rtx + 1);
+        if(((sb.high_rtx + 1) < (--sb.map.end())->second->end)){
+            SACK_REGION *r = _isLost(&it,(sb.high_rtx + 1));
+            if(r != NULL && r->lost)
+                    return (sb.high_rtx + 1);
+            else
+                sb.high_rtx = i->second->end;
+        }
     }
     // no more in SACK lists
     return state->getSndNxt();
@@ -338,7 +342,11 @@ SACK_REGION* SACK_RFC3517::_isLost(SACK_MAP::iterator *it, uint32 seg){
     for(;(*it) != sb.map.end();(*it)++){
         if(seg <= (*it)->second->end){
             // found relating SACK
-            return (*it)->second;
+            if(seg >= (*it)->first){
+                    return (*it)->second;
+            }else{
+                continue;
+            }
         }
     }
     return NULL;
