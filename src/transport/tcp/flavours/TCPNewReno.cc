@@ -163,10 +163,10 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             //sendData(true, false);
             return;
         }
-    }else{
-        updateCWND(firstSeqAcked);
-        sendData(true);
-    }
+    }else
+    updateCWND(firstSeqAcked);
+    sendData(true);
+
 }
 
 
