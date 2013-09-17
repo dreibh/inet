@@ -1296,8 +1296,10 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
         if(maxWindow < sent){
             maxWindow = 0;
-        } else if((maxWindow - sent) < congestionWindow + state->snd_mss){
-            maxWindow = (maxWindow - sent) - state->snd_mss;
+            flow->mptcp_snd_wnd = 0;
+        } else if((maxWindow - sent) < congestionWindow){
+            maxWindow = (maxWindow - sent);
+            flow->mptcp_snd_wnd = maxWindow;
         }else{
             // FULL CC
         }
@@ -1315,8 +1317,10 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     if(maxWindow > (state->getSndNxt() - state->snd_una))
       effectiveWin = maxWindow - (state->getSndNxt() - state->snd_una);
 #ifdef PRIVATE
-    else
+    else{
+        flow->mptcp_snd_wnd = 0; // Every subflow has its own buffer, if a subflow needs more than the complete flow, the subflow defines the snd wnd
         effectiveWin = 0;
+    }
     if(this->getTcpMain()->multipath && (flow != NULL)){
         if(effectiveWin > flow->mptcp_snd_wnd - sent)
             effectiveWin = flow->mptcp_snd_wnd - sent;

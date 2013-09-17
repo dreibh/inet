@@ -594,7 +594,11 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                         }
                     }
           }
-
+        int count = 0;
+//        for ( std::map<double,int>::iterator o = path_order.begin();
+//                                       o != path_order.end(); o++) {
+//            std::cerr << "count "<< count ++ << "?" << o->first  << std::endl;
+//        }
         for ( std::map<double,int>::iterator o = path_order.begin();
                                o != path_order.end(); o++) {
             //std::cerr << o->second << std::endl;
@@ -604,19 +608,16 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 uint32 cof = another_state->snd_max - another_state->snd_una;
                 //std::cerr << "cwnd " << another_state->snd_cwnd << " SND WND " << (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd << std::endl;
                 // Send Data
+
                 (*(subflow_list.begin() + o->second))->subflow->sendData(fullSegmentsOnly, another_state->snd_cwnd);
-                // Correct snd window
-                if((*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd > ((another_state->snd_max - another_state->snd_una)-cof))
-                   (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd -= ((another_state->snd_max - another_state->snd_una)-cof);
+                uint32 cof2 = another_state->snd_max - another_state->snd_una;
+                if((*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd > (cof2 - cof))
+                    (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd -= (cof2 - cof);
                 else
-                   (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd = 0;
-
-               if(cof < (another_state->snd_max - another_state->snd_una)){
-
-                    // std::cerr << "send"  << (*(subflow_list.begin() + o->second))->subflow->localAddr.str() << "<->" << (*(subflow_list.begin() + o->second))->subflow->remoteAddr.str() << " RTT:  "<< o->first << std::endl;
-                    if((*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd  > 0)
-                        continue;
-                    else break;
+                    (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd;
+               if((*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd < (*(subflow_list.begin() + o->second))->subflow->getState()->snd_mss){
+                       //std::cerr << "Huch"<< o->first  << std::endl;
+                       break;
                 }
             }//this->refreshSendMPTCPWindow();
         }
