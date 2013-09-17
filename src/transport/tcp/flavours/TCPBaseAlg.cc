@@ -403,7 +403,7 @@ void TCPBaseAlg::startRexmitTimer()
 void TCPBaseAlg::rttMeasurementComplete(simtime_t tSent, simtime_t tAcked)
 {
     //
-    // Jacobson's algorithm for estimating RTT and adaptively setting RTO.
+    // Jacobson's algorithm for estimating RTT and adaptively setting .
     //
     // Note: this implementation calculates in doubles. An impl. which uses
     // 500ms ticks is available from old tcpmodule.cc:calcRetransTimer().
@@ -503,9 +503,10 @@ bool TCPBaseAlg::sendData(bool sendCommandInvoked, bool mptcp)
             tcpEV << "Restarting idle connection, CWND is set to " << state->snd_cwnd << "\n";
         }
     }
-
+    if(this->conn->getTcpMain()->multipath && conn->flow != NULL){
+        return conn->flow->sendData(fullSegmentsOnly);
+    }
     return conn->sendData(fullSegmentsOnly, state->snd_cwnd);
-
 }
 
 

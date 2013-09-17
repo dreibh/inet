@@ -130,7 +130,10 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
                 this->conn->getState()->sackhandler->discardUpTo(state->snd_una);
                 this->conn->getState()->sackhandler->setNewRecoveryPoint(state->snd_una);
             }
-            sendData(true);
+            if(conn->getTcpMain()->multipath && (conn->flow != NULL))
+                conn->flow->sendData(true);
+            else
+                sendData(true);
         }
         else{
 
@@ -165,7 +168,11 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
         }
     }else
     updateCWND(firstSeqAcked);
-    sendData(true);
+    //sendData(true);
+    if(conn->getTcpMain()->multipath && (conn->flow != NULL))
+        conn->flow->sendData(true);
+    else
+        sendData(true);
 
 }
 

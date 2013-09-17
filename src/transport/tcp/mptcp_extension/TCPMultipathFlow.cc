@@ -583,15 +583,25 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                     }
           }
         //std::cerr << "##" << std::endl;
+
         for ( std::map<double,int>::iterator o = path_order.begin();
                                o != path_order.end(); o++) {
             //std::cerr << o->second << std::endl;
             if((*(subflow_list.begin() + o->second))->subflow->isQueueAble){
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> ((*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->getStateVariables());
+                uint32 cof = another_state->snd_max - another_state->snd_una;
+                //std::cerr << "cwnd " << another_state->snd_cwnd << " SND WND " << (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd << std::endl;
 
                 (*(subflow_list.begin() + o->second))->subflow->sendData(fullSegmentsOnly, another_state->snd_cwnd);
-                //std::cerr << "send"  << (*(subflow_list.begin() + o->second))->subflow->localAddr.str() << "<->" << (*(subflow_list.begin() + o->second))->subflow->remoteAddr.str() << " RTT:  "<< o->first << std::endl;
+                if(cof < (another_state->snd_max - another_state->snd_una)){
+                    (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd -= another_state->snd_max - another_state->snd_una;
+
+                    // std::cerr << "send"  << (*(subflow_list.begin() + o->second))->subflow->localAddr.str() << "<->" << (*(subflow_list.begin() + o->second))->subflow->remoteAddr.str() << " RTT:  "<< o->first << std::endl;
+                    if((*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd  > 0)
+                        continue;
+                    else break;
+                }
             }//this->refreshSendMPTCPWindow();
         }
         path_order.clear();
@@ -1426,13 +1436,13 @@ void MPTCP_Flow::sendToApp(){
     }else{
         mptcp_receiveQueue->printInfo();
         mptcp_rcv_wnd = 0;
-        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                    i != subflow_list.end(); i++) {
-                TCPConnection *sub = (*i)->subflow;
-                std::cerr << "ID" << sub->connId << " Amount of Buffered Bytes "  << sub->getReceiveQueue()->getAmountOfBufferedBytes() << std::endl;
-                std::cerr << "rcv nxt "  << sub->getState()->rcv_nxt << " rcv adv  "  << sub->getState()->rcv_adv << " diff " << sub->getState()->rcv_adv-sub->getState()->rcv_nxt << std::endl;
-                sub->sendAck();
-        }
+//        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+//                    i != subflow_list.end(); i++) {
+//                TCPConnection *sub = (*i)->subflow;
+                //std::cerr << "ID" << sub->connId << " Amount of Buffered Bytes "  << sub->getReceiveQueue()->getAmountOfBufferedBytes() << std::endl;
+                //std::cerr << "rcv nxt "  << sub->getState()->rcv_nxt << " rcv adv  "  << sub->getState()->rcv_adv << " diff " << sub->getState()->rcv_adv-sub->getState()->rcv_nxt << std::endl;
+                //sub->sendAck();
+//        }
 
         buffer_blocked = true;
     }
