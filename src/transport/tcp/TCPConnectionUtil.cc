@@ -962,7 +962,10 @@ void TCPConnection::sendAck()
     tcpseg->setAckBit(true);
     tcpseg->setSequenceNo(state->getSndNxt());
     tcpseg->setAckNo(state->rcv_nxt);
+
     tcpseg->setWindow(updateRcvWnd());
+
+
 
     // write header options
 #ifdef PRIVATE
@@ -1291,10 +1294,14 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
               sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
         }
 
-        if(maxWindow > sent){
-            maxWindow = maxWindow - sent;
-        }else
+        if(maxWindow < sent){
             maxWindow = 0;
+        } else if((maxWindow - sent) < congestionWindow + state->snd_mss){
+            maxWindow = (maxWindow - sent) - state->snd_mss;
+        }else{
+            // FULL CC
+        }
+
     }
 #endif
     maxWindow = std::min(congestionWindow, maxWindow);
@@ -1302,11 +1309,19 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath && (flow != NULL)){
         effectiveWin = maxWindow; //the rest is done before
-    }else
+    } // Remember subflow is not flow....
 #endif
     // calc efective max bytes to send
     if(maxWindow > (state->getSndNxt() - state->snd_una))
       effectiveWin = maxWindow - (state->getSndNxt() - state->snd_una);
+#ifdef PRIVATE
+    else
+        effectiveWin = 0;
+    if(this->getTcpMain()->multipath && (flow != NULL)){
+        if(effectiveWin > flow->mptcp_snd_wnd - sent)
+            effectiveWin = flow->mptcp_snd_wnd - sent;
+    }
+#endif
     if (effectiveWin <= 0)
     {
         tcpEV << "Effective window is zero (advertised window " << state->snd_wnd <<
