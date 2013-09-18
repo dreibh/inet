@@ -130,39 +130,34 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
 
     // _print_and_check_sb();
 
-     _setPipe();
-//    std::cerr << "pipe" << sb.pipe << "wnd" << wnd << std::endl;
-//    std::cerr << "######################## <> ##################" << std::endl;
+    _setPipe();
         sb.old_nxt = state->getSndNxt();
-        if(sb.pipe > wnd)
-            return 0;
-        while( uint32 new_nxt = _nextSeg()){
+    if(sb.pipe > wnd)
+        return 0;
+    while( uint32 new_nxt = _nextSeg()){
 
-            if(new_nxt > sb.old_nxt)
-                break;
+        if(new_nxt > sb.old_nxt)
+            break;
 
-            state->setSndNxt(new_nxt);
-            con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
+        state->setSndNxt(new_nxt);
+        con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
 
-            if((state->getSndNxt() - new_nxt) == 0)
-                break;
-            offset += state->getSndNxt() - new_nxt;
-            sb.high_rtx = state->getSndNxt() - 1;
+        if((state->getSndNxt() - new_nxt) == 0)
+            break;
+        offset += state->getSndNxt() - new_nxt;
+        sb.high_rtx = state->getSndNxt() - 1;
 
+        if(state->getSndNxt() == new_nxt)
+            break;
 
-            if(state->getSndNxt() == new_nxt)
-                break;
-//            std::cerr << "RTX on SACK base: [" << new_nxt << "..." <<  state->getSndNxt() - 1 << "]"  << "Window From: " << state->snd_una << " to " << sb.old_nxt << std::endl;
+        if(state->getSndNxt() < sb.old_nxt){
 
-            if(state->getSndNxt() < sb.old_nxt){
-
-                state->setSndNxt(sb.old_nxt);
-            }
-            if(((sb.pipe+offset) > wnd)){
-                break;
-            }
-
+            state->setSndNxt(sb.old_nxt);
         }
+        if(((sb.pipe+offset) > wnd)){
+            break;
+        }
+    }
     if(state->getSndNxt() < sb.old_nxt)
         state->setSndNxt(sb.old_nxt);
     if(((sb.pipe+offset) <= wnd))
