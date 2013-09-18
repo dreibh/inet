@@ -2261,12 +2261,6 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
         {
 
             ulong outstandingData = 0;
-#ifdef PRIVATE
-            if(this->getTcpMain()->multipath && (flow!=NULL)){
-               outstandingData = flow->mptcp_snd_nxt - flow->mptcp_snd_una;
-            }
-            else
-#endif
             outstandingData = state->snd_max - state->snd_una;
 
             // check conditions from RFC 3042
@@ -2275,7 +2269,20 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
             {
                 // RFC 3042, page 3: "(...)the sender can only send two segments beyond the congestion window (cwnd)."
                 uint32 effectiveWin = std::min(state->snd_wnd, congestionWindow) - outstandingData + 2 * state->snd_mss;
-
+#ifdef PRIVATE
+                if(tcpMain->multipath && (flow != NULL)){
+                    uint32 sent = 0;
+                    const TCP_SubFlowVector_t *subflow_list = flow->getSubflows();
+                    for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
+                              i != subflow_list->end(); i++) {
+                          TCPConnection *conn = (*i)->subflow;
+                          sent += conn->getState()->snd_max - conn->getState()->snd_una;
+                    }
+                    if(flow->mptcp_snd_wnd >= (sent + (2 * state->snd_mss)))
+                        effectiveWin = std::min(effectiveWin, (flow->mptcp_snd_wnd - sent));
+                    else return;
+                }
+#endif
                 // bytes: number of bytes we're allowed to send now
                 uint32 bytes = std::min(effectiveWin, state->snd_mss);
 
