@@ -138,6 +138,9 @@ uint32 SACK_RFC3517::sendUnsackedSegment(uint32 wnd){
             return 0;
         while( uint32 new_nxt = _nextSeg()){
 
+            if(new_nxt > sb.old_nxt)
+                break;
+
             state->setSndNxt(new_nxt);
             con->sendOneNewSegment(false, wnd - (sb.pipe+offset));
 
