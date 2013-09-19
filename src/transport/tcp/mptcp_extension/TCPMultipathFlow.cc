@@ -553,6 +553,9 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                }
                else{
                    entry->subflow->isQueueAble = false;
+                   removeSubflow(entry->subflow); // FIXME to add in list of unused subflows!!!
+                   ad_queue.clear();
+                   i = subflow_list.begin();
                  //  std::cerr << "disable"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
                }
            }
