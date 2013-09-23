@@ -549,14 +549,12 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
            if(entry->subflow->isQueueAble){
                if(ad_queue.end() == ad_queue.find(entry->subflow->remoteAddr.str())){
                    ad_queue.insert(std::make_pair(entry->subflow->remoteAddr.str(),0));
-                  // std::cerr << "use"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
                }
                else{
                    entry->subflow->isQueueAble = false;
                    removeSubflow(entry->subflow); // FIXME to add in list of unused subflows!!!
                    ad_queue.clear();
                    i = subflow_list.begin();
-                 //  std::cerr << "disable"  << entry->subflow->localAddr.str() << "<->" << entry->subflow->remoteAddr.str() << std::endl;
                }
            }
         }
@@ -598,31 +596,18 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                     }
           }
         int count = 0;
-//        for ( std::map<double,int>::iterator o = path_order.begin();
-//                                       o != path_order.end(); o++) {
-//            std::cerr << "count "<< count ++ << "?" << o->first  << std::endl;
-//        }
+
         for ( std::map<double,int>::iterator o = path_order.begin();
                                o != path_order.end(); o++) {
-            //std::cerr << o->second << std::endl;
             if((*(subflow_list.begin() + o->second))->subflow->isQueueAble){
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> ((*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->getStateVariables());
+                // Send data
                 uint32 cof = another_state->snd_max - another_state->snd_una;
-                //std::cerr << "cwnd " << another_state->snd_cwnd << " SND WND " << (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd << std::endl;
-                // Send Data
-
                 (*(subflow_list.begin() + o->second))->subflow->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 uint32 cof2 = another_state->snd_max - another_state->snd_una;
-                if((*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd > (cof2 - cof))
-                    (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd -= (cof2 - cof);
-                else
-                    (*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd;
-               if((*(subflow_list.begin() + o->second))->subflow->flow->mptcp_snd_wnd < (*(subflow_list.begin() + o->second))->subflow->getState()->snd_mss){
-                       //std::cerr << "Huch"<< o->first  << std::endl;
-                       break;
-                }
-            }//this->refreshSendMPTCPWindow();
+                // FIXME ADD vector
+            }
         }
         path_order.clear();
     }
@@ -1366,66 +1351,73 @@ void MPTCP_Flow::DEBUGprintDSSInfo() {
 #endif
 }
 void MPTCP_Flow::refreshSendMPTCPWindow(){
-
     // we try to organize the DSS List in a Map with offsets of in order sequence of DSS
-	TCP_subflow_t* entry = NULL;
-	uint64 lastMPTCPSeq = 0;
-	for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-			i != subflow_list.end(); i++) {
-		entry = (*i);
+    TCP_subflow_t* entry = NULL;
+    uint64 lastMPTCPSeq = 0;
+    uint64 smallest_in_queues = mptcp_snd_una;
+    bool data_in_queue = false;
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+            i != subflow_list.end(); i++) {
+        entry = (*i);
+
+        if(entry->subflow->dss_dataMapofSubflow.empty())
+            continue;   // Nothing to do
+
+        // Clear sending memory (DSS MAP)
+        TCPStateVariables* subflow_state = entry->subflow->getState();
+        TCPConnection* conn = entry->subflow;
+        uint32 offset = 0;
 
 
-		if(entry->subflow->dss_dataMapofSubflow.empty())
-			continue;	// Nothing to do
-		// Clear sending memory (DSS MAP)
-		TCPConnection* conn = entry->subflow;
-		uint32 offset = 0;
-		if(conn->base_una_dss_info.subflow_seq + 1 == conn->getState()->snd_una){
-		    continue; // no changes
-		}
-		TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.end();
-		while(conn->base_una_dss_info.subflow_seq + 1  < conn->getState()->snd_una){
-
-            while(true){
-                 TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.find(conn->base_una_dss_info.subflow_seq + 1);
-                 if(it==conn->dss_dataMapofSubflow.end()){
-                  // it is possible the link which established the multipath link
-                 conn->base_una_dss_info.subflow_seq++;
-                 break;
-                }
-                else
-                {
-                    conn->base_una_dss_info.subflow_seq += it->second->seq_offset;
-                    uint32 split = conn->base_una_dss_info.subflow_seq - (conn->getState()->snd_una - 1);
-                    if(mptcp_snd_una < it->second->seq_offset + it->second->dss_seq){
-                        //std::cerr << "[FLOW][SND][DSS][STATUS] snd_una:" << mptcp_snd_una << "snd_nxt" << mptcp_snd_nxt << "DIFF "<< mptcp_snd_nxt - mptcp_snd_una  << std::endl;
-                        mptcp_snd_una = it->second->seq_offset + it->second->dss_seq + 1 - split;
-                    }
-                    it->second->delivered = true;
-
-                    break;
-                }
+        for(TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.begin();it != conn->dss_dataMapofSubflow.end();it++){
+            //if(4523 == subflow_state->snd_una)
+            //    std::cerr << "investigate" << std::endl;
+            //std::cerr << "UNA" << subflow_state->snd_una << " < " << it->first << ".." << it->second->seq_offset << std::endl;
+            if(subflow_state->snd_una > (it->first)){
+                // complete delivered
+                it->second->delivered = true;
             }
+            if((subflow_state->snd_una > it->first) && (subflow_state->snd_una < (it->first+ it->second->seq_offset))){
+                // we have a split
+                // pre pare the old for delete
+                it->second->delivered = true;
+                // insert the the split as new
+                DSS_INFO* dss_info = new DSS_INFO;
+                dss_info->dss_seq = it->second->dss_seq + ((subflow_state->snd_una - it->first));
+                dss_info->seq_offset = (it->second->seq_offset - (subflow_state->snd_una - it->first));
+                dss_info->section_end = false;
+                // information stuff
+                dss_info->re_scheduled = 1;
+                dss_info->delivered = false;
+                conn->dss_dataMapofSubflow[subflow_state->snd_una] = dss_info;//dss_info;
+            }
+        }
+        // Delete the entries marked as delivered
 
-            //conn->base_una_dss_info.dss_seq  = it->second->dss_seq;
-		}
-		uint32 split_offset = 0;
-		if( conn->base_una_dss_info.subflow_seq + 1 != conn->getState()->snd_una){
-		    //std::cerr << "here is a splitting, because to less window " << std::endl;
-		    conn->base_una_dss_info.subflow_seq = conn->getState()->snd_una - 1 ;
-		    split_offset = conn->base_una_dss_info.subflow_seq = conn->getState()->snd_una;
-		}
-		for(TCPMultipathDSSStatus::iterator dit = conn->dss_dataMapofSubflow.begin(); dit != conn->dss_dataMapofSubflow.end(); dit++){
-		    if(dit->second->delivered){
-	            conn->dss_dataMapofSubflow.erase(dit->first);
-	            dit = conn->dss_dataMapofSubflow.begin();
-		    }
 
-		    break;
-		}
+        TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
+        while (itr != conn->dss_dataMapofSubflow.end()) {
+          if (itr->second->delivered) {
+              delete itr->second;
+              conn->dss_dataMapofSubflow.erase(itr++);
+          } else {
+            ++itr;
+          }
+        }
 
-		// std::cerr << "[FLOW][SND][DSS][STATUS] snd_una:" << mptcp_snd_una << std::endl;
-	}
+
+        if(!conn->dss_dataMapofSubflow.empty()){
+            if(smallest_in_queues > conn->dss_dataMapofSubflow.begin()->second->dss_seq)
+                //if(conn->dss_dataMapofSubflow.begin()->second->re_scheduled == 0)   // check if it is queued here the first time
+                    smallest_in_queues = conn->dss_dataMapofSubflow.begin()->second->dss_seq - 1;
+            data_in_queue = true;
+        }
+
+        if(smallest_in_queues > mptcp_snd_una)
+                mptcp_snd_una = smallest_in_queues;
+    }
+    if(!data_in_queue)
+        mptcp_snd_una = mptcp_snd_nxt - 1;
 }
 
 

@@ -1296,10 +1296,10 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
         if(maxWindow < sent){
             maxWindow = 0;
-            flow->mptcp_snd_wnd = 0;
+           //flow->mptcp_snd_wnd = 0;
         } else if((maxWindow - sent) < congestionWindow){
             maxWindow = (maxWindow - sent);
-            flow->mptcp_snd_wnd = maxWindow;
+          //flow->mptcp_snd_wnd = maxWindow;
         }else{
             // FULL CC
         }
@@ -1311,7 +1311,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath && (flow != NULL)){
         effectiveWin = maxWindow; //the rest is done before
-    } // Remember subflow is not flow....
+    }
 #endif
     // calc efective max bytes to send
     if(maxWindow > (state->getSndNxt() - state->snd_una))
@@ -1319,9 +1319,11 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 #ifdef PRIVATE
     else{
         if(this->getTcpMain()->multipath && (flow != NULL))
-            flow->mptcp_snd_wnd = 0; // Every subflow has its own buffer, if a subflow needs more than the complete flow, the subflow defines the snd wnd
+ //           flow->mptcp_snd_wnd = 0; // Every subflow has its own buffer, if a subflow needs more than the complete flow, the subflow defines the snd wnd
         effectiveWin = 0;
     }
+
+
     if(this->getTcpMain()->multipath && (flow != NULL)){
         if(effectiveWin > flow->mptcp_snd_wnd - sent)
             effectiveWin = flow->mptcp_snd_wnd - sent;
@@ -1349,8 +1351,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
     if (state->ts_enabled)
         effectiveMaxBytesSend -= TCP_OPTION_TS_SIZE;
-
-
 
 #ifdef PRIVATE
     // recalculate for MPTCP OPTIONS
