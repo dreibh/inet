@@ -1284,7 +1284,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
         // overwrite window with mptcp snd window
         // (keep in mind, we have to korrect this later, that is why we store old snd_nxt)
-        maxWindow = flow->mptcp_snd_wnd;
+        //
+        //maxWindow = flow->mptcp_snd_wnd;
 
         // we have to check similar as for one flow, but above all
         const TCP_SubFlowVector_t *subflow_list = flow->getSubflows();
@@ -1294,8 +1295,9 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
               sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
         }
 
-        if(maxWindow < sent){
+        if(maxWindow < sent + state->snd_mss){
             maxWindow = 0;
+            return false; // back ... Receiver window is full
            //flow->mptcp_snd_wnd = 0;
         } else if((maxWindow - sent) < congestionWindow){
             maxWindow = (maxWindow - sent);
@@ -1319,10 +1321,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 #ifdef PRIVATE
     else{
         if(this->getTcpMain()->multipath && (flow != NULL))
- //           flow->mptcp_snd_wnd = 0; // Every subflow has its own buffer, if a subflow needs more than the complete flow, the subflow defines the snd wnd
         effectiveWin = 0;
     }
-
 
     if(this->getTcpMain()->multipath && (flow != NULL)){
         if(effectiveWin > flow->mptcp_snd_wnd - sent)
