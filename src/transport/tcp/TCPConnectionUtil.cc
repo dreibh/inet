@@ -1300,7 +1300,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
               sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
         }
         onWire = std::max(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una));
-        std::cerr << "On Wire " << onWire << " Window " << maxWindow <<  std::endl;
+        //std::cerr << "On Wire " << onWire << " Window " << maxWindow <<  std::endl;
 
         // Correct MAX windo
          if((maxWindow +  (state->getSndNxt() - state->snd_una)) > onWire)

@@ -607,7 +607,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 uint32 cof = another_state->snd_max - another_state->snd_una;
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 uint32 cof2 = another_state->snd_max - another_state->snd_una;
-                std::cerr << "Send " << cof2- cof <<  " Byte -> Over " << tmp->localAddr << "<->" << tmp->remoteAddr <<  std::endl;
+                //std::cerr << "Send " << cof2- cof <<  " Byte -> Over " << tmp->localAddr << "<->" << tmp->remoteAddr <<  std::endl;
             }
         }
         path_order.clear();
