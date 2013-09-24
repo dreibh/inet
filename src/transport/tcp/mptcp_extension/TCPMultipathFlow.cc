@@ -135,14 +135,14 @@ void MPTCP_Flow::_readParameter(TCPConnection *subflow){
     }
 
     // Opportunistic retransmission
-    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmssion"), "on") == 0) {
+    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmi    ssion"), "on") == 0) {
         opportunisticRetransmission     = true;
     }
-    else if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmssion"), "off") == 0) {
+    else if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmission"), "off") == 0) {
         opportunisticRetransmission     = false;
     }else {
        throw cRuntimeError("Bad setting for multipath_path_opportunistic_retranmssion: %s\n",
-               (const char*)subflow->getTcpMain()->par("multipath_path_opportunistic_retranmssion"));
+               (const char*)subflow->getTcpMain()->par("multipath_path_opportunistic_retranmission"));
     }
 }
 
@@ -615,17 +615,21 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
           }
         int count = 0;
         TCPConnection* bestConnection = NULL;
+        TCPTahoeRenoFamilyStateVariables* bestConnectionState = NULL;
         for ( std::map<double,int>::iterator o = path_order.begin();
                                o != path_order.end(); o++) {
             TCPConnection* tmp =  (*(subflow_list.begin() + o->second))->subflow;
 
             if(tmp->isQueueAble){
-                if(count==0){
-                    bestConnection = tmp;
-                    count++;
-                }
+
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
+
+                if(count == 0){
+                    bestConnection = tmp;
+                    bestConnectionState = another_state;
+                    count++;
+                }
                 // Send data
                 uint32 cof = another_state->snd_max - another_state->snd_una;
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
@@ -634,11 +638,10 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 if(tmp->dss_dataMapofSubflow.empty())
                     continue;
 
-                if(opportunisticRetransmission && (mptcp_snd_nxt != mptcp_snd_una )){// && count){
+                if(opportunisticRetransmission && (mptcp_snd_nxt != mptcp_snd_una )){
                     bool doRTX = false;
-
-                    // Reasons for opp rtx
-                    // Window full
+                    if(bestConnection == tmp)
+                        continue;
                     if((mptcp_snd_nxt - 1) - mptcp_snd_una  + bestConnection->getState()->snd_mss > mptcp_snd_wnd){
                         doRTX = true;
                     }

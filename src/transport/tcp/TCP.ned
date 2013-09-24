@@ -230,7 +230,7 @@ simple TCP like ITCP
 		string multipath_link_uitlization = default("linear"); // cross or linear
 		string multipath_path_scheduler = default("Linux_like"); // Linux like or off
 		
-		string multipath_opportunistic_retransmssion = default("off"); 
+		string multipath_opportunistic_retransmission = default("off"); 
 		
         @display("i=block/wheelbarrow");
     gates:
