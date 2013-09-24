@@ -559,6 +559,9 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                 uint32 old_usedRcvBuffer = state->usedRcvBuffer;
 
                 if(getTcpMain()->multipath && (flow != NULL)){
+                    if(tcpseg->getSndSeq() == flow->mptcp_rcv_nxt){
+                        //std::cerr << "NEXT in queue from " << this->remoteAddr << "<->" << this->localAddr << std::endl;
+                    }
                     flow->enqueueMPTCPData(tcpseg->getSndSeq(),tcpseg->getLen());
                 }
 

@@ -135,7 +135,7 @@ void MPTCP_Flow::_readParameter(TCPConnection *subflow){
     }
 
     // Opportunistic retransmission
-    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmi    ssion"), "on") == 0) {
+    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmission"), "on") == 0) {
         opportunisticRetransmission     = true;
     }
     else if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmission"), "off") == 0) {
