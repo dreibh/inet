@@ -638,8 +638,8 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
 
 
                 // Send data
-                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_cwnd) > mptcp_snd_wnd)){
-//                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_wnd) > mptcp_snd_wnd)){
+//                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_cwnd) > mptcp_snd_wnd)){
+                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_mss) > mptcp_snd_wnd)){
 
                 // The next cycle could possible close the window
                     // we should do some opportunistic retransmission
