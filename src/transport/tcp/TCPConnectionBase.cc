@@ -127,6 +127,7 @@ TCPStateVariables::TCPStateVariables()
     isRTX = false;
 #ifdef PRIVATE
     sackhandler = NULL;
+    time_last_penalized = 0;
 #endif
 }
 

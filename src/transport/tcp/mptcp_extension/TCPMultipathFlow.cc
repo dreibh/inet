@@ -711,6 +711,25 @@ uint64 MPTCP_Flow::_nextSmallest(uint64 last){
          TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
          while((itr != conn->dss_dataMapofSubflow.end()) &&
                  (itr->second->dss_seq <= last) && (!itr->second->delivered)){
+             if(itr->second->dss_seq == last){
+
+                 // penalize flow
+                 TCPTahoeRenoFamilyStateVariables* another_state =
+                        check_and_cast<TCPTahoeRenoFamilyStateVariables*> (conn->getTcpAlgorithm()->getStateVariables());
+
+                 if(simTime() - conn->getState()->time_last_penalized > another_state->srtt){
+                     another_state->ssthresh = std::max(another_state->snd_cwnd / 2, 2 * another_state->snd_mss);
+                     another_state->snd_cwnd = another_state->ssthresh;
+                     TCPBaseAlg* base = check_and_cast<TCPBaseAlg*> (conn->getTcpAlgorithm());
+                     if(base->cwndVector)
+                         base->cwndVector->record(another_state->snd_cwnd);
+                     if(base->ssthreshVector)
+                         base->ssthreshVector->record(another_state->ssthresh);
+                     // mark last penalized
+                     conn->getState()->time_last_penalized = simTime();
+                 }
+
+             }
              itr++;
          }
          if((itr != conn->dss_dataMapofSubflow.end()) &&

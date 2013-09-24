@@ -1285,9 +1285,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         flow->refreshSendMPTCPWindow();
         maxWindow = flow->mptcp_snd_wnd;
 
-        //if(maxWindow < state->snd_mss){
-        //    std::cerr << "Buffer Blocked" << std::endl;
-        //}
         // if not isQueueAble we are not allowed to send anywhere
         if(!this->isQueueAble)
            return false;
@@ -1299,7 +1296,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
               TCPConnection *conn = (*i)->subflow;
               sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
         }
-        onWire = std::max(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una));
+        onWire = std::min(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una));
     }
 #endif
 
@@ -2124,8 +2121,6 @@ unsigned short TCPConnection::updateRcvWnd()
         if(tcpMain->multipath && (flow != NULL)){
            flow->sendToApp();
         }
-
-
 
         if (win > 0 && seqGreater(win, flow->mptcp_rcv_wnd))
         {

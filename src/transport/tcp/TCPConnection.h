@@ -334,6 +334,7 @@ public:
     BufferOptimizationLevel cmtBufferOptimizationLevel;
     BufferSplitVariant cmtBufferSplitVariant;
 
+    simtime_t time_last_penalized;
 #endif
     // those counters would logically belong to TCPAlgorithm, but it's a lot easier to manage them here
     uint32 dupacks;          // current number of received consecutive duplicate ACKs
