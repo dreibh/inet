@@ -138,6 +138,9 @@ class INET_API MPTCP_Flow
     uint64_t mptcp_rcv_nxt;                       // B.1.2
     uint64_t mptcp_rcv_wnd;                       // B.1.2
     uint64_t mptcp_rcv_adv;                       // B.1.2
+
+    uint64_t mptcp_highestRTX;
+
     uint64_t maxBuffer;
     uint64_t seq;                           	  // start seq-no generated after getting keys for the first flow
     uint64_t start_seq;
@@ -151,6 +154,7 @@ class INET_API MPTCP_Flow
     // double             maxCwndBasedBandwidth;
     // double             totalCwndBasedBandwidth;
     double             cmtCC_alpha;
+    bool               isMPTCP_RTX;
     // helper
    // uint32_t flow_send_queue_limit;
   protected:
@@ -158,6 +162,7 @@ class INET_API MPTCP_Flow
     bool isPassive;
     bool ordered;
     PATH_U path_utilization;
+    bool opportunisticRetransmission;
     InterfaceTableAccess interfaceTableAccess;
 
     // Vector and Scalar
@@ -184,6 +189,7 @@ class INET_API MPTCP_Flow
 
     void _initFlow(int port);
     // Helper - Write packets
+    void _readParameter(TCPConnection *subflow);
     int _writeInitialHandshakeHeader(uint t,
     TCPStateVariables* subflow_state, TCPSegment *tcpseg,
     TCPConnection* subflow, TCPOption* option);
@@ -207,7 +213,9 @@ class INET_API MPTCP_Flow
     void     setLocalToken(uint32_t key);
 
 
-
+    // features opportunistic Retransmission
+    void _opportunisticRetransmission(TCPConnection* sub);
+    uint64 _nextSmallest(uint64 last);
     // MPTCP Flow Organisation
     // Token to identify
     uint32_t local_token;                   // B.1.1 Authentication and Metadata

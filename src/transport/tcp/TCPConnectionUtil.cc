@@ -1300,13 +1300,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
               sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
         }
         onWire = std::max(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una));
-        //std::cerr << "On Wire " << onWire << " Window " << maxWindow <<  std::endl;
-
-//        // Correct MAX windo
-//         if((maxWindow < onWire)
-//             maxWindow = (maxWindow +  (state->getSndNxt() - state->snd_una)) - onWire;
-//         else
-//             maxWindow = 0 ;
     }
 #endif
 
@@ -2266,7 +2259,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
                 // RFC 3042, page 3: "(...)the sender can only send two segments beyond the congestion window (cwnd)."
                 uint32 effectiveWin = std::min(state->snd_wnd, congestionWindow) - outstandingData + 2 * state->snd_mss;
 #ifdef PRIVATE
-                if(tcpMain->multipath && (flow != NULL)){
+                if(tcpMain->multipath && (flow != NULL) && (!flow->isMPTCP_RTX)){
                     uint32 sent = 0;
                     const TCP_SubFlowVector_t *subflow_list = flow->getSubflows();
                     for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();

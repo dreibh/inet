@@ -70,7 +70,7 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
     p->begin = dss_start_seq;
     p->len = data_len;
     //info();
-    if(data_len != 1424)
+    if(dss_start_seq == 437371525041580823)
         std::cerr << "stop";
     // check for old
     if(dss_start_seq < (virtual_start + 1)){
