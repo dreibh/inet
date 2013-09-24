@@ -559,10 +559,14 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                 uint32 old_usedRcvBuffer = state->usedRcvBuffer;
 
                 if(getTcpMain()->multipath && (flow != NULL)){
-                    if(tcpseg->getSndSeq() == flow->mptcp_rcv_nxt){
-                        //std::cerr << "NEXT in queue from " << this->remoteAddr << "<->" << this->localAddr << std::endl;
-                    }
+//                    bool note = false;
+//                    if(tcpseg->getSndSeq() == flow->mptcp_rcv_nxt){
+//                        note = true;
+//                        std::cerr << "NEXT " << flow->mptcp_rcv_nxt << " in queue from " << this->remoteAddr << "<->" << this->localAddr << " seq no " << tcpseg->getSequenceNo() <<std::endl;
+//                    }
                     flow->enqueueMPTCPData(tcpseg->getSndSeq(),tcpseg->getLen());
+//                    if(note)
+//                        std::cerr << "Wait " << flow->mptcp_rcv_nxt << std::endl;
                 }
 
                 state->rcv_nxt = receiveQueue->insertBytesFromSegment(tcpseg);

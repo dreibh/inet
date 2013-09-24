@@ -157,12 +157,13 @@ class INET_API MPTCP_Flow
     bool               isMPTCP_RTX;
     // helper
    // uint32_t flow_send_queue_limit;
+    bool opportunisticRetransmission;
   protected:
     bool checksum;
     bool isPassive;
     bool ordered;
     PATH_U path_utilization;
-    bool opportunisticRetransmission;
+
     InterfaceTableAccess interfaceTableAccess;
 
     // Vector and Scalar
