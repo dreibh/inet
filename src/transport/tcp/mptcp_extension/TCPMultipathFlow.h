@@ -158,6 +158,7 @@ class INET_API MPTCP_Flow
     // helper
    // uint32_t flow_send_queue_limit;
     bool opportunisticRetransmission;
+    bool multipath_penalizing;
   protected:
     bool checksum;
     bool isPassive;

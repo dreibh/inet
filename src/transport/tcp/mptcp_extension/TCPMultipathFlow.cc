@@ -144,6 +144,19 @@ void MPTCP_Flow::_readParameter(TCPConnection *subflow){
        throw cRuntimeError("Bad setting for multipath_path_opportunistic_retranmssion: %s\n",
                (const char*)subflow->getTcpMain()->par("multipath_path_opportunistic_retranmission"));
     }
+
+    // multipath penalizing
+    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_penalizing"), "on") == 0) {
+        multipath_penalizing     = true;
+    }
+    else if(strcmp((const char*)subflow->getTcpMain()->par("multipath_penalizing"), "off") == 0) {
+        multipath_penalizing     = false;
+    }else {
+       throw cRuntimeError("Bad setting for multipath_penalizing: %s\n",
+               (const char*)subflow->getTcpMain()->par("multipath_penalizing"));
+    }
+
+
 }
 
 /**
@@ -711,7 +724,7 @@ uint64 MPTCP_Flow::_nextSmallest(uint64 last){
          TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
          while((itr != conn->dss_dataMapofSubflow.end()) &&
                  (itr->second->dss_seq <= last) && (!itr->second->delivered)){
-             if(itr->second->dss_seq == last){
+             if(itr->second->dss_seq == last && multipath_penalizing){
 
                  // penalize flow
                  TCPTahoeRenoFamilyStateVariables* another_state =
