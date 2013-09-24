@@ -145,7 +145,7 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
 TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 {
 
-    if(tcpseg->getSequenceNo() == 3741887){
+    if(tcpseg->getAckNo() == 96527){
         std::cerr << "Work on..." <<  localAddr.str() << ".." <<  remoteAddr.str() << std::endl;
         std::cerr << "found";
     }

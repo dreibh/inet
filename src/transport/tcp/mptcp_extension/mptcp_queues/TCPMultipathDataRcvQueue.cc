@@ -33,13 +33,16 @@ TCPMultipathDataRcvQueue::~TCPMultipathDataRcvQueue()
 }
 
 void TCPMultipathDataRcvQueue::clear(){
-    if(data.empty()) return;
-    //std::cerr <<  "Stop with filled queue" << std::endl;
-    //for(MPTCP_DataMap::iterator i = data.begin(); i != data.end(); i++){
-    //    std::cerr << "Base: " << virtual_start << "Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
-    //                   << " - send " << (uint32) i->second->begin << ".." << (uint32) i->first  << std::endl;
-    //  }
-    // std::cerr << "Occupied Memory" << getOccupiedMemory() << std::endl;
+    if(data.empty()){
+        std::cerr << "Queue is empty" << std::endl;
+        return;
+    }
+    std::cerr <<  "Stop with filled queue" << std::endl;
+    for(MPTCP_DataMap::iterator i = data.begin(); i != data.end(); i++){
+        std::cerr << "Base: " << virtual_start << "Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
+                       << " - send " << (uint32) i->second->begin << ".." << (uint32) i->first  << std::endl;
+      }
+    std::cerr << "Occupied Memory" << getOccupiedMemory() << std::endl;
     data.clear();
 }
 

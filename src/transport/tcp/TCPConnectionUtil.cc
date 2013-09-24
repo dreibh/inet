@@ -1284,10 +1284,13 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
         flow->refreshSendMPTCPWindow();
         maxWindow = flow->mptcp_snd_wnd;
+
+        if(maxWindow < state->snd_mss){
+            std::cerr << "Buffer Blocked" << std::endl;
+        }
         // if not isQueueAble we are not allowed to send anywhere
         if(!this->isQueueAble)
            return false;
-
 
         // we have to check similar as for one flow, but above all
         const TCP_SubFlowVector_t *subflow_list = flow->getSubflows();
@@ -1297,6 +1300,13 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
               sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
         }
         onWire = std::max(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una));
+        std::cerr << "On Wire " << onWire << " Window " << maxWindow <<  std::endl;
+
+        // Correct MAX windo
+         if((maxWindow +  (state->getSndNxt() - state->snd_una)) > onWire)
+             maxWindow = (maxWindow +  (state->getSndNxt() - state->snd_una)) - onWire;
+         else
+             maxWindow = 0 ;
     }
 #endif
 
@@ -1306,8 +1316,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
 #ifdef PRIVATE
     if(this->getTcpMain()->multipath && (flow != NULL)){
-        while(effectiveWin && ((effectiveWin + onWire) >= flow->mptcp_snd_wnd)){
-            effectiveWin--;
+        if(effectiveWin && ((effectiveWin + onWire) > flow->mptcp_snd_wnd)){
+            std::cerr << "Should not happen" << std::endl;
         }
     }
 #endif
@@ -1315,6 +1325,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     {
         tcpEV << "Effective window is zero (advertised window " << state->snd_wnd <<
             ", congestion window " << congestionWindow << "), cannot send.\n";
+        std::cerr << "No Window" << std::endl;
         return false;
     }
 
@@ -2189,12 +2200,18 @@ void TCPConnection::updateWndInfo(TCPSegment *tcpseg, bool doAlways)
 
         if (sndWndVector)
             sndWndVector->record(state->snd_wnd);
-#ifdef PRIVATE
-        if(this->getTcpMain()->multipath && (flow != NULL)){
-            flow->mptcp_snd_wnd = true_window;
-        }
-#endif
     }
+#ifdef PRIVATE
+    // FIXMe do Check if valid SQN aerea
+    if(this->getTcpMain()->multipath && (flow != NULL)){
+        // TODO - What happens if window information comes too late
+        if(true_window == 320){
+            std::cerr << "What happens now" << std::endl;
+        }
+        flow->mptcp_snd_wnd = true_window;
+
+    }
+#endif
 }
 
 void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWindow)
