@@ -599,13 +599,18 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
 
         for ( std::map<double,int>::iterator o = path_order.begin();
                                o != path_order.end(); o++) {
-            if((*(subflow_list.begin() + o->second))->subflow->isQueueAble){
+            TCPConnection* tmp =  (*(subflow_list.begin() + o->second))->subflow;
+            if(tmp->isQueueAble){
                 TCPTahoeRenoFamilyStateVariables* another_state =
-                                              check_and_cast<TCPTahoeRenoFamilyStateVariables*> ((*(subflow_list.begin() + o->second))->subflow->getTcpAlgorithm()->getStateVariables());
+                                              check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
                 // Send data
                 uint32 cof = another_state->snd_max - another_state->snd_una;
-                (*(subflow_list.begin() + o->second))->subflow->sendData(fullSegmentsOnly, another_state->snd_cwnd);
+                tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 uint32 cof2 = another_state->snd_max - another_state->snd_una;
+                if(cof == cof2){
+                   // tmp->sendAck();
+                }
+                //tmp->getTcpAlgorithm()->restartRexmitTimer();
                 // FIXME ADD vector
             }
         }
@@ -1178,7 +1183,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 DSS_INFO* dss_info = new DSS_INFO;// (DSS_INFO*) malloc(sizeof(DSS_INFO));
                 dss_info->dss_seq = this->mptcp_snd_nxt;
                 dss_info->seq_offset = bytes;
-                mptcp_snd_nxt += bytes + 1;
+                mptcp_snd_nxt += bytes;
                 dss_info->section_end = false;
                 // we work wit a offset parameter if we have numbers in sequence
                 // I think it is more easy to handle this in mss sections
@@ -1354,6 +1359,7 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
     // we try to organize the DSS List in a Map with offsets of in order sequence of DSS
     TCP_subflow_t* entry = NULL;
     uint64 lastMPTCPSeq = 0;
+    uint32 delivered = 0;
     uint64 smallest_in_queues = mptcp_snd_una;
     bool data_in_queue = false;
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
@@ -1370,13 +1376,12 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
 
 
         for(TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.begin();it != conn->dss_dataMapofSubflow.end();it++){
-            //if(4523 == subflow_state->snd_una)
-            //    std::cerr << "investigate" << std::endl;
-            //std::cerr << "UNA" << subflow_state->snd_una << " < " << it->first << ".." << it->second->seq_offset << std::endl;
             if(subflow_state->snd_una > (it->first)){
                 // complete delivered
                 it->second->delivered = true;
             }
+            data_in_queue = true;
+
             if((subflow_state->snd_una > it->first) && (subflow_state->snd_una < (it->first+ it->second->seq_offset))){
                 // we have a split
                 // pre pare the old for delete
@@ -1393,31 +1398,44 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
             }
         }
         // Delete the entries marked as delivered
-
-
-        TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
-        while (itr != conn->dss_dataMapofSubflow.end()) {
-          if (itr->second->delivered) {
-              delete itr->second;
-              conn->dss_dataMapofSubflow.erase(itr++);
-          } else {
-            ++itr;
-          }
-        }
-
-
-        if(!conn->dss_dataMapofSubflow.empty()){
-            if(smallest_in_queues > conn->dss_dataMapofSubflow.begin()->second->dss_seq)
-                //if(conn->dss_dataMapofSubflow.begin()->second->re_scheduled == 0)   // check if it is queued here the first time
-                    smallest_in_queues = conn->dss_dataMapofSubflow.begin()->second->dss_seq - 1;
-            data_in_queue = true;
-        }
-
-        if(smallest_in_queues > mptcp_snd_una)
-                mptcp_snd_una = smallest_in_queues;
     }
-    if(!data_in_queue)
-        mptcp_snd_una = mptcp_snd_nxt - 1;
+    bool found_some = true;
+    uint64 old_border = mptcp_snd_una + 1;
+    do{
+        found_some = false;
+        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                i != subflow_list.end(); i++) {
+            TCPConnection* conn = (*i)->subflow;
+            TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
+            while (itr != conn->dss_dataMapofSubflow.end()) {
+              if (itr->second->delivered) {
+                  uint64 inList = itr->second->dss_seq;
+
+                  if(mptcp_snd_una + 1 == inList) {
+                      uint32 old_in_send_queue = (mptcp_snd_nxt-1) - mptcp_snd_una;
+                      mptcp_snd_una += itr->second->seq_offset;
+                      //std::cerr << "Not Delivered " << (mptcp_snd_nxt-1) - mptcp_snd_una << " NEW UNA "  << mptcp_snd_una << std::endl;
+                      ASSERT((old_in_send_queue > (mptcp_snd_nxt-1) - mptcp_snd_una) && "Overflow");
+                      delete itr->second;
+                      conn->dss_dataMapofSubflow.erase(itr);
+                      found_some = true;
+                      break;
+                  }
+                  else if(old_border  > inList){
+                      // Retransmissions
+                      delete itr->second;
+                      conn->dss_dataMapofSubflow.erase(itr);
+                      found_some = true;
+                  }
+                  itr++;
+              } else {
+                  break;
+              }
+            }
+        }
+    }while(found_some);
+
+    mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
 }
 
 
@@ -1444,17 +1462,9 @@ void MPTCP_Flow::sendToApp(){
 
     if( maxBuffer  >=  mptcp_receiveQueue->getOccupiedMemory()){
         mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
-
     }else{
         mptcp_receiveQueue->printInfo();
         mptcp_rcv_wnd = 0;
-//        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-//                    i != subflow_list.end(); i++) {
-//                TCPConnection *sub = (*i)->subflow;
-                //std::cerr << "ID" << sub->connId << " Amount of Buffered Bytes "  << sub->getReceiveQueue()->getAmountOfBufferedBytes() << std::endl;
-                //std::cerr << "rcv nxt "  << sub->getState()->rcv_nxt << " rcv adv  "  << sub->getState()->rcv_adv << " diff " << sub->getState()->rcv_adv-sub->getState()->rcv_nxt << std::endl;
-                //sub->sendAck();
-//        }
         buffer_blocked = true;
     }
     return;
@@ -1465,8 +1475,9 @@ void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len){
 	mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(dss_start_seq,data_len);
 
 	if(maxBuffer < mptcp_receiveQueue->getOccupiedMemory()){
+	    mptcp_receiveQueue->printInfo();
 	    std::cerr << "RECEIVER occupied more than allowed: " << mptcp_receiveQueue->getOccupiedMemory() << " - Allowed are: "  << maxBuffer << std::endl;
-	    // ASSERT(false && "What is wrong here");
+	    ASSERT(false && "What is wrong here");
 	}
 
 
@@ -1764,7 +1775,7 @@ void MPTCP_Flow::setBaseSQN(uint64_t s) {
     seq = s;
     mptcp_receiveQueue->init(seq);
     mptcp_snd_una = seq;
-    mptcp_snd_nxt = seq;
+    mptcp_snd_nxt = seq + 1;
 
     mptcp_rcv_nxt = seq;
     mptcp_rcv_adv = mptcp_rcv_nxt + maxBuffer;

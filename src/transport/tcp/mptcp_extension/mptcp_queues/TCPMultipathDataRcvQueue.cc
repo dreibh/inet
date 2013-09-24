@@ -45,7 +45,7 @@ void TCPMultipathDataRcvQueue::clear(){
 
 void TCPMultipathDataRcvQueue::init(uint64 startSeq)
 {
-    virtual_start = startSeq - 1;
+    virtual_start = startSeq + 1;
     clear();
     data.clear();
 }
@@ -57,7 +57,7 @@ void TCPMultipathDataRcvQueue::info()
            std::cerr << "Base: " << virtual_start << " Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
             << " - send " << (uint32) i->second->begin << ".." << (uint32) i->first  << std::endl;
     }
-    std::cerr << "Occupied Memory" << getOccupiedMemory() << " complete up to " << (uint32) virtual_start << " On Time " <<  simTime() << std::endl;
+    // std::cerr << "Occupied Memory" << getOccupiedMemory() << " complete up to " << (uint32) virtual_start << " On Time " <<  simTime() << std::endl;
 }
 
 uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, uint32 data_len)
@@ -67,8 +67,8 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
     p->begin = dss_start_seq;
     p->len = data_len;
     //info();
-    //if(437371525041663415 == dss_start_seq)
-    //    std::cerr << "stop";
+    if(data_len != 1424)
+        std::cerr << "stop";
     // check for old
     if(dss_start_seq < (virtual_start + 1)){
         // old one
@@ -136,10 +136,10 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
         //std::cerr << "calc" << i->second->begin << " .. "<< i->first << "calc length" << i->first - i->second->begin  << std::endl;
         ASSERT((i->first - i->second->begin)  == i->second->len);
 
-        //if(in_order && (highest_in_order + 1 > i->second->begin))
-        //    continue;
+        if(in_order && (highest_in_order  > i->second->begin))
+            continue;
         //info();
-        if(in_order && (highest_in_order + 1 == i->second->begin)){
+        if(in_order && (highest_in_order == i->second->begin)){
             // we are in order
             highest_in_order  = i->first;
             in_order = true;
@@ -175,8 +175,8 @@ cPacket *TCPMultipathDataRcvQueue::extractBytesUpTo(uint64 seq)
 
 void TCPMultipathDataRcvQueue::printInfo(){
 #ifndef DEBUG
-    //std::cerr << "#########" << std::endl;
-    //info();
+    std::cerr << "#########" << std::endl;
+    info();
 #endif
 }
 
@@ -185,6 +185,7 @@ uint64 TCPMultipathDataRcvQueue::getOccupiedMemory(){
    if(data.empty()){
        return 0;
    }
+   //info();
    return (--(data.end()))->first - virtual_start;
 #else
    uint32 len = 0;
