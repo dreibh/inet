@@ -638,8 +638,10 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
 
 
                 // Send data
-                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_cwnd) > mptcp_snd_wnd)){
-                    // The next cycle could possible close the window
+//                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_cwnd) > mptcp_snd_wnd)){
+                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_wnd) > mptcp_snd_wnd)){
+
+                // The next cycle could possible close the window
                     // we should do some opportunistic retransmission
                     if(opportunisticRetransmission && (mptcp_snd_nxt != mptcp_snd_una)){
                         _opportunisticRetransmission(tmp);
@@ -1529,7 +1531,7 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
               if (itr->second->delivered) {
                   uint64 inList = itr->second->dss_seq;
 
-                  if(mptcp_snd_una + 1 == inList) {
+                  if(mptcp_snd_una + 1 == inList && (mptcp_snd_nxt -1 != mptcp_snd_una)) {
                       uint32 old_in_send_queue = (mptcp_snd_nxt-1) - mptcp_snd_una;
                       mptcp_snd_una += itr->second->seq_offset;
                       //std::cerr << "Not Delivered " << (mptcp_snd_nxt-1) - mptcp_snd_una << " NEW UNA "  << mptcp_snd_una << std::endl;
