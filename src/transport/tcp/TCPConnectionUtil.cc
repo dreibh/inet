@@ -1296,7 +1296,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
               TCPConnection *conn = (*i)->subflow;
               sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
         }
-        onWire = std::min(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una));
+        onWire = std::max(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una));
     }
 #endif
 
