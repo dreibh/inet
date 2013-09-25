@@ -573,6 +573,33 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
     std::map<std::string,int> (ad_queue);
     weak_link = false;
     //set parameter how many flows we want utilize
+
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                     i != subflow_list.end(); i++) {
+        TCPConnection* conn =  (*i)->subflow;
+        TCPTahoeRenoFamilyStateVariables* another_state =
+                                     check_and_cast<TCPTahoeRenoFamilyStateVariables*> (conn->getTcpAlgorithm()->getStateVariables());
+
+
+       if (!conn->isSendQueueEmpty())  // do we have any data to send?
+       {
+           if ((simTime() - another_state->time_last_data_sent) > another_state->rexmit_timeout)
+           {
+               // RFC 5681, page 11: "For the purposes of this standard, we define RW = min(IW,cwnd)."
+               if (another_state->increased_IW_enabled)
+                   another_state->snd_cwnd = std::min(std::min(4 * another_state->snd_mss, std::max(2 * another_state->snd_mss, (uint32)4380)), another_state->snd_cwnd);
+               else
+                   another_state->snd_cwnd = another_state->snd_mss;
+
+               TCPBaseAlg* base = check_and_cast<TCPBaseAlg*> (conn->getTcpAlgorithm());
+               if(base->cwndVector)
+                   base->cwndVector->record(another_state->snd_cwnd);
+               if(base->ssthreshVector)
+                   base->ssthreshVector->record(another_state->ssthresh);
+           }
+       }
+    }
+
     switch(path_utilization){
     case LINEAR:
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
@@ -643,17 +670,25 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                    // we should do some opportunistic retransmission
                    if(4 * another_state->snd_mss < another_state->snd_cwnd){
                        if(opportunisticRetransmission && (mptcp_snd_nxt != mptcp_snd_una)){
-                           _opportunisticRetransmission(tmp);
+
+                           if(mptcp_highestRTX <= mptcp_snd_una){
+                               mptcp_highestRTX = mptcp_snd_una;
+                           }
+
+                        //   do{
+                        //       uint64 old_highst = mptcp_highestRTX ;
+                               _opportunisticRetransmission(tmp);
+                        //       if(mptcp_highestRTX  == old_highst)
+                        //           break;
+                        //   }while((another_state->snd_cwnd > another_state->snd_mss)  && (mptcp_highestRTX - 1 != mptcp_snd_nxt));
                        }
                     }
                 }
-                if(count)
-                   weak_link = true;
-                count++;
 
-                uint32 cof = another_state->snd_max - another_state->snd_una;
+                count++;
+                //uint32 cof = another_state->snd_max - another_state->snd_una;
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
-                uint32 cof2 = another_state->snd_max - another_state->snd_una;
+                //uint32 cof2 = another_state->snd_max - another_state->snd_una;
 
             }
         }
@@ -710,24 +745,29 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
     mptcp_snd_nxt = mptcp_highestRTX + 1;
 //    std::cerr << "Opportunistic Retransmit DSS " << mptcp_snd_nxt << "send with " << sub->getState()->getSndNxt() << " by " <<  sub->remoteAddr << "<->" << sub->localAddr << std::endl;
     sub->orderBytesForQueue(2*another_state->snd_mss);
+
     sub->sendOneNewSegment(true, another_state->snd_cwnd);
+
     if(mptcp_snd_nxt == mptcp_highestRTX + 1){
         // windows blocked or whatever
         mptcp_highestRTX = old_mptcp_highestRTX;
     }
     else{
         // Search fo the next smallest in the lists
-        mptcp_highestRTX = _nextSmallest(mptcp_highestRTX + 1);
+        mptcp_highestRTX = _nextSmallest(sub, mptcp_highestRTX + 1);
     }
+
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
 }
 
-uint64 MPTCP_Flow::_nextSmallest(uint64 last){
+uint64 MPTCP_Flow::_nextSmallest(TCPConnection *sub, uint64 last){
     uint64 ret = mptcp_snd_nxt - 1;
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
              i != subflow_list.end(); i++) {
          TCPConnection* conn = (*i)->subflow;
+         if(sub == conn)
+             continue;
          if(conn->dss_dataMapofSubflow.empty())
              break;
 
@@ -1518,9 +1558,9 @@ void MPTCP_Flow::DEBUGprintDSSInfo() {
 void MPTCP_Flow::refreshSendMPTCPWindow(){
     // we try to organize the DSS List in a Map with offsets of in order sequence of DSS
     TCP_subflow_t* entry = NULL;
-    uint64 lastMPTCPSeq = 0;
-    uint32 delivered = 0;
-    uint64 smallest_in_queues = mptcp_snd_una;
+    //uint64 lastMPTCPSeq = 0;
+    //uint32 delivered = 0;
+    //uint64 smallest_in_queues = mptcp_snd_una;
     bool data_in_queue = false;
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
             i != subflow_list.end(); i++) {
@@ -1532,7 +1572,7 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
         // Clear sending memory (DSS MAP)
         TCPStateVariables* subflow_state = entry->subflow->getState();
         TCPConnection* conn = entry->subflow;
-        uint32 offset = 0;
+        //uint32 offset = 0;
 
 
         for(TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.begin();it != conn->dss_dataMapofSubflow.end();it++){
@@ -1745,7 +1785,7 @@ unsigned char* MPTCP_Flow::_generateSYNACK_HMAC(uint64 ka, uint64 kb, uint32 ra,
 
     // Need MAC-B
     // MAC(KEY=(Key-B + Key-A)), Msg=(R-B + R-A))
-    sprintf(key, "%19ld%19ld", kb, ka);
+    sprintf(key, "%19lld%19lld", kb, ka);
     sprintf(msg, "%10u%10u", rb, ra);
     _hmac_md5((unsigned char*) msg, strlen(msg), (unsigned char*) key,
             strlen(key), digist);
@@ -1762,7 +1802,7 @@ unsigned char* MPTCP_Flow::_generateACK_HMAC(uint64 ka, uint64 kb, uint32 ra,
 
     // Need MAC-A
     // MAC(KEY=(Key-A + Key-B)), Msg=(R-A + R-B))
-    sprintf(key, "%19ld%19ld", ka, kb);
+    sprintf(key, "%19lld%19lld", ka, kb);
     sprintf(msg, "%10u%10u", ra, rb);
     _hmac_md5((unsigned char*) msg, strlen(msg), (unsigned char*) key,
             strlen(key), digist);
