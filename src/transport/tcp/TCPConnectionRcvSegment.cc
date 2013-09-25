@@ -1105,6 +1105,8 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
 
         if (tcpseg->getAckBit())
         {
+            if(state->snd_una ==  253770347)
+                std::cerr << "why this number";
             state->snd_una = tcpseg->getAckNo();
 #ifndef PRIVATE
             // How could it be, that we have to discard in SYN
@@ -1362,6 +1364,9 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
     {
         // ack in window.
         uint32 old_snd_una = state->snd_una;
+        if(253770347 == tcpseg->getAckNo()){
+            std::cerr << "here";
+        }
         state->snd_una = tcpseg->getAckNo();
 
         if (unackedVector)

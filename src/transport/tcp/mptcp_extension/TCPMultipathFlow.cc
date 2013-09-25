@@ -1289,6 +1289,38 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 	    ASSERT(cnt < 1 && "if we do more than one round we have a problem");
 	    // FIXME Check if it is still in the queue, overflow
 	        TCPMultipathDSSStatus::const_iterator it = subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
+	        // check for special cases
+	        if(it == subflow->dss_dataMapofSubflow.end()){
+	            if(!subflow->dss_dataMapofSubflow.empty()){
+	                if((subflow->dss_dataMapofSubflow.begin()->first <= snd_nxt_tmp) &&
+	                        (snd_nxt_tmp < ((--subflow->dss_dataMapofSubflow.end())->first + (--subflow->dss_dataMapofSubflow.end())->second->seq_offset))
+	                )
+	                {
+#warning "Real problem - Why we are not in sync -See issue #29 in github"
+	                    uint32 old = snd_nxt_tmp;
+	                    // FIXME - This is just a hotfix/workaround ...it don t solve the problem
+	                    TCPMultipathDSSStatus::iterator i = subflow->dss_dataMapofSubflow.begin();
+	                    while(i != subflow->dss_dataMapofSubflow.end()){
+	                        std::cerr << "sqn: " << i->first << " DSS " << i->second->dss_seq << std::endl;
+	                        if(i->first <  old)
+	                            snd_nxt_tmp =  i->first;
+	                        else
+	                            break;
+	                        i++;
+	                    }
+	                    it = subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
+	                    if(it == subflow->dss_dataMapofSubflow.end()){
+                                            std::cerr << "not in sync of full packets" << std::endl;
+                                            ASSERT(false && "Workaround not functional");;
+	                    }
+
+	                }
+	                if(subflow->dss_dataMapofSubflow.begin()->first > snd_nxt_tmp){
+	                    std::cerr << "this is a retransmission of still delivered MPTCP data" << std::cerr;
+	                    return 0;
+	                }
+	            }
+	        }
             if(it != subflow->dss_dataMapofSubflow.end()){
                 // this is a retransmission
                 isRetranmission = true;

@@ -144,9 +144,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             if(state->snd_una < firstSeqAcked)
                 throw cRuntimeError("This is not possible");
 
-            // we should set snd nxt to snd una
-            conn->getState()->setSndNxt(conn->getState()->snd_una);
-            // Retransmit
+           // Retransmit
             conn->retransmitOneSegment(false); // It doesn t matter if here or somewhere esle ...
 
             // Do the indow stuff
