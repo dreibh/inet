@@ -571,6 +571,7 @@ bool  MPTCP_Flow::close(){
 bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
     //fullSegmentsOnly = true; // FIXME
     std::map<std::string,int> (ad_queue);
+    weak_link = false;
     //set parameter how many flows we want utilize
     switch(path_utilization){
     case LINEAR:
@@ -636,22 +637,24 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
 
+                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + 2 * another_state->snd_mss) > mptcp_snd_wnd)){
 
-                // Send data
-//                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_cwnd) > mptcp_snd_wnd)){
-                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_mss) > mptcp_snd_wnd)){
-
-                // The next cycle could possible close the window
-                    // we should do some opportunistic retransmission
-                    if(opportunisticRetransmission && (mptcp_snd_nxt != mptcp_snd_una)){
-                        _opportunisticRetransmission(tmp);
+                   // The next cycle could possible close the window
+                   // we should do some opportunistic retransmission
+                    if(4 * another_state->snd_mss >= another_state->snd_cwnd){
+                       if(opportunisticRetransmission && (mptcp_snd_nxt != mptcp_snd_una)){
+                           _opportunisticRetransmission(tmp);
+                       }
                     }
                 }
+                if(count)
+                   weak_link = true;
                 count++;
 
                 uint32 cof = another_state->snd_max - another_state->snd_una;
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 uint32 cof2 = another_state->snd_max - another_state->snd_una;
+
             }
         }
         path_order.clear();
