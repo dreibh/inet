@@ -690,7 +690,11 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
 
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
     uint64 old_mptcp_highestRTX = mptcp_highestRTX;
-
+    if(!sub->dss_dataMapofSubflow.empty()){
+        if(sub->dss_dataMapofSubflow.begin()->second->dss_seq == mptcp_snd_una){
+            return;
+        }
+    }
     if(mptcp_highestRTX -1 == mptcp_snd_nxt){
         return;
     }
