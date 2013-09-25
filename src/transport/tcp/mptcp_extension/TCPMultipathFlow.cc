@@ -675,12 +675,12 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                                mptcp_highestRTX = mptcp_snd_una;
                            }
 
-                        //   do{
-                        //       uint64 old_highst = mptcp_highestRTX ;
+                           do{
+                               uint64 old_highst = mptcp_highestRTX ;
                                _opportunisticRetransmission(tmp);
-                        //       if(mptcp_highestRTX  == old_highst)
-                        //           break;
-                        //   }while((another_state->snd_cwnd > another_state->snd_mss)  && (mptcp_highestRTX - 1 != mptcp_snd_nxt));
+                               if(mptcp_highestRTX  == old_highst)
+                                   break;
+                           }while((another_state->snd_cwnd > another_state->snd_mss)  && (mptcp_highestRTX - 1 != mptcp_snd_nxt));
                        }
                     }
                 }
@@ -774,8 +774,8 @@ uint64 MPTCP_Flow::_nextSmallest(TCPConnection *sub, uint64 last){
          TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
          while((itr != conn->dss_dataMapofSubflow.end()) &&
                  (itr->second->dss_seq <= last) && (!itr->second->delivered)){
-             if(itr->second->dss_seq == last && multipath_penalizing){
 
+             if(itr->second->dss_seq == last && multipath_penalizing){
                  // penalize flow
                  TCPTahoeRenoFamilyStateVariables* another_state =
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*> (conn->getTcpAlgorithm()->getStateVariables());
@@ -795,8 +795,7 @@ uint64 MPTCP_Flow::_nextSmallest(TCPConnection *sub, uint64 last){
              }
              itr++;
          }
-         if((itr != conn->dss_dataMapofSubflow.end()) &&
-                 (ret > itr->second->dss_seq) && (!itr->second->delivered)){
+         if((itr != conn->dss_dataMapofSubflow.end()) &&  (!itr->second->delivered)){
                  ret = itr->second->dss_seq;
          }
     }
@@ -1681,6 +1680,7 @@ void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len){
 	}
 
     //std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
+	//mptcp_receiveQueue->printInfo();
 	mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
 	if(mptcp_rcv_adv < old_mptcp_rcv_adv){
 	    ASSERT(false && "What is wrong here");
