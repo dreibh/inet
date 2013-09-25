@@ -637,11 +637,11 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
 
-                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + 2 * another_state->snd_mss) > mptcp_snd_wnd)){
+                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + another_state->snd_mss) > mptcp_snd_wnd)){
 
                    // The next cycle could possible close the window
                    // we should do some opportunistic retransmission
-                    if(4 * another_state->snd_mss >= another_state->snd_cwnd){
+                   if(4 * another_state->snd_mss < another_state->snd_cwnd){
                        if(opportunisticRetransmission && (mptcp_snd_nxt != mptcp_snd_una)){
                            _opportunisticRetransmission(tmp);
                        }
