@@ -333,8 +333,11 @@ public:
     };
     BufferOptimizationLevel cmtBufferOptimizationLevel;
     BufferSplitVariant cmtBufferSplitVariant;
-
     simtime_t time_last_penalized;
+
+    uint32 s_olia_sent_bytes;
+    uint32 olia_sent_bytes;
+    uint32 new_olia_counting_start;
 #endif
     // those counters would logically belong to TCPAlgorithm, but it's a lot easier to manage them here
     uint32 dupacks;          // current number of received consecutive duplicate ACKs

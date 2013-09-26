@@ -532,6 +532,7 @@ OBJS = \
     $O/transport/tcp/flavours/TCPTahoeRenoFamily.o \
     $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o \
     $O/transport/tcp/mptcp_extension/TCPMultipathPCB.o \
+    $O/transport/tcp/mptcp_extension/flavours/MPTCP_OLIA.o \
     $O/transport/tcp/mptcp_extension/flavours/MPTCP_RFC6356.o \
     $O/transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathDataRcvQueue.o \
     $O/transport/tcp/mptcp_extension/mptcp_scheduler/TCPMultipathRoundRobinScheduler.o \
@@ -10309,6 +10310,45 @@ $O/transport/tcp/mptcp_extension/TCPMultipathPCB.o: transport/tcp/mptcp_extensio
   networklayer/ipv4/IPv4Route.h \
   base/INETDefs.h \
   transport/tcp/TCPConnection.h \
+  networklayer/common/InterfaceTable.h \
+  networklayer/contract/IPvXAddress.h \
+  transport/tcp/TCP.h \
+  transport/tcp/SACK_variant/SACKHandler.h
+$O/transport/tcp/mptcp_extension/flavours/MPTCP_OLIA.o: transport/tcp/mptcp_extension/flavours/MPTCP_OLIA.cc \
+  networklayer/ipv4/IPv4InterfaceData.h \
+  networklayer/ipv6/IPv6InterfaceData.h \
+  transport/tcp_common/TCPSegment.h \
+  networklayer/contract/IPv6Address.h \
+  transport/tcp/TCPAlgorithm.h \
+  transport/tcp/mptcp_extension/TCPMultipathPCB.h \
+  networklayer/common/IInterfaceTable.h \
+  networklayer/contract/IPv4Address.h \
+  transport/tcp/flavours/TCPNewReno.h \
+  networklayer/common/InterfaceTableAccess.h \
+  linklayer/contract/MACAddress.h \
+  networklayer/common/InterfaceEntry.h \
+  base/ByteArray_m.h \
+  transport/tcp_common/TCPSegment_m.h \
+  networklayer/ipv4/RoutingTableAccess.h \
+  transport/tcp/mptcp_extension/mptcp_queues/TCPMultipathReceiveQueue.h \
+  networklayer/common/InterfaceToken.h \
+  transport/tcp/flavours/TCPBaseAlg.h \
+  base/INotifiable.h \
+  transport/tcp/mptcp_extension/TCPMultipath.h \
+  networklayer/ipv4/IRoutingTable.h \
+  networklayer/ipv4/RoutingTable.h \
+  base/ModuleAccess.h \
+  base/NotifierConsts.h \
+  base/ByteArray.h \
+  transport/tcp/mptcp_extension/TCPMultipathFlow.h \
+  base/NotificationBoard.h \
+  transport/contract/TCPCommand_m.h \
+  transport/tcp/SACK_variant/RFC3517/SACK_RFC3517.h \
+  transport/tcp/mptcp_extension/flavours/MPTCP_OLIA.h \
+  networklayer/ipv4/IPv4Route.h \
+  base/INETDefs.h \
+  transport/tcp/TCPConnection.h \
+  transport/tcp/flavours/TCPTahoeRenoFamily.h \
   networklayer/common/InterfaceTable.h \
   networklayer/contract/IPvXAddress.h \
   transport/tcp/TCP.h \

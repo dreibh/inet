@@ -128,6 +128,8 @@ TCPStateVariables::TCPStateVariables()
 #ifdef PRIVATE
     sackhandler = NULL;
     time_last_penalized = 0;
+    olia_sent_bytes = 0;
+    s_olia_sent_bytes = 0;
 #endif
 }
 
