@@ -28,7 +28,7 @@
 #include "TCPSendQueue.h"
 #include "TCPReceiveQueue.h"
 #include "TCPAlgorithm.h"
-#include "TCPSACKRexmitQueue.h"
+#include "SACK_variant/Reschka/TCPSACKRexmitQueue.h"
 #ifdef PRIVATE
 #include "TCPMultipath.h"
 #endif // PRIVATE
@@ -68,6 +68,7 @@ TCPStateVariables::TCPStateVariables()
     delayed_acks_enabled = false; // will be set from configureStateVariables()
     limited_transmit_enabled = false; // will be set from configureStateVariables()
     increased_IW_enabled = false; // will be set from configureStateVariables()
+    rfc6928_enabled = false;
     full_sized_segment_counter = 0;
     ack_now = false;
 
@@ -164,6 +165,7 @@ std::string TCPStateVariables::detailedInfo() const
     out << "nagle_enabled=" << nagle_enabled << "\n";
     out << "limited_transmit_enabled=" << limited_transmit_enabled << "\n";
     out << "increased_IW_enabled=" << increased_IW_enabled << "\n";
+    out << "rfc6928_enabled=" << rfc6928_enabled << "\n";
     out << "delayed_acks_enabled=" << delayed_acks_enabled << "\n";
     out << "ws_support=" << ws_support << "\n";
     out << "ws_enabled=" << ws_enabled << "\n";
@@ -194,6 +196,9 @@ TCPConnection::TCPConnection()
 	isSubflow = false;
 	joinToAck = false;
 	joinToSynAck = false;
+#ifdef ADD_ADDR
+	add_addr = false;
+#endif // ADD_ADDR
 	isQueueAble = false;
     todelete = false;
     inlist = false;
@@ -240,6 +245,9 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     isSubflow = false;
     joinToAck = false;
     joinToSynAck = false;
+#ifdef ADD_ADDR
+    add_addr = false;
+#endif // ADD_ADDR
     isQueueAble = false;
     todelete = false;
     inlist = false;
@@ -517,6 +525,9 @@ TCPConnection::~TCPConnection()
         isSubflow = false;
         joinToAck = false;
         joinToSynAck = false;
+#ifdef ADD_ADDR
+        add_addr = false;
+#endif // ADD_ADDR
         isQueueAble = false;
         todelete = false;
         inlist = false;

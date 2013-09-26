@@ -66,6 +66,9 @@ class INET_API MPTCP_PCB
         int _processMP_JOIN_IDLE(int connId, TCPConnection* subflow, TCPSegment *tcpseg, const TCPOption* option);
         int _processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
         int _processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
+#ifdef ADD_ADDR
+        int _processMP_ADD_ADDR(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option);
+#endif // ADD_ADDR
         // cleanup
         int _clearAll();
 

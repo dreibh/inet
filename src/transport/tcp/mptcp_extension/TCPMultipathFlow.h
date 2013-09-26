@@ -120,6 +120,9 @@ class INET_API MPTCP_Flow
     bool isSubflowOf(TCPConnection* subflow);
     const TCP_SubFlowVector_t* getSubflows();
     bool sendEstablished;
+#ifdef ADD_ADDR
+    int addADDR(AddrTupple_t* raddr);
+#endif // ADD_ADDR
 
     //######################################################
     // Debug
@@ -191,6 +194,10 @@ class INET_API MPTCP_Flow
               TCPConnection* subflow, TCPOption* option);
     int _writeDSSHeaderandProcessSQN(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
               TCPConnection* subflow, TCPOption* option);
+#ifdef ADD_ADDR
+    int _writeADDADDRHeader(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
+                  TCPConnection* subflow, TCPOption* option);
+#endif // ADD_ADDR
     bool _prepareJoinConnection();
 
     // crypto functions ==> see also rfc 2104

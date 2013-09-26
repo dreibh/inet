@@ -260,6 +260,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn->getState()->delayed_acks_enabled = this->getState()->delayed_acks_enabled;
 		conn->getState()->limited_transmit_enabled = this->getState()->limited_transmit_enabled;
 		conn->getState()->increased_IW_enabled = this->getState()->increased_IW_enabled;
+		conn->getState()->rfc6928_enabled = this->getState()->rfc6928_enabled;
 		conn->getState()->ws_support = this->getState()->ws_support;
 
 		conn->getState()->snd_ws = this->getState()->snd_ws;
@@ -663,6 +664,9 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
         	openCmd->getSubFlowNumber();
         	joinToAck = false;
         	joinToSynAck = false;
+#ifdef ADD_ADDR
+        	add_addr = false;
+#endif // ADD_ADDR
         }
 #endif // PRIVATE
 }
@@ -691,6 +695,7 @@ void TCPConnection::configureStateVariables()
     state->nagle_enabled = tcpMain->par("nagleEnabled"); // Nagle's algorithm (RFC 896) enabled/disabled
     state->limited_transmit_enabled = tcpMain->par("limitedTransmitEnabled"); // Limited Transmit algorithm (RFC 3042) enabled/disabled
     state->increased_IW_enabled = tcpMain->par("increasedIWEnabled"); // Increased Initial Window (RFC 3390) enabled/disabled
+    state->rfc6928_enabled = tcpMain->par("rfc6928Enabled"); // Increased Initial Window (RFC 6928) enabled/disabled
     state->snd_mss = tcpMain->par("mss").longValue(); // Maximum Segment Size (RFC 793)
     state->ts_support = tcpMain->par("timestampSupport"); // if set, this means that current host supports TS (RFC 1323)
     state->sack_support = tcpMain->par("sackSupport"); // if set, this means that current host supports SACK (RFC 2018, 2883, 3517)

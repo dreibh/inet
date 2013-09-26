@@ -263,6 +263,12 @@ int MPTCP_PCB::_processSegment(int connId, TCPConnection* subflow,
                     DEBUGPRINT("[MPTCP][IDLE][MPTCP OPTION][IN] MP_DSS%s","\0");
                     _processMP_DSS(connId, subflow, tcpseg, &option);
                     break;
+#ifdef ADD_ADDR
+                case MP_ADD_ADDR:
+                    DEBUGPRINT("[MPTCP][ESTABLISHED][MPTCP OPTION][IN] MP_ADD_ADDR%s","\0");
+                    _processMP_ADD_ADDR(connId, subflow, tcpseg, &option);
+                    break;
+#endif // ADD_ADDR
                 default:
                     DEBUGPRINT("[MPTCP][ESTABLISHED][MPTCP OPTION][IN] Not supported%s","\0");
                     ASSERT(false && "This MPTCP Message Type is not supported");
@@ -339,6 +345,9 @@ int MPTCP_PCB::_processMP_CAPABLE(int connId, TCPConnection* subflow, TCPSegment
         subflow->flow->addSubflow(connId, subflow);
 
         subflow->isQueueAble = true;
+#ifdef ADD_ADDR
+        subflow->add_addr = true;
+#endif // ADD_ADDR
         // subflow->sendAck();
 
     } else {
@@ -375,6 +384,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
 
 // process SYN
     if((tcpseg->getSynBit()) && (!tcpseg->getAckBit()) ) {
+
         DEBUGPRINT("[MPTCP][IDLE][JOIN] process SYN%s","\0");
         // First the main flow should be find in the list of flows
 
@@ -385,6 +395,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
         uint32_t remoteToken = option->getValues(1);
         DEBUGPRINT("[MPTCP] got Token = %i", remoteToken);
         // First we should find the flow for this subflow. We must sure that we know it
+
         AllMultipathTCPVector_t::const_iterator it;
         for (it = mptcp_flow_vector.begin(); it != mptcp_flow_vector.end(); it++) {
            TuppleWithStatus_t* t = (TuppleWithStatus_t *)(*it);
@@ -395,6 +406,7 @@ int MPTCP_PCB::_processMP_JOIN_ESTABLISHED(int connId, TCPConnection* subflow, T
                if(t->flow->getLocalToken() == remoteToken){
                    subflow->flow = t->flow;
                    t->flow->addSubflow(connId,subflow);
+
                    break;
                }
            }
@@ -559,6 +571,22 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow, TCPSegment *tc
         DEBUGPRINT("[FLOW][DSS][INFO][RCV] Ack Seq: %ld \t SND Seq: %ld \t Subflow Seq: %d \t Data length: %d", ack_seq, snd_seq, flow_seq, data_len);
         return 0;
 }
+
+#ifdef ADD_ADDR
+
+int MPTCP_PCB::_processMP_ADD_ADDR(int connId, TCPConnection* subflow, TCPSegment *tcpseg,const  TCPOption* option){
+    DEBUGPRINT("[MPTCP][ESTABLISHED][ADD_ADDR] process MPTCP Option ADD ADDR%s","\0");
+//    ASSERT((option->getValuesArraySize() > 5) && "We need some more options...");
+
+    AddrTupple_t* raddr = new AddrTupple_t;
+    raddr->addr = IPv4Address(option->getValues(1));
+    raddr->port = option->getValues(2);
+
+    subflow->flow->addADDR(raddr);
+    return 1;
+}
+
+#endif // ADD_ADDR
 
 /**
  * FIXME Scheduler

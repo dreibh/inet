@@ -29,7 +29,7 @@
 #include "TCPSegment.h"
 #ifdef PRIVATE
 // MBE: Includes
-#include "SACK_RFC3517.h"
+#include "SACK_variant/RFC3517/SACK_RFC3517.h"
 #include "TCPMultipath.h"
 #include "TCPMultipathPCB.h"
 #include "TCPMultipathFlow.h"
@@ -250,6 +250,7 @@ public:
     bool delayed_acks_enabled;  // set if delayed ACK algorithm (RFC 1122) is enabled
     bool limited_transmit_enabled; // set if Limited Transmit algorithm (RFC 3042) is enabled
     bool increased_IW_enabled;  // set if Increased Initial Window (RFC 3390) is enabled
+    bool rfc6928_enabled;       // set if Increased Initial Window (RFC 6928) is enabled
 
     uint32 full_sized_segment_counter; // this counter is needed for delayed ACK
     bool ack_now;               // send ACK immediately, needed if delayed_acks_enabled is set
@@ -419,7 +420,9 @@ class INET_API TCPConnection
     bool sendJOINACK;
     bool joinToAck;         // status marker
     bool joinToSynAck;      // status marker
-
+#ifdef ADD_ADDR
+    bool add_addr;
+#endif // ADD_ADDR
     bool isQueueAble;       // queue able for scheduler -> most times we wait for established
     bool todelete;          // we should delete this
     bool inlist;            // is in our subflow list enqueued

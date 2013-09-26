@@ -206,6 +206,7 @@ simple TCP like ITCP
         bool nagleEnabled = default(true); // Nagle's algorithm (RFC 896) enabled/disabled
         bool limitedTransmitEnabled = default(true); // Limited Transmit algorithm (RFC 3042) enabled/disabled (can be used for TCPReno/TCPTahoe/TCPNewReno/TCPNoCongestionControl)
         bool increasedIWEnabled = default(false); // Increased Initial Window (RFC 3390) enabled/disabled
+        bool rfc6928Enabled = default(false); // Increased Initial Window (RFC 6928) enabled/disabled
         bool sackSupport = default(false); // Selective Acknowledgment (RFC 2018, 2883, 3517) support (header option) (SACK will be enabled for a connection if both endpoints support it)
         bool windowScalingSupport = default(true); // Window Scale (RFC 1323) support (header option) (WS will be enabled for a connection if both endpoints support it)
         bool timestampSupport = default(true); // Timestamps (RFC 1323) support (header option) (TS will be enabled for a connection if both endpoints support it)
