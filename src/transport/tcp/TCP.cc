@@ -94,12 +94,12 @@ void TCP::initialize()
      else if( (strcmp((const char*)par("cmtCCVariant"), "like-mptcp") == 0) ||
               (strcmp((const char*)par("cmtCCVariant"), "mptcp-like") == 0) ) {
          multipath     = true;
-         isOLIA_CC = true;
+         isRFC6356  = true;
      }
      else if( (strcmp((const char*)par("cmtCCVariant"), "like-olia") == 0) ||
               (strcmp((const char*)par("cmtCCVariant"), "olia-like") == 0) ) {
          multipath     = true;
-         isRFC6356 = true;
+         isOLIA_CC = true;
      }
      else {
          throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",
