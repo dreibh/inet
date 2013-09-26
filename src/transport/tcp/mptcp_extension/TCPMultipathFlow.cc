@@ -734,7 +734,7 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
             return;
         }
     }
-    if(mptcp_highestRTX - 1 == mptcp_snd_nxt){
+    if(mptcp_highestRTX - 1 >= mptcp_snd_nxt){
         return;
     }
     if(mptcp_highestRTX <= mptcp_snd_una){

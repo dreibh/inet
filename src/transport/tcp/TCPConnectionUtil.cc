@@ -443,7 +443,7 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 
 void TCPConnection::sendToIP(TCPSegment *tcpseg)
 {
-    if(tcpseg->getSequenceNo() == 253770347)
+    if(tcpseg->getSequenceNo() == 297867)
         std::cerr << " STOP  " << std::endl;
     // record seq (only if we do send data) and ackno
     if (sndNxtVector && tcpseg->getPayloadLength() != 0)
