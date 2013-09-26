@@ -681,11 +681,11 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                                mptcp_highestRTX = mptcp_snd_una;
                            }
 
-                          // do{
-                          //     uint64 old_highst = mptcp_highestRTX ;
+                           //do{
+                           //    uint64 old_highst = mptcp_highestRTX ;
                                _opportunisticRetransmission(tmp);
-                               //if(mptcp_highestRTX  == old_highst)
-                             //      break;
+                           //    if(mptcp_highestRTX  == old_highst)
+                           //        break;
                            //}while((another_state->snd_cwnd > another_state->snd_mss)  && (mptcp_highestRTX - 1 != mptcp_snd_nxt));
                        }
                     }
@@ -729,35 +729,36 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
 
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
     uint64 old_mptcp_highestRTX = mptcp_highestRTX;
+    // penalize if configured
+    _nextSmallest(sub, mptcp_highestRTX + 1);
+
+    // New to retransmit?
+    if(mptcp_highestRTX == mptcp_snd_una){
+        return;
+    }
+    mptcp_highestRTX = mptcp_snd_una;
+
+    // Don t repeat msgs from the same subflow
     if(!sub->dss_dataMapofSubflow.empty()){
-       //std::cerr <<  sub->dss_dataMapofSubflow.begin()->second->dss_seq << " "<<  mptcp_snd_una << std::endl;
         if(sub->dss_dataMapofSubflow.begin()->second->dss_seq -1 == mptcp_snd_una){
             return;
         }
     }
+
+    // if there is only one msg outstanding... go back
     if(mptcp_highestRTX - 1 >= mptcp_snd_nxt){
         return;
     }
-    if(mptcp_highestRTX <= mptcp_snd_una){
-        mptcp_highestRTX = mptcp_snd_una;
-    }
+
     isMPTCP_RTX = true;
-    // Workaround FIXME ...in normal case we must shift buffer
     mptcp_snd_nxt = mptcp_highestRTX + 1;
 //    std::cerr << "Opportunistic Retransmit DSS " << mptcp_snd_nxt << "send with " << sub->getState()->getSndNxt() << " by " <<  sub->remoteAddr << "<->" << sub->localAddr << std::endl;
     sub->orderBytesForQueue(2*another_state->snd_mss);
-
     sub->sendOneNewSegment(true, another_state->snd_cwnd);
-
     if(mptcp_snd_nxt == mptcp_highestRTX + 1){
-        // windows blocked or whatever
+        // Ok something went bad during opp. rtx... so set back
         mptcp_highestRTX = old_mptcp_highestRTX;
     }
-    else{
-        // Search fo the next smallest in the lists
-        mptcp_highestRTX = _nextSmallest(sub, mptcp_highestRTX + 1);
-    }
-
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
 }
@@ -769,38 +770,36 @@ uint64 MPTCP_Flow::_nextSmallest(TCPConnection *sub, uint64 last){
          TCPConnection* conn = (*i)->subflow;
          if(sub == conn)
              continue;
-         if(conn->dss_dataMapofSubflow.empty())
-             break;
 
          TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
          while((itr != conn->dss_dataMapofSubflow.end()) &&
-                 (itr->second->dss_seq <= last) && (!itr->second->delivered)){
-
-             if(itr->second->dss_seq == last && multipath_penalizing){
-                 // penalize flow
-                 TCPTahoeRenoFamilyStateVariables* another_state =
-                        check_and_cast<TCPTahoeRenoFamilyStateVariables*> (conn->getTcpAlgorithm()->getStateVariables());
-
-                 if(simTime() - conn->getState()->time_last_penalized > another_state->srtt){
-                     another_state->ssthresh = std::max(another_state->snd_cwnd / 2, 2 * another_state->snd_mss);
-                     another_state->snd_cwnd = another_state->ssthresh;
-                     TCPBaseAlg* base = check_and_cast<TCPBaseAlg*> (conn->getTcpAlgorithm());
-                     if(base->cwndVector)
-                         base->cwndVector->record(another_state->snd_cwnd);
-                     if(base->ssthreshVector)
-                         base->ssthreshVector->record(another_state->ssthresh);
-                     // mark last penalized
-                     conn->getState()->time_last_penalized = simTime();
-                 }
-
-             }
+                (itr->second->delivered)){
              itr++;
          }
-         if((itr != conn->dss_dataMapofSubflow.end()) &&  (!itr->second->delivered)){
-                 ret = itr->second->dss_seq;
-         }
+         if( (itr != conn->dss_dataMapofSubflow.end()) && (itr->second->dss_seq <= last + 1))
+             _penalize(conn);
+
     }
     return ret;
+}
+
+void MPTCP_Flow::_penalize(TCPConnection *conn){
+    if(!multipath_penalizing)
+        return;
+    TCPTahoeRenoFamilyStateVariables* another_state =
+           check_and_cast<TCPTahoeRenoFamilyStateVariables*> (conn->getTcpAlgorithm()->getStateVariables());
+
+    if(simTime() - conn->getState()->time_last_penalized > another_state->srtt){
+        another_state->ssthresh = std::max(another_state->snd_cwnd / 2, another_state->snd_mss);
+        another_state->snd_cwnd = another_state->ssthresh;
+        TCPBaseAlg* base = check_and_cast<TCPBaseAlg*> (conn->getTcpAlgorithm());
+        if(base->cwndVector)
+            base->cwndVector->record(another_state->snd_cwnd);
+        if(base->ssthreshVector)
+            base->ssthreshVector->record(another_state->ssthresh);
+        // mark last penalized
+        conn->getState()->time_last_penalized = simTime();
+    }
 }
 /*
  * Do the MP_CAPABLE Handshake
