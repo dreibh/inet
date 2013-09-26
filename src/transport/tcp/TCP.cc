@@ -83,6 +83,7 @@ void TCP::initialize()
 #ifdef PRIVATE
     static int id;
     isRFC6356 = false;
+    isOLIA_CC = false;
     // MBe: setup Multipath and the CC  by CC Variant
      if(strcmp((const char*)par("cmtCCVariant"), "off") == 0) {
          multipath     = false;
@@ -92,6 +93,11 @@ void TCP::initialize()
      }
      else if( (strcmp((const char*)par("cmtCCVariant"), "like-mptcp") == 0) ||
               (strcmp((const char*)par("cmtCCVariant"), "mptcp-like") == 0) ) {
+         multipath     = true;
+         isOLIA_CC = true;
+     }
+     else if( (strcmp((const char*)par("cmtCCVariant"), "like-olia") == 0) ||
+              (strcmp((const char*)par("cmtCCVariant"), "olia-like") == 0) ) {
          multipath     = true;
          isRFC6356 = true;
      }
