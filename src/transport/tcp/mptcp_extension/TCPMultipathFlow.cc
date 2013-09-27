@@ -763,12 +763,19 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
 }
 
 uint64 MPTCP_Flow::penalize(TCPConnection *sub, uint64 last){
-    uint64 ret = mptcp_snd_nxt - 1;
+    uint64 ret = last;
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
              i != subflow_list.end(); i++) {
          TCPConnection* conn = (*i)->subflow;
          if(sub == conn)
              continue;
+
+         // Don t repeat msgs from the same subflow
+         if(!sub->dss_dataMapofSubflow.empty()){
+             if(sub->dss_dataMapofSubflow.begin()->second->dss_seq  == last){
+                 return ret;
+             }
+         }
 
          TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
          while((itr != conn->dss_dataMapofSubflow.end()) &&
