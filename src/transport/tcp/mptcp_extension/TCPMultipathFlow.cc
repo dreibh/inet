@@ -629,7 +629,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
     MPTCP_PATH_SCHEDULER scheduler = (*(subflow_list.begin()))->subflow->getTcpMain()->multipath_path_scheduler;
 
     // First alternative: we fill the window depending on the RTT - TCP like
-
     switch(scheduler){
     case Linux_like:{
         // start always with the path with the smallest RTT
@@ -638,13 +637,13 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
         int c = 0;
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                         i != subflow_list.end(); i++,c++) {
-                    TCP_subflow_t* entry = (*i);
-                    if(entry->subflow->isQueueAble){
-
+                    TCPConnection* tmp =  (*i)->subflow;
+                    if(tmp->isQueueAble){
                         TCPTahoeRenoFamilyStateVariables* another_state =
-                                check_and_cast<TCPTahoeRenoFamilyStateVariables*> (entry->subflow->getTcpAlgorithm()->getStateVariables());
+                                check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
                         double sRTT = GET_SRTT(another_state->srtt.dbl());
-                        while(true){
+
+                        for(;;  ){
                             if(path_order.end() == path_order.find(sRTT)){
                                 path_order.insert(std::make_pair(sRTT,c));
                                 break;
@@ -654,17 +653,15 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                         }
                     }
           }
+
         int count = 0;
         for ( std::map<double,int>::iterator o = path_order.begin();
                                o != path_order.end(); o++) {
             TCPConnection* tmp =  (*(subflow_list.begin() + o->second))->subflow;
 
             if(tmp->isQueueAble){
-
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
-
-
 
                 //uint32 cof = another_state->snd_max - another_state->snd_una;
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
@@ -681,9 +678,12 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                    // and we send
 
                    // Penalize the flow with the smallest DSS
-                   penalize(tmp, mptcp_snd_una + 1);
-                   if(4 * another_state->snd_mss < another_state->snd_cwnd){
-                       if(opportunisticRetransmission && (mptcp_snd_nxt != mptcp_snd_una)){
+
+
+                   if((4 * another_state->snd_mss < another_state->snd_cwnd) && (mptcp_snd_nxt != mptcp_snd_una)){
+                       penalize(tmp, mptcp_snd_una + 1);
+
+                       if(opportunisticRetransmission ){
 
                             // Do opportunistic retransmission
                             if(mptcp_highestRTX == mptcp_snd_una){
@@ -770,19 +770,12 @@ uint64 MPTCP_Flow::penalize(TCPConnection *sub, uint64 last){
          if(sub == conn)
              continue;
 
-         // Don t repeat msgs from the same subflow
-         if(!sub->dss_dataMapofSubflow.empty()){
-             if(sub->dss_dataMapofSubflow.begin()->second->dss_seq  == last){
-                 return ret;
-             }
-         }
-
          TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
          while((itr != conn->dss_dataMapofSubflow.end()) &&
                 (itr->second->delivered)){
              itr++;
          }
-         if( (itr != conn->dss_dataMapofSubflow.end()) && (itr->second->dss_seq <= last + 1))
+         if( (itr != conn->dss_dataMapofSubflow.end()) && (itr->second->dss_seq <= last))
              _penalize(conn);
 
     }
@@ -792,6 +785,7 @@ uint64 MPTCP_Flow::penalize(TCPConnection *sub, uint64 last){
 void MPTCP_Flow::_penalize(TCPConnection *conn){
     if(!multipath_penalizing)
         return;
+
     TCPTahoeRenoFamilyStateVariables* another_state =
            check_and_cast<TCPTahoeRenoFamilyStateVariables*> (conn->getTcpAlgorithm()->getStateVariables());
 
