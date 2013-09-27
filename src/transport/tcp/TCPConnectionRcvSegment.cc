@@ -98,6 +98,10 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     printSegmentBrief(tcpseg);
     tcpEV << "TCB: " << state->info() << "\n";
 
+    if(tcpseg->getSequenceNo() == 272235){
+           std::cerr << "found";
+       }
+
     if (rcvSeqVector)
         rcvSeqVector->record(tcpseg->getSequenceNo());
 
@@ -141,9 +145,10 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
 TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 {
 
-    //if(tcpseg->getSequenceNo() == 2155255){
-    //    std::cerr << "found";
-    //}
+    if(tcpseg->getAckNo() == 96527){
+        std::cerr << "Work on..." <<  localAddr.str() << ".." <<  remoteAddr.str() << std::endl;
+        std::cerr << "found";
+    }
 
     //
     // RFC 793: first check sequence number
@@ -554,7 +559,14 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                 uint32 old_usedRcvBuffer = state->usedRcvBuffer;
 
                 if(getTcpMain()->multipath && (flow != NULL)){
+//                    bool note = false;
+//                    if(tcpseg->getSndSeq() == flow->mptcp_rcv_nxt){
+//                        note = true;
+//                        std::cerr << "NEXT " << flow->mptcp_rcv_nxt << " in queue from " << this->remoteAddr << "<->" << this->localAddr << " seq no " << tcpseg->getSequenceNo() <<std::endl;
+//                    }
                     flow->enqueueMPTCPData(tcpseg->getSndSeq(),tcpseg->getLen());
+//                    if(note)
+//                        std::cerr << "Wait " << flow->mptcp_rcv_nxt << std::endl;
                 }
 
                 state->rcv_nxt = receiveQueue->insertBytesFromSegment(tcpseg);
@@ -1093,6 +1105,8 @@ TCPEventCode TCPConnection::processSegmentInSynSent(TCPSegment *tcpseg, IPvXAddr
 
         if (tcpseg->getAckBit())
         {
+            if(state->snd_una ==  253770347)
+                std::cerr << "why this number";
             state->snd_una = tcpseg->getAckNo();
 #ifndef PRIVATE
             // How could it be, that we have to discard in SYN
@@ -1350,6 +1364,9 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
     {
         // ack in window.
         uint32 old_snd_una = state->snd_una;
+        if(253770347 == tcpseg->getAckNo()){
+            std::cerr << "here";
+        }
         state->snd_una = tcpseg->getAckNo();
 
         if (unackedVector)

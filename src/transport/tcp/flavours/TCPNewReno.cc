@@ -130,6 +130,10 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
                 this->conn->getState()->sackhandler->discardUpTo(state->snd_una);
                 this->conn->getState()->sackhandler->setNewRecoveryPoint(state->snd_una);
             }
+            if(conn->getTcpMain()->multipath && (conn->flow != NULL))
+                conn->flow->sendData(true);
+            else
+                sendData(true);
         }
         else{
 
@@ -140,16 +144,14 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             if(state->snd_una < firstSeqAcked)
                 throw cRuntimeError("This is not possible");
 
-
-            // Retransmit
+           // Retransmit
             conn->retransmitOneSegment(false); // It doesn t matter if here or somewhere esle ...
 
             // Do the indow stuff
             decreaseCWND(std::min(state->snd_una - firstSeqAcked,state->snd_mss), false); // Fixe ME -> How to do deflating
             tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
-            increaseCWND(state->snd_mss, false); // Is this correct ?
-
+            increaseCWND(state->snd_mss, false);
             //conn->sendAck(); // Fixme ...needed?
 
             if (state->sack_enabled  && (!state->snd_fin_seq)) // FIXME... IT should be OK, even with fin. But we have to look on the sqn
@@ -159,22 +161,16 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
                 // B.2 & C
                 this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
             }
-
-            sendData(true);
             return;
         }
-    }else{
-        updateCWND(firstSeqAcked);
-    }
+    }else
+    updateCWND(firstSeqAcked);
+    //sendData(true);
+    if(conn->getTcpMain()->multipath && (conn->flow != NULL))
+        conn->flow->sendData(true);
+    else
+        sendData(true);
 
-//
-//    // Retransmit Timer
-//    if ( state->lossRecovery && (!state->firstPartialACK) && (!state->fin_rcvd)) // TODO Unacked date => Correct? ... overwork check Fin state
-//    {
-//        restartRexmitTimer();
-//    }
-
-    sendData(true);
 }
 
 
@@ -213,12 +209,13 @@ void TCPNewReno::receivedDuplicateAck()
         // Deflating
         increaseCWND(state->snd_mss, false);
         tcpEV << "NewReno on dupAcks > DUPTHRESH(=3): Fast Recovery: inflating cwnd by SMSS, new cwnd=" << state->snd_cwnd << "\n";
-        conn->sendOneNewSegment(false, state->snd_cwnd);
-        //sendData(true);
+        if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
+        {
+            this->conn->getState()->sackhandler->sendUnsackedSegment(state->snd_cwnd);
+        }
     } else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0,false); // Just for Debug
         conn->sendOneNewSegment(false, state->snd_cwnd);
-        //sendData(true);
     }
     else{
         increaseCWND(0,false); // Just for Debug

@@ -228,9 +228,12 @@ simple TCP like ITCP
         string multipath_receiveQueueClass = default("TCPMultipathDataRcvQueue");	// Set scheduler for the subflows of multipath
         bool multipath_ordered = default(true); // endable and disable ordered multipath transmission -> just for testing
 	
-		string multipath_link_uitlization = default("cross"); // cross or linear
-	
-		string multipath_path_scheduler = default("off");
+		string multipath_link_uitlization = default("linear"); // cross or linear
+		string multipath_path_scheduler = default("Linux_like"); // Linux like or off
+		
+		string multipath_opportunistic_retransmission = default("off"); 
+		string multipath_penalizing = default("off"); 
+		
         @display("i=block/wheelbarrow");
     gates:
         input appIn[] @labels(TCPCommand/down);

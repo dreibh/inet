@@ -33,6 +33,10 @@ TCPMultipathDataRcvQueue::~TCPMultipathDataRcvQueue()
 }
 
 void TCPMultipathDataRcvQueue::clear(){
+    if(data.empty()){
+        std::cerr << "Queue is empty" << std::endl;
+        return;
+    }
     std::cerr <<  "Stop with filled queue" << std::endl;
     for(MPTCP_DataMap::iterator i = data.begin(); i != data.end(); i++){
         std::cerr << "Base: " << virtual_start << "Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
@@ -44,7 +48,7 @@ void TCPMultipathDataRcvQueue::clear(){
 
 void TCPMultipathDataRcvQueue::init(uint64 startSeq)
 {
-    virtual_start = startSeq - 1;
+    virtual_start = startSeq + 1;
     clear();
     data.clear();
 }
@@ -56,17 +60,30 @@ void TCPMultipathDataRcvQueue::info()
            std::cerr << "Base: " << virtual_start << " Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
             << " - send " << (uint32) i->second->begin << ".." << (uint32) i->first  << std::endl;
     }
-    std::cerr << "Occupied Memory" << getOccupiedMemory() << std::endl;
+    // std::cerr << "Occupied Memory" << getOccupiedMemory() << " complete up to " << (uint32) virtual_start << " On Time " <<  simTime() << std::endl;
 }
 
 uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, uint32 data_len)
 {
     MPTCP_DataMap::iterator i = data.begin();
-
     Data_Pair *p = (Data_Pair *) malloc(sizeof(Data_Pair));
     p->begin = dss_start_seq;
     p->len = data_len;
-
+    //info();
+    if(dss_start_seq == 437371525041580823)
+        std::cerr << "stop";
+    // check for old
+    if(dss_start_seq < (virtual_start + 1)){
+        // old one
+        // perhaps we coudl use part of this data
+        if(dss_start_seq + data_len < (virtual_start + 1))
+            return virtual_start; // No that is not valid any more
+        dss_start_seq = (virtual_start);
+        data_len = (dss_start_seq + data_len) - (virtual_start);
+        p->begin = virtual_start;
+        p->len = data_len;
+    }
+    //std::cerr << "Waiting for " << virtual_start+1 << std::endl;
     std::pair<MPTCP_DataMap::iterator, bool> res = data.insert(std::make_pair(dss_start_seq + data_len,p));
     const bool result = res.second;
     if(!result){
@@ -84,10 +101,12 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
         return virtual_start;
     }
 
-    uint64 next_start= virtual_start + 1;
+    uint64 next_start= virtual_start; + 1;
     uint64 highest_in_order = virtual_start;
     bool in_order = true;
 
+//    if(virtual_start  > p->begin)
+//        return virtual_start;   // I only sort the list, if I have everything
     // Now check the queue for Overlapping
     for(i = data.begin();i != data.end();i++){
 
@@ -107,7 +126,7 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
             // New begin is next start - The end is later
             // we remove the new entry and adapt the second
             j->second->begin = ((res.first))->second->begin;
-            j->second->len   = j->first - ((res.first))->second->begin;
+            j->second->len   = j->first - j->second->begin;
 
             // we correct the length on delivery
             data.erase((res.first)->first);
@@ -116,10 +135,14 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
             i = data.begin();
             continue;
         }
-        if(in_order && (highest_in_order + 1 > i->second->begin))
-            continue;
+        // Just to be sure
+        //std::cerr << "calc" << i->second->begin << " .. "<< i->first << "calc length" << i->first - i->second->begin  << std::endl;
+        ASSERT((i->first - i->second->begin)  == i->second->len);
 
-        if(in_order && (highest_in_order + 1 == i->second->begin)){
+        if(in_order && (highest_in_order  > i->second->begin))
+            continue;
+        //info();
+        if(in_order && (highest_in_order == i->second->begin)){
             // we are in order
             highest_in_order  = i->first;
             in_order = true;
@@ -128,6 +151,10 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
      }
 
     virtual_start = highest_in_order;
+    //info();
+    //if(data.begin()->second->begin == 437371525041671959){ //437371525041579444
+    //    std::cerr << "stop";
+    //}
     return virtual_start;
 }
 
@@ -144,14 +171,7 @@ cPacket *TCPMultipathDataRcvQueue::extractBytesUpTo(uint64 seq)
         data.erase((data.begin())->first);
         return (pkt);
     }
-    else{
-//        std::cerr << "#################" << std::endl;
-        for(MPTCP_DataMap::iterator i = data.begin(); i != data.end(); i++){
-//            std::cerr << "Base: " << virtual_start << " Small: " << (uint32) virtual_start << " -> " << i->second->begin << ".."<< i->first
-//                   << " - send " << (uint32) i->second->begin << ".." << (uint32) i->first  << std::endl;
-        }
-//        std::cerr << "Occupied Memory" << getOccupiedMemory() << std::endl;
-    }
+    uint64 new_start = (--(data.end()))->first;
 
     return NULL;
 }
@@ -164,11 +184,19 @@ void TCPMultipathDataRcvQueue::printInfo(){
 }
 
 uint64 TCPMultipathDataRcvQueue::getOccupiedMemory(){
-
+#ifndef Relativ
    if(data.empty()){
        return 0;
    }
+   //info();
    return (--(data.end()))->first - virtual_start;
+#else
+   uint32 len = 0;
+   for(MPTCP_DataMap::iterator i = data.begin(); i != data.end(); i++){
+       len += i->second->len;
+   }
+   return len;
+#endif
 }
 
 uint64 TCPMultipathDataRcvQueue::getAmountOfBufferedBytes()
@@ -195,4 +223,3 @@ void TCPMultipathDataRcvQueue::getQueueStatus()
 {
     //tcpEV << "receiveQLength=" << data.size() << " " << info() << "\n";
 }
-

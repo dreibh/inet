@@ -209,6 +209,7 @@ class INET_API TCPStateVariables : public cObject
 
     // send sequence number variables (see RFC 793, "3.2. Terminology")
     uint32 snd_una;      // send unacknowledged
+private:
     uint32 snd_nxt;      // send next (drops back on retransmission)
 public:
     virtual void setSndNxt(uint32 new_snd_nxt);
@@ -284,7 +285,6 @@ public:
     // SACK related variables
     bool sack_support;       // set if the host supports selective acknowledgment (header option) (RFC 2018, 2883, 3517)
     bool sack_enabled;       // set if the connection uses selective acknowledgment (header option)
-
     bool snd_sack_perm;      // set if SACK_PERMITTED has been sent
     bool rcv_sack_perm;      // set if SACK_PERMITTED has been received
 
@@ -334,7 +334,11 @@ public:
     };
     BufferOptimizationLevel cmtBufferOptimizationLevel;
     BufferSplitVariant cmtBufferSplitVariant;
+    simtime_t time_last_penalized;
 
+    uint32 s_olia_sent_bytes;
+    uint32 olia_sent_bytes;
+    uint32 new_olia_counting_start;
 #endif
     // those counters would logically belong to TCPAlgorithm, but it's a lot easier to manage them here
     uint32 dupacks;          // current number of received consecutive duplicate ACKs
@@ -619,9 +623,8 @@ public:
      */
     virtual bool sendData(bool fullSegmentsOnly, uint32 congestionWindow);
 
-    virtual bool sendMPTCPData(bool fullSegmentsOnly, uint32 congestionWindow);
 #ifdef PRIVATE
-
+    virtual bool orderBytesForQueue(uint32 bytesToSend);
     virtual bool  sendKeepAlive();
 #endif
     /** Utility: sends 1 bytes as "probe", called by the "persist" mechanism */

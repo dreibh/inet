@@ -258,7 +258,6 @@ void TCPConnection::process_CLOSE(){
         sendFin();
         tcpAlgorithm->restartRexmitTimer();
         state->setSndNxt(state->getSndNxt() + 1);
-        state->snd_max = state->getSndNxt();
 
         if (unackedVector)
             unackedVector->record(state->snd_max - state->snd_una);
@@ -308,7 +307,6 @@ void TCPConnection::process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, c
                 sendFin();
                 tcpAlgorithm->restartRexmitTimer();
                 state->setSndNxt((state->getSndNxt() + 1));
-                state->snd_max = state->getSndNxt();
 
                 if (unackedVector)
                     unackedVector->record(state->snd_max - state->snd_una);
