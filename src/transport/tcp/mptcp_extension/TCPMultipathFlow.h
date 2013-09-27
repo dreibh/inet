@@ -219,7 +219,7 @@ class INET_API MPTCP_Flow
 
     // features opportunistic Retransmission
     void _opportunisticRetransmission(TCPConnection* sub);
-    uint64 _nextSmallest(TCPConnection *sub, uint64 last);
+    uint64 penalize(TCPConnection *sub, uint64 last);
     // MPTCP Flow Organisation
     // Token to identify
     uint32_t local_token;                   // B.1.1 Authentication and Metadata
