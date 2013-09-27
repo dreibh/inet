@@ -17,30 +17,57 @@ network bottleneck
         channel C2 extends DatarateChannel
         {
             datarate = 10 Mbps;
-            delay = 10 ms;
-            per = 0;
+            delay = 1 ms;
         }
     submodules:
-        default1: StandardHost {
+        pc2: StandardHost {
             parameters:
-                @display("p=72,47;i=device/pc3");
-                routingFile = "default1.mrt";
-            gates:
-                pppg[1];
-        }
-        mptcp1: StandardHost {
-            parameters:
-                @display("p=72,206;i=device/pc3");
-                routingFile = "mptcp1.mrt";
+                @display("p=72,241;i=device/pc3");
+                routingFile = "pc2.mrt";
             gates:
                 pppg[2];
         }
         server1: StandardHost {
             parameters:
-                @display("p=670,206;i=device/pc2");
+                @display("p=685,255;i=device/pc2");
                 routingFile = "server1.mrt";
             gates:
                 pppg[2];
+        }
+        router1: Router {
+            parameters:
+                routingFile = "router1.mrt";
+                @display("p=280,138;i=abstract/router");
+            gates:
+                pppg[3];
+        }
+        router2: Router {
+            parameters:
+                routingFile = "router2.mrt";
+                @display("p=280,330;i=abstract/router");
+            gates:
+                pppg[2];
+        }
+        router3: Router {
+            parameters:
+                routingFile = "router3.mrt";
+                @display("p=564,154;i=abstract/router");
+            gates:
+                pppg[3];
+        }
+        router4: Router {
+            parameters:
+                routingFile = "router4.mrt";
+                @display("p=564,338;i=abstract/router");
+            gates:
+                pppg[2];
+        }
+        pc1: StandardHost {
+            parameters:
+                @display("p=72,47;i=device/pc3");
+                routingFile = "pc1.mrt";
+            gates:
+                pppg[1];
         }
         server2: StandardHost {
             parameters:
@@ -49,50 +76,38 @@ network bottleneck
             gates:
                 pppg[1];
         }
-        router1: Router {
+        router5: Router {
             parameters:
-                routingFile = "router1.mrt";
-                @display("p=362,107;i=abstract/router");
+                routingFile = "router5.mrt";
+                @display("p=373,251;i=abstract/router");
             gates:
                 pppg[3];
         }
-        router2: Router {
+        router6: Router {
             parameters:
-                routingFile = "router2.mrt";
-                @display("p=362,255;i=abstract/router");
-            gates:
-                pppg[2];
-        }
-        router3: Router {
-            parameters:
-                routingFile = "router3.mrt";
-                @display("p=503,107;i=abstract/router");
+                routingFile = "router6.mrt";
+                @display("p=474,251;i=abstract/router");
             gates:
                 pppg[3];
         }
-        router4: Router {
-            parameters:
-                routingFile = "router4.mrt";
-                @display("p=503,255;i=abstract/router");
-            gates:
-                pppg[2];
-        }                
-
     connections:
+		// MPTCP Network 
 		// Subflow 1
-        mptcp1.pppg[0] <--> C1 <--> router1.pppg[0];
-        router3.pppg[1] <--> C1 <--> server1.pppg[0];
-        // Subflow 2
-        mptcp1.pppg[1] <--> C1 <--> router2.pppg[0];
-        router4.pppg[1] <--> C1 <--> server1.pppg[1];
-        // Subflow 3
-//        mptcp1.pppg[2] <--> C1 <--> router1.pppg[3];
-//        router3.pppg[3] <--> C1 <--> server1.pppg[2];
-		// Default network        
-        default1.pppg[0] <--> C1 <--> router1.pppg[2];
-        router3.pppg[2] <--> C1 <--> server2.pppg[0];
-        // Router Connection        
-        router1.pppg[1] <--> C2 <--> router3.pppg[0];
-        router2.pppg[1] <--> C2 <--> router4.pppg[0];
+        pc2.pppg[0] <--> C1 <--> router1.pppg[0];
+        router2.pppg[1] <--> C1 <--> router5.pppg[0];
+        pc1.pppg[0] <--> C1 <--> router1.pppg[2];
+
+        pc2.pppg[1] <--> C1 <--> router2.pppg[0];
+
+        server2.pppg[0] <--> C1 <--> router3.pppg[2];
+        server1.pppg[0] <--> C1 <--> router3.pppg[1];
+        router6.pppg[0] <--> C1 <--> router3.pppg[0];
+        server1.pppg[1] <--> C1 <--> router4.pppg[1];
+
+
+        router5.pppg[2] <--> C2 <--> router6.pppg[2];
+
+        router6.pppg[1] <--> C1 <--> router4.pppg[0];
+        router5.pppg[1] <--> C1 <--> router1.pppg[1];
 }
 

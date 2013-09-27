@@ -232,11 +232,11 @@ void MPTCP_Flow::_initFlow(int port) {
 }
 
 #ifdef ADD_ADDR
-int MPTCP_Flow::addADDR(AddrTupple_t* raddr){
+int MPTCP_Flow::addADDR(AddrTupple_t* raddr) {
 
-    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++){
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++) {
         TCP_subflow_t* entry = (*i);
-        if ((entry->subflow->remoteAddr == raddr->addr) && (entry->subflow->remotePort == raddr->port)){
+        if ((entry->subflow->remoteAddr == raddr->addr) && (entry->subflow->remotePort == raddr->port)) {
             return 0;
         }
     }
@@ -259,22 +259,22 @@ int MPTCP_Flow::addADDR(AddrTupple_t* raddr){
     bool found = false;
     AddrTupple_t* tmp_l;
     TCP_AddressVector_t::const_iterator it_l;
-    for (it_l = list_laddrtuple.begin(); it_l != list_laddrtuple.end(); it_l++){
+    for (it_l = list_laddrtuple.begin(); it_l != list_laddrtuple.end(); it_l++) {
         tmp_l = (AddrTupple_t*) *it_l;
-        if (IPvXAddress("127.0.0.1").equals(tmp_l->addr)){
+        if (IPvXAddress("127.0.0.1").equals(tmp_l->addr)) {
             continue;
         }
-        if (IPvXAddress("0.0.0.0").equals(tmp_l->addr)){
+        if (IPvXAddress("0.0.0.0").equals(tmp_l->addr)) {
             continue;
         }
-        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++){
+        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin(); i != subflow_list.end(); i++) {
             TCP_subflow_t* entry = (*i);
             if ((entry->subflow->localAddr == tmp_l->addr) && (entry->subflow->localPort == tmp_l->port)) {
                 found = true;
                 break;
             }
         }
-        if (found){
+        if (found) {
             found = false;
             continue;
         } else {
@@ -282,7 +282,7 @@ int MPTCP_Flow::addADDR(AddrTupple_t* raddr){
         }
     }
 
-    if (it_l != list_laddrtuple.end()){
+    if (it_l != list_laddrtuple.end()) {
         TCPConnection* tmp = subflow_list.front()->subflow;
 
         int old = tmp->remotePort;
@@ -298,7 +298,6 @@ int MPTCP_Flow::addADDR(AddrTupple_t* raddr){
     return 1;
 }
 #endif // ADD_ADDR
-
 /**
  * Add a subflow to a MPTCP connection
  * @param int Id of subflow - still not used
@@ -1454,7 +1453,7 @@ int MPTCP_Flow::_writeADDADDRHeader(uint t, TCPStateVariables* subflow_state,
             continue;
         }
         if (!skip)
-            break;
+        break;
     }
 
     if (it != list_laddrtuple.end()) {
@@ -1462,17 +1461,22 @@ int MPTCP_Flow::_writeADDADDRHeader(uint t, TCPStateVariables* subflow_state,
         uint32_t first_bits = 0x0;
         first_bits = (first_bits | ((uint16_t) MP_ADD_ADDR));
         first_bits = first_bits
-                << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
-        option->setValuesArraySize(3);
-        option->setValues(0, first_bits);
-        if (!laddr->addr.isIPv6()) {
-            option->setLength(MP_ADD_ADDR_SIZE + 4);
+        << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
+            option->setValuesArraySize(3);
+            option->setValues(0, first_bits);
+        if (laddr->addr.isIPv6()) {
+            option->setLength(MP_ADD_ADDR_SIZE + 20);
+            option->setValuesArraySize(option->getValuesArraySize()+3);
+            option->setValues(1, laddr->addr.get6().words()[0]);
+            option->setValues(2, laddr->addr.get6().words()[1]);
+            option->setValues(3, laddr->addr.get6().words()[2]);
+            option->setValues(4, laddr->addr.get6().words()[3]);
+            option->setValues(5, laddr->port);
+        } else {
+            option->setLength(MP_ADD_ADDR_SIZE + 8);
             option->setValues(1, laddr->addr.get4().getInt());
-        } //else {
-//            option->setLength(MP_ADD_ADDR_SIZE + 16);
-//            option->setValues(1, laddr->addr.get6().words());
-//        }
-        option->setValues(2, laddr->port);
+            option->setValues(2, laddr->port);
+        }
         tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
         tcpseg->setOptions(t, *option);
         t++;
@@ -1481,7 +1485,6 @@ int MPTCP_Flow::_writeADDADDRHeader(uint t, TCPStateVariables* subflow_state,
 
 }
 #endif // ADD_ADDR
-
 void MPTCP_Flow::DEBUGprintDSSInfo() {
 #ifdef _PRIVATE
     TCP_subflow_t* entry = NULL;

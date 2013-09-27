@@ -12,18 +12,26 @@ network bottleneck
     types:
         channel C1 extends DatarateChannel
         {
-            datarate = 100 Mbps;
+            datarate = 10 Mbps;
         }
         channel C2 extends DatarateChannel
         {
             datarate = 10 Mbps;
-            delay = 1 ms;
+            delay = 10 ms;
+            per = 0;
         }
     submodules:
+        pc1: StandardHost {
+            parameters:
+                @display("p=72,47;i=device/pc3");
+                routingFile = "pc1.mrt";
+            gates:
+                pppg[1];
+        }
         pc2: StandardHost {
             parameters:
                 @display("p=72,206;i=device/pc3");
-                routingFile = "mptcp1.mrt";
+                routingFile = "pc2.mrt";
             gates:
                 pppg[2];
         }
@@ -33,6 +41,13 @@ network bottleneck
                 routingFile = "server1.mrt";
             gates:
                 pppg[2];
+        }
+        server2: StandardHost {
+            parameters:
+                @display("p=670,47;i=device/pc3");
+                routingFile = "server2.mrt";
+            gates:
+                pppg[1];
         }
         router1: Router {
             parameters:
@@ -61,36 +76,20 @@ network bottleneck
                 @display("p=503,255;i=abstract/router");
             gates:
                 pppg[2];
-        }
-        pc1: StandardHost {
-            parameters:
-                @display("p=72,47;i=device/pc3");
-                routingFile = "default1.mrt";
-            gates:
-                pppg[1];
-        }
-        server2: StandardHost {
-            parameters:
-                @display("p=670,47;i=device/pc3");
-                routingFile = "server2.mrt";
-            gates:
-                pppg[1];
-        }
+        }                
+
     connections:
-// MPTCP Network 
 		// Subflow 1
         pc2.pppg[0] <--> C1 <--> router1.pppg[0];
         router3.pppg[1] <--> C1 <--> server1.pppg[0];
         // Subflow 2
         pc2.pppg[1] <--> C1 <--> router2.pppg[0];
         router4.pppg[1] <--> C1 <--> server1.pppg[1];
-// Default network        
+		// Default network        
         pc1.pppg[0] <--> C1 <--> router1.pppg[2];
         router3.pppg[2] <--> C1 <--> server2.pppg[0];
-// Router Connection        
-//        router1.pppg[1] <--> C2 {  delay = 1 ms; per = 0.01; } <--> router3.pppg[0];
-//        router2.pppg[1] <--> C2 {  delay = 1 ms; per = 0.01; } <--> router4.pppg[0];
-  		router1.pppg[1] <--> C2 <--> router3.pppg[0];
+        // Router Connection        
+        router1.pppg[1] <--> C2 <--> router3.pppg[0];
         router2.pppg[1] <--> C2 <--> router4.pppg[0];
 }
 
