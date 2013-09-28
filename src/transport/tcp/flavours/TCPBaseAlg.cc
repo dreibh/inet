@@ -556,10 +556,11 @@ void TCPBaseAlg::receiveSeqChanged() {
             tcpEV << "rcv_nxt changed to " << state->rcv_nxt
                          << ", (delayed ACK disabled) sending ACK now\n";
 #ifdef PRIVATE
-//           if(this->conn->getTcpMain()->multipath && (this->conn->flow != NULL)){
-//           if(state->snd_wnd > this->conn->flow->mptcp_rcv_nxt - this->conn->flow->mptcp_snd_una)
-//               conn->sendAck();
-//           }else
+            ////// FXME - Why is                                  this the case
+           if(this->conn->getTcpMain()->multipath && (this->conn->flow != NULL)){
+           if(state->snd_wnd > this->conn->flow->mptcp_rcv_nxt - this->conn->flow->mptcp_snd_una)
+               conn->sendAck();
+           }else
 #endif
             conn->sendAck();
         } else // delayed ACK enabled
