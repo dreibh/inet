@@ -831,7 +831,7 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
     // Don t repeat msgs from the same subflow
     if(!sub->dss_dataMapofSubflow.empty()){
         TCPMultipathDSSStatus::iterator check = sub->dss_dataMapofSubflow.begin();
-        while((check !=  sub->dss_dataMapofSubflow.end()) && (check->second->dss_seq -1 <= mptcp_highestRTX)){
+        while((check !=  sub->dss_dataMapofSubflow.end()) && (check->second->dss_seq -1 <= mptcp_highestRTX) && (mptcp_highestRTX < mptcp_snd_nxt)){
             if(sub->dss_dataMapofSubflow.begin()->second->dss_seq -1 == mptcp_highestRTX){
                 mptcp_highestRTX += sub->dss_dataMapofSubflow.begin()->second->dss_seq + sub->dss_dataMapofSubflow.begin()->second->seq_offset;
                 _opportunisticRetransmission(sub);
@@ -842,7 +842,7 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
     }
 
     // if there is only one msg outstanding... go back
-    if(mptcp_highestRTX - 1 >= mptcp_snd_nxt){
+    if(mptcp_highestRTX >= mptcp_snd_nxt){
         mptcp_highestRTX = mptcp_snd_una;
         return;
     }
