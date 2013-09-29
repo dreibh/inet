@@ -145,9 +145,9 @@ uint32 TCPVirtualDataRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg)
     RegionList::iterator test = regionList.begin();
     while(test!=regionList.end()){
         if((*test)->getEnd() - (*test)->getBegin() != (*test)->getLength())
-            ASSERT(false && "work with false length");
+        //   ASSERT(false && "work with false length");
         if((*test)->getLength()%1424 != 0){
-            ASSERT(false && "WWWrong packet length");
+       //     ASSERT(false && "WWWrong packet length");
         }
         test++;
     }
