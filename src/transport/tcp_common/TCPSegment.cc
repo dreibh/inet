@@ -82,7 +82,11 @@ void TCPSegment::truncateSegment(uint32 firstSeqNo, uint32 endSeqNo)
 
     if (seqGreater(sequenceNo_var + payloadLength_var, endSeqNo))
     {
+#ifndef PRIVATE
         truncright = sequenceNo_var + payloadLength_var - endSeqNo;
+#else
+        truncright = payloadLength_var;  // FIXME How can I be sure, that I not short the packets
+#endif
     }
 
     truncateData(truncleft, truncright);

@@ -446,6 +446,9 @@ void TCPConnection::sendToIP(TCPSegment *tcpseg)
 {
     if(tcpseg->getAckNo() == 73287307)
         std::cerr << " STOP  " << std::endl;
+    if(tcpseg->getSequenceNo() == 73286411){
+        std::cerr << " STOP  " << std::endl;
+    }
     // record seq (only if we do send data) and ackno
     if (sndNxtVector && tcpseg->getPayloadLength() != 0)
         sndNxtVector->record(tcpseg->getSequenceNo());
@@ -815,6 +818,11 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
     {
         if (state->rcv_wnd == 0)
             ret = false; // FIXME false;
+#ifdef PRIVATE
+        else if(seqNo + len > rcvWndEnd){
+            ret = false;
+        }
+#endif
         else // rcv_wnd > 0
             ret = (seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd))
                     || (seqLess(state->rcv_nxt, seqNo + len) && seqLE(seqNo + len, rcvWndEnd)); // Accept an ACK on end of window

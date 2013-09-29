@@ -120,6 +120,9 @@ TCPVirtualDataRcvQueue::Region* TCPVirtualDataRcvQueue::createRegionFromSegment(
 }
 uint32 TCPVirtualDataRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg)
 {
+    if(tcpseg->getSequenceNo() == 73286411){
+        std::cerr << "Help";
+    }
     Region *region = createRegionFromSegment(tcpseg);
 
 #ifndef NDEBUG
@@ -139,6 +142,15 @@ uint32 TCPVirtualDataRcvQueue::insertBytesFromSegment(TCPSegment *tcpseg)
 
     merge(region);
 
+    RegionList::iterator test = regionList.begin();
+    while(test!=regionList.end()){
+        if((*test)->getEnd() - (*test)->getBegin() != (*test)->getLength())
+            ASSERT(false && "work with false length");
+        if((*test)->getLength()%1424 != 0){
+            ASSERT(false && "WWWrong packet length");
+        }
+        test++;
+    }
     if (seqGE(rcv_nxt, regionList.front()->getBegin()))
         rcv_nxt = regionList.front()->getEnd();
 

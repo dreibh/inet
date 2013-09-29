@@ -98,7 +98,7 @@ TCPEventCode TCPConnection::process_RCV_SEGMENT(TCPSegment *tcpseg, IPvXAddress 
     printSegmentBrief(tcpseg);
     tcpEV << "TCB: " << state->info() << "\n";
 
-    if(tcpseg->getSequenceNo() == 272235){
+    if(tcpseg->getSequenceNo() == 73286411){
            std::cerr << "found";
        }
 
@@ -534,6 +534,9 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 
         if (tcpseg->getPayloadLength() > 0)
         {
+            if(tcpseg->getSequenceNo() == 73286411){
+                 std::cerr <<  "check this";
+             }
             // check for full sized segment
             if (tcpseg->getPayloadLength() == state->snd_mss || tcpseg->getPayloadLength() + tcpseg->getHeaderLength() - TCP_HEADER_OCTETS == state->snd_mss)
                 state->full_sized_segment_counter++;
@@ -568,7 +571,9 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 //                    if(note)
 //                        std::cerr << "Wait " << flow->mptcp_rcv_nxt << std::endl;
                 }
-
+                if(tcpseg->getSequenceNo() == 73286411){
+                    std::cerr <<  "check this";
+                }
                 state->rcv_nxt = receiveQueue->insertBytesFromSegment(tcpseg);
 
                 if (seqGreater(state->snd_una, old_snd_una))
