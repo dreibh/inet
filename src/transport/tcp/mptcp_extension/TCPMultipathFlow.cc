@@ -770,9 +770,8 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                    // and we send
 
                    // Penalize the flow with the smallest DSS
-                   if((4 * another_state->snd_mss <= another_state->snd_cwnd) && (mptcp_snd_nxt != mptcp_snd_una)){
+                   if((4 * another_state->snd_mss <= another_state->snd_cwnd + (cof2 - cof)) && (mptcp_snd_nxt != mptcp_snd_una)){
                        penalize(tmp, mptcp_snd_una + 1);
-
                        if(opportunisticRetransmission ){
 
                             // Do opportunistic retransmission
@@ -782,7 +781,9 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                             if(mptcp_highestRTX < mptcp_snd_una){
                                 mptcp_highestRTX = mptcp_snd_una;
                             }
+
                             _opportunisticRetransmission(tmp);
+
                        }
                     }
                 }
