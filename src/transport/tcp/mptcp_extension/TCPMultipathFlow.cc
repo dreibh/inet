@@ -754,23 +754,24 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 uint32 cof = another_state->snd_max - another_state->snd_una;
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 uint32 cof2 = another_state->snd_max - another_state->snd_una;
-                if(cof != cof2){
-                    // reset opportunistic retransmission
+                if(cof != cof2)
                     mptcp_highestRTX = mptcp_snd_una;
-                }
+
                 uint32 sent = 0;
                 for (TCP_SubFlowVector_t::const_iterator i = subflow_list.begin();
                                  i != subflow_list.end(); i++) {
                       TCPConnection *conn = (*i)->subflow;
                       sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
                 }
-                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (2 * another_state->snd_mss)) > mptcp_snd_wnd)){
-                   // The next cycle could possible close the window
+            //    if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (another_state->snd_mss)) > mptcp_snd_wnd)){
+                if((count == 0) && (another_state->snd_cwnd > another_state->snd_mss)){
+
+                // The next cycle could possible close the window
                    // we should do some opportunistic retransmission, if the window is still open
                    // and we send
 
                    // Penalize the flow with the smallest DSS
-                   if((4 * another_state->snd_mss <= another_state->snd_cwnd + (cof2 - cof)) && (mptcp_snd_nxt != mptcp_snd_una)){
+                   if((4 * another_state->snd_mss <= another_state->snd_cwnd) && (mptcp_snd_nxt != mptcp_snd_una)){
                        penalize(tmp, mptcp_snd_una + 1);
                        if(opportunisticRetransmission ){
 
@@ -834,7 +835,8 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
             if(sub->dss_dataMapofSubflow.begin()->second->dss_seq -1 == mptcp_highestRTX){
                 mptcp_highestRTX = mptcp_highestRTX + sub->dss_dataMapofSubflow.begin()->second->seq_offset;
                 if(!sub->dss_dataMapofSubflow.begin()->second->delivered)
-                    break;
+                    mptcp_highestRTX = mptcp_snd_nxt;
+                    return;
             }
             check++;
         }
