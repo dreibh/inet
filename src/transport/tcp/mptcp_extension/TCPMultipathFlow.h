@@ -47,6 +47,8 @@ enum PATH_U {CROSS, LINEAR};
 #ifdef PRIVATE
 #include <queue>
 typedef std::queue<cPacket*>         Tmp_Buffer_t;
+typedef std::map<uint64,uint64>      Delivered_list;
+typedef std::map<uint64,TCPConnection*>      Scheduler_list;
 #endif
 
 // ###############################################################################################################
@@ -143,7 +145,10 @@ class INET_API MPTCP_Flow
     uint64_t mptcp_rcv_adv;                       // B.1.2
 
     uint64_t mptcp_highestRTX;
+    uint64_t old_mptcp_snd_una;
 
+    Delivered_list dlist;
+    Scheduler_list slist;
     uint64_t maxBuffer;
     uint64_t seq;                           	  // start seq-no generated after getting keys for the first flow
     uint64_t start_seq;

@@ -1340,9 +1340,11 @@ bool TCPConnection::processAckInEstabEtc(TCPSegment *tcpseg)
             updateWndInfo(tcpseg);
 #ifdef PRIVATE
             bool doit = true;
-            if(this->getTcpMain()->multipath)
+            if((this->getTcpMain()->multipath) && (flow != NULL)){
                 if(this->flow->isFIN)
-            doit = false;
+                       doit = false;
+                //flow->mptcp_highestRTX = flow->mptcp_snd_una;
+            }
             if(doit)
 #endif // PRIVATE
             tcpAlgorithm->receivedDuplicateAck();

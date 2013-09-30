@@ -22,7 +22,7 @@
 #include "TCPSACKRexmitQueue.h"
 #include "TCPSchedulerManager.h"
 #include "TCPAlgorithm.h"
-
+#include "TCPSendQueue.h"
 
 #include "TCPTahoeRenoFamily.h"
 
@@ -111,6 +111,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     cmtCC_alpha = 0;
     tmp_msg_buf = subflow->tmp_msg_buf;
     mptcp_highestRTX = 0;
+    old_mptcp_snd_una = 0;
     isMPTCP_RTX = false;
     buffer_blocked = false;
 }
@@ -750,12 +751,9 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
             if(tmp->isQueueAble){
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
-
-                uint32 cof = another_state->snd_max - another_state->snd_una;
+                tmp->orderBytesForQueue(another_state->snd_cwnd);
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
-                uint32 cof2 = another_state->snd_max - another_state->snd_una;
-                if(cof != cof2)
-                    mptcp_highestRTX = mptcp_snd_una;
+
 
                 uint32 sent = 0;
                 for (TCP_SubFlowVector_t::const_iterator i = subflow_list.begin();
@@ -763,28 +761,14 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                       TCPConnection *conn = (*i)->subflow;
                       sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
                 }
-            //    if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (another_state->snd_mss)) > mptcp_snd_wnd)){
-                if((count == 0) && (another_state->snd_cwnd > another_state->snd_mss)){
-
-                // The next cycle could possible close the window
-                   // we should do some opportunistic retransmission, if the window is still open
-                   // and we send
-
+               if((count == 0) && (another_state->snd_cwnd > another_state->snd_mss) &&
+                       ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (another_state->snd_mss)) > mptcp_snd_wnd)){
                    // Penalize the flow with the smallest DSS
                    if((4 * another_state->snd_mss <= another_state->snd_cwnd) && (mptcp_snd_nxt != mptcp_snd_una)){
                        penalize(tmp, mptcp_snd_una + 1);
+
                        if(opportunisticRetransmission ){
-
-                            // Do opportunistic retransmission
-                            if(mptcp_highestRTX > mptcp_snd_nxt){
-                                continue;
-                            }
-                            if(mptcp_highestRTX < mptcp_snd_una){
-                                mptcp_highestRTX = mptcp_snd_una;
-                            }
-
                             _opportunisticRetransmission(tmp);
-
                        }
                     }
                 }
@@ -814,52 +798,58 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
 
 void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
 
-    if(mptcp_snd_nxt == mptcp_snd_una)
+      // set it to lowest if lowest changed
+    if(old_mptcp_snd_una != mptcp_snd_una){
+        old_mptcp_snd_una = mptcp_snd_una;
+        mptcp_highestRTX = mptcp_snd_una;
+     }
+    // Do opportunistic retransmission
+    if(mptcp_highestRTX >= mptcp_snd_nxt - 1){
         return;
-    // the idea is simple retransmit the last snd una over the fastest link, in case the mptcp snd wnd is 0
-    // it is a special kind of retranmisson
-    // on the subflow level we keep beeing in order... but for the header to write we have to manipulate
-    // the mptcp_snd_nxt
-    // FIXME - In next step we should also repeat the correct value, not just cheating with seq nr
+    }
+
+    // Check if next is not still delivered
+    bool isDelivered = false;
+    do{
+       isDelivered = false;
+       Delivered_list::iterator list = dlist.find(mptcp_highestRTX + 1);
+       if(list != dlist.end()){
+           mptcp_highestRTX += list->second;
+           isDelivered = true;
+       }
+    }while(isDelivered);
+    // Check if this is not a msg from this flow
+    Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX + 1);
+    while(s_itr != slist.end()){
+       if(s_itr->second == sub){
+           s_itr++;
+           continue;
+       }
+       mptcp_highestRTX = s_itr->first - 1;
+       break;
+    }
+
+    if(s_itr == slist.end())
+       mptcp_highestRTX == mptcp_snd_nxt;
+    // Do opportunistic retransmission
+    if(mptcp_highestRTX >= mptcp_snd_nxt - 1){
+       return;
+    }
 
     TCPTahoeRenoFamilyStateVariables* another_state =
        check_and_cast<TCPTahoeRenoFamilyStateVariables*> (sub->getTcpAlgorithm()->getStateVariables());
 
-    uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
-    uint64 old_mptcp_highestRTX = mptcp_highestRTX;
-
-    // Don t repeat msgs from the same subflow
-    if(!sub->dss_dataMapofSubflow.empty()){
-        TCPMultipathDSSStatus::iterator check = sub->dss_dataMapofSubflow.begin();
-        while((check !=  sub->dss_dataMapofSubflow.end()) && (check->second->dss_seq -1 <= mptcp_highestRTX) && (mptcp_highestRTX < mptcp_snd_nxt)){
-            if(sub->dss_dataMapofSubflow.begin()->second->dss_seq -1 == mptcp_highestRTX){
-                mptcp_highestRTX = mptcp_highestRTX + sub->dss_dataMapofSubflow.begin()->second->seq_offset;
-                if(!sub->dss_dataMapofSubflow.begin()->second->delivered)
-                    mptcp_highestRTX = mptcp_snd_nxt;
-                    return;
-            }
-            check++;
-        }
-    }
-
-    // if there is only one msg outstanding... go back
-    if(mptcp_highestRTX >= mptcp_snd_nxt){
-        // mptcp_highestRTX = mptcp_snd_una;
-        return;
-    }
-
     isMPTCP_RTX = true;
+    uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
     mptcp_snd_nxt = mptcp_highestRTX + 1;
-    sub->orderBytesForQueue(2*another_state->snd_mss);
+
     sub->sendOneNewSegment(true, another_state->snd_cwnd);
-    if(mptcp_snd_nxt == mptcp_highestRTX + 1){
-        // Ok something went bad during opp. rtx... so set back
-        mptcp_highestRTX = old_mptcp_highestRTX;
-    }
-    else{
+    if(mptcp_snd_nxt != mptcp_highestRTX + 1){
         //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX + 1 << "send with " << sub->getState()->getSndNxt() << " by " <<  sub->remoteAddr << "<->" << sub->localAddr << std::endl;
         mptcp_highestRTX = mptcp_snd_nxt - 1;
+
     }
+
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
 }
@@ -1497,6 +1487,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
             else{
                 DSS_INFO* dss_info = new DSS_INFO;// (DSS_INFO*) malloc(sizeof(DSS_INFO));
                 dss_info->dss_seq = this->mptcp_snd_nxt;
+                slist.insert(std::make_pair(dss_info->dss_seq,subflow));
                 dss_info->seq_offset = bytes;
                 mptcp_snd_nxt += bytes;
                 dss_info->section_end = false;
@@ -1749,7 +1740,9 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
         for(TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.begin();it != conn->dss_dataMapofSubflow.end();it++){
             if(subflow_state->snd_una > (it->first)){
                 // complete delivered
+                slist.erase(it->second->dss_seq);
                 it->second->delivered = true;
+                dlist.insert(std::make_pair(it->second->dss_seq, it->second->seq_offset));
             }
             data_in_queue = true;
 
