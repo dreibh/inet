@@ -756,7 +756,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 uint32 cof2 = another_state->snd_max - another_state->snd_una;
                 if(cof != cof2){
                     // reset opportunistic retransmission
-                    mptcp_highestRTX = mptcp_snd_una - 1;
+                    mptcp_highestRTX = mptcp_snd_una;
                 }
                 uint32 sent = 0;
                 for (TCP_SubFlowVector_t::const_iterator i = subflow_list.begin();
@@ -778,7 +778,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                        if(opportunisticRetransmission ){
 
                             // Do opportunistic retransmission
-                            if(mptcp_highestRTX == mptcp_snd_una){
+                            if(mptcp_highestRTX > mptcp_snd_nxt){
                                 continue;
                             }
                             if(mptcp_highestRTX < mptcp_snd_una){
@@ -828,22 +828,22 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
     uint64 old_mptcp_highestRTX = mptcp_highestRTX;
 
-/*    // Don t repeat msgs from the same subflow
+    // Don t repeat msgs from the same subflow
     if(!sub->dss_dataMapofSubflow.empty()){
         TCPMultipathDSSStatus::iterator check = sub->dss_dataMapofSubflow.begin();
         while((check !=  sub->dss_dataMapofSubflow.end()) && (check->second->dss_seq -1 <= mptcp_highestRTX) && (mptcp_highestRTX < mptcp_snd_nxt)){
             if(sub->dss_dataMapofSubflow.begin()->second->dss_seq -1 == mptcp_highestRTX){
-                mptcp_highestRTX += sub->dss_dataMapofSubflow.begin()->second->dss_seq + sub->dss_dataMapofSubflow.begin()->second->seq_offset;
-                _opportunisticRetransmission(sub);
-                return;
+                mptcp_highestRTX = mptcp_highestRTX + sub->dss_dataMapofSubflow.begin()->second->seq_offset;
+                if(!sub->dss_dataMapofSubflow.begin()->second->delivered)
+                    break;
             }
             check++;
         }
-    }*/
+    }
 
     // if there is only one msg outstanding... go back
     if(mptcp_highestRTX >= mptcp_snd_nxt){
-        mptcp_highestRTX = mptcp_snd_una;
+        // mptcp_highestRTX = mptcp_snd_una;
         return;
     }
 
@@ -853,11 +853,11 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
     sub->sendOneNewSegment(true, another_state->snd_cwnd);
     if(mptcp_snd_nxt == mptcp_highestRTX + 1){
         // Ok something went bad during opp. rtx... so set back
-        mptcp_highestRTX = old_mptcp_highestRTX - 1;
+        mptcp_highestRTX = old_mptcp_highestRTX;
     }
     else{
         //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX + 1 << "send with " << sub->getState()->getSndNxt() << " by " <<  sub->remoteAddr << "<->" << sub->localAddr << std::endl;
-        mptcp_highestRTX = mptcp_snd_nxt;
+        mptcp_highestRTX = mptcp_snd_nxt - 1;
     }
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
