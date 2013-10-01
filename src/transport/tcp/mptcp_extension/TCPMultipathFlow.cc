@@ -762,7 +762,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                       sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
                 }
                if((count == 0) && (another_state->snd_cwnd > another_state->snd_mss) &&
-                       ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (2 * another_state->snd_mss)) > mptcp_snd_wnd)){
+                       ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (another_state->snd_mss)) > mptcp_snd_wnd)){
                    // Penalize the flow with the smallest DSS
                    if((4 * another_state->snd_mss <= another_state->snd_cwnd) && (mptcp_snd_nxt != mptcp_snd_una)){
                        penalize(tmp, mptcp_snd_una + 1);
