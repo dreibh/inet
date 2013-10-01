@@ -769,8 +769,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                                 tmp->getTcpAlgorithm()->getStateVariables());
 
                 tmp->orderBytesForQueue(another_state->snd_cwnd);
-
-                tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 if ((count == 0)
                        && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)
                                + (another_state->snd_mss)) > mptcp_snd_wnd)) {
@@ -784,6 +782,8 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                        }
                    }
                 }
+                tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
+
                 count++;
             }
         }
@@ -817,10 +817,20 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         old_mptcp_snd_una = mptcp_snd_una;
         mptcp_highestRTX = mptcp_snd_una;
     }
+//    Scheduler_list::iterator print = slist.begin();
+//    while (print != slist.end()) {
+//        std::cerr << "In list "<< print->first <<  " Over " << print->second->remoteAddr << std::endl;
+//        print++;
+//    }
     Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX);
+    if(s_itr != slist.end())
+        s_itr++;
+    if(s_itr != slist.end())
+        mptcp_highestRTX = s_itr->first;
     while (s_itr != slist.end()) {
         if (s_itr->second == sub) {
             s_itr++;
+            mptcp_highestRTX = s_itr->first;
             continue;
         }
         break;
@@ -839,9 +849,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     mptcp_snd_nxt = mptcp_highestRTX;
     sub->sendOneNewSegment(true, another_state->snd_cwnd);
     if (mptcp_snd_nxt != mptcp_highestRTX) {
-        //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
-        //        << "send with " << sub->getState()->getSndNxt() << " by "
-        //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
+      //  std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
+      //          << "send with " << sub->getState()->getSndNxt() << " by "
+      //          << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
         mptcp_highestRTX = mptcp_snd_nxt - 1;
 
         // Check if next is not still delivered
@@ -1762,63 +1772,26 @@ void MPTCP_Flow::refreshSendMPTCPWindow() {
         for (TCPMultipathDSSStatus::const_iterator it =
                 conn->dss_dataMapofSubflow.begin();
                 it != conn->dss_dataMapofSubflow.end(); it++) {
+
             if (subflow_state->snd_una > (it->first)) {
                 // complete delivered
                 it->second->delivered = true;
             }
 
             data_in_queue = true;
-
-            if ((subflow_state->snd_una > it->first)
-                    && (subflow_state->snd_una
-                            < (it->first + it->second->seq_offset))) {
-                // we have a split
-                // pre pare the old for delete
-                it->second->delivered = true;
-                // insert the the split as new
-                DSS_INFO* dss_info = new DSS_INFO;
-                dss_info->dss_seq = it->second->dss_seq
-                        + ((subflow_state->snd_una - it->first));
-                dss_info->seq_offset = (it->second->seq_offset
-                        - (subflow_state->snd_una - it->first));
-                dss_info->section_end = false;
-                // information stuff
-                dss_info->re_scheduled = 1;
-                dss_info->delivered = false;
-                conn->dss_dataMapofSubflow[subflow_state->snd_una] = dss_info; //dss_info;
+            //if()
+            if ( it->second->dss_seq < mptcp_snd_una) {
+                slist.erase(it->second->dss_seq);
+                dlist.insert(std::make_pair(it->second->dss_seq,it->second->seq_offset));
+                if(it->second->delivered){
+                    conn->dss_dataMapofSubflow.erase(it->first);
+                }
+                // FIXME To split
             }
         }
         // Delete the entries marked as delivered
     }
-    bool found_some = true;
-    //uint64 old_border = mptcp_snd_una + 1;
-    do {
-        found_some = false;
-        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                i != subflow_list.end(); i++) {
-            TCPConnection* conn = (*i)->subflow;
-            TCPMultipathDSSStatus::iterator itr =
-                    conn->dss_dataMapofSubflow.begin();
 
-            while (itr != conn->dss_dataMapofSubflow.end()) {
-                if(itr->second->dss_seq > mptcp_snd_una){
-                    break;
-                }
-                if (itr->second->delivered) {
-
-                    slist.erase(itr->second->dss_seq + itr->second->seq_offset);
-                    dlist.insert(std::make_pair(itr->second->dss_seq, itr->second->seq_offset));
-
-                    delete itr->second;
-                    conn->dss_dataMapofSubflow.erase(itr);
-                    found_some = true;
-                    itr++;
-                } else {
-                    break;
-                }
-            }
-        }
-    } while (found_some);
 
     mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
 }
