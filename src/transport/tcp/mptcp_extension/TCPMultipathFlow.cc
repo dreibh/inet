@@ -769,21 +769,21 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                                 tmp->getTcpAlgorithm()->getStateVariables());
 
                 tmp->orderBytesForQueue(another_state->snd_cwnd);
-                if ((count == 0)
-                       && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)
-                               + (another_state->snd_mss)) > mptcp_snd_wnd)) {
-                   // Penalize the flow with the smallest DSS
-                   if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
-                           && (mptcp_snd_nxt != mptcp_snd_una)) {
-                       penalize(tmp, mptcp_snd_una + 1);
 
-                       if (opportunisticRetransmission) {
-                          _opportunisticRetransmission(tmp);
-                       }
-                   }
-                }
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
+                if ((count == 0)
+                      && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)
+                              + (another_state->snd_mss)) > mptcp_snd_wnd)) {
+                  // Penalize the flow with the smallest DSS
+                  if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
+                          && (mptcp_snd_nxt != mptcp_snd_una)) {
+                      penalize(tmp, mptcp_snd_una + 1);
 
+                      if (opportunisticRetransmission) {
+                         _opportunisticRetransmission(tmp);
+                      }
+                  }
+               }
                 count++;
             }
         }
@@ -817,13 +817,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         old_mptcp_snd_una = mptcp_snd_una;
         mptcp_highestRTX = mptcp_snd_una;
     }
-//    Scheduler_list::iterator print = slist.begin();
-//    while (print != slist.end()) {
-//        std::cerr << "In list "<< print->first <<  " Over " << print->second->remoteAddr << std::endl;
-//        print++;
-//    }
+
     Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX);
-    if(s_itr != slist.end())
+    if((s_itr != slist.end()) && (mptcp_snd_una == mptcp_highestRTX))
         s_itr++;
     if(s_itr != slist.end())
         mptcp_highestRTX = s_itr->first;
@@ -852,18 +848,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
       //  std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
       //          << "send with " << sub->getState()->getSndNxt() << " by "
       //          << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
-        mptcp_highestRTX = mptcp_snd_nxt - 1;
-
-        // Check if next is not still delivered
-        bool isDelivered = false;
-        do {
-            isDelivered = false;
-            Delivered_list::iterator list = dlist.find(mptcp_highestRTX + 1);
-            if (list != dlist.end()) {
-                mptcp_highestRTX += list->second;    // add the offset
-                isDelivered = true;
-            }
-        } while (isDelivered);
+        mptcp_highestRTX = mptcp_snd_nxt;
     } else {
         // we did not the opp retrans
     }
