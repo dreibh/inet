@@ -805,34 +805,14 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
         old_mptcp_snd_una = mptcp_snd_una;
         mptcp_highestRTX = mptcp_snd_una;
      }
+    //else return;
     // Do opportunistic retransmission
     if(mptcp_highestRTX >= mptcp_snd_nxt - 1){
         return;
     }
 
-    // Check if next is not still delivered
-    bool isDelivered = false;
-    do{
-       isDelivered = false;
-       Delivered_list::iterator list = dlist.find(mptcp_highestRTX + 1);
-       if(list != dlist.end()){
-           mptcp_highestRTX += list->second;
-           isDelivered = true;
-       }
-    }while(isDelivered);
-    // Check if this is not a msg from this flow
-    Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX + 1);
-    while(s_itr != slist.end()){
-       if(s_itr->second == sub){
-           s_itr++;
-           continue;
-       }
-       mptcp_highestRTX = s_itr->first - 1;
-       break;
-    }
 
-    if(s_itr == slist.end())
-       mptcp_highestRTX =  mptcp_snd_nxt;
+
     // Do opportunistic retransmission
     if(mptcp_highestRTX >= mptcp_snd_nxt - 1){
        return;
@@ -849,6 +829,29 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
     if(mptcp_snd_nxt != mptcp_highestRTX + 1){
         //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX + 1 << "send with " << sub->getState()->getSndNxt() << " by " <<  sub->remoteAddr << "<->" << sub->localAddr << std::endl;
         mptcp_highestRTX = mptcp_snd_nxt - 1;
+
+        // Check if next is not still delivered
+        bool isDelivered = false;
+        do{
+           isDelivered = false;
+           Delivered_list::iterator list = dlist.find(mptcp_highestRTX + 1);
+           if(list != dlist.end()){
+               mptcp_highestRTX += list->second;
+               isDelivered = true;
+           }
+        }while(isDelivered);
+        // Check if this is not a msg from this flow
+        Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX + 1);
+        while(s_itr != slist.end()){
+           if(s_itr->second == sub){
+               s_itr++;
+               continue;
+           }
+           mptcp_highestRTX = s_itr->first - 1;
+           break;
+        }
+        if(s_itr == slist.end())
+           mptcp_highestRTX =  mptcp_snd_nxt;
 
     }
 
