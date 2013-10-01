@@ -203,15 +203,15 @@ class INET_API MPTCP_Flow
     void _readParameter(TCPConnection *subflow);
     int _writeInitialHandshakeHeader(uint t,
     TCPStateVariables* subflow_state, TCPSegment *tcpseg,
-    TCPConnection* subflow, TCPOption* option);
+    TCPConnection* subflow, TCPOption option);
     void _penalize(TCPConnection *conn);
     int _writeJoinHandshakeHeader(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg,
-              TCPConnection* subflow, TCPOption* option);
+              TCPConnection* subflow, TCPOption option);
     int _writeDSSHeaderandProcessSQN(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
-              TCPConnection* subflow, TCPOption* option);
+              TCPConnection* subflow, TCPOption option);
 #ifdef ADD_ADDR
     int _writeADDADDRHeader(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
-                  TCPConnection* subflow, TCPOption* option);
+                  TCPConnection* subflow, TCPOption option);
 #endif // ADD_ADDR
     bool _prepareJoinConnection();
 

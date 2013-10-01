@@ -535,7 +535,7 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow,
 
     // some checks
     ASSERT(
-            (option->getValuesArraySize() > 3)
+            (option->getValuesArraySize() > 0)
                     && "We need some more options...");
 
     // First get the flags so we know what to do
@@ -574,7 +574,15 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow,
             // FIXME overflow border
             uint64_t first32_bits = subflow->flow->mptcp_snd_una >> 32;
             ack_seq |= first32_bits << 32;
+            if(ack_seq > subflow->flow->mptcp_snd_una){
+                subflow->flow->mptcp_snd_una = ack_seq;
+                //std::cerr << "NEW MPTCP UNA " <<  subflow->flow->mptcp_snd_una << std::endl;
+            }
         }
+    }
+
+    if(option->getLength() < MP_DSS_OPTIONLENGTH_4BYTE){
+        return 0;
     }
     if (isDSS_FLAG_M) {
         // seq no

@@ -124,7 +124,7 @@ const unsigned int MP_S_POS = MP_SIGNAL_FIRST_VALUE_TYPE - MP_SUBTYPE_POS - MP_V
 
 
 const unsigned int MP_DSS_OPTIONLENGTH_4BYTE = 20;
-
+const unsigned int MP_DSS_OPTIONLENGTH_ACK = 8;
 // Helper to set state for a subflow
 #define MPTCP_FSM(state) setState(state); // fprintf(stderr,"\n[FSM] CHANGE STATE %u line %u\n",state,__LINE__);
 

@@ -479,7 +479,6 @@ TCPSegment *SACK_RFC3517::addSACK(TCPSegment *tcpseg){
          state->snd_dsack = false;
          state->start_seqno = 0;
          state->end_seqno = 0;
-         ASSERT(false && "Not enough space for ACKS");
          return tcpseg;
     }
 

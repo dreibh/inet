@@ -410,7 +410,7 @@ void TCPBaseAlg::rttMeasurementComplete(simtime_t tSent, simtime_t tAcked) {
     // Note: this implementation calculates in doubles. An impl. which uses
     // 500ms ticks is available from old tcpmodule.cc:calcRetransTimer().
     //
-
+    ASSERT(tSent <= tAcked);
     // update smoothed RTT estimate (srtt) and variance (rttvar)
     const double g = 0.125; // 1 / 8; (1 - alpha) where alpha == 7 / 8;
     simtime_t newRTT = tAcked - tSent;

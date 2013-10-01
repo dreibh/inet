@@ -80,7 +80,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     // Sending side
     mptcp_snd_una = subflow->getState()->snd_una;
     mptcp_snd_nxt = subflow->getState()->getSndNxt();
-    mptcp_snd_wnd =subflow->getState()->snd_wnd;
+    mptcp_snd_wnd = subflow->getState()->snd_wnd;
     // Receiver Side
     mptcp_rcv_nxt = subflow->getState()->rcv_nxt;
     mptcp_rcv_wnd = subflow->getState()->rcv_wnd;
@@ -96,13 +96,13 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     sendEstablished = false;
     _readParameter(subflow);
     char name[255]; // opp_dup will be called
-	sprintf(name,"[FLOW-%d][RCV-QUEUE] size",ID);
-	mptcpRcvBufferSize = new cOutVector(name);
-	lastscheduled = NULL;
-	lastenqueued = NULL;
-	commonSendQueueLimit = 0;
+    sprintf(name, "[FLOW-%d][RCV-QUEUE] size", ID);
+    mptcpRcvBufferSize = new cOutVector(name);
+    lastscheduled = NULL;
+    lastenqueued = NULL;
+    commonSendQueueLimit = 0;
 
-	// init for MPTCP CC
+    // init for MPTCP CC
     utilizedCMTCwnd = 0;
     totalCMTCwnd = 0;
     totalCMTSsthresh = 0;
@@ -116,48 +116,59 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     buffer_blocked = false;
 }
 
-void MPTCP_Flow::_readParameter(TCPConnection *subflow){
+void MPTCP_Flow::_readParameter(TCPConnection *subflow) {
     // initial Receive Queue
-    mptcp_receiveQueue = check_and_cast<TCPMultipathReceiveQueue*>
-                            (createOne(subflow->getTcpMain()->par("multipath_receiveQueueClass")));
+    mptcp_receiveQueue = check_and_cast<TCPMultipathReceiveQueue*>(
+            createOne(
+                    subflow->getTcpMain()->par("multipath_receiveQueueClass")));
     mptcp_receiveQueue->setFlow(this);
 
     ordered = subflow->getTcpMain()->par("multipath_ordered");
 
     // Check kind of link utilisat
-    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_link_uitlization"), "cross") == 0) {
-        path_utilization     = CROSS;
-    }
-    else if(strcmp((const char*)subflow->getTcpMain()->par("multipath_link_uitlization"), "linear") == 0) {
-        path_utilization     = LINEAR;
-    }else {
+    if (strcmp(
+            (const char*) subflow->getTcpMain()->par(
+                    "multipath_link_uitlization"), "cross") == 0) {
+        path_utilization = CROSS;
+    } else if (strcmp(
+            (const char*) subflow->getTcpMain()->par(
+                    "multipath_link_uitlization"), "linear") == 0) {
+        path_utilization = LINEAR;
+    } else {
         throw cRuntimeError("Bad setting for multipath_path_scheduler: %s\n",
                 (const char*) subflow->getTcpMain()->par(
                         "multipath_path_scheduler"));
     }
 
     // Opportunistic retransmission
-    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmission"), "on") == 0) {
-        opportunisticRetransmission     = true;
-    }
-    else if(strcmp((const char*)subflow->getTcpMain()->par("multipath_opportunistic_retransmission"), "off") == 0) {
-        opportunisticRetransmission     = false;
-    }else {
-       throw cRuntimeError("Bad setting for multipath_path_opportunistic_retranmssion: %s\n",
-               (const char*)subflow->getTcpMain()->par("multipath_path_opportunistic_retranmission"));
+    if (strcmp(
+            (const char*) subflow->getTcpMain()->par(
+                    "multipath_opportunistic_retransmission"), "on") == 0) {
+        opportunisticRetransmission = true;
+    } else if (strcmp(
+            (const char*) subflow->getTcpMain()->par(
+                    "multipath_opportunistic_retransmission"), "off") == 0) {
+        opportunisticRetransmission = false;
+    } else {
+        throw cRuntimeError(
+                "Bad setting for multipath_path_opportunistic_retranmssion: %s\n",
+                (const char*) subflow->getTcpMain()->par(
+                        "multipath_path_opportunistic_retranmission"));
     }
 
     // multipath penalizing
-    if(strcmp((const char*)subflow->getTcpMain()->par("multipath_penalizing"), "on") == 0) {
-        multipath_penalizing     = true;
+    if (strcmp((const char*) subflow->getTcpMain()->par("multipath_penalizing"),
+            "on") == 0) {
+        multipath_penalizing = true;
+    } else if (strcmp(
+            (const char*) subflow->getTcpMain()->par("multipath_penalizing"),
+            "off") == 0) {
+        multipath_penalizing = false;
+    } else {
+        throw cRuntimeError("Bad setting for multipath_penalizing: %s\n",
+                (const char*) subflow->getTcpMain()->par(
+                        "multipath_penalizing"));
     }
-    else if(strcmp((const char*)subflow->getTcpMain()->par("multipath_penalizing"), "off") == 0) {
-        multipath_penalizing     = false;
-    }else {
-       throw cRuntimeError("Bad setting for multipath_penalizing: %s\n",
-               (const char*)subflow->getTcpMain()->par("multipath_penalizing"));
-    }
-
 
 }
 
@@ -510,10 +521,6 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
     // Only work on MPTCP Options!!
     // (Note: If this is a design problem to do it here, we could move this to TCP...)
     option.setKind(TCPOPTION_MPTCP); // FIXME depending on IANA request
-//    DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] STATE (%i)", state);
-//    DEBUGPRINT("[FLOW][OUT][SEND A MPTCP PACKET] Support of MPTCP Kind: %u",
-//            TCPOPTION_MPTCP);
-
     // If SYN remark this combination as tried
     if ((tcpseg->getSynBit()) && (!tcpseg->getAckBit())) {
         AddrCombi_t* c = new AddrCombi_t();
@@ -569,15 +576,15 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
         if (((subflow->isSubflow) && (tcpseg->getSynBit()))
                 || subflow->joinToAck || subflow->joinToSynAck) {
             t = _writeJoinHandshakeHeader(t, subflow_state, tcpseg, subflow,
-                    &option);
+                    option);
             subflow->joinToAck = false;
             subflow->joinToSynAck = false;
         } else {
             DEBUGPRINT(
                     "[FLOW][OUT][SEND A MPTCP PACKET] DATA OUT Do SQN for subflow (%u) by utilizing DSS",
                     subflow->isSubflow);
-            _writeDSSHeaderandProcessSQN(t, subflow_state, tcpseg, bytes,
-                    subflow, &option);
+            t = _writeDSSHeaderandProcessSQN(t, subflow_state, tcpseg, bytes,
+                    subflow, option);
 #ifdef ADD_ADDR
             if (subflow->add_addr) {
                 TCPOption option2;
@@ -598,7 +605,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
         DEBUGPRINT("[FLOW][OUT] PRE ESTABLISHED (%i)", state)
         ;
         t = _writeInitialHandshakeHeader(t, subflow_state, tcpseg, subflow,
-                &option);
+                option);
         break;
     case IDLE:
         DEBUGPRINT("[FLOW][OUT] Work on state %i - Figure out what to do",
@@ -610,7 +617,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
             isPassive = true;
         }
         t = _writeInitialHandshakeHeader(t, subflow_state, tcpseg, subflow,
-                &option);
+                option);
         break;
 
     default:
@@ -654,54 +661,61 @@ bool MPTCP_Flow::close() {
     return true;
 }
 
-bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
+bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
     //fullSegmentsOnly = true; // FIXME
-    std::map<std::string,int> (ad_queue);
+    std::map<std::string, int> (ad_queue);
     weak_link = false;
     //set parameter how many flows we want utilize
 
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                     i != subflow_list.end(); i++) {
-        TCPConnection* conn =  (*i)->subflow;
-        TCPTahoeRenoFamilyStateVariables* another_state =
-                                     check_and_cast<TCPTahoeRenoFamilyStateVariables*> (conn->getTcpAlgorithm()->getStateVariables());
+            i != subflow_list.end(); i++) {
+        TCPConnection* conn = (*i)->subflow;
+        TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
+                TCPTahoeRenoFamilyStateVariables*>(
+                conn->getTcpAlgorithm()->getStateVariables());
 
+        if (!conn->isSendQueueEmpty())  // do we have any data to send?
+        {
+            if ((simTime() - another_state->time_last_data_sent)
+                    > another_state->rexmit_timeout) {
+                // RFC 5681, page 11: "For the purposes of this standard, we define RW = min(IW,cwnd)."
+                if (another_state->increased_IW_enabled)
+                    another_state->snd_cwnd = std::min(
+                            std::min(4 * another_state->snd_mss,
+                                    std::max(2 * another_state->snd_mss,
+                                            (uint32) 4380)),
+                            another_state->snd_cwnd);
+                else
+                    another_state->snd_cwnd = another_state->snd_mss;
 
-       if (!conn->isSendQueueEmpty())  // do we have any data to send?
-       {
-           if ((simTime() - another_state->time_last_data_sent) > another_state->rexmit_timeout)
-           {
-               // RFC 5681, page 11: "For the purposes of this standard, we define RW = min(IW,cwnd)."
-               if (another_state->increased_IW_enabled)
-                   another_state->snd_cwnd = std::min(std::min(4 * another_state->snd_mss, std::max(2 * another_state->snd_mss, (uint32)4380)), another_state->snd_cwnd);
-               else
-                   another_state->snd_cwnd = another_state->snd_mss;
-
-               TCPBaseAlg* base = check_and_cast<TCPBaseAlg*> (conn->getTcpAlgorithm());
-               if(base->cwndVector)
-                   base->cwndVector->record(another_state->snd_cwnd);
-               if(base->ssthreshVector)
-                   base->ssthreshVector->record(another_state->ssthresh);
-           }
-       }
+                TCPBaseAlg* base = check_and_cast<TCPBaseAlg*>(
+                        conn->getTcpAlgorithm());
+                if (base->cwndVector)
+                    base->cwndVector->record(another_state->snd_cwnd);
+                if (base->ssthreshVector)
+                    base->ssthreshVector->record(another_state->ssthresh);
+            }
+        }
     }
 
-    switch(path_utilization){
+    switch (path_utilization) {
     case LINEAR:
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                   i != subflow_list.end(); i++) {
-           TCP_subflow_t* entry = (*i);
-           if(entry->subflow->isQueueAble){
-               if(ad_queue.end() == ad_queue.find(entry->subflow->remoteAddr.str())){
-                   ad_queue.insert(std::make_pair(entry->subflow->remoteAddr.str(),0));
-               }
-               else{
-                   entry->subflow->isQueueAble = false;
-                   removeSubflow(entry->subflow); // FIXME to add in list of unused subflows!!!
-                   ad_queue.clear();
-                   i = subflow_list.begin();
-               }
-           }
+                i != subflow_list.end(); i++) {
+            TCP_subflow_t* entry = (*i);
+            if (entry->subflow->isQueueAble) {
+                if (ad_queue.end()
+                        == ad_queue.find(entry->subflow->remoteAddr.str())) {
+                    ad_queue.insert(
+                            std::make_pair(entry->subflow->remoteAddr.str(),
+                                    0));
+                } else {
+                    entry->subflow->isQueueAble = false;
+                    removeSubflow(entry->subflow); // FIXME to add in list of unused subflows!!!
+                    ad_queue.clear();
+                    i = subflow_list.begin();
+                }
+            }
         }
         break;
     default:
@@ -725,47 +739,51 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
         std::map<double, int> path_order;
         int c = 0;
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                        i != subflow_list.end(); i++,c++) {
-                    TCPConnection* tmp =  (*i)->subflow;
-                    if(tmp->isQueueAble){
-                        TCPTahoeRenoFamilyStateVariables* another_state =
-                                check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
-                        double sRTT = GET_SRTT(another_state->srtt.dbl());
+                i != subflow_list.end(); i++, c++) {
+            TCPConnection* tmp = (*i)->subflow;
+            if (tmp->isQueueAble) {
+                TCPTahoeRenoFamilyStateVariables* another_state =
+                        check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
+                                tmp->getTcpAlgorithm()->getStateVariables());
+                double sRTT = GET_SRTT(another_state->srtt.dbl());
 
-                        for(;;  ){
-                            if(path_order.end() == path_order.find(sRTT)){
-                                path_order.insert(std::make_pair(sRTT,c));
-                                break;
-                            }
-                            else
-                               sRTT += 0.001;
-                        }
-                    }
-          }
+                for (;;) {
+                    if (path_order.end() == path_order.find(sRTT)) {
+                        path_order.insert(std::make_pair(sRTT, c));
+                        break;
+                    } else
+                        sRTT += 0.001;
+                }
+            }
+        }
 
         int count = 0;
-        for ( std::map<double,int>::iterator o = path_order.begin();
-                               o != path_order.end(); o++) {
-            TCPConnection* tmp =  (*(subflow_list.begin() + o->second))->subflow;
+        refreshSendMPTCPWindow();
+        for (std::map<double, int>::iterator o = path_order.begin();
+                o != path_order.end(); o++) {
+            TCPConnection* tmp = (*(subflow_list.begin() + o->second))->subflow;
 
-            if(tmp->isQueueAble){
+            if (tmp->isQueueAble) {
                 TCPTahoeRenoFamilyStateVariables* another_state =
-                                              check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
+                        check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
+                                tmp->getTcpAlgorithm()->getStateVariables());
+
                 tmp->orderBytesForQueue(another_state->snd_cwnd);
 
-
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
-                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (another_state->snd_mss)) > mptcp_snd_wnd)){
-                    // Penalize the flow with the smallest DSS
-                    if((4 * another_state->snd_mss < another_state->snd_cwnd) && (mptcp_snd_nxt != mptcp_snd_una)){
-                        penalize(tmp, mptcp_snd_una + 1);
+                if ((count == 0)
+                       && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)
+                               + (another_state->snd_mss)) > mptcp_snd_wnd)) {
+                   // Penalize the flow with the smallest DSS
+                   if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
+                           && (mptcp_snd_nxt != mptcp_snd_una)) {
+                       // penalize(tmp, mptcp_snd_una + 1);
 
-                        if(opportunisticRetransmission ){
-                             _opportunisticRetransmission(tmp);
-                        }
-                     }
-                 }
-
+                       if (opportunisticRetransmission) {
+                        //   _opportunisticRetransmission(tmp);
+                       }
+                   }
+                }
                 count++;
             }
         }
@@ -774,14 +792,16 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
         break;
     default: {
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-                      i != subflow_list.end(); i++) {
-                  TCP_subflow_t* entry = (*i);
-                  if(entry->subflow->isQueueAble){
-                      TCPTahoeRenoFamilyStateVariables* another_state =
-                                          check_and_cast<TCPTahoeRenoFamilyStateVariables*> (entry->subflow->getTcpAlgorithm()->getStateVariables());
-                      entry->subflow->sendData(fullSegmentsOnly, another_state->snd_cwnd);
-                  }
-                  this->refreshSendMPTCPWindow();
+                i != subflow_list.end(); i++) {
+            TCP_subflow_t* entry = (*i);
+            if (entry->subflow->isQueueAble) {
+                TCPTahoeRenoFamilyStateVariables* another_state =
+                        check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
+                                entry->subflow->getTcpAlgorithm()->getStateVariables());
+                entry->subflow->sendData(fullSegmentsOnly,
+                        another_state->snd_cwnd);
+            }
+            this->refreshSendMPTCPWindow();
         }
         break;
     }
@@ -790,101 +810,97 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
     return true;
 }
 
-void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
+void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
 
-      // set it to lowest if lowest changed
-    if(old_mptcp_snd_una != mptcp_snd_una){
+    // set it to lowest if lowest changed
+    if (old_mptcp_snd_una != mptcp_snd_una) {
         old_mptcp_snd_una = mptcp_snd_una;
         mptcp_highestRTX = mptcp_snd_una;
-     }
-    //else return;
-    // Do opportunistic retransmission
-    if(mptcp_highestRTX >= mptcp_snd_nxt - 1){
+    }
+    Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX);
+    while (s_itr != slist.end()) {
+        if (s_itr->second == sub) {
+            s_itr++;
+            continue;
+        }
+        break;
+    }
+    if (s_itr == slist.end())
+        return;
+    if (mptcp_highestRTX >= mptcp_snd_nxt - 1) {
         return;
     }
-
-
-
-    // Do opportunistic retransmission
-    if(mptcp_highestRTX >= mptcp_snd_nxt - 1){
-       return;
-    }
-
-    TCPTahoeRenoFamilyStateVariables* another_state =
-       check_and_cast<TCPTahoeRenoFamilyStateVariables*> (sub->getTcpAlgorithm()->getStateVariables());
+    TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
+            TCPTahoeRenoFamilyStateVariables*>(
+            sub->getTcpAlgorithm()->getStateVariables());
 
     isMPTCP_RTX = true;
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
-    mptcp_snd_nxt = mptcp_highestRTX + 1;
-
+    mptcp_snd_nxt = mptcp_highestRTX;
     sub->sendOneNewSegment(true, another_state->snd_cwnd);
-    if(mptcp_snd_nxt != mptcp_highestRTX + 1){
-        //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX + 1 << "send with " << sub->getState()->getSndNxt() << " by " <<  sub->remoteAddr << "<->" << sub->localAddr << std::endl;
+    if (mptcp_snd_nxt != mptcp_highestRTX) {
+        //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
+        //        << "send with " << sub->getState()->getSndNxt() << " by "
+        //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
         mptcp_highestRTX = mptcp_snd_nxt - 1;
 
         // Check if next is not still delivered
         bool isDelivered = false;
-        do{
-           isDelivered = false;
-           Delivered_list::iterator list = dlist.find(mptcp_highestRTX + 1);
-           if(list != dlist.end()){
-               mptcp_highestRTX += list->second;
-               isDelivered = true;
-           }
-        }while(isDelivered);
-        // Check if this is not a msg from this flow
-        Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX + 1);
-        while(s_itr != slist.end()){
-           if(s_itr->second == sub){
-               s_itr++;
-               continue;
-           }
-           mptcp_highestRTX = s_itr->first - 1;
-           break;
-        }
-        if(s_itr == slist.end())
-           mptcp_highestRTX =  mptcp_snd_nxt;
-
+        do {
+            isDelivered = false;
+            Delivered_list::iterator list = dlist.find(mptcp_highestRTX + 1);
+            if (list != dlist.end()) {
+                mptcp_highestRTX += list->second;    // add the offset
+                isDelivered = true;
+            }
+        } while (isDelivered);
+    } else {
+        // we did not the opp retrans
     }
 
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
 }
 
-uint64 MPTCP_Flow::penalize(TCPConnection *sub, uint64 last){
+uint64 MPTCP_Flow::penalize(TCPConnection *sub, uint64 last) {
     uint64 ret = last;
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-             i != subflow_list.end(); i++) {
-         TCPConnection* conn = (*i)->subflow;
-         if(sub == conn)
-             continue;
+            i != subflow_list.end(); i++) {
+        TCPConnection* conn = (*i)->subflow;
+        if (sub == conn)
+            continue;
 
-         TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
-         while((itr != conn->dss_dataMapofSubflow.end()) &&
-                (itr->second->delivered)){
-             itr++;
-         }
-         if( (itr != conn->dss_dataMapofSubflow.end()) && (itr->second->dss_seq <= last))
-             _penalize(conn);
+        TCPMultipathDSSStatus::iterator itr =
+                conn->dss_dataMapofSubflow.begin();
+        while ((itr != conn->dss_dataMapofSubflow.end())
+                && (itr->second->delivered)) {
+            itr++;
+        }
+        if ((itr != conn->dss_dataMapofSubflow.end())
+                && (itr->second->dss_seq <= last))
+            _penalize(conn);
 
     }
     return ret;
 }
 
-void MPTCP_Flow::_penalize(TCPConnection *conn){
-    if(!multipath_penalizing)
+void MPTCP_Flow::_penalize(TCPConnection *conn) {
+    if (!multipath_penalizing)
         return;
 
-    TCPTahoeRenoFamilyStateVariables* another_state =
-           check_and_cast<TCPTahoeRenoFamilyStateVariables*> (conn->getTcpAlgorithm()->getStateVariables());
+    TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
+            TCPTahoeRenoFamilyStateVariables*>(
+            conn->getTcpAlgorithm()->getStateVariables());
 
-    if(simTime() - conn->getState()->time_last_penalized > another_state->srtt){
-        another_state->ssthresh = std::max(another_state->snd_cwnd / 2, another_state->snd_mss);
+    if (simTime() - conn->getState()->time_last_penalized
+            > another_state->srtt) {
+        another_state->ssthresh = std::max(another_state->snd_cwnd / 2,
+                another_state->snd_mss);
         another_state->snd_cwnd = another_state->ssthresh;
-        TCPBaseAlg* base = check_and_cast<TCPBaseAlg*> (conn->getTcpAlgorithm());
-        if(base->cwndVector)
+        TCPBaseAlg* base = check_and_cast<TCPBaseAlg*>(conn->getTcpAlgorithm());
+        if (base->cwndVector)
             base->cwndVector->record(another_state->snd_cwnd);
-        if(base->ssthreshVector)
+        if (base->ssthreshVector)
             base->ssthreshVector->record(another_state->ssthresh);
         // mark last penalized
         conn->getState()->time_last_penalized = simTime();
@@ -895,7 +911,7 @@ void MPTCP_Flow::_penalize(TCPConnection *conn){
  */
 int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
         TCPStateVariables* subflow_state, TCPSegment *tcpseg,
-        TCPConnection* subflow, TCPOption* option) {
+        TCPConnection* subflow, TCPOption option) {
 
     /* General overview MP_CAPABLE
      ------------------------                       ----------
@@ -944,9 +960,9 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
                     "\0");
 
             // Prepare
-            option->setLength(MP_CAPABLE_SIZE_SYN);
-            option->setValuesArraySize(3);
-            option->setValues(0, first_bits);
+            option.setLength(MP_CAPABLE_SIZE_SYN);
+            option.setValuesArraySize(3);
+            option.setValues(0, first_bits);
 
             // generate local_key(!!) Section 3.1 => only time the key will send in clear
 
@@ -955,9 +971,9 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
             ASSERT(local_key != 0 && "Something is wrong with the local key");
             // set 64 bit value
             uint32_t value = (uint32_t) _getLocalKey();
-            option->setValues(1, value);
+            option.setValues(1, value);
             value = _getLocalKey() >> 32;
-            option->setValues(2, value);
+            option.setValues(2, value);
             addSubflow(0, subflow); // OK this is the first subflow and should be add
             this->MPTCP_FSM(PRE_ESTABLISHED)
             ;DEBUGPRINT("[FLOW][OUT] Generate Sender Key in IDLE for SYN: %ld",
@@ -970,9 +986,9 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
                     "\0");
 
             // Prepare
-            option->setLength(MP_CAPABLE_SIZE_SYNACK);
-            option->setValuesArraySize(3);
-            option->setValues(0, first_bits);
+            option.setLength(MP_CAPABLE_SIZE_SYNACK);
+            option.setValuesArraySize(3);
+            option.setValues(0, first_bits);
 
             // generate receiver_key -> important is key of ACK
             _generateLocalKey();
@@ -980,9 +996,9 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
             ASSERT(local_key != 0 && "Something is wrong with the local key");
             // set 64 bit value
             uint32_t value = (uint32_t) _getLocalKey();
-            option->setValues(1, value);
+            option.setValues(1, value);
             value = _getLocalKey() >> 32;
-            option->setValues(2, value);
+            option.setValues(2, value);
 
             DEBUGPRINT(
                     "[FLOW][OUT] Generate Receiver Key in IDLE for SYN-ACK: %ld",
@@ -997,7 +1013,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
         // FIXME Just for Testing
 
         tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-        tcpseg->setOptions(t, *option);
+        tcpseg->setOptions(t, option);
         t++;
         break;
     }
@@ -1013,24 +1029,24 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
                     "\0");
 
             // Prepare
-            option->setLength(MP_CAPABLE_SIZE_ACK);
-            option->setValuesArraySize(5);
-            option->setValues(0, first_bits);
+            option.setLength(MP_CAPABLE_SIZE_ACK);
+            option.setValuesArraySize(5);
+            option.setValues(0, first_bits);
 
             // set 64 bit value
             uint32_t value = (uint32_t) _getLocalKey();
-            option->setValues(1, value);
+            option.setValues(1, value);
             value = _getLocalKey() >> 32;
-            option->setValues(2, value);
+            option.setValues(2, value);
 
             // set 64 bit value
             value = (uint32_t) _getRemoteKey();
-            option->setValues(3, value);
+            option.setValues(3, value);
             value = _getRemoteKey() >> 32;
-            option->setValues(4, value);
+            option.setValues(4, value);
 
             tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-            tcpseg->setOptions(t, *option);
+            tcpseg->setOptions(t, option);
             t++;
 
             // OK,if we want accept server side joints we have to open a socket wor incoming connection
@@ -1093,7 +1109,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
  */
 int MPTCP_Flow::_writeJoinHandshakeHeader(uint t,
         TCPStateVariables* subflow_state, TCPSegment *tcpseg,
-        TCPConnection* subflow, TCPOption* option) {
+        TCPConnection* subflow, TCPOption option) {
 
     /*
      ------------------------                       ----------
@@ -1144,20 +1160,20 @@ int MPTCP_Flow::_writeJoinHandshakeHeader(uint t,
         assert(
                 MP_JOIN_SIZE_SYN==12 && "Did somone a change on the MP_JOIN_SIZE_SYN");
         // In the draft it is defined as 12
-        option->setLength(MP_JOIN_SIZE_SYN);
-        option->setValuesArraySize(3);
-        option->setValues(0, first_bits);
+        option.setLength(MP_JOIN_SIZE_SYN);
+        option.setValuesArraySize(3);
+        option.setValues(0, first_bits);
 
         // FIXME Missing Address ID (!!!!)
-        option->setValues(1, getRemoteToken());
+        option.setValues(1, getRemoteToken());
 
         subflow->randomA = 0; // FIXME (uint32)generateKey();
-        option->setValues(2, subflow->randomA); // FIXME Sender's random number (Generator perhaps other one??)
+        option.setValues(2, subflow->randomA); // FIXME Sender's random number (Generator perhaps other one??)
 
         addSubflow(subflow->connId, subflow); // connection becomes stateful on SYN because we have to remember all values -> not needed for real implemenation
 
         tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-        tcpseg->setOptions(t, *option);
+        tcpseg->setOptions(t, option);
         t++;
 
     }
@@ -1174,19 +1190,19 @@ int MPTCP_Flow::_writeJoinHandshakeHeader(uint t,
         assert(
                 MP_JOIN_SIZE_SYNACK==16 && "Did someone a change on MP_JOIN_SIZE_SYNACK?");
         // In the draft it is defined as 12
-        option->setLength(MP_JOIN_SIZE_SYNACK);
-        option->setValuesArraySize(3);
-        option->setValues(0, first_bits);
+        option.setLength(MP_JOIN_SIZE_SYNACK);
+        option.setValuesArraySize(3);
+        option.setValues(0, first_bits);
         // FIXME B
         // FIXME Adress ID
 
         // generate the tuncated MAC (64) and the random Number of the Receiver (Sender of the Packet)
         // FIXME For second Parameter
-        option->setValues(1, 0); // FIXME truncated MAC 64
-        option->setValues(2, 0); // FIXME Random Number
+        option.setValues(1, 0); // FIXME truncated MAC 64
+        option.setValues(2, 0); // FIXME Random Number
 
         tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-        tcpseg->setOptions(t, *option);
+        tcpseg->setOptions(t, option);
         t++;
         DEBUGPRINT(
                 "[MPTCP][HANDSHAKE][MP_JOIN] Pre-Established after enqueue of SYN-ACK%s",
@@ -1205,17 +1221,17 @@ int MPTCP_Flow::_writeJoinHandshakeHeader(uint t,
         assert(
                 MP_JOIN_SIZE_ACK==24 && "Did someone a change on MP_JOIN_SIZE_ACK");
         // In the draft it is defined as 12
-        option->setLength(MP_JOIN_SIZE_ACK);
-        option->setValuesArraySize(3);
-        option->setValues(0, first_bits);
+        option.setLength(MP_JOIN_SIZE_ACK);
+        option.setValuesArraySize(3);
+        option.setValues(0, first_bits);
 
         // generate the tuncated MAC (64) and the random Number of the Receiver (Sender of the Packet)
         // FIXME FIXME FIXME
-        option->setValues(1, 0); // FIXME truncated MAC 64
-        option->setValues(2, 0); // FIXME Random Number
+        option.setValues(1, 0); // FIXME truncated MAC 64
+        option.setValues(2, 0); // FIXME Random Number
 
         tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-        tcpseg->setOptions(t, *option);
+        tcpseg->setOptions(t, option);
         t++;
 
         //  subflow->startMPTCPACKRexmitTimer();
@@ -1370,7 +1386,7 @@ bool MPTCP_Flow::_prepareJoinConnection() {
  */
 int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
         TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
-        TCPConnection* subflow, TCPOption* option) {
+        TCPConnection* subflow, TCPOption option) {
 
     /*
      The Data Sequence Mapping and the Data ACK are signalled in the Data
@@ -1383,8 +1399,6 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
     DEBUGprintDSSInfo();
     // check if we need to add DSS
-    if (bytes < 1)
-        return 0;
 
     // Special cases: Retranmission
     bool isRetranmission = false;
@@ -1420,85 +1434,87 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 "Uih...sending window is just less 8 bytes... if we want send, we have to fix this");
     }
 
-	// get Start DSS
-	uint64 dss_start = this->mptcp_snd_una;		// will be manipulated in process_dss of the pcb
-	subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una;
+    // get Start DSS
+    uint64 dss_start = this->mptcp_snd_una;	// will be manipulated in process_dss of the pcb
+    subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una;
 
+    // fill the dss seq nr map
+    // FIXME -> Perhaps it is enough to hold list like on SACK
+    uint32 snd_nxt_tmp = subflow->getState()->getSndNxt();
+    uint32 bytes_tmp = bytes;
+    uint32 to_report_sqn = this->mptcp_snd_nxt;
 
-
-	// fill the dss seq nr map
-	// FIXME -> Perhaps it is enough to hold list like on SACK
-	uint32 snd_nxt_tmp = subflow->getState()->getSndNxt();
-	uint32 bytes_tmp = bytes;
-	uint32 to_report_sqn = this->mptcp_snd_nxt;
-
-    if(bytes_tmp > subflow->getState()->snd_mss)
-       ASSERT(false && "Expect only segments with size less that path mss");
-	for(uint64 cnt = 0; cnt <= bytes;cnt++){
-		// check if there is any in the list
-	    ASSERT(cnt < 1 && "if we do more than one round we have a problem");
-	    // FIXME Check if it is still in the queue, overflow
-	        TCPMultipathDSSStatus::const_iterator it = subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
-	        // check for special cases
-	        if(it == subflow->dss_dataMapofSubflow.end()){
-	            if(!subflow->dss_dataMapofSubflow.empty()){
-	                if((subflow->dss_dataMapofSubflow.begin()->first <= snd_nxt_tmp) &&
-	                        (snd_nxt_tmp < ((--subflow->dss_dataMapofSubflow.end())->first + (--subflow->dss_dataMapofSubflow.end())->second->seq_offset))
-	                )
-	                {
+    if (bytes_tmp > subflow->getState()->snd_mss)
+        ASSERT(false && "Expect only segments with size less that path mss");
+    for (uint64 cnt = 0; cnt <= bytes; cnt++) {
+        // check if there is any in the list
+        ASSERT(cnt < 1 && "if we do more than one round we have a problem");
+        // FIXME Check if it is still in the queue, overflow
+        TCPMultipathDSSStatus::const_iterator it =
+                subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
+        // check for special cases
+        if (it == subflow->dss_dataMapofSubflow.end()) {
+            if (!subflow->dss_dataMapofSubflow.empty()) {
+                if ((subflow->dss_dataMapofSubflow.begin()->first <= snd_nxt_tmp)
+                        && (snd_nxt_tmp
+                                < ((--subflow->dss_dataMapofSubflow.end())->first
+                                        + (--subflow->dss_dataMapofSubflow.end())->second->seq_offset))) {
 #warning "Real problem - Why we are not in sync -See issue #29 in github"
-	                    uint32 old = snd_nxt_tmp;
-	                    // FIXME - This is just a hotfix/workaround ...it don t solve the problem
-	                    TCPMultipathDSSStatus::iterator i = subflow->dss_dataMapofSubflow.begin();
-	                    while(i != subflow->dss_dataMapofSubflow.end()){
-	                        std::cerr << "sqn: " << i->first << " DSS " << i->second->dss_seq << std::endl;
-	                        if(i->first <  old)
-	                            snd_nxt_tmp =  i->first;
-	                        else
-	                            break;
-	                        i++;
-	                    }
-	                    it = subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
-	                    if(it == subflow->dss_dataMapofSubflow.end()){
-                                            std::cerr << "not in sync of full packets" << std::endl;
-                                            ASSERT(false && "Workaround not functional");;
-	                    }
+                    uint32 old = snd_nxt_tmp;
+                    // FIXME - This is just a hotfix/workaround ...it don t solve the problem
+                    TCPMultipathDSSStatus::iterator i =
+                            subflow->dss_dataMapofSubflow.begin();
+                    while (i != subflow->dss_dataMapofSubflow.end()) {
+                        std::cerr << "sqn: " << i->first << " DSS "
+                                << i->second->dss_seq << std::endl;
+                        if (i->first < old)
+                            snd_nxt_tmp = i->first;
+                        else
+                            break;
+                        i++;
+                    }
+                    it = subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
+                    if (it == subflow->dss_dataMapofSubflow.end()) {
+                        std::cerr << "not in sync of full packets" << std::endl;
+                        ASSERT(false && "Workaround not functional");;
+                    }
 
-	                }
-	                if(subflow->dss_dataMapofSubflow.begin()->first > snd_nxt_tmp){
-	                    std::cerr << "this is a retransmission of still delivered MPTCP data" << std::cerr;
-	                    return 0;
-	                }
-	            }
-	        }
-            if(it != subflow->dss_dataMapofSubflow.end()){
-                // this is a retransmission
-                isRetranmission = true;
-                DSS_INFO* dss_info = it->second;
-                rtx_msg_length = dss_info->seq_offset;
-                rtx_snd_seq = dss_info->dss_seq;
-                to_report_sqn = dss_info->dss_seq;
-                // FIXME check if it really could be only one message
-                break;
+                }
+                if (subflow->dss_dataMapofSubflow.begin()->first
+                        > snd_nxt_tmp) {
+                    std::cerr
+                            << "this is a retransmission of still delivered MPTCP data"
+                            << std::cerr;
+                    return t;
+                }
             }
-            else{
-                DSS_INFO* dss_info = new DSS_INFO;// (DSS_INFO*) malloc(sizeof(DSS_INFO));
-                dss_info->dss_seq = this->mptcp_snd_nxt;
-                slist.insert(std::make_pair(dss_info->dss_seq,subflow));
-                dss_info->seq_offset = bytes;
-                mptcp_snd_nxt += bytes;
-                dss_info->section_end = false;
-                // we work wit a offset parameter if we have numbers in sequence
-                // I think it is more easy to handle this in mss sections
-
-                // information stuff
-                dss_info->re_scheduled = 0;
-                dss_info->delivered = false;
-                subflow->dss_dataMapofSubflow[snd_nxt_tmp] = dss_info;//dss_info;
-               // recalc the offset
-                snd_nxt_tmp += bytes_tmp;
-                cnt += bytes_tmp;
-            }
+        }
+        if (it != subflow->dss_dataMapofSubflow.end()) {
+            // this is a retransmission
+            isRetranmission = true;
+            DSS_INFO* dss_info = it->second;
+            rtx_msg_length = dss_info->seq_offset;
+            rtx_snd_seq = dss_info->dss_seq;
+            to_report_sqn = dss_info->dss_seq;
+            // FIXME check if it really could be only one message
+            break;
+        } else {
+            DSS_INFO* dss_info = new DSS_INFO;// (DSS_INFO*) malloc(sizeof(DSS_INFO));
+            dss_info->dss_seq = this->mptcp_snd_nxt;
+            dss_info->seq_offset = bytes;
+            mptcp_snd_nxt += bytes;
+            dss_info->section_end = false;
+            // we work wit a offset parameter if we have numbers in sequence
+            // I think it is more easy to handle this in mss sections
+            slist.insert(std::make_pair(dss_info->dss_seq, subflow));
+            // information stuff
+            dss_info->re_scheduled = 0;
+            dss_info->delivered = false;
+            subflow->dss_dataMapofSubflow[snd_nxt_tmp] = dss_info;   //dss_info;
+            // recalc the offset
+            snd_nxt_tmp += bytes_tmp;
+            cnt += bytes_tmp;
+        }
 
 //		}
 //		else ASSERT (false);
@@ -1506,8 +1522,6 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
     // this->mptcp_snd_nxt += bytesToSend;
     uint64 dss_end = this->mptcp_snd_nxt - 1;
-    if (dss_end == dss_start)
-        return 0;
 
     /*
      DSS packet format:
@@ -1526,15 +1540,20 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
      +-------------------------------+------------------------------+
      */
     // Some Debug
-    // !!!!!!!!!!!!!!!!!!!! FIXME -> I have a shift of 16 bit during use of  option->setValues
+    // !!!!!!!!!!!!!!!!!!!! FIXME -> I have a shift of 16 bit during use of  option.setValues
     // Initiate some helper
     uint32_t first_bits = 0x0;
     DEBUGPRINT("[MPTCP][PROCESS SQN] start%s", "\0");
     first_bits = (first_bits | ((uint16_t) MP_DSS));
     first_bits = first_bits << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
-    option->setLength(dss_option_offset);
-    option->setValuesArraySize(4);
 
+    if (dss_end == dss_start){
+        option.setLength(MP_DSS_OPTIONLENGTH_ACK);
+        option.setValuesArraySize(3);
+    }else{
+        option.setLength(dss_option_offset);
+        option.setValuesArraySize(4);
+    }
     uint32_t array_cnt = 0;
     uint32_t flags = 0;
 
@@ -1547,7 +1566,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     // Switch: NED Parameter multipath_DSSSeqNo8
     if (subflow->getTcpMain()->multipath_DSSSeqNo8) {
         flags |= DSS_FLAG_m; // 8 or 4 Octets
-        option->setValuesArraySize(option->getValuesArraySize() + 1);
+        option.setValuesArraySize(option.getValuesArraySize() + 1);
     }
 
     // Note:
@@ -1562,7 +1581,11 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     // Switch: NED Parameter multipath_DSSDataACK8
     if (subflow->getTcpMain()->multipath_DSSDataACK8) {
         flags |= DSS_FLAG_a; // 8 or 4 Octets
-        option->setValuesArraySize(option->getValuesArraySize() + 1);
+        option.setValuesArraySize(option.getValuesArraySize() + 1);
+    }
+    if (dss_end == dss_start){
+        // No other flags, there is only an ack
+        flags = 0x01;
     }
     first_bits |= flags << 16;
 
@@ -1576,7 +1599,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     l_seq = ack_seq = this->mptcp_rcv_nxt;
 
     first_bits |= l_seq >> 16;
-    option->setValues(array_cnt++, first_bits);
+    option.setValues(array_cnt++, first_bits);
     first_bits = 0;
     first_bits |= l_seq << 16;
 
@@ -1589,11 +1612,22 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
         ASSERT(false && "Not implemented yet");
     }
 
+    if (dss_end == dss_start){
+        // Data seq no.
+        l_seq  = 0;
+
+        first_bits |= l_seq >> 16;
+        option.setValues(array_cnt++, first_bits);
+        tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
+        tcpseg->setOptions(t++, option);
+        return t;
+    }
+
     // Data seq no.
     l_seq = snd_seq = to_report_sqn;
 
     first_bits |= l_seq >> 16;
-    option->setValues(array_cnt++, first_bits);
+    option.setValues(array_cnt++, first_bits);
 
     first_bits = 0;
 
@@ -1604,7 +1638,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
             - subflow->getState()->iss;
     first_bits |= l_seq >> 16;
 
-    option->setValues(array_cnt++, first_bits);
+    option.setValues(array_cnt++, first_bits);
     first_bits = 0;
     first_bits |= l_seq << 16;
 
@@ -1612,34 +1646,25 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
         first_bits |= data_len = rtx_msg_length;
     else
         first_bits |= data_len = bytes;
-    option->setValues(array_cnt++, first_bits);
+    option.setValues(array_cnt++, first_bits);
 
     // FIXME Checksum is missing
 
     tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-    tcpseg->setOptions(t, *option);
-    t++;
+    tcpseg->setOptions(t++, option);
+
 
     DEBUGPRINT(
             "[FLOW][DSS][INFO][SND] Ack Seq: %ld \t SND Seq: %ld \t Subflow Seq: %d \t Data length: %d",
             ack_seq, snd_seq, flow_seq, data_len);
 
-    //std::cerr << "[FLOW][SND][DSS][STATUS] snd_una:" << mptcp_snd_una << std::endl;
-    //std::cerr << this->ID << "[FLOW][SND][DSS][STATUS] snd_nxt:" << mptcp_snd_nxt << std::endl;
-    //std::cerr << "[FLOW][SND][DSS][STATUS] snd_wnd:" << mptcp_snd_wnd << std::endl;
-    //std::cerr << "[FLOW][SND][DSS][STATUS] rcv_nxt:" << mptcp_rcv_nxt << std::endl;
-    //std::cerr << "[FLOW][SND][DSS][STATUS] rcv_wnd: "<< mptcp_rcv_wnd << std::endl;
-
-    //if(mptcp_snd_wnd < (mptcp_snd_nxt - mptcp_snd_una))
-    //    ASSERT(false && "Why I m sending too much data for the receiver buffer?");
-    //std::cerr << "Send MPTCP: " << mptcp_snd_nxt << " On flight " << mptcp_snd_nxt - mptcp_snd_una << " Window " << mptcp_snd_wnd << std::endl;
-    return 0;
+    return t;
 }
 
 #ifdef ADD_ADDR
 int MPTCP_Flow::_writeADDADDRHeader(uint t, TCPStateVariables* subflow_state,
         TCPSegment *tcpseg, uint32 bytes, TCPConnection* subflow,
-        TCPOption* option) {
+        TCPOption option) {
     AddrTupple_t* laddr;
     TCP_AddressVector_t::const_iterator it;
     bool skip = false;
@@ -1676,23 +1701,23 @@ int MPTCP_Flow::_writeADDADDRHeader(uint t, TCPStateVariables* subflow_state,
         first_bits = (first_bits | ((uint16_t) MP_ADD_ADDR));
         first_bits = first_bits
         << (MP_SUBTYPE_POS + MP_SIGNAL_FIRST_VALUE_TYPE);
-            option->setValuesArraySize(3);
-            option->setValues(0, first_bits);
+        option.setValuesArraySize(3);
+        option.setValues(0, first_bits);
         if (laddr->addr.isIPv6()) {
-            option->setLength(MP_ADD_ADDR_SIZE + 20);
-            option->setValuesArraySize(option->getValuesArraySize()+3);
-            option->setValues(1, laddr->addr.get6().words()[0]);
-            option->setValues(2, laddr->addr.get6().words()[1]);
-            option->setValues(3, laddr->addr.get6().words()[2]);
-            option->setValues(4, laddr->addr.get6().words()[3]);
-            option->setValues(5, laddr->port);
+            option.setLength(MP_ADD_ADDR_SIZE + 20);
+            option.setValuesArraySize(option.getValuesArraySize()+3);
+            option.setValues(1, laddr->addr.get6().words()[0]);
+            option.setValues(2, laddr->addr.get6().words()[1]);
+            option.setValues(3, laddr->addr.get6().words()[2]);
+            option.setValues(4, laddr->addr.get6().words()[3]);
+            option.setValues(5, laddr->port);
         } else {
-            option->setLength(MP_ADD_ADDR_SIZE + 8);
-            option->setValues(1, laddr->addr.get4().getInt());
-            option->setValues(2, laddr->port);
+            option.setLength(MP_ADD_ADDR_SIZE + 8);
+            option.setValues(1, laddr->addr.get4().getInt());
+            option.setValues(2, laddr->port);
         }
         tcpseg->setOptionsArraySize(tcpseg->getOptionsArraySize() + 1);
-        tcpseg->setOptions(t, *option);
+        tcpseg->setOptions(t, option);
         t++;
     }
     return t;
@@ -1715,7 +1740,7 @@ void MPTCP_Flow::DEBUGprintDSSInfo() {
     }
 #endif
 }
-void MPTCP_Flow::refreshSendMPTCPWindow(){
+void MPTCP_Flow::refreshSendMPTCPWindow() {
     // we try to organize the DSS List in a Map with offsets of in order sequence of DSS
     TCP_subflow_t* entry = NULL;
     //uint64 lastMPTCPSeq = 0;
@@ -1726,7 +1751,7 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
             i != subflow_list.end(); i++) {
         entry = (*i);
 
-        if(entry->subflow->dss_dataMapofSubflow.empty())
+        if (entry->subflow->dss_dataMapofSubflow.empty())
             continue;   // Nothing to do
 
         // Clear sending memory (DSS MAP)
@@ -1734,67 +1759,77 @@ void MPTCP_Flow::refreshSendMPTCPWindow(){
         TCPConnection* conn = entry->subflow;
         //uint32 offset = 0;
 
-        for(TCPMultipathDSSStatus::const_iterator it = conn->dss_dataMapofSubflow.begin();it != conn->dss_dataMapofSubflow.end();it++){
-            if(subflow_state->snd_una > (it->first)){
+        for (TCPMultipathDSSStatus::const_iterator it =
+                conn->dss_dataMapofSubflow.begin();
+                it != conn->dss_dataMapofSubflow.end(); it++) {
+            if (subflow_state->snd_una > (it->first)) {
                 // complete delivered
-                slist.erase(it->second->dss_seq);
                 it->second->delivered = true;
-                dlist.insert(std::make_pair(it->second->dss_seq, it->second->seq_offset));
+            }
+            if (it->second->dss_seq < mptcp_snd_una) {
+//                slist.erase(it->second->dss_seq + it->second->seq_offset);
+//                dlist.insert(std::make_pair(it->second->dss_seq, it->second->seq_offset));
             }
             data_in_queue = true;
 
-            if((subflow_state->snd_una > it->first) && (subflow_state->snd_una < (it->first+ it->second->seq_offset))){
+            if ((subflow_state->snd_una > it->first)
+                    && (subflow_state->snd_una
+                            < (it->first + it->second->seq_offset))) {
                 // we have a split
                 // pre pare the old for delete
                 it->second->delivered = true;
                 // insert the the split as new
                 DSS_INFO* dss_info = new DSS_INFO;
-                dss_info->dss_seq = it->second->dss_seq + ((subflow_state->snd_una - it->first));
-                dss_info->seq_offset = (it->second->seq_offset - (subflow_state->snd_una - it->first));
+                dss_info->dss_seq = it->second->dss_seq
+                        + ((subflow_state->snd_una - it->first));
+                dss_info->seq_offset = (it->second->seq_offset
+                        - (subflow_state->snd_una - it->first));
                 dss_info->section_end = false;
                 // information stuff
                 dss_info->re_scheduled = 1;
                 dss_info->delivered = false;
-                conn->dss_dataMapofSubflow[subflow_state->snd_una] = dss_info;//dss_info;
+                conn->dss_dataMapofSubflow[subflow_state->snd_una] = dss_info; //dss_info;
             }
         }
         // Delete the entries marked as delivered
     }
     bool found_some = true;
-    uint64 old_border = mptcp_snd_una + 1;
-    do{
+    //uint64 old_border = mptcp_snd_una + 1;
+    do {
         found_some = false;
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                 i != subflow_list.end(); i++) {
             TCPConnection* conn = (*i)->subflow;
-            TCPMultipathDSSStatus::iterator itr = conn->dss_dataMapofSubflow.begin();
+            TCPMultipathDSSStatus::iterator itr =
+                    conn->dss_dataMapofSubflow.begin();
+            //uint64 tmp_mptcp_snd_una = mptcp_snd_una;
             while (itr != conn->dss_dataMapofSubflow.end()) {
-              if (itr->second->delivered) {
-                  uint64 inList = itr->second->dss_seq;
+                if (itr->second->delivered) {
+                    //uint64 inList = itr->second->dss_seq;
 
-                  if(mptcp_snd_una + 1 == inList && (mptcp_snd_nxt -1 != mptcp_snd_una)) {
-                      uint32 old_in_send_queue = (mptcp_snd_nxt-1) - mptcp_snd_una;
-                      mptcp_snd_una += itr->second->seq_offset;
-                      //std::cerr << "Not Delivered " << (mptcp_snd_nxt-1) - mptcp_snd_una << " NEW UNA "  << mptcp_snd_una << std::endl;
-                      ASSERT((old_in_send_queue > (mptcp_snd_nxt-1) - mptcp_snd_una) && "Overflow");
-                      delete itr->second;
-                      conn->dss_dataMapofSubflow.erase(itr);
-                      found_some = true;
-                      break;
-                  }
-                  else if(old_border  > inList){
-                      // Retransmissions
-                      delete itr->second;
-                      conn->dss_dataMapofSubflow.erase(itr);
-                      found_some = true;
-                  }
-                  itr++;
-              } else {
-                  break;
-              }
+                    //if(tmp_mptcp_snd_una + 1 == inList && (mptcp_snd_nxt -1 != tmp_mptcp_snd_una)) {
+                    //   uint32 old_in_send_queue = (mptcp_snd_nxt-1) - tmp_mptcp_snd_una;
+                    //   tmp_mptcp_snd_una += itr->second->seq_offset;
+                    //std::cerr << "Not Delivered " << (mptcp_snd_nxt-1) - mptcp_snd_una << " NEW UNA "  << mptcp_snd_una << std::endl;
+                    //   ASSERT((old_in_send_queue > (mptcp_snd_nxt-1) - tmp_mptcp_snd_una) && "Overflow");
+                    delete itr->second;
+                    conn->dss_dataMapofSubflow.erase(itr);
+                    //   found_some = true;
+                    //   break;
+                    // }
+                    //else if(old_border  > inList){
+                    // Retransmissions
+                    //    delete itr->second;
+                    //    conn->dss_dataMapofSubflow.erase(itr);
+                    found_some = true;
+                    //}
+                    itr++;
+                } else {
+                    break;
+                }
             }
         }
-    }while(found_some);
+    } while (found_some);
 
     mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
 }
@@ -1821,7 +1856,7 @@ void MPTCP_Flow::sendToApp() {
 
     if (maxBuffer >= mptcp_receiveQueue->getOccupiedMemory()) {
         mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
-    }else{
+    } else {
         mptcp_receiveQueue->printInfo();
         mptcp_rcv_wnd = 0;
         buffer_blocked = true;
@@ -1831,20 +1866,23 @@ void MPTCP_Flow::sendToApp() {
 
 void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
     uint32 old_mptcp_rcv_adv = mptcp_rcv_adv;
-	mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(dss_start_seq,data_len);
+    mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(dss_start_seq,
+            data_len);
 
-	if(maxBuffer < mptcp_receiveQueue->getOccupiedMemory()){
-	    mptcp_receiveQueue->printInfo();
-	    std::cerr << "RECEIVER occupied more than allowed: " << mptcp_receiveQueue->getOccupiedMemory() << " - Allowed are: "  << maxBuffer << std::endl;
-	    ASSERT(false && "What is wrong here");
-	}
+    if (maxBuffer < mptcp_receiveQueue->getOccupiedMemory()) {
+        mptcp_receiveQueue->printInfo();
+        std::cerr << "RECEIVER occupied more than allowed: "
+                << mptcp_receiveQueue->getOccupiedMemory() << " - Allowed are: "
+                << maxBuffer << std::endl;
+        ASSERT(false && "What is wrong here");
+    }
 
     //std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
-	//mptcp_receiveQueue->printInfo();
-	mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
-	if(mptcp_rcv_adv < old_mptcp_rcv_adv){
-	    ASSERT(false && "What is wrong here");
-	}
+    //mptcp_receiveQueue->printInfo();
+    mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
+    if (mptcp_rcv_adv < old_mptcp_rcv_adv) {
+        ASSERT(false && "What is wrong here");
+    }
 }
 
 TCPConnection* MPTCP_Flow::schedule(TCPConnection* save, cMessage* msg) {
@@ -2025,16 +2063,14 @@ void MPTCP_Flow::_hmac_md5(unsigned char* text, int text_len,
     }
     /*
      * perform inner MD5
-     */
-    MD5_Init(&context); /* init context for 1st
+     */MD5_Init(&context); /* init context for 1st
      * pass */
     MD5_Update(&context, (const void*) k_ipad, (size_t) 64); /* start with inner pad */
     MD5_Update(&context, (const void*) text, (size_t) text_len); /* then text of datagram */
     MD5_Final(digest, &context); /* finish up 1st pass */
     /*
      * perform outer MD5
-     */
-    MD5_Init(&context); /* init context for 2nd
+     */MD5_Init(&context); /* init context for 2nd
      * pass */
     MD5_Update(&context, k_opad, 64); /* start with outer pad */
     MD5_Update(&context, digest, 16); /* then results of 1st
@@ -2137,7 +2173,7 @@ void MPTCP_Flow::setBaseSQN(uint64_t s) {
 
     mptcp_rcv_nxt = seq;
     mptcp_rcv_adv = mptcp_rcv_nxt + maxBuffer;
-
+    slist.clear();
     mptcp_receiveQueue->init(seq);
 }
 

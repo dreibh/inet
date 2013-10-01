@@ -1931,7 +1931,8 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
 
             // Update TS variables
             // RFC 1323, page 13: "The Timestamp Value field (TSval) contains the current value of the timestamp clock of the TCP sending the option."
-            option.setValues(0, convertSimtimeToTS(simTime()));
+            uint32 TS = convertSimtimeToTS(simTime());
+            option.setValues(0, TS);
 
             // RFC 1323, page 16: "(3) When a TSopt is sent, its TSecr field is set to the current TS.Recent value."
             // RFC 1323, page 13:
@@ -1953,6 +1954,23 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
         }
 
         // TODO add new TCPOptions here once they are implemented
+#ifdef PRIVATE
+    if(tcpMain->multipath){
+        /**
+         * OK, we need signaling for MPTCP, in the draft it is done by options
+         *
+         */
+        if(tcpseg->getSynBit()){
+            if(!flow){
+                // Possible the first SYN, without any PCB
+                new MPTCP_PCB(connId, appGateIndex,this);
+            }
+        }
+        ASSERT(flow && "flow should be initialized");
+        t = flow->writeMPTCPHeaderOptions(t,state,tcpseg, bytes, this);
+    }
+#endif // PRIVATE
+
     }
     else if (fsm.getState() == TCP_S_SYN_SENT || fsm.getState() == TCP_S_SYN_RCVD
             || fsm.getState() == TCP_S_ESTABLISHED || fsm.getState() == TCP_S_FIN_WAIT_1
@@ -1978,7 +1996,8 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
 
             // Update TS variables
             // RFC 1323, page 13: "The Timestamp Value field (TSval) contains the current value of the timestamp clock of the TCP sending the option."
-            option.setValues(0, convertSimtimeToTS(simTime()));
+            uint32 TS = convertSimtimeToTS(simTime());
+            option.setValues(0, TS);
 
             // RFC 1323, page 16: "(3) When a TSopt is sent, its TSecr field is set to the current TS.Recent value."
             // RFC 1323, page 13:
@@ -1997,6 +2016,22 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
             tcpseg->setOptions(t++, option);
 
         }
+#ifdef PRIVATE
+    if(tcpMain->multipath){
+        /**
+         * OK, we need signaling for MPTCP, in the draft it is done by options
+         *
+         */
+        if(tcpseg->getSynBit()){
+            if(!flow){
+                // Possible the first SYN, without any PCB
+                new MPTCP_PCB(connId, appGateIndex,this);
+            }
+        }
+        ASSERT(flow && "flow should be initialized");
+        t = flow->writeMPTCPHeaderOptions(t,state,tcpseg, bytes, this);
+    }
+#endif // PRIVATE
 
         // SACK header option
 
@@ -2010,7 +2045,7 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
         // receiver SHOULD send an ACK for every valid segment that arrives
         // containing new data, and each of these "duplicate" ACKs SHOULD bear a
         // SACK option."
-        if (state->sack_enabled && (state->snd_sack || state->snd_dsack))
+        if (state->sack_enabled) // && (state->snd_sack || state->snd_dsack))
         {
 #ifndef PRIVATE
             addSacks(tcpseg);
@@ -2023,22 +2058,7 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
         // TODO add new TCPOptions here once they are implemented
         // TODO delegate to TCPAlgorithm as well -- it may want to append additional options
     }
-#ifdef PRIVATE
-	if(tcpMain->multipath){
-		/**
-		 * OK, we need signaling for MPTCP, in the draft it is done by options
-		 *
-		 */
-	    if(tcpseg->getSynBit()){
-            if(!flow){
-                // Possible the first SYN, without any PCB
-                new MPTCP_PCB(connId, appGateIndex,this);
-            }
-	    }
-	    ASSERT(flow && "flow should be initialized");
-		flow->writeMPTCPHeaderOptions(t,state,tcpseg, bytes, this);
-	}
-#endif // PRIVATE
+
     if (tcpseg->getOptionsArraySize() != 0){
         uint options_len = tcpseg->getOptionsArrayLength();
         if (options_len <= TCP_OPTIONS_MAX_SIZE) // Options length allowed? - maximum: 40 Bytes
@@ -2074,8 +2094,9 @@ uint32 TCPConnection::getTSecr(TCPSegment *tcpseg) const
         const TCPOption& option = tcpseg->getOptions(i);
         short kind = option.getKind();
 
-        if (kind == TCPOPTION_TIMESTAMP)
+        if (kind == TCPOPTION_TIMESTAMP){
             return option.getValues(1);
+        }
     }
 
     return 0;
