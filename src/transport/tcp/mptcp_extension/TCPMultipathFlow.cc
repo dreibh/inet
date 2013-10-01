@@ -777,10 +777,10 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                    // Penalize the flow with the smallest DSS
                    if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
                            && (mptcp_snd_nxt != mptcp_snd_una)) {
-                       // penalize(tmp, mptcp_snd_una + 1);
+                       penalize(tmp, mptcp_snd_una + 1);
 
                        if (opportunisticRetransmission) {
-                        //   _opportunisticRetransmission(tmp);
+                          _opportunisticRetransmission(tmp);
                        }
                    }
                 }
@@ -1766,10 +1766,7 @@ void MPTCP_Flow::refreshSendMPTCPWindow() {
                 // complete delivered
                 it->second->delivered = true;
             }
-            if (it->second->dss_seq < mptcp_snd_una) {
-//                slist.erase(it->second->dss_seq + it->second->seq_offset);
-//                dlist.insert(std::make_pair(it->second->dss_seq, it->second->seq_offset));
-            }
+
             data_in_queue = true;
 
             if ((subflow_state->snd_una > it->first)
@@ -1802,27 +1799,19 @@ void MPTCP_Flow::refreshSendMPTCPWindow() {
             TCPConnection* conn = (*i)->subflow;
             TCPMultipathDSSStatus::iterator itr =
                     conn->dss_dataMapofSubflow.begin();
-            //uint64 tmp_mptcp_snd_una = mptcp_snd_una;
-            while (itr != conn->dss_dataMapofSubflow.end()) {
-                if (itr->second->delivered) {
-                    //uint64 inList = itr->second->dss_seq;
 
-                    //if(tmp_mptcp_snd_una + 1 == inList && (mptcp_snd_nxt -1 != tmp_mptcp_snd_una)) {
-                    //   uint32 old_in_send_queue = (mptcp_snd_nxt-1) - tmp_mptcp_snd_una;
-                    //   tmp_mptcp_snd_una += itr->second->seq_offset;
-                    //std::cerr << "Not Delivered " << (mptcp_snd_nxt-1) - mptcp_snd_una << " NEW UNA "  << mptcp_snd_una << std::endl;
-                    //   ASSERT((old_in_send_queue > (mptcp_snd_nxt-1) - tmp_mptcp_snd_una) && "Overflow");
+            while (itr != conn->dss_dataMapofSubflow.end()) {
+                if(itr->second->dss_seq > mptcp_snd_una){
+                    break;
+                }
+                if (itr->second->delivered) {
+
+                    slist.erase(itr->second->dss_seq + itr->second->seq_offset);
+                    dlist.insert(std::make_pair(itr->second->dss_seq, itr->second->seq_offset));
+
                     delete itr->second;
                     conn->dss_dataMapofSubflow.erase(itr);
-                    //   found_some = true;
-                    //   break;
-                    // }
-                    //else if(old_border  > inList){
-                    // Retransmissions
-                    //    delete itr->second;
-                    //    conn->dss_dataMapofSubflow.erase(itr);
                     found_some = true;
-                    //}
                     itr++;
                 } else {
                     break;
