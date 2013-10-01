@@ -752,26 +752,28 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly){
                 TCPTahoeRenoFamilyStateVariables* another_state =
                                               check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
                 tmp->orderBytesForQueue(another_state->snd_cwnd);
+
+                if((count == 0) && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (another_state->snd_mss)) > mptcp_snd_wnd)){
+                    // Penalize the flow with the smallest DSS
+                    if((4 * another_state->snd_mss < another_state->snd_cwnd) && (mptcp_snd_nxt != mptcp_snd_una)){
+                        penalize(tmp, mptcp_snd_una + 1);
+
+                        if(opportunisticRetransmission ){
+                             _opportunisticRetransmission(tmp);
+                        }
+                     }
+                 }
+
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
 
-                uint32 sent = 0;
-                for (TCP_SubFlowVector_t::const_iterator i = subflow_list.begin();
-                                 i != subflow_list.end(); i++) {
-                      TCPConnection *conn = (*i)->subflow;
-                      sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
-                }
-               if((count == 0) && (another_state->snd_cwnd > another_state->snd_mss) &&
-                       ((((mptcp_snd_nxt - 1) - mptcp_snd_una)  + (another_state->snd_mss)) > mptcp_snd_wnd)){
-                   // Penalize the flow with the smallest DSS
-                   if((4 * another_state->snd_mss <= another_state->snd_cwnd) && (mptcp_snd_nxt != mptcp_snd_una)){
-                       penalize(tmp, mptcp_snd_una + 1);
+               // uint32 sent = 0;
+               // for (TCP_SubFlowVector_t::const_iterator i = subflow_list.begin();
+               //                  i != subflow_list.end(); i++) {
+               //       TCPConnection *conn = (*i)->subflow;
+               //       sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
+               // }
 
-                       if(opportunisticRetransmission ){
-                            _opportunisticRetransmission(tmp);
-                       }
-                    }
-                }
                 count++;
             }
         }
@@ -830,7 +832,7 @@ void  MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub){
     }
 
     if(s_itr == slist.end())
-       mptcp_highestRTX == mptcp_snd_nxt;
+       mptcp_highestRTX =  mptcp_snd_nxt;
     // Do opportunistic retransmission
     if(mptcp_highestRTX >= mptcp_snd_nxt - 1){
        return;
