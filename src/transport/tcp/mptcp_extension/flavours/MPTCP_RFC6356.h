@@ -35,7 +35,6 @@ class INET_API MPTCP_RFC6356 : public TCPNewReno
 {
   private:
     bool isCA;
-
     virtual void increaseCWND(uint32 increase, bool print);
     /** Utility function to recalculate path variables */
     virtual void recalculateMPTCPCCBasis();
@@ -43,6 +42,7 @@ class INET_API MPTCP_RFC6356 : public TCPNewReno
   public:
 //    /** Ctor */
     MPTCP_RFC6356();
+
 };
 
 #endif

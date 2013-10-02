@@ -107,7 +107,7 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
 }
 
 
-void MPTCP_RFC6356::increaseCWND(uint32 ackedBytes, bool print){
+void MPTCP_RFC6356::increaseCWND(uint32 increase, bool print){
 
 // cite RFC6356
 /**
@@ -117,7 +117,7 @@ void MPTCP_RFC6356::increaseCWND(uint32 ackedBytes, bool print){
  *         min ( --------------------------- , ------------------- )  (1)
  *                        cwnd_total                   cwnd_i
  */
-    uint32 increase = ackedBytes;
+    uint32 ackedBytes = increase;
     double numerator   = 0.0;
     double denominator = 0.0;
     if ((!(state->snd_cwnd < state->ssthresh)) && (!this->conn->getState()->lossRecovery) && ackedBytes){
