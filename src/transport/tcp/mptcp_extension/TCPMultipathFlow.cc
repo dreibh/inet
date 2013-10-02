@@ -817,7 +817,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         old_mptcp_snd_una = mptcp_snd_una;
         mptcp_highestRTX = mptcp_snd_una;
     }
-
+    else return;
     Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX);
     if((s_itr != slist.end()) && (mptcp_snd_una == mptcp_highestRTX))
         s_itr++;
