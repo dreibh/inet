@@ -1444,6 +1444,8 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     uint32 bytes_tmp = bytes;
     uint32 to_report_sqn = this->mptcp_snd_nxt;
 
+    if(subflow->getState()->getSndNxt() == 329985249)
+            std::cerr << " STOP  " << std::endl;
     if (bytes_tmp > subflow->getState()->snd_mss)
         ASSERT(false && "Expect only segments with size less that path mss");
     for (uint64 cnt = 0; cnt <= bytes; cnt++) {
@@ -1454,7 +1456,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
         // check for special cases
         if (it == subflow->dss_dataMapofSubflow.end()) {
-            if (!subflow->dss_dataMapofSubflow.empty()) {
+            if (!subflow->dss_dataMapofSubflow.empty() && (subflow->getState()->getSndNxt() < subflow->getState()->snd_max) ) {
                 if ((subflow->dss_dataMapofSubflow.begin()->first <= snd_nxt_tmp)
                         && (snd_nxt_tmp
                                 < ((--subflow->dss_dataMapofSubflow.end())->first
@@ -1833,7 +1835,7 @@ void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
     //mptcp_receiveQueue->printInfo();
     mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
     if (mptcp_rcv_adv < old_mptcp_rcv_adv) {
-        ASSERT(false && "What is wrong here");
+    //    ASSERT(false && "What is wrong here");
     }
 }
 
@@ -2117,8 +2119,8 @@ uint64_t MPTCP_Flow::getSQN() {
 }
 void MPTCP_Flow::setBaseSQN(uint64_t s) {
     DEBUGPRINT("[FLOW][INFO] INIT SQN from %ld to %ld", seq, s);
-    start_seq = s;
-    seq = s;
+    start_seq = (s%20); // FIXME Overflow
+    seq = (s%20); // FIXME Overflow
     mptcp_receiveQueue->init(seq);
     mptcp_snd_una = seq;
     mptcp_snd_nxt = seq + 1;
