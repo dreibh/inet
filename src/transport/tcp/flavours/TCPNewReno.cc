@@ -51,6 +51,9 @@ uint32 TCPNewReno::bytesInFlight(){
 
 void TCPNewReno::increaseCWND(uint32 increase, bool print){
     state->snd_cwnd += increase;
+
+    if((state->snd_cwnd > 200000) && print)
+        std::cerr << "Stop" << std::endl;
     if(print)
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
@@ -68,6 +71,9 @@ void TCPNewReno::decreaseCWND(uint32 decrease, bool print){
 }
 void TCPNewReno::setCWND(uint32 newCWND){
     state->snd_cwnd = newCWND;
+
+    if((state->snd_cwnd > 300000))
+        std::cerr << "Stop" << std::endl;
     if (cwndVector)
         cwndVector->record(state->snd_cwnd);
 
@@ -152,7 +158,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
             increaseCWND(state->snd_mss, false);
-            //conn->sendAck(); // Fixme ...needed?
+            conn->sendAck(); // Fixme ...needed?
 
             if (state->sack_enabled  && (!state->snd_fin_seq)) // FIXME... IT should be OK, even with fin. But we have to look on the sqn
             {
@@ -163,7 +169,8 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             }
             return;
         }
-    }else
+    }//else
+
     updateCWND(firstSeqAcked);
     //sendData(true);
     if(conn->getTcpMain()->multipath && (conn->flow != NULL))
@@ -263,6 +270,9 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
           << ", ssthresh=" << state->ssthresh << "\n";
     state->afterRto = true;
     state->isRTX = true;
+    if(conn->getTcpMain()->multipath){
+        std::cerr << "test" << std::endl;
+    }
     conn->retransmitOneSegment(true);
     state->isRTX = false;
 }

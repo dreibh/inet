@@ -444,7 +444,7 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 
 void TCPConnection::sendToIP(TCPSegment *tcpseg)
 {
-    if(tcpseg->getSequenceNo() == 297867)
+    if(tcpseg->getSequenceNo() == 21205092)
         std::cerr << " STOP  " << std::endl;
     // record seq (only if we do send data) and ackno
     if (sndNxtVector && tcpseg->getPayloadLength() != 0)
@@ -1075,10 +1075,10 @@ bool TCPConnection::sendSegment(uint32 bytes)
             // turn all Bufferoptimization off
             break;
         case TCPStateVariables::C_SCTPlikeGlobecom:
-            if(!SCTPlikeBufferSplittingGlobecom()) return false; // avoid of buffer blocking by buffer splitting
+            if(!SCTPlikeBufferSplittingGlobecom()); // avoid of buffer blocking by buffer splitting
             break;
         case TCPStateVariables::C_MPTCPlike:
-            if(!MPTCPlikeBufferSplitting(bytes)) return false; // avoid of buffer blocking by buffer splitting
+            if(!MPTCPlikeBufferSplitting(bytes)); // avoid of buffer blocking by buffer splitting
             break;
         default:
             throw cRuntimeError("Bad setting for cmtBufferOptimizationLevel: %s\n",
@@ -1145,20 +1145,9 @@ bool TCPConnection::sendSegment(uint32 bytes)
 #endif // PRIVATE
 
     // if sack_enabled copy region of tcpseg to rexmitQueue
-#ifdef PRIVATE
-    bool doenq = true;
-    if(this->getTcpMain()->multipath)
-        if(this->flow->isFIN)
-            doenq = false;
-    if(doenq)
-#endif // PRIVATE
 #ifndef PRIVATE
     if (state->sack_enabled && (!this->getState()->fin_rcvd) && (!this->getState()->send_fin) && (!state->isRTX))
         rexmitQueue->enqueueSentData(state->snd_nxt, state->snd_nxt + bytes);
-#else
-   // if (state->sack_enabled)
-   //         SACK_BLOCK->enqueueSACKReceiver(bytes);
-   // Warum?
 #endif
     tcpseg->setAckNo(state->rcv_nxt);
     tcpseg->setAckBit(true);
@@ -1487,6 +1476,8 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
     // retransmit one segment at snd_una, and set snd_nxt accordingly (if not called at RTO)
     state->setSndNxt(state->snd_una);
 
+    if(state->getSndNxt() == 21205092)
+        std::cerr << "Stop" << std::endl;
 #ifndef PRIVATE
    // When FIN sent the snd_max - snd_nxt larger than bytes available in queue
     ulong bytes = std::min((ulong)std::min(state->snd_mss, state->snd_max - state->snd_nxt),
@@ -2243,7 +2234,11 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
 #ifndef PRIVATE
     if (!state->sack_enabled || (state->sack_enabled && state->sackedBytes_old != state->sackedBytes))
 #else
-    if (state->sack_enabled)
+    bool opportunisticRTX = false;
+    if(tcpMain->multipath && (flow != NULL) && (flow->isMPTCP_RTX)){
+        opportunisticRTX = true;
+    }
+    if (state->sack_enabled || opportunisticRTX)
 #endif
     {
         // check how many bytes we have
