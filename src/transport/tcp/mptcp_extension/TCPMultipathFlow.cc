@@ -738,6 +738,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
         // map should insert in order
         std::map<double, int> path_order;
         int c = 0;
+
         for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
                 i != subflow_list.end(); i++, c++) {
             TCPConnection* tmp = (*i)->subflow;
@@ -747,13 +748,14 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                                 tmp->getTcpAlgorithm()->getStateVariables());
                 double sRTT = GET_SRTT(another_state->srtt.dbl());
 
-                for (;;) {
-                    if (path_order.end() == path_order.find(sRTT)) {
-                        path_order.insert(std::make_pair(sRTT, c));
-                        break;
-                    } else
-                        sRTT += 0.001;
-                }
+                    for (;;) {
+                        if (path_order.end() == path_order.find(sRTT)) {
+                            path_order.insert(std::make_pair(sRTT, c));
+                            break;
+                        } else
+                            sRTT += 0.001;
+                    }
+
             }
         }
 
@@ -768,7 +770,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
 
-                tmp->orderBytesForQueue(another_state->snd_cwnd);
+                //tmp->orderBytesForQueue(another_state->snd_cwnd);
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 if ((count == 0)
@@ -780,6 +782,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                       penalize(tmp, mptcp_snd_una + 1);
 
                       if (opportunisticRetransmission) {
+                          tmp->orderBytesForQueue(another_state->snd_mss);
                          _opportunisticRetransmission(tmp);
                       }
                   }
@@ -821,8 +824,8 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX);
     if((s_itr != slist.end()) && (mptcp_snd_una == mptcp_highestRTX))
         s_itr++;
-    if(s_itr != slist.end())
-        mptcp_highestRTX = s_itr->first;
+    //if(s_itr != slist.end())
+    //    mptcp_highestRTX = s_itr->first;
     while (s_itr != slist.end()) {
         if (s_itr->second == sub) {
             s_itr++;
@@ -886,7 +889,9 @@ void MPTCP_Flow::_penalize(TCPConnection *conn) {
     TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
             TCPTahoeRenoFamilyStateVariables*>(
             conn->getTcpAlgorithm()->getStateVariables());
-
+    if(another_state->lossRecovery || another_state->isRTX){
+        return;
+    }
     if (simTime() - conn->getState()->time_last_penalized
             > another_state->srtt) {
         another_state->ssthresh = std::max(another_state->snd_cwnd / 2,

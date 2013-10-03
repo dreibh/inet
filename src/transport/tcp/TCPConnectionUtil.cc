@@ -1441,7 +1441,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
-    orderBytesForQueue(state->snd_max - state->snd_una);
+    //orderBytesForQueue(state->snd_max - state->snd_una);
     return true;
 }
 
