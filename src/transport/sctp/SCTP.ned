@@ -27,7 +27,7 @@ simple SCTP like ISCTP
         //#====== SCTP Association Parameters =================================
         int    numGapReports                = default(3);
         double rtoInitial @unit(s)          = default(3s);
-        double rtoMin @unit(s)              = default(1s);
+        double rtoMin @unit(s)              = default(0.3s);
         double rtoMax @unit(s)              = default(60s);
         double rtoAlpha                     = default(0.125);
         double rtoBeta                      = default(0.250);
