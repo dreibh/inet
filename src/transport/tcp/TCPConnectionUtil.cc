@@ -764,7 +764,7 @@ void TCPConnection::configureStateVariables()
 void TCPConnection::selectInitialSeqNum()
 {
     // set the initial send sequence number
-    state->iss = (unsigned long)fmod(SIMTIME_DBL(simTime()) * 250000.0, 1.0 + (double)(unsigned)0xffffffffUL) & 0xffffffffUL;
+    state->iss = (((unsigned long)fmod(SIMTIME_DBL(simTime()) * 250000.0, 1.0 + (double)(unsigned)0xffffffffUL) & 0xffffffffUL)%4);
     state->snd_una = state->snd_max = state->iss;
     state->setSndNxt(state->iss);
     sendQueue->init(state->iss + 1); // + 1 is for SYN
