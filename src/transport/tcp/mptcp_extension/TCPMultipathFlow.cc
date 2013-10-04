@@ -821,24 +821,24 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         mptcp_highestRTX = mptcp_snd_una;
     }
 
-//    Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX);
-//    if((s_itr != slist.end()) && (mptcp_snd_una == mptcp_highestRTX))
-// //       s_itr++;
-//    //if(s_itr != slist.end())
-//    //    mptcp_highestRTX = s_itr->first;
-//    while (s_itr != slist.end()) {
-//        if (s_itr->second == sub) {
-//            s_itr++;
-//            mptcp_highestRTX = s_itr->first;
-//            continue;
-//        }
-//        break;
-//    }
-//    if (s_itr == slist.end())
-//        return;
-//    if (mptcp_highestRTX >= mptcp_snd_nxt - 1) {
-//        return;
-//    }
+    Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX);
+    if((s_itr != slist.end()) && (mptcp_snd_una == mptcp_highestRTX))
+ //       s_itr++;
+    //if(s_itr != slist.end())
+    //    mptcp_highestRTX = s_itr->first;
+    while (s_itr != slist.end()) {
+        if (s_itr->second == sub) {
+            s_itr++;
+            mptcp_highestRTX = s_itr->first;
+            continue;
+        }
+        break;
+    }
+    if (s_itr == slist.end())
+        return;
+    if (mptcp_highestRTX >= mptcp_snd_nxt - 1) {
+        return;
+    }
     TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
             TCPTahoeRenoFamilyStateVariables*>(
             sub->getTcpAlgorithm()->getStateVariables());
