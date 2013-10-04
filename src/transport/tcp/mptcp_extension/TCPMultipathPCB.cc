@@ -572,10 +572,16 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow,
         } else {
             // we have to guess the rest... it should have the same offset like flow->mptcp_snd_una
             // FIXME overflow border
+            subflow->flow->mptcp_snd_una = ack_seq;
             uint64_t first32_bits = subflow->flow->mptcp_snd_una >> 32;
+
+            uint32 forComparision = subflow->flow->mptcp_snd_una;
+            if(forComparision > ack_seq){
+                first32_bits += 1<<16;
+            }
             ack_seq |= first32_bits << 32;
             if(ack_seq > subflow->flow->mptcp_snd_una){
-                subflow->flow->mptcp_snd_una = ack_seq;
+
                 //std::cerr << "NEW MPTCP UNA " <<  subflow->flow->mptcp_snd_una << std::endl;
             }
         }
@@ -599,6 +605,10 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow,
             // we have to guess the rest... it should have the same offset like flow->mptcp_rcv_nxt
             // FIXME overflow border
             uint64_t first32_bits = subflow->flow->mptcp_rcv_nxt >> 32;
+            uint32 forComparision = subflow->flow->mptcp_rcv_nxt;
+                 if(forComparision > snd_seq){
+                     first32_bits += 1<<16;
+                 }
             snd_seq |= first32_bits << 32;
         }
 
