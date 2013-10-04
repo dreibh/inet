@@ -770,7 +770,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
 
-                //tmp->orderBytesForQueue(another_state->snd_cwnd);
+                tmp->orderBytesForQueue(another_state->snd_cwnd);
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 if ((count == 0)
@@ -782,7 +782,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                       penalize(tmp, mptcp_snd_una + 1);
 
                       if (opportunisticRetransmission) {
-                          tmp->orderBytesForQueue(3*another_state->snd_mss);
+                         // tmp->orderBytesForQueue(3*another_state->snd_mss);
                          _opportunisticRetransmission(tmp);
                       }
                   }
