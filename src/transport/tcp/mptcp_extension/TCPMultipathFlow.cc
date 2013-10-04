@@ -747,7 +747,8 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
                 double sRTT = GET_SRTT(another_state->srtt.dbl());
-
+                if(another_state->isRTX || another_state->lossRecovery)
+                    sRTT = 0.0;
                     for (;;) {
                         if (path_order.end() == path_order.find(sRTT)) {
                             path_order.insert(std::make_pair(sRTT, c));
@@ -770,19 +771,19 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
 
-                tmp->orderBytesForQueue(another_state->snd_cwnd);
+                //tmp->orderBytesForQueue(another_state->snd_cwnd);
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
                 if ((count == 0)
                       && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)
                               + (another_state->snd_mss)) > mptcp_snd_wnd)) {
                   // Penalize the flow with the smallest DSS
-                  if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
-                          && (mptcp_snd_nxt != mptcp_snd_una)) {
+                  if (((4 * another_state->snd_mss <= another_state->snd_cwnd)
+                          && (mptcp_snd_nxt != mptcp_snd_una))) {
                       penalize(tmp, mptcp_snd_una + 1);
 
                       if (opportunisticRetransmission) {
-                         // tmp->orderBytesForQueue(3*another_state->snd_mss);
+                          tmp->orderBytesForQueue(3*another_state->snd_mss);
                          _opportunisticRetransmission(tmp);
                       }
                   }
@@ -822,8 +823,8 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     }
 
     Scheduler_list::iterator s_itr = slist.find(mptcp_highestRTX);
-    if((s_itr != slist.end()) && (mptcp_snd_una == mptcp_highestRTX))
-        s_itr++;
+    //if((s_itr != slist.end()) && (mptcp_snd_una == mptcp_highestRTX))
+    //    s_itr++;
     //if(s_itr != slist.end())
     //    mptcp_highestRTX = s_itr->first;
 //    while (s_itr != slist.end()) {
