@@ -826,14 +826,14 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         s_itr++;
     //if(s_itr != slist.end())
     //    mptcp_highestRTX = s_itr->first;
-    while (s_itr != slist.end()) {
-        if (s_itr->second == sub) {
-            s_itr++;
-            mptcp_highestRTX = s_itr->first;
-            continue;
-        }
-        break;
-    }
+//    while (s_itr != slist.end()) {
+//        if (s_itr->second == sub) {
+//            s_itr++;
+//            mptcp_highestRTX = s_itr->first;
+//            continue;
+//        }
+//        break;
+//    }
     if (s_itr == slist.end())
         return;
     if (mptcp_highestRTX >= mptcp_snd_nxt - 1) {
