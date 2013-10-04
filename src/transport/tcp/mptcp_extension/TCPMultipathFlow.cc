@@ -782,7 +782,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                       penalize(tmp, mptcp_snd_una + 1);
 
                       if (opportunisticRetransmission) {
-                          tmp->orderBytesForQueue(another_state->snd_mss);
+                          tmp->orderBytesForQueue(2*another_state->snd_mss);
                          _opportunisticRetransmission(tmp);
                       }
                   }
