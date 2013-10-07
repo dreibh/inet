@@ -10266,6 +10266,7 @@ $O/transport/tcp/mptcp_extension/TCPMultipathFlow.o: transport/tcp/mptcp_extensi
   transport/tcp/mptcp_extension/TCPMultipath.h \
   base/INotifiable.h \
   networklayer/ipv4/IRoutingTable.h \
+  transport/tcp/TCPSendQueue.h \
   networklayer/ipv4/RoutingTable.h \
   base/ModuleAccess.h \
   transport/tcp/mptcp_extension/mptcp_scheduler/TCPSchedulerManager.h \

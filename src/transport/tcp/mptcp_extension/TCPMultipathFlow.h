@@ -213,6 +213,7 @@ class INET_API MPTCP_Flow
     int _writeADDADDRHeader(uint t, TCPStateVariables* subflow_state, TCPSegment *tcpseg, uint32 bytes,
                   TCPConnection* subflow, TCPOption option);
 #endif // ADD_ADDR
+
     bool _prepareJoinConnection();
 
     // crypto functions ==> see also rfc 2104
