@@ -668,6 +668,35 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
     //set parameter how many flows we want utilize
 
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+              i != subflow_list.end(); i++) {
+        TCPConnection* conn = (*i)->subflow;
+        TCPTahoeRenoFamilyStateVariables* another_state =
+                               check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
+                                       conn->getTcpAlgorithm()->getStateVariables());
+        if (!conn->isSendQueueEmpty())  // do we have any data to send?
+        {
+            if ((simTime() - another_state->time_last_data_sent) > another_state->rexmit_timeout) {
+                // RFC 5681, page 11: "For the purposes of this standard, we define RW = min(IW,cwnd)."
+                if (another_state->increased_IW_enabled)
+                    if (another_state->rfc6928_enabled) {
+                        another_state->snd_cwnd = std::min(10 * another_state->snd_mss,
+                                std::max(2 * another_state->snd_mss, (uint32) 14600));
+                    } else {
+                        another_state->snd_cwnd = std::min(
+                                std::min(4 * another_state->snd_mss,
+                                        std::max(2 * another_state->snd_mss,
+                                                (uint32) 4380)), another_state->snd_cwnd);
+                    }
+                else
+                    another_state->snd_cwnd = another_state->snd_mss;
+
+                tcpEV << "Restarting idle connection, CWND is set to "
+                             << another_state->snd_cwnd << "\n";
+            }
+        }
+    }
+
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
             i != subflow_list.end(); i++) {
         TCPConnection* conn = (*i)->subflow;
         TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
@@ -822,7 +851,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     }
     std::cerr << "SUB " <<  sub->remoteAddr << std::endl;
     Scheduler_list::iterator print = slist.begin();
-
+    int cnt = 0;
 
     Scheduler_list::iterator s_itr = slist.begin();
     bool found = false;

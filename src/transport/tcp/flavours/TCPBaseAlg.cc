@@ -68,6 +68,7 @@ TCPBaseAlgStateVariables::TCPBaseAlgStateVariables() {
     // whose initial value is the initial send sequence number."
     recover = iss;
     firstPartialACK = false;
+    rttUpdateTime = 0.0;
 }
 
 std::string TCPBaseAlgStateVariables::info() const {
@@ -363,10 +364,18 @@ void TCPBaseAlg::processPersistTimer(TCPEventCode& event) {
 
     // PERSIST timer is bounded to 5-60 seconds
     if (state->persist_timeout < MIN_PERSIST_TIMEOUT)
-        state->rexmit_timeout = MIN_PERSIST_TIMEOUT;
+#ifndef PRIVATE
+        state->rexmit_timeout = MIN_PERSIST_TIMEOUT; // Why rexmit_timeout??
+#else
+        state->persist_timeout = MIN_PERSIST_TIMEOUT; // Why rexmit_timeout??
+#endif
 
     if (state->persist_timeout > MAX_PERSIST_TIMEOUT)
-        state->rexmit_timeout = MAX_PERSIST_TIMEOUT;
+#ifndef PRIVATE
+        state->rexmit_timeout = MAX_PERSIST_TIMEOUT; // Why rexmit_timeout??
+#else
+        state->persist_timeout = MAX_PERSIST_TIMEOUT; // Why rexmit_timeout??
+#endif
 
     conn->scheduleTimeout(persistTimer, state->persist_timeout);
 
@@ -410,21 +419,34 @@ void TCPBaseAlg::rttMeasurementComplete(simtime_t tSent, simtime_t tAcked) {
     // Note: this implementation calculates in doubles. An impl. which uses
     // 500ms ticks is available from old tcpmodule.cc:calcRetransTimer().
     //
+    if (simTime() < state->rttUpdateTime)
+        return;
+
     ASSERT(tSent <= tAcked);
     // update smoothed RTT estimate (srtt) and variance (rttvar)
     const double g = 0.125; // 1 / 8; (1 - alpha) where alpha == 7 / 8;
-    simtime_t newRTT = tAcked - tSent;
+    simtime_t newRTT = tAcked.dbl() - tSent.dbl();
 
     simtime_t& srtt = state->srtt;
     simtime_t& rttvar = state->rttvar;
 
+#ifdef PRIVATE
+    //Someting is missing from my point of view
+    simtime_t err = 0.0;
+    if(srtt.dbl() > newRTT.dbl())
+        err = srtt.dbl() - newRTT.dbl();
+    else
+        err = newRTT.dbl() - srtt.dbl();
+#else
     simtime_t err = newRTT - srtt;
-
-    srtt += g * err;
-    rttvar += g * (fabs(err) - rttvar);
-
+#endif
+    srtt = ((1.0 - g) * srtt) + (g * err.dbl());
+    if(err.dbl() >= rttvar.dbl())
+        rttvar = ((1.0 - g) * rttvar) + (g * (err.dbl()) - rttvar.dbl());
+    else
+        rttvar = ((1.0 - g) * rttvar) + (g * (rttvar.dbl()) - err.dbl());
     // assign RTO (here: rexmit_timeout) a new value
-    simtime_t rto = srtt + 4 * rttvar;
+    simtime_t rto = srtt.dbl() + 4.0 * rttvar.dbl();
 
     if (rto > MAX_REXMIT_TIMEOUT)
         rto = MAX_REXMIT_TIMEOUT;
@@ -432,10 +454,14 @@ void TCPBaseAlg::rttMeasurementComplete(simtime_t tSent, simtime_t tAcked) {
         rto = MIN_REXMIT_TIMEOUT;
 
     state->rexmit_timeout = rto;
+    state->rttUpdateTime = simTime() + srtt;
 
+    if(rto > 30)
+        std::cerr << "Stop" << std::endl;
     // record statistics
     tcpEV << "Measured RTT=" << (newRTT * 1000) << "ms, updated SRTT="
                  << (srtt * 1000) << "ms, new RTO=" << (rto * 1000) << "ms\n";
+
 
     if (rttVector)
         rttVector->record(newRTT);
@@ -453,6 +479,8 @@ void TCPBaseAlg::rttMeasurementComplete(simtime_t tSent, simtime_t tAcked) {
 void TCPBaseAlg::rttMeasurementCompleteUsingTS(uint32 echoedTS) {
     ASSERT(state->ts_enabled);
 
+    if(echoedTS == 0)   /// FIXME - Why is it sometimes 0
+        return;
     // Note: The TS option is using uint32 values (ms precision) therefore we convert the current simTime also to a uint32 value (ms precision)
     // and then convert back to simtime_t to use rttMeasurementComplete() to update srtt and rttvar
     uint32 now = conn->convertSimtimeToTS(simTime());

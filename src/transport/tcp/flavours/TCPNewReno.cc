@@ -196,8 +196,10 @@ void TCPNewReno::receivedDuplicateAck()
         // 3. Retansmit
 
         conn->retransmitOneSegment(false);
-        this->restartRexmitTimer();
-
+        if (rexmitTimer->isScheduled())
+                cancelEvent(rexmitTimer);
+        state->rexmit_count++;
+        conn->scheduleTimeout(rexmitTimer, state->rexmit_timeout);
         if (state->sack_enabled && (!state->snd_fin_seq))  // FIXME... IT should be OK, even with fin. But we have to look on the sqn
         {
             // Run SetPipe

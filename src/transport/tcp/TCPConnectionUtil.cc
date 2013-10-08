@@ -444,7 +444,7 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 
 void TCPConnection::sendToIP(TCPSegment *tcpseg)
 {
-    if(tcpseg->getSequenceNo() == 329985249)
+    if(tcpseg->getSequenceNo() == 261004962)
         std::cerr << " STOP  " << std::endl;
     // record seq (only if we do send data) and ackno
     if (sndNxtVector && tcpseg->getPayloadLength() != 0)
@@ -815,6 +815,12 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
     {
         if (state->rcv_wnd == 0)
             ret = false; // FIXME false;
+#ifdef PRIVATE
+        else if(tcpMain->multipath && (flow != NULL) &&
+                (flow->mptcp_rcv_wnd == 0 || ((seqNo + state->snd_mss) > (state->rcv_nxt + flow->mptcp_rcv_wnd)))){
+            ret = false;
+        }
+#endif
         else // rcv_wnd > 0
             ret = (seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd))
                     || (seqLess(state->rcv_nxt, seqNo + len) && seqLE(seqNo + len, rcvWndEnd)); // Accept an ACK on end of window
@@ -1145,21 +1151,6 @@ bool TCPConnection::sendSegment(uint32 bytes)
 #endif // PRIVATE
 
     // if sack_enabled copy region of tcpseg to rexmitQueue
-#ifdef PRIVATE
-    bool doenq = true;
-    if(this->getTcpMain()->multipath)
-        if(this->flow->isFIN)
-            doenq = false;
-    if(doenq)
-#endif // PRIVATE
-#ifndef PRIVATE
-    if (state->sack_enabled && (!this->getState()->fin_rcvd) && (!this->getState()->send_fin) && (!state->isRTX))
-        rexmitQueue->enqueueSentData(state->snd_nxt, state->snd_nxt + bytes);
-#else
-   // if (state->sack_enabled)
-   //         SACK_BLOCK->enqueueSACKReceiver(bytes);
-   // Warum?
-#endif
     tcpseg->setAckNo(state->rcv_nxt);
     tcpseg->setAckBit(true);
     tcpseg->setWindow(updateRcvWnd());
@@ -1291,7 +1282,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     if(this->getTcpMain()->multipath && (flow != NULL)){
 
         flow->refreshSendMPTCPWindow();
-        maxWindow = flow->mptcp_snd_wnd;
+        maxWindow = std::max(flow->mptcp_snd_wnd, state->snd_wnd);
 
         // if not isQueueAble we are not allowed to send anywhere
         if(!this->isQueueAble)
@@ -1528,6 +1519,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
 #endif // PRIVATE
 
         sendSegment(bytes);
+        //getTcpAlgorithm()->restartRexmitTimer();
         state->highRxt = state->getSndNxt() + 1;
         if (!called_at_rto)
         {

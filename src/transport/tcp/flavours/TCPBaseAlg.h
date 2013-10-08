@@ -38,6 +38,9 @@ class INET_API TCPBaseAlgStateVariables : public TCPStateVariables
     //@{
     int rexmit_count;         ///< number of retransmissions (=1 after first rexmit)
     simtime_t rexmit_timeout; ///< current retransmission timeout (aka RTO)
+#ifdef PRIVATE
+    simtime_t rttUpdateTime;
+#endif
     //@}
 
     /// persist factor
