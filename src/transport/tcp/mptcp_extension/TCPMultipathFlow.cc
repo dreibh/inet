@@ -864,9 +864,10 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
             }
             s_itr++;
         }
+        if(s_itr == slist.end())
+            return;
     }
-    if(s_itr == slist.end())
-        return;
+
     old_mptcp_highestRTX = mptcp_highestRTX;
 
     if (mptcp_highestRTX >= mptcp_snd_nxt) {
