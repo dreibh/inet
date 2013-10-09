@@ -807,11 +807,11 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                       && (((mptcp_snd_nxt - mptcp_snd_una)
                               + (another_state->snd_mss)) > mptcp_snd_wnd)) {
 
-                  // Penalize the flow with the smallest DSS
-                  penalize(tmp, mptcp_snd_una);
+
                   if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
                           && (mptcp_snd_nxt != mptcp_snd_una)) {
-
+                      // Penalize the flow with the smallest DSS
+                      penalize(tmp, mptcp_snd_una);
                       if (opportunisticRetransmission) {
                           tmp->orderBytesForQueue(another_state->snd_mss);
                          _opportunisticRetransmission(tmp);
@@ -1465,8 +1465,8 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     }
 
     // get Start DSS
-    uint64 dss_start = this->mptcp_snd_una - 1;	// will be manipulated in process_dss of the pcb
-    subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una - 1;
+    uint64 dss_start = this->mptcp_snd_una;	// will be manipulated in process_dss of the pcb
+    subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una;
 
     // fill the dss seq nr map
     // FIXME -> Perhaps it is enough to hold list like on SACK
