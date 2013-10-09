@@ -885,31 +885,21 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
         mptcp_highestRTX = mptcp_snd_nxt;
     }
-
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
 }
 
 uint64 MPTCP_Flow::penalize(TCPConnection *sub, uint64 last) {
-    uint64 ret = last;
-    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-            i != subflow_list.end(); i++) {
-        TCPConnection* conn = (*i)->subflow;
-        if (sub == conn)
-            continue;
 
-        TCPMultipathDSSStatus::iterator itr =
-                conn->dss_dataMapofSubflow.begin();
-        while ((itr != conn->dss_dataMapofSubflow.end())
-                && (itr->second->delivered)) {
-            itr++;
+    Scheduler_list::iterator s_itr = slist.begin();
+    while(s_itr != slist.end()){
+        if(sub != s_itr->second){
+            _penalize(s_itr->second);
+            break;
         }
-        if ((itr != conn->dss_dataMapofSubflow.end())
-                && (itr->second->dss_seq <= last))
-            _penalize(conn);
-
+        s_itr++;
     }
-    return ret;
+    return s_itr->first;
 }
 
 void MPTCP_Flow::_penalize(TCPConnection *conn) {
