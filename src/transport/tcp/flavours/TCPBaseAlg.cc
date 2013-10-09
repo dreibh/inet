@@ -478,7 +478,7 @@ void TCPBaseAlg::rttMeasurementComplete(simtime_t tSent, simtime_t tAcked) {
 
 void TCPBaseAlg::rttMeasurementCompleteUsingTS(uint32 echoedTS) {
     ASSERT(state->ts_enabled);
-
+#warning "echoedTS sometimes 0..Why? ...see issue #33 in github"
     if(echoedTS == 0)   /// FIXME - Why is it sometimes 0
         return;
     // Note: The TS option is using uint32 values (ms precision) therefore we convert the current simTime also to a uint32 value (ms precision)
