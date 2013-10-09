@@ -855,9 +855,10 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         Scheduler_list::iterator s_itr = slist.begin();
         while(s_itr != slist.end()){
             //std::cerr << "FIRST : " << s_itr->first << " over "  << s_itr->second->remoteAddr << std::endl;
-            if(s_itr->first >=  mptcp_highestRTX - 1){
+            uint64_t compare_value = s_itr->first;
+            if(compare_value >=  mptcp_highestRTX){
                 if(sub != s_itr->second){
-                       mptcp_highestRTX = s_itr->first + 1;
+                       mptcp_highestRTX = s_itr->first;
                        break;
                 }
             }
@@ -1800,7 +1801,7 @@ void MPTCP_Flow::refreshSendMPTCPWindow() {
             }
 
             data_in_queue = true;
-            if ( it->second->dss_seq < mptcp_snd_una) {
+            if ( it->second->dss_seq < mptcp_snd_una - 1) {
                 slist.erase(it->second->dss_seq);
                 dlist.insert(std::make_pair(it->second->dss_seq,it->second->seq_offset));
                 if(it->second->delivered){
@@ -1849,7 +1850,7 @@ void MPTCP_Flow::sendToApp() {
 void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
     uint32 old_mptcp_rcv_adv = mptcp_rcv_adv;
     mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(dss_start_seq,
-            data_len) + 1;
+            data_len);
 
     if (maxBuffer < mptcp_receiveQueue->getOccupiedMemory()) {
         mptcp_receiveQueue->printInfo();
@@ -1858,8 +1859,8 @@ void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
                 << maxBuffer << std::endl;
         ASSERT(false && "What is wrong here");
     }
-
-    //std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
+    //if (maxBuffer < mptcp_receiveQueue->getOccupiedMemory() + 1500)
+    //    std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
     //mptcp_receiveQueue->printInfo();
     mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
     if (mptcp_rcv_adv < old_mptcp_rcv_adv) {
