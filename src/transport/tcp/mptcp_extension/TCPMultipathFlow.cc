@@ -802,22 +802,22 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 //tmp->orderBytesForQueue(another_state->snd_cwnd);
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
+
                 if ((count == 0)
                       && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)
-                              + (another_state->snd_mss)) >= mptcp_snd_wnd)) {
+                              + (another_state->snd_mss)) > mptcp_snd_wnd)) {
 
                   // Penalize the flow with the smallest DSS
                   penalize(tmp, mptcp_snd_una + 1);
-                  if ((4 * another_state->snd_mss < another_state->snd_cwnd)
+                  if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
                           && (mptcp_snd_nxt != mptcp_snd_una)) {
 
                       if (opportunisticRetransmission) {
-                          tmp->orderBytesForQueue(2 * another_state->snd_mss);
+                          tmp->orderBytesForQueue(another_state->snd_mss);
                          _opportunisticRetransmission(tmp);
                       }
                   }
                 }
-
                 count++;
             }
         }
@@ -851,6 +851,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         old_mptcp_snd_una = mptcp_snd_una;
         mptcp_highestRTX = mptcp_snd_una;
     }
+    else if(mptcp_highestRTX != mptcp_snd_una)
+        return;
+
     //std::cerr << "SUB " <<  sub->remoteAddr << std::endl;
     Scheduler_list::iterator s_itr = slist.begin();
     bool found = false;
@@ -883,7 +886,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
         //        << "send with " << sub->getState()->getSndNxt() << " by "
         //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
-        mptcp_highestRTX = old_mptcp_snd_nxt; //mptcp_snd_nxt;
+        mptcp_highestRTX = mptcp_snd_nxt;
     }
 
     mptcp_snd_nxt = old_mptcp_snd_nxt;
