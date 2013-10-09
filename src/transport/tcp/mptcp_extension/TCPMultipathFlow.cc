@@ -852,11 +852,12 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         mptcp_highestRTX = mptcp_snd_una;
     }
     if(old_mptcp_highestRTX != mptcp_highestRTX){
+        mptcp_highestRTX = mptcp_snd_nxt;
+        uint64_t compare_value = mptcp_highestRTX;
         Scheduler_list::iterator s_itr = slist.begin();
         while(s_itr != slist.end()){
             //std::cerr << "FIRST : " << s_itr->first << " over "  << s_itr->second->remoteAddr << std::endl;
-            uint64_t compare_value = s_itr->first;
-            if(compare_value >=  mptcp_highestRTX){
+            if(s_itr->first >=  compare_value){
                 if(sub != s_itr->second){
                        mptcp_highestRTX = s_itr->first;
                        break;
