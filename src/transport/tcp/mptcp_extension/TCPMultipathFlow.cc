@@ -819,8 +819,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                   }
                   break;
                 }
-                old_mptcp_snd_una = 0;
-
                 count++;
             }
         }
@@ -886,9 +884,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     mptcp_snd_nxt = mptcp_highestRTX;
     sub->sendOneNewSegment(true, another_state->snd_cwnd);
     if (mptcp_snd_nxt != mptcp_highestRTX) {
-        std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
-                << "send with " << sub->getState()->getSndNxt() << " by "
-                << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
+        //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
+        //        << "send with " << sub->getState()->getSndNxt() << " by "
+        //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
         mptcp_highestRTX = mptcp_snd_nxt;
     }
 
@@ -1866,7 +1864,7 @@ void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
         ASSERT(false && "What is wrong here");
     }
 
-    std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
+    //std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
     //mptcp_receiveQueue->printInfo();
     mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
     if (mptcp_rcv_adv < old_mptcp_rcv_adv) {
