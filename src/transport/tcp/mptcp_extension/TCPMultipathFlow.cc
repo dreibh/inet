@@ -111,7 +111,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     cmtCC_alpha = 0;
     tmp_msg_buf = subflow->tmp_msg_buf;
     mptcp_highestRTX = 0;
-    old_mptcp_snd_una = 0;
+    old_mptcp_highestRTX = 0;
     isMPTCP_RTX = false;
     buffer_blocked = false;
 }
@@ -851,25 +851,20 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     if (mptcp_highestRTX < mptcp_snd_una) {
         mptcp_highestRTX = mptcp_snd_una;
     }
-
-//    //std::cerr << "SUB " <<  sub->remoteAddr << std::endl;
-//    bool found = false;
-    Scheduler_list::iterator s_itr = slist.begin();
-    while(s_itr != slist.end()){
-//        std::cerr << "FIRST : " << s_itr->first << " over "  << s_itr->second->remoteAddr << std::endl;
-        if(s_itr->first >=  mptcp_highestRTX - 1){
-            if(sub != s_itr->second){
-//                if(mptcp_highestRTX < s_itr->first){
-                    mptcp_highestRTX = s_itr->first + 1;
-//                    found = true;
-                   break;
-//                }
+    if(old_mptcp_highestRTX != mptcp_highestRTX){
+        Scheduler_list::iterator s_itr = slist.begin();
+        while(s_itr != slist.end()){
+            //std::cerr << "FIRST : " << s_itr->first << " over "  << s_itr->second->remoteAddr << std::endl;
+            if(s_itr->first >=  mptcp_highestRTX - 1){
+                if(sub != s_itr->second){
+                       mptcp_highestRTX = s_itr->first + 1;
+                       break;
+                }
             }
+            s_itr++;
         }
-        s_itr++;
     }
-//    if(!found)
-//        return;
+    old_mptcp_highestRTX = mptcp_highestRTX;
 
     if (mptcp_highestRTX >= mptcp_snd_nxt) {
         return;
