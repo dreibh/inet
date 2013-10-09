@@ -803,12 +803,12 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
-                if ((count == 0)
-                      && ((((mptcp_snd_nxt - 1) - mptcp_snd_una)
+                if ((count == 0) && (another_state->snd_cwnd > another_state->snd_mss)
+                      && (((mptcp_snd_nxt - mptcp_snd_una)
                               + (another_state->snd_mss)) > mptcp_snd_wnd)) {
 
                   // Penalize the flow with the smallest DSS
-                  penalize(tmp, mptcp_snd_una + 1);
+                  penalize(tmp, mptcp_snd_una);
                   if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
                           && (mptcp_snd_nxt != mptcp_snd_una)) {
 
@@ -817,11 +817,10 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                          _opportunisticRetransmission(tmp);
                       }
                   }
+                  break;
+                }
+                old_mptcp_snd_una = 0;
 
-                }
-                else if(count == 0){
-                    old_mptcp_snd_una = 0;
-                }
                 count++;
             }
         }
@@ -851,27 +850,28 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
 
     // set it to lowest if lowest changed
-    if (old_mptcp_snd_una != mptcp_snd_una) {
-        old_mptcp_snd_una = mptcp_snd_una;
+    if (mptcp_highestRTX < mptcp_snd_una) {
+        mptcp_highestRTX = mptcp_snd_una;
     }
-    else return;
 
-    //std::cerr << "SUB " <<  sub->remoteAddr << std::endl;
+//    //std::cerr << "SUB " <<  sub->remoteAddr << std::endl;
+//    bool found = false;
     Scheduler_list::iterator s_itr = slist.begin();
-    bool found = false;
     while(s_itr != slist.end()){
-        if(s_itr->first >  mptcp_snd_una + sub->getState()->snd_mss){
+//        std::cerr << "FIRST : " << s_itr->first << " over "  << s_itr->second->remoteAddr << std::endl;
+        if(s_itr->first >=  mptcp_highestRTX - 1){
             if(sub != s_itr->second){
-                if(mptcp_highestRTX != s_itr->first){
-                        mptcp_highestRTX = s_itr->first;
-                        found = true;
-                        break;
-                        }
-            }        }
+//                if(mptcp_highestRTX < s_itr->first){
+                    mptcp_highestRTX = s_itr->first + 1;
+//                    found = true;
+                   break;
+//                }
+            }
+        }
         s_itr++;
     }
-    if(!found)
-        return;
+//    if(!found)
+//        return;
 
     if (mptcp_highestRTX >= mptcp_snd_nxt) {
         return;
@@ -886,9 +886,10 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     mptcp_snd_nxt = mptcp_highestRTX;
     sub->sendOneNewSegment(true, another_state->snd_cwnd);
     if (mptcp_snd_nxt != mptcp_highestRTX) {
-//        std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
-//                << "send with " << sub->getState()->getSndNxt() << " by "
-//                << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
+        std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
+                << "send with " << sub->getState()->getSndNxt() << " by "
+                << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
+        mptcp_highestRTX = mptcp_snd_nxt;
     }
 
     mptcp_snd_nxt = old_mptcp_snd_nxt;
@@ -1470,8 +1471,8 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     }
 
     // get Start DSS
-    uint64 dss_start = this->mptcp_snd_una;	// will be manipulated in process_dss of the pcb
-    subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una;
+    uint64 dss_start = this->mptcp_snd_una - 1;	// will be manipulated in process_dss of the pcb
+    subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una - 1;
 
     // fill the dss seq nr map
     // FIXME -> Perhaps it is enough to hold list like on SACK
@@ -1855,7 +1856,7 @@ void MPTCP_Flow::sendToApp() {
 void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
     uint32 old_mptcp_rcv_adv = mptcp_rcv_adv;
     mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(dss_start_seq,
-            data_len);
+            data_len) + 1;
 
     if (maxBuffer < mptcp_receiveQueue->getOccupiedMemory()) {
         mptcp_receiveQueue->printInfo();
@@ -1865,7 +1866,7 @@ void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
         ASSERT(false && "What is wrong here");
     }
 
-    // std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
+    std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
     //mptcp_receiveQueue->printInfo();
     mptcp_rcv_adv = mptcp_rcv_nxt + mptcp_rcv_wnd;
     if (mptcp_rcv_adv < old_mptcp_rcv_adv) {

@@ -816,10 +816,10 @@ bool TCPConnection::isSegmentAcceptable(TCPSegment *tcpseg) const
         if (state->rcv_wnd == 0)
             ret = false; // FIXME false;
 #ifdef PRIVATE
-        else if(tcpMain->multipath && (flow != NULL) &&
-                (flow->mptcp_rcv_wnd == 0 || ((seqNo + state->snd_mss) > (state->rcv_nxt + flow->mptcp_rcv_wnd)))){
-            ret = false;
-        }
+//        else if(tcpMain->multipath && (flow != NULL) &&
+//                (flow->mptcp_rcv_wnd == 0 || ((seqNo + state->snd_mss) > (state->rcv_nxt + flow->mptcp_rcv_wnd)))){
+//            ret = false;
+//        }
 #endif
         else // rcv_wnd > 0
             ret = (seqLE(state->rcv_nxt, seqNo) && seqLess(seqNo, rcvWndEnd))
