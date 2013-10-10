@@ -164,13 +164,14 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             return;
         }
     }
-    updateCWND(firstSeqAcked);
-    //sendData(true);
-    if(conn->getTcpMain()->multipath && (conn->flow != NULL))
-        conn->flow->sendData(true);
-    else
-        sendData(true);
-
+    else{
+        updateCWND(firstSeqAcked);
+        //sendData(true);
+        if(conn->getTcpMain()->multipath && (conn->flow != NULL))
+            conn->flow->sendData(true);
+        else
+            sendData(true);
+    }
 }
 
 
