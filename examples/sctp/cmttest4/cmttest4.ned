@@ -69,7 +69,7 @@ module REDQueue like IOutputQueue
 channel coreChannel extends DatarateChannel
 {
    int netID = default(0);        // NOTE: Shared by all networks!
-   datarate  = default(1 Mbps);
+   datarate  = default(10 Gbps);
    delay     = default(0ms);
    ber       = default(0);
    per       = default(0);
@@ -80,7 +80,7 @@ channel accessChannel extends DatarateChannel
 {
    int netID = default(1);
    datarate  = default(10 Gbps);   // NOTE: 1 Gbit/s access channel!
-   delay     = default(0.1ms);
+   delay     = default(0ms);
    ber       = default(0);
    per       = default(0);
    @display("ls=blue,5;t=NetID=$netID");
