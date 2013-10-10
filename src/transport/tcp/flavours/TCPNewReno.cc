@@ -164,14 +164,14 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
             return;
         }
     }
-    else{
-        updateCWND(firstSeqAcked);
-        //sendData(true);
-        if(conn->getTcpMain()->multipath && (conn->flow != NULL))
-            conn->flow->sendData(true);
-        else
-            sendData(true);
-    }
+
+    updateCWND(firstSeqAcked);
+    //sendData(true);
+    if(conn->getTcpMain()->multipath && (conn->flow != NULL))
+        conn->flow->sendData(true);
+    else
+        sendData(true);
+
 }
 
 
@@ -218,7 +218,7 @@ void TCPNewReno::receivedDuplicateAck()
         }
     } else if((!state->lossRecovery) && state->limited_transmit_enabled){
         increaseCWND(0,false); // Just for Debug
-        conn->sendOneNewSegment(false, state->snd_cwnd);
+        //conn->sendOneNewSegment(false, state->snd_cwnd);
     }
     else{
         increaseCWND(0,false); // Just for Debug
