@@ -775,8 +775,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 TCPTahoeRenoFamilyStateVariables* another_state =
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
-                double sRTT = GET_SRTT(another_state->srtt.dbl());
-
+                    double sRTT = GET_SRTT(another_state->srtt.dbl());
                     for (;;) {
                         if (path_order.end() == path_order.find(sRTT)) {
                             path_order.insert(std::make_pair(sRTT, c));
@@ -851,9 +850,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     if (mptcp_highestRTX < mptcp_snd_una) {
         mptcp_highestRTX = mptcp_snd_una;
     }
+    uint64_t compare_value = mptcp_highestRTX;
     if(old_mptcp_highestRTX != mptcp_highestRTX){
         mptcp_highestRTX = mptcp_snd_nxt;
-        uint64_t compare_value = mptcp_highestRTX;
         Scheduler_list::iterator s_itr = slist.begin();
         while(s_itr != slist.end()){
             //std::cerr << "FIRST : " << s_itr->first << " over "  << s_itr->second->remoteAddr << std::endl;
@@ -867,6 +866,16 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         }
         if(s_itr == slist.end())
             return;
+    }
+    else{
+        Scheduler_list::iterator s_itr = slist.begin();
+        if(s_itr != slist.end()){
+              if(s_itr->first ==  compare_value){
+                  if(sub == s_itr->second){
+                      return;
+                  }
+              }
+        }
     }
 
     old_mptcp_highestRTX = mptcp_highestRTX;
