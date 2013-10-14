@@ -896,7 +896,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
         //        << "send with " << sub->getState()->getSndNxt() << " by "
         //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
-        mptcp_highestRTX = mptcp_snd_nxt;
+        mptcp_highestRTX = old_mptcp_snd_nxt;
     }
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
