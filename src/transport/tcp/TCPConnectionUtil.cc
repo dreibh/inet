@@ -1186,6 +1186,7 @@ bool TCPConnection::sendSegment(uint32 bytes)
 
     return true;
 }
+
 bool TCPConnection::orderBytesForQueue(uint32 bytesToSend){
 #ifdef PRIVATE
     // OK for Multipath

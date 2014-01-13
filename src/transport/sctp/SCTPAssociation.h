@@ -379,6 +379,8 @@ class INET_API SCTPPathVariables : public cPolymorphic
     bool               waitingForRTTCalculaton;        // T.D. 25.02.2010
     simtime_t          txTimeForRTTCalculation;        // T.D. 25.02.2010
     uint32             tsnForRTTCalculation;           // T.D. 25.02.2010
+    // ====== OLIA TMP Variable ===========================================
+    uint32 olia_sent_bytes;
 #endif
 
     // ====== Path Status =================================================
@@ -745,6 +747,7 @@ class INET_API SCTPStateVariables : public cPolymorphic
        CCCV_CMTRPv1     = 2,   // CMT/RP-SCTP with path MTU optimization
        CCCV_CMTRPv2     = 3,   // CMT/RP-SCTP with path MTU optimization and bandwidth consideration
        CCCV_Like_MPTCP  = 4,   // RP like MPTCP
+       CCCV_CMT_OLIA    = 5,   // OLIA CC
        CCCV_CMTRP_Test1 = 100,
        CCCV_CMTRP_Test2 = 101
     };
@@ -1353,6 +1356,17 @@ class INET_API SCTPAssociation : public cObject
     static bool pathMapRandomized(const SCTPPathVariables* left, const SCTPPathVariables* right);
     std::vector<SCTPPathVariables*> getSortedPathMap();
     void chunkReschedulingControl(SCTPPathVariables* path);
+
+    // OLIA variables
+    typedef std::map<uint32,SCTPPathVariables*> SCTP_Path_Collection;
+    void recalculateOLIABasis();
+    uint32 updateOLIA(uint32 w, const uint32 s, const uint32 totalW, double a, const uint32 mtu, const uint32 ackedBytes, SCTPPathVariables* path);
+
+    SCTP_Path_Collection assoc_best_paths;
+    SCTP_Path_Collection assoc_max_w_paths;
+    SCTP_Path_Collection assoc_collected_paths;
+    // end OLIA Variable
+
 #endif
 
     void dumpPaths(std::ostream& os = sctpEV3) const;

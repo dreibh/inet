@@ -1271,7 +1271,9 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
 #else
                     if (path == state->getPrimaryPath()) {
 #endif
-
+#ifdef PRIVATE
+                        path->olia_sent_bytes += sctpMsg->getByteLength();
+#endif
                         // ------ Dequeue data message ----------------------------
                         SCTPDataMsg* datMsg = dequeueOutboundDataMsg(path, path->pmtu-sctpMsg->getByteLength() - 20,
                                 allowance);

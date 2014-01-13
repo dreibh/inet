@@ -211,6 +211,155 @@ static uint32 updateMPTCP(const uint32 w,
 #endif
 
 
+#ifdef PRIVATE
+
+void SCTPAssociation::recalculateOLIABasis(){
+    // it is necessary to calculate all flow information
+    double assoc_best_paths_l_rXl_r__rtt_r = 0.0;
+    uint32 max_w = 0;
+    uint32 max_w_paths_cnt = 0;
+    uint32 best_paths_cnt =0;
+
+    // Create the sets
+    int cnt = 0;
+    assoc_collected_paths.clear();
+    assoc_best_paths.clear();
+    assoc_max_w_paths.clear();
+    for (SCTPPathMap::iterator iter = sctpPathMap.begin(); iter != sctpPathMap.end(); iter++, cnt++) {
+        SCTPPathVariables* path = iter->second;
+
+           double r_sRTT = GET_SRTT(path->srtt.dbl());
+           double r_l_rXl_r__rtt_r = ((path->olia_sent_bytes * path->olia_sent_bytes) / r_sRTT);
+           if(assoc_best_paths.empty()){
+               assoc_best_paths_l_rXl_r__rtt_r = r_l_rXl_r__rtt_r;
+               assoc_best_paths.insert(std::make_pair(cnt,path));
+           }
+           if(assoc_max_w_paths.empty()){
+               max_w = path->cwnd;
+               assoc_max_w_paths.insert(std::make_pair(cnt,path));
+           }
+           if(cnt == 0) continue;
+           // set up the sets
+           if(r_l_rXl_r__rtt_r > assoc_best_paths_l_rXl_r__rtt_r){
+               assoc_best_paths_l_rXl_r__rtt_r = r_l_rXl_r__rtt_r;
+               assoc_best_paths.insert(std::make_pair(cnt,path));
+               assoc_best_paths.erase(best_paths_cnt);
+               best_paths_cnt = cnt;
+           }
+           if(path->cwnd > max_w){
+               max_w = path->cwnd;
+               assoc_max_w_paths.insert(std::make_pair(cnt,path));
+               assoc_max_w_paths.erase(best_paths_cnt);
+               max_w_paths_cnt = cnt;
+           }
+
+           if((assoc_max_w_paths.find(cnt) == assoc_max_w_paths.end()) && (assoc_max_w_paths.find(cnt) == assoc_max_w_paths.end()) )
+                assoc_collected_paths.insert(std::make_pair(cnt,path));
+    }
+}
+
+uint32 SCTPAssociation::updateOLIA(uint32 w, const uint32 s,
+        const uint32 totalW,
+        double       a,
+        const uint32 mtu,
+        const uint32 ackedBytes, SCTPPathVariables* path)
+{
+
+    bool is_in_collected_path = false;
+    bool is_max_w_paths = false;
+
+    if ((!(w < s)) && (!path->fastRecoveryActive)){
+        // in CA
+        recalculateOLIABasis();
+
+        int cnt = 0;
+        for (SCTP_Path_Collection::iterator it =assoc_collected_paths.begin(); it != assoc_collected_paths.end(); it++, cnt++) {
+          if(it->second == path){
+              is_in_collected_path = true;
+              break;
+          }
+        }
+        cnt = 0;
+        for (SCTP_Path_Collection::iterator it = assoc_max_w_paths.begin(); it != assoc_max_w_paths.end(); it++, cnt++) {
+          if(it->second == path){
+              is_max_w_paths = true;
+              break;
+          }
+        }
+
+        double r_sRTT = GET_SRTT(path->srtt.dbl());
+
+        double numerator_1 = path->cwnd/(r_sRTT * r_sRTT);
+        double denominator_1 = 0;
+
+        for (SCTPPathMap::iterator iter = sctpPathMap.begin(); iter != sctpPathMap.end(); iter++) {
+                SCTPPathVariables* p_path = iter->second;
+               double p_sRTT = GET_SRTT(p_path->srtt.dbl());
+               denominator_1 += (p_path->cwnd/p_sRTT);
+        }
+        denominator_1 =  denominator_1 *  denominator_1;
+        double term1 = numerator_1/ denominator_1;
+
+       if(is_in_collected_path){
+          /*
+          For each ACK on the path r:
+           - If r is in collected_paths, increase w_r by
+
+                w_r/rtt_r^2                          1
+            -------------------    +     -----------------------       (2)
+           (SUM (w_p/rtt_p))^2    w_r * number_of_paths * |collected_paths|
+
+           multiplied by MSS_r * bytes_acked.
+           */
+
+          double numerator_2 = 1;
+          double denominator_2 = path->cwnd * sctpPathMap.size() * assoc_collected_paths.size();
+          double term2 = 0.0;
+          if(denominator_2 > 0.0){
+              term2 = numerator_2 / denominator_2;
+          }
+          w += (term1 + term2) * (path->pmtu *  std::min(ackedBytes,path->pmtu) ); // TODO std::min(acked,
+        }
+        else if((is_max_w_paths) && (!assoc_collected_paths.empty())){
+            /*
+            - If r is in max_w_paths and if collected_paths is not empty,
+             increase w_r by
+
+                   w_r/rtt_r^2                         1
+              --------------------    -     ------------------------     (3)
+              (SUM (w_r/rtt_r))^2     w_r * number_of_paths * |max_w_paths|
+
+             multiplied by MSS_r * bytes_acked.
+             */
+            double numerator_2 = 1;
+            double denominator_2 = path->cwnd * sctpPathMap.size() * assoc_max_w_paths.size();
+            double term2 = 0.0;
+            if(denominator_2 > 0.0){
+                term2 = numerator_2 / denominator_2;
+            }
+            w += (term1 + term2) * (path->pmtu * std::min(ackedBytes,path->pmtu) );// TODO
+        }
+        else{
+            /*
+            - Otherwise, increase w_r by
+
+                                     (w_r/rtt_r^2)
+                             ----------------------------------           (4)
+                                    (SUM (w_r/rtt_r))^2
+
+              multiplied by MSS_r * bytes_acked.
+              */
+            w += term1 * (path->pmtu * std::min(ackedBytes,path->pmtu) ); // TODO std::min(acked,
+
+        }
+    }
+    else
+        w += path->pmtu; //ackedBytes;
+
+    return w;
+}
+#endif
+
 void SCTPAssociation::recordCwndUpdate(SCTPPathVariables* path)
 {
     if (path == NULL) {
@@ -273,6 +422,13 @@ void SCTPAssociation::initCCParameters(SCTPPathVariables* path)
 #endif
             << "\tsst=" << path->ssthresh
             << "\tcwnd=" << path->cwnd << endl;
+#ifdef PRIVATE
+    // init OLIA
+#warning  ¨TO FIX¨
+    // assoc_new_olia_counting_start = state->snd_una;
+    assoc_best_paths.clear();
+    assoc_max_w_paths.clear();
+#endif
 }
 
 
@@ -363,6 +519,12 @@ void SCTPAssociation::cwndUpdateAfterSack()
                         path->ssthresh = max(reducedCwnd, (int32)state->rpMinCwnd * (int32)path->pmtu);
                         path->cwnd     = path->ssthresh;
                     }
+                    else if(state->cmtCCVariant == SCTPStateVariables::CCCV_CMT_OLIA) {
+                           // like draft
+                           path->ssthresh = max((int32)path->cwnd - (int32)rint(decreaseFactor * (double)path->cwnd),
+                                                                   4 * (int32)path->pmtu);
+                           path->cwnd     = path->ssthresh;
+                    }
                     // ====== TEST Fast Retransmit ===============================
                     else if(state->cmtCCVariant == SCTPStateVariables::CCCV_CMTRP_Test1) {
                         // Bandwidth is based on cwnd, *not* ssthresh!
@@ -419,6 +581,9 @@ void SCTPAssociation::cwndUpdateAfterSack()
                             }
                         }
                     }
+#ifdef PRIVATE
+                    path->olia_sent_bytes = 0;
+#endif
                     // This can ONLY become TRUE, when Fast Recovery IS supported.
                     path->fastRecoveryActive = true;
                     path->fastRecoveryExitPoint = highestOutstanding;
@@ -456,6 +621,10 @@ void SCTPAssociation::cwndUpdateAfterRtxTimeout(SCTPPathVariables* path)
 
     double decreaseFactor = 0.5;
 #ifdef PRIVATE
+    path->olia_sent_bytes = 0;
+#endif
+#ifdef PRIVATE
+
     sctpEV3 << assocId << ": " << simTime() << ":\tCC [cwndUpdateAfterRtxTimeout]\t" << path->remoteAddress
             << " (cmtCCGroup=" << path->cmtCCGroup << ")"
             << "\tsst="     << path->ssthresh
@@ -504,6 +673,13 @@ void SCTPAssociation::cwndUpdateAfterRtxTimeout(SCTPPathVariables* path)
                                  (int32)state->rpMinCwnd * (int32)path->pmtu);
             path->cwnd     = path->pmtu;
         }
+        else if(state->cmtCCVariant == SCTPStateVariables::CCCV_CMT_OLIA) {
+            // like draft
+            path->ssthresh = max((int32)path->cwnd - (int32)rint(decreaseFactor * (double)path->cwnd),
+                                 4 * (int32)path->pmtu);
+            path->cwnd     = path->pmtu;
+        }
+
         // ====== TEST RTX Timeout ============================================
         else if(state->cmtCCVariant == SCTPStateVariables::CCCV_CMTRP_Test1) {
             const double pathBandwidth   = path->cwnd / GET_SRTT(path->srtt.dbl());
@@ -598,6 +774,11 @@ void SCTPAssociation::cwndUpdateBytesAcked(SCTPPathVariables* path,
                         // T.D. 14.08.2011: Rewrote MPTCP-Like CC code
                         path->cwnd = updateMPTCP(path->cwnd, path->cmtGroupTotalCwnd,
                                                  path->cmtGroupAlpha, path->pmtu, ackedBytes);
+                    }
+                    else if(state->cmtCCVariant == SCTPStateVariables::CCCV_CMT_OLIA) {
+                        // OLIA see draft
+                        path->cwnd = updateOLIA(path->cwnd, path->ssthresh, path->cmtGroupTotalCwnd,
+                                                                         path->cmtGroupAlpha, path->pmtu, ackedBytes,path);
                     }
                     // ====== TEST Slow Start ====================================
                     else if(state->cmtCCVariant == SCTPStateVariables::CCCV_CMTRP_Test1) {
@@ -703,6 +884,11 @@ void SCTPAssociation::cwndUpdateBytesAcked(SCTPPathVariables* path,
                         // T.D. 14.08.2011: Rewrote MPTCP-Like CC code
                         path->cwnd = updateMPTCP(path->cwnd, path->cmtGroupTotalCwnd,
                                                  path->cmtGroupAlpha, path->pmtu, path->pmtu);
+                    }
+                    else if(state->cmtCCVariant == SCTPStateVariables::CCCV_CMT_OLIA) {
+                        // like draft
+                        path->cwnd = updateOLIA(path->cwnd, path->ssthresh, path->cmtGroupTotalCwnd,
+                                                 path->cmtGroupAlpha, path->pmtu, path->pmtu, path);
                     }
                     // ====== TEST Congestion Avoidance ==========================
                     else if(state->cmtCCVariant == SCTPStateVariables::CCCV_CMTRP_Test1) {
