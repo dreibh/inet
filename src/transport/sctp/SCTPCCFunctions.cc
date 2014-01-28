@@ -176,7 +176,7 @@ void SCTPAssociation::cwndUpdateBeforeSack()
             qDenominator = qDenominator + (otherPath->cwnd / GET_SRTT(otherPath->srtt.dbl()));
          }
       }
-      currentPath->cmtGroupAlpha = currentPath->cmtGroupTotalCwnd * (qNumerator / pow(qDenominator, 2.0));
+      currentPath->cmtGroupAlpha = currentPath->cmtGroupTotalCwnd  * (qNumerator / pow(qDenominator, 2.0));
 
 /*
       printf("alpha(%s)=%1.6f\ttotalCwnd=%u\tcwnd=%u\tpaths=%u\n",
@@ -202,10 +202,10 @@ static uint32 updateMPTCP(const uint32 w,
       max(1,
           min( (uint32)ceil((double)w * a * (double)min(ackedBytes, mtu)  / (double)totalW),
                (uint32)min(ackedBytes, mtu) ));
-/*
-   printf("\n%1.6f:\tMPTCP-Like CC: a=%1.6f\tc=%u -> %u\tincrease=%u\n",
-          simTime().dbl(), a, w, w + increase, increase);
-*/
+
+   //printf("\n%1.6f:\tMPTCP-Like CC: a=%1.6f\tc=%u -> %u\tincrease=%u\n",
+   //       simTime().dbl(), a, w, w + increase, increase);
+
    return(w + increase);
 }
 #endif
@@ -227,34 +227,40 @@ void SCTPAssociation::recalculateOLIABasis(){
     assoc_max_w_paths.clear();
     for (SCTPPathMap::iterator iter = sctpPathMap.begin(); iter != sctpPathMap.end(); iter++, cnt++) {
         SCTPPathVariables* path = iter->second;
-
+           bool next = false;
            double r_sRTT = GET_SRTT(path->srtt.dbl());
            double r_l_rXl_r__rtt_r = ((path->olia_sent_bytes * path->olia_sent_bytes) / r_sRTT);
            if(assoc_best_paths.empty()){
                assoc_best_paths_l_rXl_r__rtt_r = r_l_rXl_r__rtt_r;
                assoc_best_paths.insert(std::make_pair(cnt,path));
+               next = true;
            }
            if(assoc_max_w_paths.empty()){
                max_w = path->cwnd;
                assoc_max_w_paths.insert(std::make_pair(cnt,path));
+               next = true;
            }
-           if(cnt == 0) continue;
+           if(next) continue;
            // set up the sets
            if(r_l_rXl_r__rtt_r > assoc_best_paths_l_rXl_r__rtt_r){
                assoc_best_paths_l_rXl_r__rtt_r = r_l_rXl_r__rtt_r;
                assoc_best_paths.insert(std::make_pair(cnt,path));
                assoc_best_paths.erase(best_paths_cnt);
+
                best_paths_cnt = cnt;
+               next = true;
            }
            if(path->cwnd > max_w){
                max_w = path->cwnd;
                assoc_max_w_paths.insert(std::make_pair(cnt,path));
                assoc_max_w_paths.erase(best_paths_cnt);
                max_w_paths_cnt = cnt;
+               next = true;
            }
+           if(next) continue;
 
-           if((assoc_max_w_paths.find(cnt) == assoc_max_w_paths.end()) && (assoc_max_w_paths.find(cnt) == assoc_max_w_paths.end()) )
-                assoc_collected_paths.insert(std::make_pair(cnt,path));
+           assoc_collected_paths.insert(std::make_pair(cnt,path));
+
     }
 }
 
@@ -264,7 +270,7 @@ uint32 SCTPAssociation::updateOLIA(uint32 w, const uint32 s,
         const uint32 mtu,
         const uint32 ackedBytes, SCTPPathVariables* path)
 {
-
+    int32 increase = 0;
     bool is_in_collected_path = false;
     bool is_max_w_paths = false;
 
@@ -312,13 +318,17 @@ uint32 SCTPAssociation::updateOLIA(uint32 w, const uint32 s,
            multiplied by MSS_r * bytes_acked.
            */
 
-          double numerator_2 = 1;
-          double denominator_2 = path->cwnd * sctpPathMap.size() * assoc_collected_paths.size();
+          double numerator_2 = 1/sctpPathMap.size();
+          double denominator_2 = assoc_collected_paths.size();
           double term2 = 0.0;
           if(denominator_2 > 0.0){
               term2 = numerator_2 / denominator_2;
           }
-          w += (term1 + term2) * (path->pmtu *  std::min(ackedBytes,path->pmtu) ); // TODO std::min(acked,
+
+          increase = (uint32)ceil((term1 * path->cwnd *path->pmtu) + (term2 * path->pmtu)); // TODO std::min(acked,
+          if(increase > 200000){
+              printf("Stop");
+          }
         }
         else if((is_max_w_paths) && (!assoc_collected_paths.empty())){
             /*
@@ -327,17 +337,21 @@ uint32 SCTPAssociation::updateOLIA(uint32 w, const uint32 s,
 
                    w_r/rtt_r^2                         1
               --------------------    -     ------------------------     (3)
-              (SUM (w_r/rtt_r))^2     w_r * number_of_paths * |max_w_paths|
+              (SUM (w_p/rtt_p))^2     w_r * number_of_paths * |max_w_paths|
 
              multiplied by MSS_r * bytes_acked.
              */
-            double numerator_2 = 1;
-            double denominator_2 = path->cwnd * sctpPathMap.size() * assoc_max_w_paths.size();
+            double numerator_2 = 1/sctpPathMap.size();
+            double denominator_2 = assoc_max_w_paths.size();
             double term2 = 0.0;
             if(denominator_2 > 0.0){
                 term2 = numerator_2 / denominator_2;
             }
-            w += (term1 + term2) * (path->pmtu * std::min(ackedBytes,path->pmtu) );// TODO
+
+            increase = (int32) ceil((term1 * path->cwnd * path->pmtu) - (term2 * path->pmtu) );// TODO
+            if(increase > 200000){
+                      printf("Stop");
+                  }
         }
         else{
             /*
@@ -345,18 +359,24 @@ uint32 SCTPAssociation::updateOLIA(uint32 w, const uint32 s,
 
                                      (w_r/rtt_r^2)
                              ----------------------------------           (4)
-                                    (SUM (w_r/rtt_r))^2
+                                    (SUM (w_p/rtt_p))^2
 
               multiplied by MSS_r * bytes_acked.
               */
-            w += term1 * (path->pmtu * std::min(ackedBytes,path->pmtu) ); // TODO std::min(acked,
-
+            increase = (int32) ceil(term1 * path->cwnd * path->pmtu); // TODO std::min(acked,
+            if(increase > 200000){
+                      printf("Stop");
+                  }
         }
     }
-    else
-        w += path->pmtu; //ackedBytes;
+    else{
+        increase = (int32) min(path->pmtu, ackedBytes);  // slow start
+    }
 
-    return w;
+    if(increase > 200000){
+              printf("Stop");
+          }
+    return(w + increase);
 }
 #endif
 

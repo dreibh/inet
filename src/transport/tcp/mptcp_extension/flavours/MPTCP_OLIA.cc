@@ -47,34 +47,38 @@ void MPTCP_OLIA::recalculateMPTCPCCBasis(){
     for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++, cnt++) {
            if(!conn->isQueueAble) continue;
            TCPConnection *r = (*it)->subflow;
+           bool next = false;
            TCPTahoeRenoFamilyStateVariables* r_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (r->getTcpAlgorithm()->getStateVariables());
            double r_sRTT = GET_SRTT(r_state->srtt.dbl());
            double r_l_rXl_r__rtt_r = ((state->s_olia_sent_bytes * state->s_olia_sent_bytes) / r_sRTT);
            if(best_paths.empty()){
                best_paths_l_rXl_r__rtt_r = r_l_rXl_r__rtt_r;
                best_paths.insert(std::make_pair(cnt,r));
+               next = true;
            }
            if(max_w_paths.empty()){
                max_w = r_state->snd_cwnd;
                max_w_paths.insert(std::make_pair(cnt,r));
+               next = true;
            }
-           if(cnt == 0) continue;
+           if(next) continue;
            // set up the sets
            if(r_l_rXl_r__rtt_r > best_paths_l_rXl_r__rtt_r){
                best_paths_l_rXl_r__rtt_r = r_l_rXl_r__rtt_r;
                best_paths.insert(std::make_pair(cnt,r));
                best_paths.erase(best_paths_cnt);
                best_paths_cnt = cnt;
+               next = true;
            }
            if(r_state->snd_cwnd > max_w){
                max_w = r_state->snd_cwnd;
                max_w_paths.insert(std::make_pair(cnt,r));
                max_w_paths.erase(best_paths_cnt);
                max_w_paths_cnt = cnt;
+               next = true;
            }
-
-           if((max_w_paths.find(cnt) == max_w_paths.end()) && (max_w_paths.find(cnt) == max_w_paths.end()) )
-                collected_paths.insert(std::make_pair(cnt,r));
+           if(next) continue;
+           collected_paths.insert(std::make_pair(cnt,r));
     }
 }
 
@@ -134,7 +138,9 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
           if(denominator_2 > 0.0){
               term2 = numerator_2 / denominator_2;
           }
-          state->snd_cwnd += (term1 + term2) * (conn->getState()->snd_mss * std::min(acked, conn->getState()->snd_mss));
+
+
+          state->snd_cwnd += (int32)( (term1 + term2) * (conn->getState()->snd_mss * std::min(acked, conn->getState()->snd_mss)));
         }
         else if((is_max_w_paths) && (!collected_paths.empty())){
             /*
@@ -153,7 +159,8 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
             if(denominator_2 > 0.0){
                 term2 = numerator_2 / denominator_2;
             }
-            state->snd_cwnd += (term1 + term2) * (conn->getState()->snd_mss * std::min(acked, conn->getState()->snd_mss));
+
+            state->snd_cwnd += (int32) (std::min((term1 - term2),0.0) * (conn->getState()->snd_mss * std::min(acked, conn->getState()->snd_mss)));
         }
         else{
             /*
@@ -181,13 +188,6 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
 
 void MPTCP_OLIA::receivedDataAck(uint32 firstSeqAcked){
     TCPNewReno::receivedDataAck(firstSeqAcked);
-//    if(state->lossRecovery){
-//        if(state->new_olia_counting_start != state->snd_una){
-//            state->s_olia_sent_bytes = std::max(state->snd_una - state->new_olia_counting_start,state->olia_sent_bytes);
-//            state->olia_sent_bytes = state->snd_una - state->new_olia_counting_start;
-//            state->new_olia_counting_start = state->snd_una;
-//        }
-//    }
 }
 
 void MPTCP_OLIA::receivedDuplicateAck(){
