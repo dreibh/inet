@@ -147,7 +147,7 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
            // Retransmit
             conn->retransmitOneSegment(false); // It doesn t matter if here or somewhere esle ...
 
-            // Do the indow stuff
+            // Do the window stuff
             decreaseCWND(std::min(state->snd_una - firstSeqAcked,state->snd_mss), false); // Fixe ME -> How to do deflating
             tcpEV << "Fast Recovery: deflating cwnd by amount of new data acknowledged, new cwnd=" << state->snd_cwnd << "\n";
             // if the partial ACK acknowledges at least one SMSS of new data, then add back SMSS bytes to the cwnd
@@ -174,6 +174,10 @@ void TCPNewReno::receivedDataAck(uint32 firstSeqAcked)
 
 }
 
+void TCPNewReno::receivedDuplicateAckSetCWND(){
+    recalculateSlowStartThreshold();
+    setCWND(state->ssthresh + (3 * state->snd_mss));
+}
 
 void TCPNewReno::receivedDuplicateAck()
 {
@@ -191,8 +195,8 @@ void TCPNewReno::receivedDuplicateAck()
         state->recover = state->getSndNxt();
 
         // 2. Recalculate Window
-        recalculateSlowStartThreshold();
-        setCWND(state->ssthresh + (3 * state->snd_mss));
+        receivedDuplicateAckSetCWND();
+
         state->firstPartialACK = false;
         // 3. Retansmit
 
@@ -226,6 +230,10 @@ void TCPNewReno::receivedDuplicateAck()
 
 }
 
+void TCPNewReno::processRexmitTimerSetCWND(){
+    recalculateSlowStartThreshold();
+    setCWND(state->snd_mss);
+}
 void TCPNewReno::processRexmitTimer(TCPEventCode& event)
 {
     TCPTahoeRenoFamily::processRexmitTimer(event);
@@ -259,8 +267,8 @@ void TCPNewReno::processRexmitTimer(TCPEventCode& event)
     // point congestion avoidance again takes over."
 
     // begin Slow Start (RFC 2581)
-    recalculateSlowStartThreshold();
-    setCWND(state->snd_mss);
+
+    processRexmitTimerSetCWND();
 
     tcpEV << "Begin Slow Start: resetting cwnd to " << state->snd_cwnd
           << ", ssthresh=" << state->ssthresh << "\n";

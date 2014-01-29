@@ -636,6 +636,9 @@ void TCPConnection::initConnection(TCPOpenCommand *openCmd)
         else if(this->getTcpMain()->isOLIA_CC){
                tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne("MPTCP_OLIA"));
         }
+        else if(this->getTcpMain()->isRPMP2_CC){
+               tcpAlgorithm = check_and_cast<TCPAlgorithm *>(createOne("MPTCP_RPMPv2"));
+        }
         else{
             const char *tcpAlgorithmClass = openCmd->getTcpAlgorithmClass();
             if (!tcpAlgorithmClass || !tcpAlgorithmClass[0])

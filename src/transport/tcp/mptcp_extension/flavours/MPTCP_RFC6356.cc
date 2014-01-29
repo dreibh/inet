@@ -60,8 +60,9 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
     //fprintf(stderr,"\n");
     // conn->flow->totalCwndBasedBandwidth = 0;
     for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++, cnt++) {
-        if(!conn->isQueueAble) continue;
+
         TCPConnection* tmp = (*it)->subflow;
+        if(!tmp->isQueueAble) continue;
         TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
 
         ASSERT(flowID==tmp->flow->ID);
@@ -77,8 +78,9 @@ void MPTCP_RFC6356::recalculateMPTCPCCBasis(){
     }
 
     for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
-           if(!conn->isQueueAble) continue;
+
            TCPConnection* tmp = (*it)->subflow;
+           if(!tmp->isQueueAble) continue;
            TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (tmp->getTcpAlgorithm()->getStateVariables());
            totalCwndBasedBandwidth += bestSRTT * ((tmp->getState()->lossRecovery)?another_state->ssthresh:another_state->snd_cwnd) / GET_SRTT(another_state->srtt.dbl());
     }

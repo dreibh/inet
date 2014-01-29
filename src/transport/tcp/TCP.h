@@ -190,6 +190,7 @@ class INET_API TCP : public cSimpleModule
     MPTCP_PATH_SCHEDULER multipath_path_scheduler;
     bool isRFC6356;
     bool isOLIA_CC;
+    bool isRPMP2_CC;
     bool multipath_DSSDataACK8;     // kind of ack length
     bool multipath_DSSSeqNo8;       // kind of seq no length
     int  multipath_subflow_id;      // helper for identification

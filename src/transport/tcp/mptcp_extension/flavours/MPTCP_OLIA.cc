@@ -45,8 +45,9 @@ void MPTCP_OLIA::recalculateMPTCPCCBasis(){
     best_paths.clear();
     max_w_paths.clear();
     for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++, cnt++) {
-           if(!conn->isQueueAble) continue;
+
            TCPConnection *r = (*it)->subflow;
+           if(!r->isQueueAble) continue;
            bool next = false;
            TCPTahoeRenoFamilyStateVariables* r_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (r->getTcpAlgorithm()->getStateVariables());
            double r_sRTT = GET_SRTT(r_state->srtt.dbl());
@@ -111,8 +112,9 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
         double denominator_1 = 0;
         TCP_SubFlowVector_t* subflow_list = (TCP_SubFlowVector_t*)(conn->flow->getSubflows());
         for (TCP_SubFlowVector_t::iterator it =subflow_list->begin(); it != subflow_list->end(); it++) {
-               if(!conn->isQueueAble) continue;
+
                TCPConnection *p = (*it)->subflow;
+               if(!p->isQueueAble) continue;
                TCPTahoeRenoFamilyStateVariables* p_state = check_and_cast<TCPTahoeRenoFamilyStateVariables*> (p->getTcpAlgorithm()->getStateVariables());
                double p_sRTT = GET_SRTT(p_state->srtt.dbl());
                denominator_1 += (p_state->snd_cwnd/p_sRTT);

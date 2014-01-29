@@ -84,6 +84,7 @@ void TCP::initialize()
     static int id;
     isRFC6356 = false;
     isOLIA_CC = false;
+    isRPMP2_CC = false;
     // MBe: setup Multipath and the CC  by CC Variant
      if(strcmp((const char*)par("cmtCCVariant"), "off") == 0) {
          multipath     = false;
@@ -100,6 +101,11 @@ void TCP::initialize()
               (strcmp((const char*)par("cmtCCVariant"), "olia-like") == 0) ) {
          multipath     = true;
          isOLIA_CC = true;
+     }
+     else if( (strcmp((const char*)par("cmtCCVariant"), "cmtrpv2") == 0) ||
+                  (strcmp((const char*)par("cmtCCVariant"), "cmtrpv2") == 0) ) {
+             multipath     = true;
+             isRPMP2_CC = true;
      }
      else {
          throw cRuntimeError("Bad setting for cmtCCVariant: %s\n",

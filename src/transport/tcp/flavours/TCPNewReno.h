@@ -69,7 +69,9 @@ class INET_API TCPNewReno : public TCPTahoeRenoFamily
 
     /** Redefine what should happen when dupAck was received, to add congestion window management */
     virtual void receivedDuplicateAck();
+    virtual void receivedDuplicateAckSetCWND();
 
+    virtual void processRexmitTimerSetCWND();
     /* redefine initialize*/
     virtual void initialize();
 };
