@@ -806,7 +806,8 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                       && (((mptcp_snd_nxt - mptcp_snd_una)
                               + (another_state->snd_mss)) > mptcp_snd_wnd)) {
 
-
+                  // The window is too small, if we not in a initial state do
+                  // penalizing and opportunistic retransmission
                   if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
                           && (mptcp_snd_nxt != mptcp_snd_una)) {
                       // Penalize the flow with the smallest DSS
@@ -846,58 +847,64 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
 void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
 
-    // set it to lowest if lowest changed
+    // idea opportunistic retransmission
+    // send smallest DSS, to free buffer blocking
+
+    // update highest retransmitted
     if (mptcp_highestRTX < mptcp_snd_una) {
         mptcp_highestRTX = mptcp_snd_una;
     }
-    uint64_t compare_value = mptcp_highestRTX;
-    if(old_mptcp_highestRTX != mptcp_highestRTX){
-        mptcp_highestRTX = mptcp_snd_nxt;
+    // save current state
+    uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
+
+    for(;;){
+        // search for the smallest DSS
+        uint64_t search_for = mptcp_highestRTX;
         Scheduler_list::iterator s_itr = slist.begin();
         while(s_itr != slist.end()){
-            //std::cerr << "FIRST : " << s_itr->first << " over "  << s_itr->second->remoteAddr << std::endl;
-            if(s_itr->first >=  compare_value){
-                if(sub != s_itr->second){
-                       mptcp_highestRTX = s_itr->first;
-                       break;
-                }
-            }
-            s_itr++;
-        }
-        if(s_itr == slist.end())
-            return;
-    }
-    else{
-        Scheduler_list::iterator s_itr = slist.begin();
-        if(s_itr != slist.end()){
-              if(s_itr->first ==  compare_value){
-                  if(sub == s_itr->second){
-                      return;
-                  }
+          if(s_itr->first >=  search_for){
+              if(sub == s_itr->second){
+                  s_itr = slist.end();
+                  break;
               }
+              mptcp_highestRTX = s_itr->first;
+              break;
+          }
+          s_itr++;
         }
+        // break condition is end of list
+        if(s_itr == slist.end())
+          break;
+
+        if (mptcp_highestRTX >= mptcp_snd_nxt) {
+            // just to be sure, that we transmit nothing bigger than mptcp_snd_nxt
+            break;
+        }
+        old_mptcp_highestRTX = mptcp_highestRTX;
+
+
+        // Prepare
+        TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
+                TCPTahoeRenoFamilyStateVariables*>(
+                sub->getTcpAlgorithm()->getStateVariables());
+        isMPTCP_RTX = true;
+        mptcp_snd_nxt = mptcp_highestRTX;
+
+        // Send
+        sub->sendOneNewSegment(true, another_state->snd_cwnd);
+
+        // Check if send successfull
+        if (mptcp_snd_nxt != mptcp_highestRTX) {
+            //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
+            //        << "send with " << sub->getState()->getSndNxt() << " by "
+            //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
+            mptcp_highestRTX = old_mptcp_highestRTX;
+            continue; // try next
+        }
+            break;
     }
 
-    old_mptcp_highestRTX = mptcp_highestRTX;
-
-    if (mptcp_highestRTX >= mptcp_snd_nxt) {
-        return;
-    }
-
-    TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
-            TCPTahoeRenoFamilyStateVariables*>(
-            sub->getTcpAlgorithm()->getStateVariables());
-
-    isMPTCP_RTX = true;
-    uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
-    mptcp_snd_nxt = mptcp_highestRTX;
-    sub->sendOneNewSegment(true, another_state->snd_cwnd);
-    if (mptcp_snd_nxt != mptcp_highestRTX) {
-        //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
-        //        << "send with " << sub->getState()->getSndNxt() << " by "
-        //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
-        mptcp_highestRTX = old_mptcp_snd_nxt;
-    }
+    // set back to old status
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
 }
