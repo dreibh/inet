@@ -154,6 +154,7 @@ class INET_API MPTCP_Flow
     uint64_t start_seq;
     bool buffer_blocked;
 
+    bool inConSNBlock;
     //######################################################
     // MPTCP CC stuff
     uint32             utilizedCMTCwnd;
@@ -168,6 +169,9 @@ class INET_API MPTCP_Flow
     bool opportunisticRetransmission;
     bool multipath_penalizing;
     bool weak_link;
+    bool consn;
+    uint32 consn_snd_wnd;
+    uint64 consn_snd_una;
   protected:
     bool checksum;
     bool isPassive;

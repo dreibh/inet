@@ -233,7 +233,7 @@ simple TCP like ITCP
 		
 		string multipath_opportunistic_retransmission = default("off"); 
 		string multipath_penalizing = default("off"); 
-		
+		string multipath_consn = default("off");
         @display("i=block/wheelbarrow");
     gates:
         input appIn[] @labels(TCPCommand/down);

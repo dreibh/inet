@@ -71,6 +71,22 @@ typedef struct _DSS_BASE_INFO{
 
 /* MBE: Map to organize the DSS information */
 typedef std::map<uint32,DSS_INFO*> TCPMultipathDSSStatus;
+typedef std::map<uint64,uint32> ConSN_SQN_MAP;
+enum ConSNCountDirection
+{
+    forward = false,
+    backward = true
+};
+typedef struct _ConSN_Block_Window{
+    bool finished;
+    uint32 block_id;
+    uint64 snd_una;
+    uint64 snd_nxt;
+    uint64 snd_max;
+    uint64 start_block;
+    ConSN_SQN_MAP sqn_map;
+    ConSNCountDirection  count_direction;
+} ConSN_Block_Window;
 #endif //PRIVATE
 
 //
@@ -339,6 +355,9 @@ public:
     uint32 s_olia_sent_bytes;
     uint32 olia_sent_bytes;
     uint32 new_olia_counting_start;
+
+    uint32 consn_order;
+    ConSN_Block_Window consn_status;
 #endif
     // those counters would logically belong to TCPAlgorithm, but it's a lot easier to manage them here
     uint32 dupacks;          // current number of received consecutive duplicate ACKs

@@ -70,8 +70,7 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
     p->begin = dss_start_seq;
     p->len = data_len;
     //info();
-    if(dss_start_seq == 9390385380360292027)
-        std::cerr << "stop";
+    //std::cerr << "Last DSS " << dss_start_seq <<" len "   << data_len<< std::endl;
     // check for old
     if(dss_start_seq < (virtual_start + 1)){
         // old one
@@ -83,7 +82,7 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
         p->begin = virtual_start;
         p->len = data_len;
     }
-    //std::cerr << "Waiting for " << virtual_start+1 << std::endl;
+
     std::pair<MPTCP_DataMap::iterator, bool> res = data.insert(std::make_pair(dss_start_seq + data_len,p));
     const bool result = res.second;
     if(!result){
@@ -105,12 +104,10 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
     uint64 highest_in_order = virtual_start;
     bool in_order = true;
 
-//    if(virtual_start  > p->begin)
-//        return virtual_start;   // I only sort the list, if I have everything
     // Now check the queue for Overlapping
     for(i = data.begin();i != data.end();i++){
 
-        uint64 start = i->second->begin;
+        uint64 start = std::min(i->second->begin, highest_in_order);
         MPTCP_DataMap::iterator j = i;
         // find start of next element
         j++;
@@ -118,7 +115,7 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
             next_start = j->second->begin;
         }
         else{
-            next_start = i->first + 1; //simlate last element
+            next_start = i->first + 1; //simulate last element
         }
 
         if(next_start < start){
@@ -136,15 +133,10 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
             continue;
         }
         // Just to be sure
-        //std::cerr << "calc" << i->second->begin << " .. "<< i->first << "calc length" << i->first - i->second->begin  << std::endl;
         ASSERT((i->first - i->second->begin)  == i->second->len);
 
-        if(in_order && (highest_in_order  > i->second->begin))
-            continue;
-        //info();
-        if(in_order && (highest_in_order == i->second->begin)){
-            // we are in order
-            highest_in_order  = i->first;
+        if(in_order && (highest_in_order + 1  >= i->second->begin)){
+            highest_in_order  = std::max(i->first,highest_in_order);
             in_order = true;
         }
         else in_order = false;
@@ -152,9 +144,6 @@ uint64 TCPMultipathDataRcvQueue::insertBytesFromSegment(uint64 dss_start_seq, ui
 
     virtual_start = highest_in_order;
     //info();
-    //if(data.begin()->second->begin == 437371525041671959){ //437371525041579444
-    //    std::cerr << "stop";
-    //}
     return virtual_start;
 }
 

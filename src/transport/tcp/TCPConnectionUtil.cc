@@ -282,6 +282,7 @@ TCPConnection *TCPConnection::cloneMPTCPConnection(bool active, uint64 token,IPv
 		conn->getState()->sackedBytes = 0;
 #endif
 		conn->getState()->dupacks = 0;
+		conn->getState()->consn_order = -1;
 		conn->getState()->sendQueueLimit = this->getState()->sendQueueLimit;
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
@@ -433,6 +434,7 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 		conn->transferMode = this->transferMode;
 		conn->todelete = true;
 		conn->inlist = false;
+		conn->getState()->consn_order = -1;
 		conn->getState()->ws_enabled = this->getState()->ws_enabled;
     }
 #endif // PRIVATE
@@ -1115,7 +1117,8 @@ bool TCPConnection::sendSegment(uint32 bytes)
 #ifdef PRIVATE
     updateRcvWnd();
     // redirect
-    writeHeaderOptionsWithMPTCP(tcpseg_temp, bytes);
+    if( writeHeaderOptionsWithMPTCP(tcpseg_temp, bytes) == NULL)
+        return false;
 #else
     writeHeaderOptions(tcpseg_temp);
 #endif // PRIVATE
@@ -1287,7 +1290,10 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
         flow->refreshSendMPTCPWindow();
         maxWindow = std::max(flow->mptcp_snd_wnd, state->snd_wnd);
-
+        if(flow->consn && flow->inConSNBlock){
+            // we have to overwrite the window for consn
+            maxWindow = flow->consn_snd_wnd;
+        }
         // if not isQueueAble we are not allowed to send anywhere
         if(!this->isQueueAble)
            return false;
@@ -1411,7 +1417,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
                 bytesToSend = 0;
         }
     }
-
+#warning "Missing Implementation for ConSN in REAL World setup - see FIXME and GIThub Issue 34"
+/* Fixme: We need a split of the send Queue for eordering data for ConSN... However, just for simulation it is not nessary */
     // check how many bytes we have - last segment could be less than state->snd_mss
     buffered = sendQueue->getBytesAvailable(state->getSndNxt());
 
@@ -2024,7 +2031,8 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg) //Question why 
             }
 	    }
 	    ASSERT(flow && "flow should be initialized");
-		flow->writeMPTCPHeaderOptions(t,state,tcpseg, bytes, this);
+		if(flow->writeMPTCPHeaderOptions(t,state,tcpseg, bytes, this) < 0)
+		    return NULL;
 	}
 #endif // PRIVATE
     if (tcpseg->getOptionsArraySize() != 0){

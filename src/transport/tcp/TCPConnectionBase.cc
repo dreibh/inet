@@ -110,7 +110,7 @@ TCPStateVariables::TCPStateVariables()
 #endif
 
     lossRecovery = false;
-
+    consn_order = 0;
     dupacks = 0;
     snd_sacks = 0;
     rcv_sacks = 0;
@@ -180,6 +180,7 @@ std::string TCPStateVariables::detailedInfo() const
     out << "snd_sacks=" << snd_sacks << "\n";
     out << "rcv_sacks=" << rcv_sacks << "\n";
     out << "dupacks=" << dupacks << "\n";
+    out << "consn order="  << consn_order << "\n";
     out << "rcv_oooseg=" << rcv_oooseg << "\n";
     out << "rcv_naseg=" << rcv_naseg << "\n";
     return out.str();

@@ -544,7 +544,7 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow,
 
     uint64 ack_seq = 0;
     uint64 snd_seq = 0;
-    uint32 flow_seq = 0;
+    uint32 subflow_seq = 0;
     uint16 data_len = 0;
 
     for (option_cnt = 0; option_cnt < option->getValuesArraySize();
@@ -576,6 +576,7 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow,
             ack_seq |= first32_bits << 32;
             if(ack_seq > subflow->flow->mptcp_snd_una){
                 subflow->flow->mptcp_snd_una = ack_seq;
+                //fprintf(stderr,"ACK %llu\n",ack_seq);
                 //std::cerr << "NEW MPTCP UNA " <<  subflow->flow->mptcp_snd_una << std::endl;
             }
         }
@@ -601,16 +602,15 @@ int MPTCP_PCB::_processMP_DSS(int connId, TCPConnection* subflow,
             uint64_t first32_bits = subflow->flow->mptcp_rcv_nxt >> 32;
             snd_seq |= first32_bits << 32;
         }
-
-        flow_seq = option_v[option_cnt] << 16;
-        flow_seq |= option_v[++option_cnt] >> 16;
+        // Not used so far (e.g RTX), but we need the offset
+        subflow_seq = option_v[option_cnt] << 16;
+        subflow_seq |= option_v[++option_cnt] >> 16;
 
         data_len = option_v[option_cnt];
     }
 
     // we know everything ...lets queue in if data > 0
     if (data_len > 0) {
-
         tcpseg->setLen(data_len);
         tcpseg->setSndSeq(snd_seq);
 

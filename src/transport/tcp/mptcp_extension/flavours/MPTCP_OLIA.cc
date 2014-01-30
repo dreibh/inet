@@ -135,7 +135,14 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
            */
 
           double numerator_2 = 1;
-          double denominator_2 = r_state->snd_wnd * subflow_list->size() * collected_paths.size();
+          uint32 queueAbleFlows = 0;
+           for (TCP_SubFlowVector_t::iterator i = subflow_list->begin();
+                                        i != subflow_list->end(); i++) {
+           TCPConnection* sub = (*i)->subflow;
+           if(!sub->isQueueAble) continue;
+           queueAbleFlows++;
+          }
+          double denominator_2 = r_state->snd_wnd * queueAbleFlows * collected_paths.size();
           double term2 = 0.0;
           if(denominator_2 > 0.0){
               term2 = numerator_2 / denominator_2;
@@ -156,7 +163,14 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
              multiplied by MSS_r * bytes_acked.
              */
             double numerator_2 = 1;
-            double denominator_2 = r_state->snd_wnd * subflow_list->size() * max_w_paths.size();
+            uint32 queueAbleFlows = 0;
+            for (TCP_SubFlowVector_t::iterator i = subflow_list->begin();
+                                           i != subflow_list->end(); i++) {
+                TCPConnection* sub = (*i)->subflow;
+                if(!sub->isQueueAble) continue;
+                queueAbleFlows++;
+            }
+            double denominator_2 = r_state->snd_wnd * queueAbleFlows * max_w_paths.size();
             double term2 = 0.0;
             if(denominator_2 > 0.0){
                 term2 = numerator_2 / denominator_2;

@@ -534,9 +534,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
 
         if (tcpseg->getPayloadLength() > 0)
         {
-            if(tcpseg->getSequenceNo() == 73286411){
-                 std::cerr <<  "check this";
-             }
+
             // check for full sized segment
             if (tcpseg->getPayloadLength() == state->snd_mss || tcpseg->getPayloadLength() + tcpseg->getHeaderLength() - TCP_HEADER_OCTETS == state->snd_mss)
                 state->full_sized_segment_counter++;
@@ -544,7 +542,7 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
             // check for persist probe
             if (tcpseg->getPayloadLength() == 1)
                 state->ack_now = true;    // TODO how to check if it is really a persist probe?
-#warning "must we adapt truncate for coupled arwnd"
+//FIXME "must we adapt truncate for coupled arwnd?"
             tcpseg->truncateSegment(state->rcv_nxt, state->rcv_nxt + state->rcv_wnd);
 
             updateRcvQueueVars();
@@ -562,18 +560,11 @@ TCPEventCode TCPConnection::processSegment1stThru8th(TCPSegment *tcpseg)
                 uint32 old_usedRcvBuffer = state->usedRcvBuffer;
 
                 if(getTcpMain()->multipath && (flow != NULL)){
-//                    bool note = false;
-//                    if(tcpseg->getSndSeq() == flow->mptcp_rcv_nxt){
-//                        note = true;
-//                        std::cerr << "NEXT " << flow->mptcp_rcv_nxt << " in queue from " << this->remoteAddr << "<->" << this->localAddr << " seq no " << tcpseg->getSequenceNo() <<std::endl;
-//                    }
+
                     flow->enqueueMPTCPData(tcpseg->getSndSeq(),tcpseg->getLen());
-//                    if(note)
-//                        std::cerr << "Wait " << flow->mptcp_rcv_nxt << std::endl;
+
                 }
-                if(tcpseg->getSequenceNo() == 73286411){
-                    std::cerr <<  "check this";
-                }
+
                 state->rcv_nxt = receiveQueue->insertBytesFromSegment(tcpseg);
 
                 if (seqGreater(state->snd_una, old_snd_una))

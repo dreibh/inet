@@ -114,6 +114,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
     old_mptcp_highestRTX = 0;
     isMPTCP_RTX = false;
     buffer_blocked = false;
+    inConSNBlock = false;
 }
 
 void MPTCP_Flow::_readParameter(TCPConnection *subflow) {
@@ -169,7 +170,21 @@ void MPTCP_Flow::_readParameter(TCPConnection *subflow) {
                 (const char*) subflow->getTcpMain()->par(
                         "multipath_penalizing"));
     }
-
+    // multipath ConSN
+    if (strcmp(
+            (const char*) subflow->getTcpMain()->par(
+                    "multipath_consn"), "on") == 0) {
+        consn = true;
+    } else if (strcmp(
+            (const char*) subflow->getTcpMain()->par(
+                    "multipath_consn"), "off") == 0) {
+        consn = false;
+    } else {
+        throw cRuntimeError(
+                "Bad setting for multipath_consn: %s\n",
+                (const char*) subflow->getTcpMain()->par(
+                        "multipath_consn"));
+    }
 }
 
 /**
@@ -585,6 +600,7 @@ int MPTCP_Flow::writeMPTCPHeaderOptions(uint t,
                     subflow->isSubflow);
             t = _writeDSSHeaderandProcessSQN(t, subflow_state, tcpseg, bytes,
                     subflow, option);
+            if(t < 0) return t;
 #ifdef ADD_ADDR
             if (subflow->add_addr) {
                 TCPOption option2;
@@ -703,7 +719,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 TCPTahoeRenoFamilyStateVariables*>(
                 conn->getTcpAlgorithm()->getStateVariables());
 
-        if (!conn->isSendQueueEmpty())  // do we have any data to send?
+        if (!conn->isSendQueueEmpty())  // have we any data to send?
         {
             if ((simTime() - another_state->time_last_data_sent)
                     > another_state->rexmit_timeout) {
@@ -797,8 +813,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 TCPTahoeRenoFamilyStateVariables* another_state =
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
-
-                //tmp->orderBytesForQueue(another_state->snd_cwnd);
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
@@ -1439,13 +1453,14 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
     DEBUGprintDSSInfo();
     // check if we need to add DSS
-
+    uint64 dss_end = 0;
     // Special cases: Retranmission
     bool isRetranmission = false;
     uint64 rtx_snd_seq = 0;
     uint32 rtx_msg_length = 0;
     // First calculate possible message size
     uint options_len = 0;
+    if(!subflow->isQueueAble) return 0;
     for (uint i = 0; i < tcpseg->getOptionsArraySize(); i++)
         options_len = options_len + tcpseg->getOptions(i).getLength();
 
@@ -1475,7 +1490,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     }
 
     // get Start DSS
-    uint64 dss_start = this->mptcp_snd_una;	// will be manipulated in process_dss of the pcb
+    uint64 dss_start = this->mptcp_snd_una;
     subflow->base_una_dss_info.dss_seq = this->mptcp_snd_una;
 
     // fill the dss seq nr map
@@ -1484,16 +1499,21 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
     uint32 bytes_tmp = bytes;
     uint32 to_report_sqn = this->mptcp_snd_nxt;
 
-    if(subflow->getState()->getSndNxt() == 329985249)
-            std::cerr << " STOP  " << std::endl;
+
+
     if (bytes_tmp > subflow->getState()->snd_mss)
         ASSERT(false && "Expect only segments with size less that path mss");
+
     for (uint64 cnt = 0; cnt <= bytes; cnt++) {
         // check if there is any in the list
         ASSERT(cnt < 1 && "if we do more than one round we have a problem");
         // FIXME Check if it is still in the queue, overflow
         TCPMultipathDSSStatus::const_iterator it =
                 subflow->dss_dataMapofSubflow.find(snd_nxt_tmp);
+
+
+
+#ifdef test_special
         // check for special cases
         if (it == subflow->dss_dataMapofSubflow.end()) {
             if (!subflow->dss_dataMapofSubflow.empty() && (subflow->getState()->getSndNxt() < subflow->getState()->snd_max) ) {
@@ -1531,39 +1551,159 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 }
             }
         }
-        if (it != subflow->dss_dataMapofSubflow.end()) {
-            // this is a retransmission
-            isRetranmission = true;
-            DSS_INFO* dss_info = it->second;
-            rtx_msg_length = dss_info->seq_offset;
-            rtx_snd_seq = dss_info->dss_seq;
-            to_report_sqn = dss_info->dss_seq;
-            // FIXME check if it really could be only one message
-            break;
-        } else {
-            DSS_INFO* dss_info = new DSS_INFO;// (DSS_INFO*) malloc(sizeof(DSS_INFO));
-            dss_info->dss_seq = this->mptcp_snd_nxt;
-            dss_info->seq_offset = bytes;
-            mptcp_snd_nxt += bytes;
-            dss_info->section_end = false;
-            // we work wit a offset parameter if we have numbers in sequence
-            // I think it is more easy to handle this in mss sections
-            slist.insert(std::make_pair(dss_info->dss_seq, subflow));
-            // information stuff
-            dss_info->re_scheduled = 0;
-            dss_info->delivered = false;
-            subflow->dss_dataMapofSubflow[snd_nxt_tmp] = dss_info;   //dss_info;
-            // recalc the offset
-            snd_nxt_tmp += bytes_tmp;
-            cnt += bytes_tmp;
-        }
+
+#endif
+            if (it != subflow->dss_dataMapofSubflow.end()) {
+                // this is a retransmission
+                isRetranmission = true;
+                DSS_INFO* dss_info = it->second;
+                rtx_msg_length = dss_info->seq_offset;
+                rtx_snd_seq = dss_info->dss_seq;
+
+                // FIXME check if it really could be only one message
+                break;
+            } else {
+                if(subflow->getState()->snd_max > snd_nxt_tmp)
+                    ASSERT(false && "not in sync of full packets");
+                // create Block
+                uint32 queueAbleFlows = 0;
+                bool blocked_block = false;
+                for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                                                    i != subflow_list.end(); i++) {
+                     TCPConnection* sub = (*i)->subflow;
+                     if(!sub->isQueueAble) continue;
+                     queueAbleFlows++;
+                }
+                if(consn && (!this->inConSNBlock) && (queueAbleFlows > 1)){
+                    // OK block is complete ... recalculate new block
+                    refreshSendMPTCPWindow();
+                    // First we need arwnd
+                    TCPTahoeRenoFamilyStateVariables* state =
+                    check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
+                            subflow->getTcpAlgorithm()->getStateVariables());
+
+                    uint32 max_block = this->mptcp_snd_wnd - state->snd_mss;
+                    consn_snd_una = this->mptcp_snd_una;
+                    consn_snd_wnd = max_block;
+
+                    // static block size calculation
+                    uint32 block_size = max_block / queueAbleFlows;
+
+                    // fill structures static
+                    uint32 _consn_order = 1;
+                    uint32 offset = 0;
+                    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                                   i != subflow_list.end(); i++, _consn_order++) {
+                        TCPConnection* sub = (*i)->subflow;
+                        if(!sub->isQueueAble) continue;
+                        sub->getState()->consn_order = _consn_order;
+                        sub->getState()->consn_status.block_id = sub->getState()->consn_order;
+                        sub->getState()->consn_status.finished = false;
+
+                        if(_consn_order != 1){
+                            sub->getState()->consn_status.snd_max = this->mptcp_snd_una + offset - sub->getState()->snd_mss; // one MMS Overlapping;
+                            offset += block_size;
+                            sub->getState()->consn_status.snd_una = this->mptcp_snd_una + offset;
+                            sub->getState()->consn_status.start_block = sub->getState()->consn_status.snd_una;
+                            sub->getState()->consn_status.snd_nxt =  this->mptcp_snd_nxt + offset;
+                            sub->getState()->consn_status.count_direction = backward;
+                        }
+                        else{
+
+                            sub->getState()->consn_status.snd_una = this->mptcp_snd_una + offset;
+                            sub->getState()->consn_status.start_block = sub->getState()->consn_status.snd_una;
+                            offset += block_size;
+                            sub->getState()->consn_status.snd_max = sub->getState()->consn_status.snd_una + offset + sub->getState()->snd_mss; // one MMS Overlapping
+                            sub->getState()->consn_status.snd_nxt = this->mptcp_snd_nxt;
+                            sub->getState()->consn_status.count_direction = forward;
+                        }
+
+                        sub->getState()->consn_status.sqn_map.clear();
+                    }
+
+                    // max Block size is current arwnd
+                    this->inConSNBlock = true;
+                }
+
+
+                DSS_INFO* dss_info = new DSS_INFO;// (DSS_INFO*) malloc(sizeof(DSS_INFO));
+                if((!consn) || (queueAbleFlows < 2)){
+                    dss_info->dss_seq = this->mptcp_snd_nxt;
+                    dss_info->seq_offset = bytes;
+                    mptcp_snd_nxt += (bytes + 1);
+                    dss_end = mptcp_snd_nxt -1;
+                }
+                else if(consn){
+                    if(!subflow->getState()->consn_status.finished){
+                        if(subflow->getState()->consn_status.count_direction == backward){
+                            // mptcp_snd_nxt = subflow->getState()->consn_status.snd_nxt;
+                            dss_info->dss_seq = (subflow->getState()->consn_status.snd_nxt - bytes);
+                            dss_info->seq_offset = bytes;
+                            subflow->getState()->consn_status.snd_nxt -= (bytes + 1);
+                            dss_end = subflow->getState()->consn_status.snd_nxt;
+                            if(subflow->getState()->consn_status.snd_nxt <= subflow->getState()->consn_status.snd_max)
+                                subflow->getState()->consn_status.finished = true;
+                        }
+                        else if(subflow->getState()->consn_status.count_direction == forward){
+                            dss_info->dss_seq = subflow->getState()->consn_status.snd_nxt;
+                            dss_info->seq_offset = bytes;
+                            subflow->getState()->consn_status.snd_nxt += (bytes + 1);
+                            dss_end = subflow->getState()->consn_status.snd_nxt - 1;
+                            //mptcp_snd_nxt += bytes;
+                            if(subflow->getState()->consn_status.snd_nxt >= subflow->getState()->consn_status.snd_max)
+                                subflow->getState()->consn_status.finished = true;
+                        }
+                        else ASSERT(false && "This should not happen");
+                        mptcp_snd_nxt = mptcp_snd_una;
+                    }
+                    else{
+                            blocked_block = true;
+                        }
+
+                        // ok ... the block is finished, which block should I support of complete ConSN Block
+                        //fprintf(stderr,"ConSN Block is finished for %d \t snd_una %llu \t %llu \n",subflow->getState()->consn_status.block_id, this->mptcp_snd_una, consn_snd_una + consn_snd_wnd);
+                        if(this->mptcp_snd_una >= (consn_snd_una + consn_snd_wnd)){
+                           //fprintf(stderr,"Create New Block");
+                           this->mptcp_snd_nxt = this->mptcp_snd_una;
+                           this->inConSNBlock = false;
+                        }
+
+                        if(blocked_block){
+
+                            //default:
+                            return -1;
+
+                        }
+                        // check if all blocks finished
+
+
+
+                }
+                else
+                    ASSERT(false && "This should not happen");
+
+
+                //fprintf(stderr,"ConSN %d \t Send DSS %llu with len %d\n",subflow->getState()->consn_status.block_id, dss_info->dss_seq,dss_info->seq_offset);
+                to_report_sqn = dss_info->dss_seq;
+                dss_info->section_end = false;
+                // we work wit a offset parameter if we have numbers in sequence
+                // I think it is more easy to handle this in mss sections
+                slist.insert(std::make_pair(dss_info->dss_seq, subflow));
+                // information stuff
+                dss_info->re_scheduled = 0;
+                dss_info->delivered = false;
+                subflow->dss_dataMapofSubflow[snd_nxt_tmp] = dss_info;   //dss_info;
+                // recalc the offset
+                snd_nxt_tmp += bytes_tmp;
+                cnt += bytes_tmp;
+            }
 
 //		}
 //		else ASSERT (false);
     }
 
     // this->mptcp_snd_nxt += bytesToSend;
-    uint64 dss_end = this->mptcp_snd_nxt - 1;
+
 
     /*
      DSS packet format:
@@ -1785,10 +1925,7 @@ void MPTCP_Flow::DEBUGprintDSSInfo() {
 void MPTCP_Flow::refreshSendMPTCPWindow() {
     // we try to organize the DSS List in a Map with offsets of in order sequence of DSS
     TCP_subflow_t* entry = NULL;
-    //uint64 lastMPTCPSeq = 0;
-    //uint32 delivered = 0;
-    //uint64 smallest_in_queues = mptcp_snd_una;
-    bool data_in_queue = false;
+
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
             i != subflow_list.end(); i++) {
         entry = (*i);
@@ -1810,7 +1947,6 @@ void MPTCP_Flow::refreshSendMPTCPWindow() {
                 it->second->delivered = true;
             }
 
-            data_in_queue = true;
             if ( it->second->dss_seq < mptcp_snd_una - 1) {
                 slist.erase(it->second->dss_seq);
                 dlist.insert(std::make_pair(it->second->dss_seq,it->second->seq_offset));
@@ -1861,6 +1997,73 @@ void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
     uint32 old_mptcp_rcv_adv = mptcp_rcv_adv;
     mptcp_rcv_nxt = mptcp_receiveQueue->insertBytesFromSegment(dss_start_seq,
             data_len);
+    uint32 queueAbleFlows = 0;
+    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                                       i != subflow_list.end(); i++) {
+        TCPConnection* sub = (*i)->subflow;
+        if(!sub->isQueueAble) continue;
+        queueAbleFlows++;
+    }
+    // ConSN Block on Receiver Side
+    if(consn && (queueAbleFlows > 2) ){
+        // recalculate structure for ConSN
+        bool found = false;
+
+        for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
+                 i != subflow_list.end(); i++) {
+            if(!found){
+                uint64 min_block = 0;
+                uint64 max_block = 0;
+                TCPConnection* sub = (*i)->subflow;
+                if(sub->getState()->consn_status.count_direction == forward){
+                    min_block = sub->getState()->consn_status.start_block;
+                    max_block = sub->getState()->consn_status.snd_max;
+                }
+                else{
+                    min_block = sub->getState()->consn_status.snd_max;
+                    max_block = sub->getState()->consn_status.start_block;
+                }
+                if((min_block <= dss_start_seq) &&  (dss_start_seq + data_len <= max_block)){
+                    sub->getState()->consn_status.finished = false;
+                    found = true;
+
+                    // Check list for Forward
+                    if(sub->getState()->consn_status.count_direction == forward){
+                        sub->getState()->consn_status.sqn_map.insert(std::make_pair(dss_start_seq,data_len));
+                        ConSN_SQN_MAP::iterator consn_sqn_list = sub->getState()->consn_status.sqn_map.find(min_block);
+                        uint64 nxt_sqn = min_block;
+                        while(consn_sqn_list != sub->getState()->consn_status.sqn_map.end()){
+                            sub->getState()->consn_status.snd_una = nxt_sqn;
+
+                            nxt_sqn = consn_sqn_list->first + consn_sqn_list->second;
+                            if(nxt_sqn >= max_block){
+                                sub->getState()->consn_status.finished = true;
+                                break;
+                            }
+                            consn_sqn_list = sub->getState()->consn_status.sqn_map.find(nxt_sqn);
+                        }
+                    }
+                    else{
+                        sub->getState()->consn_status.sqn_map.insert(std::make_pair(dss_start_seq + data_len,data_len));
+                        ConSN_SQN_MAP::iterator consn_sqn_list = sub->getState()->consn_status.sqn_map.find(max_block);
+                        uint64 nxt_sqn = max_block;
+                        while(consn_sqn_list != sub->getState()->consn_status.sqn_map.end()){
+                          sub->getState()->consn_status.snd_una = nxt_sqn;
+
+                          nxt_sqn = consn_sqn_list->first - consn_sqn_list->second;
+                          if(nxt_sqn <= min_block){
+                              sub->getState()->consn_status.finished = true;
+                              break;
+                          }
+                          consn_sqn_list = sub->getState()->consn_status.sqn_map.find(nxt_sqn);
+                        }
+                    }
+                }
+                this->inConSNBlock &= sub->getState()->consn_status.finished;
+            }
+        }
+    }
+    // End ConSN Receiver Side
 
     if (maxBuffer < mptcp_receiveQueue->getOccupiedMemory()) {
         mptcp_receiveQueue->printInfo();
