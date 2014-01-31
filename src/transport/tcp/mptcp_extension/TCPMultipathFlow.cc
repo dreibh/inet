@@ -1561,7 +1561,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 rtx_msg_length = dss_info->seq_offset;
                 rtx_snd_seq = dss_info->dss_seq;
                 to_report_sqn = dss_info->dss_seq;
-                // FIXME check if it really could be only one message
+                // FIXME check if only one message
                 break;
             } else {
                 if(subflow->getState()->snd_max > snd_nxt_tmp)
@@ -1688,7 +1688,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                //     fprintf(stderr,"ConSN %d \t Send DSS %llu with len %d\n",subflow->getState()->consn_status.block_id, dss_info->dss_seq,dss_info->seq_offset);
                 to_report_sqn = dss_info->dss_seq;
                 dss_info->section_end = false;
-                // we work wit a offset parameter if we have numbers in sequence
+                // we work wit an offset parameter - if we have numbers in sequence
                 // I think it is more easy to handle this in mss sections
                 slist.insert(std::make_pair(dss_info->dss_seq, subflow));
                 // information stuff

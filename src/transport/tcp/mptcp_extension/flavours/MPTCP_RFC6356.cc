@@ -119,17 +119,17 @@ void MPTCP_RFC6356::increaseCWND(uint32 increase, bool print){
  *         min ( --------------------------- , ------------------- )  (1)
  *                        cwnd_total                   cwnd_i
  */
-    uint32 ackedBytes = increase;
+
     double numerator   = 0.0;
     double denominator = 0.0;
-    if ((!(state->snd_cwnd < state->ssthresh)) && (!this->conn->getState()->lossRecovery) && ackedBytes){
+    if ((!(state->snd_cwnd < state->ssthresh)) && (!this->conn->getState()->lossRecovery) && increase){
         // in CA
         recalculateMPTCPCCBasis();
-        numerator =  conn->flow->cmtCC_alpha * std::min(acked, conn->getState()->snd_mss) * conn->getState()->snd_mss;
+        numerator =  conn->flow->cmtCC_alpha *  conn->getState()->snd_mss * conn->getState()->snd_mss;
         denominator = conn->flow->totalCMTCwnd;
         double term1 = numerator / denominator;
 
-        numerator = conn->getState()->snd_mss * std::min(acked, conn->getState()->snd_mss);
+        numerator = conn->getState()->snd_mss * conn->getState()->snd_mss;
         denominator = state->snd_cwnd;
         double term2 = numerator / denominator;
 
