@@ -134,7 +134,7 @@ void MPTCP_RFC6356::increaseCWND(uint32 increase, bool print){
         double term2 = numerator / denominator;
 
         increase = std::max((uint32)1,
-                std::min((uint32)term1,(uint32)term2));
+                std::min((uint32)ceil(term1),(uint32)ceil(term2)));
     }
 
     state->snd_cwnd += increase;

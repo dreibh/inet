@@ -149,7 +149,7 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
           }
 
 
-          state->snd_cwnd += (int32)( (term1 + term2) * (conn->getState()->snd_mss * conn->getState()->snd_mss));
+          state->snd_cwnd += (int32)ceil( (term1 + term2) * (conn->getState()->snd_mss * conn->getState()->snd_mss));
         }
         else if((is_max_w_paths) && (!collected_paths.empty())){
             /*
@@ -176,7 +176,7 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
                 term2 = numerator_2 / denominator_2;
             }
 
-            state->snd_cwnd += (int32) (std::min((term1 - term2),0.0) * (conn->getState()->snd_mss * conn->getState()->snd_mss));
+            state->snd_cwnd += (int32) ceil(std::min((term1 - term2),0.0) * (conn->getState()->snd_mss * conn->getState()->snd_mss));
         }
         else{
             /*
@@ -188,7 +188,7 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
 
               multiplied by MSS_r * bytes_acked.
               */
-            state->snd_cwnd += term1 * (conn->getState()->snd_mss * conn->getState()->snd_mss);
+            state->snd_cwnd += ceil(term1 * (conn->getState()->snd_mss * conn->getState()->snd_mss));
 
         }
     }
