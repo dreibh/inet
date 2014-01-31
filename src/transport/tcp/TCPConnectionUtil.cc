@@ -1367,7 +1367,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         << ", in buffer " << buffered << " bytes)\n";
 
     uint32 old_snd_nxt = state->getSndNxt();
-
+    orderBytesForQueue(bytesToSend);
     ASSERT(bytesToSend > 0);
 
 #ifdef TCP_SENDFRAGMENTS  /* normally undefined */
@@ -1422,6 +1422,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // check how many bytes we have - last segment could be less than state->snd_mss
     buffered = sendQueue->getBytesAvailable(state->getSndNxt());
 
+
     if (bytesToSend == buffered && buffered != 0) // last segment?
         sendSegment(bytesToSend);
     else if (bytesToSend > 0)
@@ -1443,7 +1444,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
-    //orderBytesForQueue(state->snd_max - state->snd_una);
+
     return true;
 }
 

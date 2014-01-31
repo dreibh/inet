@@ -410,6 +410,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
             t->subflow->tmp_msg_buf = tmp_msg_buf;
         }
         subflow_list.push_back(t);
+        subflow->orderBytesForQueue(commonSendQueueLimit);
     }
 
     // ###################################
@@ -1559,7 +1560,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 DSS_INFO* dss_info = it->second;
                 rtx_msg_length = dss_info->seq_offset;
                 rtx_snd_seq = dss_info->dss_seq;
-
+                to_report_sqn = dss_info->dss_seq;
                 // FIXME check if it really could be only one message
                 break;
             } else {
@@ -1682,8 +1683,9 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 else
                     ASSERT(false && "This should not happen");
 
+               // if(to_report_sqn >= 212514543)
 
-                //fprintf(stderr,"ConSN %d \t Send DSS %llu with len %d\n",subflow->getState()->consn_status.block_id, dss_info->dss_seq,dss_info->seq_offset);
+               //     fprintf(stderr,"ConSN %d \t Send DSS %llu with len %d\n",subflow->getState()->consn_status.block_id, dss_info->dss_seq,dss_info->seq_offset);
                 to_report_sqn = dss_info->dss_seq;
                 dss_info->section_end = false;
                 // we work wit a offset parameter if we have numbers in sequence
