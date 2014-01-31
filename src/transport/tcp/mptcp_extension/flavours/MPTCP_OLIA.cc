@@ -175,8 +175,11 @@ void MPTCP_OLIA::increaseCWND(uint32 ackedBytes, bool print){
             if(denominator_2 > 0.0){
                 term2 = numerator_2 / denominator_2;
             }
-
-            state->snd_cwnd += (int32) ceil(std::min((term1 - term2),0.0) * (conn->getState()->snd_mss * conn->getState()->snd_mss));
+            int increase = (int32) ceil((term1 - term2)* (conn->getState()->snd_mss * conn->getState()->snd_mss));
+            if(((increase < 0) &&  (state->snd_cwnd < (uint32) (-1 * increase))) || increase >= 0)
+                state->snd_cwnd += (int32) ceil((term1 - term2)* (conn->getState()->snd_mss * conn->getState()->snd_mss));
+            else
+                state->snd_cwnd =   conn->getState()->snd_mss;
         }
         else{
             /*
