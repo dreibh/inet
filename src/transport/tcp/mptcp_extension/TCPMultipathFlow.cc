@@ -818,8 +818,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
                 if ((count == 0) && (another_state->snd_cwnd > (4*another_state->snd_mss))
-                      && (((mptcp_snd_nxt - mptcp_snd_una)
-                              + (another_state->snd_mss)) > mptcp_snd_wnd)) {
+                      && (2 * another_state->snd_mss < mptcp_snd_wnd)) {
 
                   // The window is too small, if we not in a initial state do
                   // penalizing and opportunistic retransmission
