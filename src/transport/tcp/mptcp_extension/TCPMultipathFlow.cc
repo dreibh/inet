@@ -1513,10 +1513,9 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
 
 
-#ifdef test_special
+
         // check for special cases
-        if (it == subflow->dss_dataMapofSubflow.end()) {
-            if (!subflow->dss_dataMapofSubflow.empty() && (subflow->getState()->getSndNxt() < subflow->getState()->snd_max) ) {
+        if((subflow->getState()->snd_max) > snd_nxt_tmp && (it == subflow->dss_dataMapofSubflow.end())) {
                 if ((subflow->dss_dataMapofSubflow.begin()->first <= snd_nxt_tmp)
                         && (snd_nxt_tmp
                                 < ((--subflow->dss_dataMapofSubflow.end())->first
@@ -1550,9 +1549,9 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                     return t;
                 }
             }
-        }
 
-#endif
+
+
             if (it != subflow->dss_dataMapofSubflow.end()) {
                 // this is a retransmission
                 isRetranmission = true;
@@ -1563,7 +1562,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 // FIXME check if only one message
                 break;
             } else {
-                if(subflow->getState()->snd_max > snd_nxt_tmp)
+                if((subflow->getState()->snd_max > snd_nxt_tmp) && (it == subflow->dss_dataMapofSubflow.end()))
                     ASSERT(false && "not in sync of full packets");
                 // create Block
                 uint32 queueAbleFlows = 0;
