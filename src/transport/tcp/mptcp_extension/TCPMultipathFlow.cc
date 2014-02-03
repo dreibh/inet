@@ -817,14 +817,13 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
-                if ((count == 0) && (another_state->snd_cwnd > another_state->snd_mss)
+                if ((count == 0) && (another_state->snd_cwnd > (4*another_state->snd_mss))
                       && (((mptcp_snd_nxt - mptcp_snd_una)
                               + (another_state->snd_mss)) > mptcp_snd_wnd)) {
 
                   // The window is too small, if we not in a initial state do
                   // penalizing and opportunistic retransmission
-                  if ((4 * another_state->snd_mss <= another_state->snd_cwnd)
-                          && (mptcp_snd_nxt != mptcp_snd_una)) {
+                  if (mptcp_snd_nxt != mptcp_snd_una) {
                       // Penalize the flow with the smallest DSS
                       penalize(tmp, mptcp_snd_una);
                       if (opportunisticRetransmission) {
@@ -995,7 +994,7 @@ int MPTCP_Flow::_writeInitialHandshakeHeader(uint t,
     first_bits |= version;
 
     switch (state) {
-    // Connection initiation SYN; SYN/ACK; ACK of the whole flow it must contain the MP_CAPABLE Option
+    // Connection initiation SYN; SYN/ACK; ACK of the whole flow it must contoain the MP_CAPABLE Option
     // MPTCP IDLE
     case IDLE: { // whether a SYN or ACK for a SYN ACK is send -> new MPTCP Flow
 
