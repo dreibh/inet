@@ -222,6 +222,7 @@ TCPConnection::TCPConnection()
     tmp_msg_buf = new Tmp_Buffer_t();
     sendJOINACK = false;
     this->subflowID = getTcpMain()->subflowCounter++;
+    highestRTX_path = 0;
 #endif // PRIVATE
 
     // Note: this ctor is NOT used to create live connections, only
@@ -270,6 +271,7 @@ TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
     bzero(&base_una_dss_info,sizeof(DSS_BASE_INFO));
     this->subflowID = getTcpMain()->subflowCounter++;
     tmp_msg_buf = new Tmp_Buffer_t();
+    highestRTX_path = 0;
 #endif
 
 

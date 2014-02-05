@@ -865,8 +865,13 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     // send smallest DSS, to free buffer blocking
 
     // update highest retransmitted
-
-    mptcp_highestRTX = mptcp_snd_una;
+    if(sub->highestRTX_path < mptcp_snd_una){
+        sub->highestRTX_path = mptcp_snd_una;
+    }
+    if(sub->highestRTX_path > mptcp_snd_nxt){
+        sub->highestRTX_path = mptcp_snd_una;
+    }
+    mptcp_highestRTX = sub->highestRTX_path;
 
     // save current state
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
@@ -925,7 +930,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         }
         break;
     }
-
+    sub->highestRTX_path = mptcp_highestRTX;
     // set back to old status
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;

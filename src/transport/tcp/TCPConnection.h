@@ -449,6 +449,7 @@ class INET_API TCPConnection
     bool isQueueAble;       // queue able for scheduler -> most times we wait for established
     bool todelete;          // we should delete this
     bool inlist;            // is in our subflow list enqueued
+    bool highestRTX_path;
     // in case thereit is a subflow it must have a flow container.
     MPTCP_Flow* flow;
     // security stuff
