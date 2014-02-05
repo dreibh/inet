@@ -875,12 +875,12 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
 
     // save current state
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
-
+    Scheduler_list::iterator s_itr = slist.begin();
     for(;;){
         // search for the smallest DSS
         uint64_t search_for = mptcp_highestRTX;
-        Scheduler_list::iterator s_itr = slist.begin();
-        bool second_loop = false;
+        s_itr = slist.begin();
+        //bool second_loop = false;
         while(s_itr != slist.end()){
           if(s_itr->first >=  search_for){
               if(s_itr->first  < mptcp_highestRTX){
@@ -928,7 +928,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
             //        << "send with " << sub->getState()->getSndNxt() << " by "
             //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
             mptcp_highestRTX = mptcp_snd_nxt;
-            break; // try next
+            continue; // try next
         }
         break;
     }
