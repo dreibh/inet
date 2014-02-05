@@ -817,8 +817,9 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
-                if ((count == 0) && (another_state->snd_cwnd > (4*another_state->snd_mss))
-                      && (2 * another_state->snd_mss > (mptcp_snd_wnd - (mptcp_snd_nxt - mptcp_snd_una)))) {
+               // if ((count == 0) && (another_state->snd_cwnd > (4*another_state->snd_mss))
+                  if ((another_state->snd_cwnd > (4*another_state->snd_mss))
+                        && (2 * another_state->snd_mss > (mptcp_snd_wnd - (mptcp_snd_nxt - mptcp_snd_una)))) {
 
                   // The window is too small, if we not in a initial state do
                   // penalizing and opportunistic retransmission
@@ -867,6 +868,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     if (mptcp_highestRTX < mptcp_snd_una) {
         mptcp_highestRTX = mptcp_snd_una;
     }
+    if (mptcp_highestRTX > mptcp_snd_nxt) {
+           mptcp_highestRTX = mptcp_snd_una;
+       }
     // save current state
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
 
@@ -876,9 +880,13 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         Scheduler_list::iterator s_itr = slist.begin();
         while(s_itr != slist.end()){
           if(s_itr->first >=  search_for){
+              if(s_itr->first  < mptcp_highestRTX){
+                  s_itr++;
+                  continue;
+              }
               if(sub == s_itr->second){
-                  s_itr = slist.end();
-                  break;
+                  s_itr++;
+                  continue;
               }
               mptcp_highestRTX = s_itr->first;
               break;
@@ -887,11 +895,11 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         }
         // break condition is end of list
         if(s_itr == slist.end())
-          break;
+         return;
 
         if (mptcp_highestRTX >= mptcp_snd_nxt) {
             // just to be sure, that we transmit nothing bigger than mptcp_snd_nxt
-            break;
+            return;
         }
         old_mptcp_highestRTX = mptcp_highestRTX;
 
@@ -911,7 +919,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
             //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
             //        << "send with " << sub->getState()->getSndNxt() << " by "
             //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
-            mptcp_highestRTX = old_mptcp_highestRTX;
+            mptcp_highestRTX = mptcp_snd_nxt;
             continue; // try next
         }
             break;
