@@ -865,12 +865,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     // send smallest DSS, to free buffer blocking
 
     // update highest retransmitted
-    if (mptcp_highestRTX < mptcp_snd_una) {
-        mptcp_highestRTX = mptcp_snd_una;
-    }
-    if (mptcp_highestRTX > mptcp_snd_nxt) {
-           mptcp_highestRTX = mptcp_snd_una;
-       }
+
+    mptcp_highestRTX = mptcp_snd_una;
+
     // save current state
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
 
@@ -878,6 +875,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         // search for the smallest DSS
         uint64_t search_for = mptcp_highestRTX;
         Scheduler_list::iterator s_itr = slist.begin();
+        bool second_loop = false;
         while(s_itr != slist.end()){
           if(s_itr->first >=  search_for){
               if(s_itr->first  < mptcp_highestRTX){
@@ -885,6 +883,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
                   continue;
               }
               if(sub == s_itr->second){
+                  if(second_loop)
+                      return;
+                  second_loop = true;
                   s_itr++;
                   continue;
               }
@@ -922,7 +923,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
             mptcp_highestRTX = mptcp_snd_nxt;
             continue; // try next
         }
-            break;
+        break;
     }
 
     // set back to old status
