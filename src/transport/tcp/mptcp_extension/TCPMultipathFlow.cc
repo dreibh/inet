@@ -888,17 +888,19 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
                   continue;
               }
               if(sub == s_itr->second){
-                  if(second_loop)
+                //  if(second_loop)
+                      sub->highestRTX_path = s_itr->first;
                       return;
-                  second_loop = true;
-                  s_itr++;
-                  continue;
+                //  second_loop = true;
+                //  s_itr++;
+                //  continue;
               }
               mptcp_highestRTX = s_itr->first;
               break;
           }
           s_itr++;
         }
+        sub->highestRTX_path = mptcp_highestRTX;
         // break condition is end of list
         if(s_itr == slist.end())
          return;
@@ -926,11 +928,11 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
             //        << "send with " << sub->getState()->getSndNxt() << " by "
             //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
             mptcp_highestRTX = mptcp_snd_nxt;
-            continue; // try next
+            break; // try next
         }
         break;
     }
-    sub->highestRTX_path = mptcp_highestRTX;
+
     // set back to old status
     mptcp_snd_nxt = old_mptcp_snd_nxt;
     isMPTCP_RTX = false;
