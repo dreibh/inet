@@ -819,7 +819,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
                // if ((count == 0) && (another_state->snd_cwnd > (4*another_state->snd_mss))
                   if ((another_state->snd_cwnd > (4*another_state->snd_mss))
-                        && (2 * another_state->snd_mss > (mptcp_snd_wnd - (mptcp_snd_nxt - mptcp_snd_una)))) {
+                        && (another_state->snd_mss > (mptcp_snd_wnd - (mptcp_snd_nxt - mptcp_snd_una)))) {
 
                   // The window is too small, if we not in a initial state do
                   // penalizing and opportunistic retransmission
@@ -831,7 +831,7 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                          _opportunisticRetransmission(tmp);
                       }
                   }
-                  break;
+                  //break;
                 }
                 count++;
             }
@@ -880,7 +880,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         // search for the smallest DSS
         uint64_t search_for = mptcp_highestRTX;
         s_itr = slist.begin();
-        //bool second_loop = false;
+        bool second_loop = false;
         while(s_itr != slist.end()){
           if(s_itr->first >=  search_for){
               if(s_itr->first  < mptcp_highestRTX){
@@ -888,12 +888,12 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
                   continue;
               }
               if(sub == s_itr->second){
-                //  if(second_loop)
+                  if(second_loop)
                       sub->highestRTX_path = s_itr->first;
                       return;
-                //  second_loop = true;
-                //  s_itr++;
-                //  continue;
+                  second_loop = true;
+                  s_itr++;
+                  continue;
               }
               mptcp_highestRTX = s_itr->first;
               break;
