@@ -784,14 +784,15 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 TCPTahoeRenoFamilyStateVariables* another_state =
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
-
+                //uint32 test = another_state->getSndNxt();
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
                 if ((another_state->snd_cwnd > (4*another_state->snd_mss))
-                    && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) + another_state->snd_mss)
+                    && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) )//+ another_state->snd_mss)
                     && (mptcp_snd_nxt != mptcp_snd_una) ) {
 
-                    // The window is too small, if we not in a initial state do
+                    // The window is too small,
+                    // if we not in an initial state do
                     // penalizing and opportunistic retransmission
 
                     // Penalize the flow with the smallest DSS
