@@ -682,36 +682,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
     //fullSegmentsOnly = true; // FIXME
     std::map<std::string, int> (ad_queue);
     weak_link = false;
-    //set parameter how many flows we want utilize
-
-//    for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
-//              i != subflow_list.end(); i++) {
-//        TCPConnection* conn = (*i)->subflow;
-//        TCPTahoeRenoFamilyStateVariables* another_state =
-//                               check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
-//                                       conn->getTcpAlgorithm()->getStateVariables());
-//        if (!conn->isSendQueueEmpty())  // do we have any data to send?
-//        {
-//            if ((simTime() - another_state->time_last_data_sent) > another_state->rexmit_timeout) {
-//                // RFC 5681, page 11: "For the purposes of this standard, we define RW = min(IW,cwnd)."
-//                if (another_state->increased_IW_enabled)
-//                    if (another_state->rfc6928_enabled) {
-//                        another_state->snd_cwnd = std::min(10 * another_state->snd_mss,
-//                                std::max(2 * another_state->snd_mss, (uint32) 14600));
-//                    } else {
-//                        another_state->snd_cwnd = std::min(
-//                                std::min(4 * another_state->snd_mss,
-//                                        std::max(2 * another_state->snd_mss,
-//                                                (uint32) 4380)), another_state->snd_cwnd);
-//                    }
-//                else
-//                    another_state->snd_cwnd = another_state->snd_mss;
-//
-//                tcpEV << "Restarting idle connection, CWND is set to "
-//                             << another_state->snd_cwnd << "\n";
-//            }
-//        }
-//    }
 
     for (TCP_SubFlowVector_t::iterator i = subflow_list.begin();
             i != subflow_list.end(); i++) {
@@ -862,80 +832,84 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
 
     // idea opportunistic retransmission
-    // send smallest DSS, to free buffer blocking
+    // Send smallest DSS of alternative to free buffer blocking
 
-    // update highest retransmitted
+    // update highest retransmitted...work in correct range
     if(sub->highestRTX_path < mptcp_snd_una){
         sub->highestRTX_path = mptcp_snd_una;
     }
     if(sub->highestRTX_path > mptcp_snd_nxt){
-        sub->highestRTX_path = mptcp_snd_una;
+       return;
     }
     mptcp_highestRTX = sub->highestRTX_path;
 
-    // save current state
+    // save current state,
+    // - to compare for max range
+    // - to set back
     uint64 old_mptcp_snd_nxt = mptcp_snd_nxt;
     Scheduler_list::iterator s_itr = slist.begin();
+    // count bytes sent by opportunistic rtx
+    uint32 sent_by_opp = 0;
+
+    // send until there are no more data, or window is closed
     for(;;){
         // search for the smallest DSS
         uint64_t search_for = mptcp_highestRTX;
         s_itr = slist.begin();
-        bool second_loop = false;
-        while(s_itr != slist.end()){
-          if(s_itr->first >=  search_for){
-              if(s_itr->first  < mptcp_highestRTX){
-                  s_itr++;
-                  continue;
-              }
+        // go through list
+        while((s_itr != slist.end())){
+          if((s_itr->first  < mptcp_highestRTX) && (s_itr->first >=  search_for)){
               if(sub == s_itr->second){
-                  if(second_loop)
-                      sub->highestRTX_path = s_itr->first;
-                      return;
-                  second_loop = true;
-                  s_itr++;
-                  continue;
+                // same path... natural border
+                //sub->highestRTX_path = s_itr->first;
+                //return;
               }
-              mptcp_highestRTX = s_itr->first;
-              break;
+              else{
+                  // found
+                  mptcp_highestRTX = s_itr->first;
+                  break;
+              }
           }
           s_itr++;
         }
-        sub->highestRTX_path = mptcp_highestRTX;
-        // break condition is end of list
-        if(s_itr == slist.end())
-         return;
 
-        if (mptcp_highestRTX >= mptcp_snd_nxt) {
-            // just to be sure, that we transmit nothing bigger than mptcp_snd_nxt
+        // break condition is end of list
+        if(s_itr == slist.end() || (mptcp_highestRTX >= old_mptcp_snd_nxt)){
+            sub->highestRTX_path = mptcp_snd_nxt;
             return;
         }
-        old_mptcp_highestRTX = mptcp_highestRTX;
 
-
-        // Prepare
+        // prepare
         TCPTahoeRenoFamilyStateVariables* another_state = check_and_cast<
                 TCPTahoeRenoFamilyStateVariables*>(
                 sub->getTcpAlgorithm()->getStateVariables());
         isMPTCP_RTX = true;
         mptcp_snd_nxt = mptcp_highestRTX;
 
-        // Send
-        sub->sendOneNewSegment(true, another_state->snd_cwnd);
+        // send
+        if(another_state->snd_cwnd > sent_by_opp + another_state->snd_mss){
+            sub->sendOneNewSegment(true, another_state->snd_cwnd);
+        }
+        // set back
+        isMPTCP_RTX = false;
+        sub->highestRTX_path = mptcp_highestRTX;
 
-        // Check if send successfull
+        // check if send successfull
         if (mptcp_snd_nxt != mptcp_highestRTX) {
-            //std::cerr << "Opportunistic Retransmit DSS " << mptcp_highestRTX
-            //        << "send with " << sub->getState()->getSndNxt() << " by "
-            //        << sub->remoteAddr << "<->" << sub->localAddr << std::endl;
+            // count sent data
+            sent_by_opp += (mptcp_snd_nxt - mptcp_highestRTX - 1);
+            // store new highestRTX
             mptcp_highestRTX = mptcp_snd_nxt;
+            // set back mptcp next
+            mptcp_snd_nxt = old_mptcp_snd_nxt;
             continue; // try next
+        }else{
+            mptcp_snd_nxt = old_mptcp_snd_nxt;
+            return;
         }
         break;
     }
-
-    // set back to old status
-    mptcp_snd_nxt = old_mptcp_snd_nxt;
-    isMPTCP_RTX = false;
+    return;
 }
 
 uint64 MPTCP_Flow::penalize(TCPConnection *sub, uint64 last) {
@@ -1556,13 +1530,6 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                     }
 
                 }
-                if (subflow->dss_dataMapofSubflow.begin()->first
-                        > snd_nxt_tmp) {
-                    std::cerr
-                            << "this is a retransmission of still delivered MPTCP data"
-                            << std::cerr;
-                    return t;
-                }
             }
 
 
@@ -1577,8 +1544,12 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
                 // FIXME check if only one message
                 break;
             } else {
-                if((subflow->getState()->snd_max > snd_nxt_tmp) && (it == subflow->dss_dataMapofSubflow.end()))
-                    ASSERT(false && "not in sync of full packets");
+                if((subflow->getState()->snd_max > snd_nxt_tmp) && (it == subflow->dss_dataMapofSubflow.end())){
+                    std::cerr
+                            << "this is a retransmission of still delivered MPTCP data "
+                            << subflow->dss_dataMapofSubflow.begin()->first << " > " << snd_nxt_tmp << std::endl;
+                    return t;
+                }
                 // create Block
                 uint32 queueAbleFlows = 0;
                 bool blocked_block = false;

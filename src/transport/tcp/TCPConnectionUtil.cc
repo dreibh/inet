@@ -1258,18 +1258,17 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend){
 }
 bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 {
-    // we'll start sending from snd_max, if not after RTO
-    if(!state->afterRto)
-        state->setSndNxt(state->snd_max);
+
     uint32 sent = 0;
 
 // DEBUG
     static uint64 runtime = 0;
     uint64 run = runtime++;
-//    if(run == 14880){
-//        std::cerr << "found";
-//    }
-// end debug
+
+    // we'll start sending from snd_max, if not after RTO
+    if(!state->afterRto)
+        state->setSndNxt(state->snd_max);
+
     uint32 old_highRxt = 0;
 #ifndef PRIVATE
     if (state->sack_enabled && (rexmitQueue->getQueueLength() > 0 ))

@@ -186,9 +186,7 @@ std::string TCPStateVariables::detailedInfo() const
     return out.str();
 }
 void TCPStateVariables::setSndNxt(uint32 new_snd_nxt){
-    if(new_snd_nxt == 73312939){
-        std::cerr << "found";
-    }
+
     if(seqGreater(new_snd_nxt, snd_max)){
         snd_max = new_snd_nxt;
     }
