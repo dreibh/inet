@@ -787,21 +787,21 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
-               // if ((count == 0) && (another_state->snd_cwnd > (4*another_state->snd_mss))
-                  if ((another_state->snd_cwnd > (4*another_state->snd_mss))
-                        && (another_state->snd_mss > (mptcp_snd_wnd - (mptcp_snd_nxt - mptcp_snd_una)))) {
+                if ((another_state->snd_cwnd > (4*another_state->snd_mss))
+                    && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) + another_state->snd_mss)
+                    && (mptcp_snd_nxt != mptcp_snd_una) ) {
 
-                  // The window is too small, if we not in a initial state do
-                  // penalizing and opportunistic retransmission
-                  if (mptcp_snd_nxt != mptcp_snd_una) {
-                      // Penalize the flow with the smallest DSS
-                      penalize(tmp, mptcp_snd_una);
-                      if (opportunisticRetransmission) {
-                          tmp->orderBytesForQueue(another_state->snd_mss);
-                         _opportunisticRetransmission(tmp);
-                      }
-                  }
-                  break;
+                    // The window is too small, if we not in a initial state do
+                    // penalizing and opportunistic retransmission
+
+                    // Penalize the flow with the smallest DSS
+                    penalize(tmp, mptcp_snd_una);
+                    if (opportunisticRetransmission) {
+                      tmp->orderBytesForQueue(another_state->snd_mss);
+                     _opportunisticRetransmission(tmp);
+
+                }
+                break;
                 }
                 count++;
             }
@@ -881,7 +881,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         mptcp_snd_nxt = mptcp_highestRTX;
 
         // send
-        if(another_state->snd_cwnd > sent_by_opp + another_state->snd_mss){
+        if(another_state->snd_wnd > (another_state->getSndNxt() - another_state->snd_una) + another_state->snd_mss){
             sub->sendOneNewSegment(true, another_state->snd_cwnd);
         }
         // set back
