@@ -800,9 +800,8 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                     if (opportunisticRetransmission) {
                       tmp->orderBytesForQueue(another_state->snd_mss);
                      _opportunisticRetransmission(tmp);
-
-                }
-                break;
+                    }
+                    break;
                 }
                 count++;
             }
