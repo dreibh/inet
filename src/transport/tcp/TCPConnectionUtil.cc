@@ -1280,44 +1280,35 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
     // maxWindow is minimum of snd_wnd and congestionWindow (snd_cwnd)
     uint32 maxWindow = state->snd_wnd;
-    long effectiveWin = 0;
+    uint32 effectiveWin = 0;
 
 #ifdef PRIVATE
-    // MPTCP
-    int32 onWire = 0;
+    // MPT
     if(this->getTcpMain()->multipath && (flow != NULL)){
-
-        flow->refreshSendMPTCPWindow();
-        maxWindow = std::max(flow->mptcp_snd_wnd, state->snd_wnd);
+        // if not isQueueAble we are not allowed to send anywhere
+        if(!this->isQueueAble)
+            return false;
+        // flow->refreshSendMPTCPWindow();
+        maxWindow = flow->mptcp_snd_wnd;
         if(flow->consn && flow->inConSNBlock){
             // we have to overwrite the window for consn
             maxWindow = flow->consn_snd_wnd;
         }
-        // if not isQueueAble we are not allowed to send anywhere
-        if(!this->isQueueAble)
-           return false;
 
-        // we have to check similar as for one flow, but above all
-        const TCP_SubFlowVector_t *subflow_list = flow->getSubflows();
-        for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
-                  i != subflow_list->end(); i++) {
-              TCPConnection *conn = (*i)->subflow;
-              sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
-        }
-        onWire = std::max(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una));
+        if(maxWindow > (flow->mptcp_snd_nxt - flow->mptcp_snd_una))
+            effectiveWin = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una);
     }
+    else{
 #endif
-
-    maxWindow = std::min(congestionWindow, maxWindow);
     if(maxWindow > (state->getSndNxt() - state->snd_una))
-        effectiveWin = maxWindow - (state->getSndNxt() - state->snd_una);
+       effectiveWin = maxWindow - (state->getSndNxt() - state->snd_una);
 
 #ifdef PRIVATE
-    if(this->getTcpMain()->multipath && (flow != NULL)){
-        while(effectiveWin && ((effectiveWin + onWire) > flow->mptcp_snd_wnd)){
-            effectiveWin--;
-        }
     }
+     if(congestionWindow >= (state->getSndNxt() - state->snd_una))
+       effectiveWin = std::min(effectiveWin,(uint32)(congestionWindow));// - (state->getSndNxt() - state->snd_una)));
+    else
+        effectiveWin = 0;
 #endif
     if (effectiveWin <= 0)
     {
@@ -1443,7 +1434,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
-
+    sendIndicationToApp(TCP_I_SEND_MSG, bytesToSend);
     return true;
 }
 

@@ -810,7 +810,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         // Penalize the flow with the smallest DSS
                         penalize(tmp, mptcp_snd_una);
                         if (opportunisticRetransmission) {
-                          tmp->orderBytesForQueue(another_state->snd_mss);
                          _opportunisticRetransmission(tmp);
                         }
 
