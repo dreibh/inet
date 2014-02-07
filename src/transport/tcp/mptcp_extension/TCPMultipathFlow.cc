@@ -799,19 +799,9 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                if(test == another_state->getSndNxt()){
 
                     // if we are blocked -> correct behavior
-
-                    uint32 sent= 0;
-                    const TCP_SubFlowVector_t *subflow_list = getSubflows();
-                    for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
-                              i != subflow_list->end(); i++) {
-                          TCPConnection *conn = (*i)->subflow;
-                          sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
-                    }
-
                     if ((another_state->snd_cwnd > (4*another_state->snd_mss))
-                     //   && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) + another_state->snd_mss)
-                            && (sent + (2*another_state->snd_mss) > mptcp_snd_wnd)
-                            && (mptcp_snd_nxt != mptcp_snd_una) ) {
+                        && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) + another_state->snd_mss)
+                        && (mptcp_snd_nxt != mptcp_snd_una) ) {
 
                         // The window is too small,
                         // if we not in an initial state do
