@@ -795,41 +795,40 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 uint32 test = another_state->getSndNxt();
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
-                // if we sent something break out
-                if(test != another_state->getSndNxt()){
-                    break;
-                }
+                // if we sent something -> break out
+               if(test == another_state->getSndNxt()){
 
-                // if we are blocked correct behavior
+                    // if we are blocked -> correct behavior
 
-                uint32 sent= 0;
-                const TCP_SubFlowVector_t *subflow_list = getSubflows();
-                for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
-                          i != subflow_list->end(); i++) {
-                      TCPConnection *conn = (*i)->subflow;
-                      sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
-                }
-
-                if ((another_state->snd_cwnd > (4*another_state->snd_mss))
-                 //   && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) + another_state->snd_mss)
-                        && (sent + (2*another_state->snd_mss) > mptcp_snd_wnd)
-                        && (mptcp_snd_nxt != mptcp_snd_una) ) {
-
-                    // The window is too small,
-                    // if we not in an initial state do
-                    // penalizing and opportunistic retransmission
-
-                    // Penalize the flow with the smallest DSS
-                    penalize(tmp, mptcp_snd_una);
-                    if (opportunisticRetransmission) {
-                      tmp->orderBytesForQueue(another_state->snd_mss);
-                     _opportunisticRetransmission(tmp);
+                    uint32 sent= 0;
+                    const TCP_SubFlowVector_t *subflow_list = getSubflows();
+                    for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
+                              i != subflow_list->end(); i++) {
+                          TCPConnection *conn = (*i)->subflow;
+                          sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
                     }
-                    break;
+
+                    if ((another_state->snd_cwnd > (4*another_state->snd_mss))
+                     //   && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) + another_state->snd_mss)
+                            && (sent + (2*another_state->snd_mss) > mptcp_snd_wnd)
+                            && (mptcp_snd_nxt != mptcp_snd_una) ) {
+
+                        // The window is too small,
+                        // if we not in an initial state do
+                        // penalizing and opportunistic retransmission
+
+                        // Penalize the flow with the smallest DSS
+                        penalize(tmp, mptcp_snd_una);
+                        if (opportunisticRetransmission) {
+                          tmp->orderBytesForQueue(another_state->snd_mss);
+                         _opportunisticRetransmission(tmp);
+                        }
+
+                        //anyway if the window is too small, break out
+                        break;
+                    }
                 }
-
                 // else transmit over next path
-
                 count++;
             }
         }
