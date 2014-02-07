@@ -776,6 +776,14 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
         int count = 0;
         refreshSendMPTCPWindow();
+        // Steps to do
+        // get first path of the list (e.g. best RTT path)
+        // try to send
+        //  - if ok     -> done
+        //  - if not ok
+        //      -> try optimizing
+        //      -> next path
+
         for (std::map<double, int>::iterator o = path_order.begin();
                 o != path_order.end(); o++) {
             TCPConnection* tmp = (*(subflow_list.begin() + o->second))->subflow;
@@ -784,12 +792,28 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 TCPTahoeRenoFamilyStateVariables* another_state =
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
-                //uint32 test = another_state->getSndNxt();
+                uint32 test = another_state->getSndNxt();
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
+                // if we sent something break out
+                if(test != another_state->getSndNxt()){
+                    break;
+                }
+
+                // if we are blocked correct behavior
+
+                uint32 sent= 0;
+                const TCP_SubFlowVector_t *subflow_list = getSubflows();
+                for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
+                          i != subflow_list->end(); i++) {
+                      TCPConnection *conn = (*i)->subflow;
+                      sent += conn->getState()->getSndNxt() - conn->getState()->snd_una;
+                }
+
                 if ((another_state->snd_cwnd > (4*another_state->snd_mss))
-                    && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) )//+ another_state->snd_mss)
-                    && (mptcp_snd_nxt != mptcp_snd_una) ) {
+                 //   && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) + another_state->snd_mss)
+                        && (sent + (2*another_state->snd_mss) > mptcp_snd_wnd)
+                        && (mptcp_snd_nxt != mptcp_snd_una) ) {
 
                     // The window is too small,
                     // if we not in an initial state do
@@ -803,6 +827,9 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                     }
                     break;
                 }
+
+                // else transmit over next path
+
                 count++;
             }
         }
@@ -864,6 +891,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
                   mptcp_highestRTX = s_itr->first;
                   break;
               }
+              else{
+                  return;
+              }
           }
           s_itr++;
         }
@@ -881,7 +911,8 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         mptcp_snd_nxt = mptcp_highestRTX;
 
         // send
-        if(another_state->snd_wnd > (another_state->getSndNxt() - another_state->snd_una) + another_state->snd_mss){
+        if(another_state->snd_wnd > (another_state->getSndNxt() - another_state->snd_una) + another_state->snd_mss
+                && (another_state->snd_cwnd > sent_by_opp + another_state->snd_mss)){
             sub->sendOneNewSegment(true, another_state->snd_cwnd);
         }
         // set back
