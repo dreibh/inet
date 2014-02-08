@@ -795,7 +795,8 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
 
                 uint32 test = another_state->getSndNxt();
-                tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
+               tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
+      //         std::cerr << "Sent "<< another_state->getSndNxt()-test << " ID " << tmp->connId << " IDX " << tmp->appGateIndex << " local "<< tmp->localAddr << " remote " << tmp->remoteAddr << std::endl;
 
                 // if we sent something -> break out
                if(test == another_state->getSndNxt()){
@@ -819,8 +820,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         break;
                     }
                 }
-                // else transmit over next path
-                count++;
             }
         }
         path_order.clear();

@@ -1260,7 +1260,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         // if not isQueueAble we are not allowed to send anywhere
         if(!this->isQueueAble)
             return false;
-        // flow->refreshSendMPTCPWindow();
+        flow->refreshSendMPTCPWindow();
         maxWindow = flow->mptcp_snd_wnd;
         if(flow->consn && flow->inConSNBlock){
             // we have to overwrite the window for consn
@@ -1268,9 +1268,9 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         }
 
         if(maxWindow > (flow->mptcp_snd_nxt - flow->mptcp_snd_una))
-            effectiveWin = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una);
+            maxWindow = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una);
         if(congestionWindow > (state->getSndNxt() - state->snd_una))
-            effectiveWin = std::min(congestionWindow- (state->getSndNxt() - state->snd_una),effectiveWin);
+            effectiveWin = std::min(congestionWindow- (state->getSndNxt() - state->snd_una),maxWindow);
         else
             effectiveWin = 0;
     }
@@ -1293,7 +1293,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     uint32 bytesToSend = effectiveWin;
     uint32 effectiveMaxBytesSend = state->snd_mss;// FIXME std::min(bytesToSend,state->snd_mss);
     // Organize data
-
+    orderBytesForQueue(0);
     ulong buffered = sendQueue->getBytesAvailable(state->getSndNxt());
 
     if(buffered == 0)
@@ -1330,7 +1330,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
         << ", in buffer " << buffered << " bytes)\n";
 
 
-    orderBytesForQueue(0);
     ASSERT(bytesToSend > 0);
 
 #ifdef TCP_SENDFRAGMENTS  /* normally undefined */
