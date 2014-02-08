@@ -815,9 +815,10 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         if (opportunisticRetransmission) {
                          _opportunisticRetransmission(tmp);
                         }
+                        break;
                     }
                 }
-               else break;
+
             }
         }
         path_order.clear();

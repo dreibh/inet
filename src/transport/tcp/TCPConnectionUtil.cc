@@ -1204,7 +1204,7 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend, bool request){
     if(buffered < bytesToSend)
         diff = bytesToSend - buffered;
 
-    if(this->getTcpMain()->multipath && (flow != NULL)){
+    if(diff && (!request) && this->getTcpMain()->multipath && (flow != NULL)){
         while(!tmp_msg_buf->empty()){
             if(enq <= diff){ // ONLY COMPLETE MESSAGES -> We don t fragment user Messages
                 cPacket* pkt = tmp_msg_buf->front();
@@ -1212,8 +1212,11 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend, bool request){
                 sendQueue->enqueueAppData(PK(pkt));
                 tmp_msg_buf->pop();
             }
-            else break;
+            else
+                break;
         }
+        if(enq < diff)
+            std::cerr << std::endl;
     }
     if(request){
         sendIndicationToApp(TCP_I_SEND_MSG, bytesToSend);
