@@ -1193,32 +1193,31 @@ bool TCPConnection::sendSegment(uint32 bytes)
     return true;
 }
 
-bool TCPConnection::orderBytesForQueue(uint32 bytesToSend){
+bool TCPConnection::orderBytesForQueue(uint32 bytesToSend, bool request){
 #ifdef PRIVATE
     // OK for Multipath
-    ulong buffered = sendQueue->getBytesAvailable(state->getSndNxt() + bytesToSend);
-    bool test = true;
-
+    uint32 buffered = sendQueue->getBytesAvailable(state->getSndNxt() + bytesToSend);
+    uint32 enq = 0;
+    uint32 diff = 0;
 
     // check if there are pre-buffered Data
-    uint32 diff = bytesToSend;
-    uint32 enq = 0;
+    if(buffered < bytesToSend)
+        diff = bytesToSend - buffered;
+
     if(this->getTcpMain()->multipath && (flow != NULL)){
         while(!tmp_msg_buf->empty()){
             if(enq <= diff){ // ONLY COMPLETE MESSAGES -> We don t fragment user Messages
                 cPacket* pkt = tmp_msg_buf->front();
                 enq += pkt->getByteLength();
                 sendQueue->enqueueAppData(PK(pkt));
-
                 tmp_msg_buf->pop();
             }
             else break;
         }
-
     }
-    if(diff){
-        sendIndicationToApp(TCP_I_SEND_MSG, diff);
-        getState()->requested += diff;
+    if(request){
+        sendIndicationToApp(TCP_I_SEND_MSG, bytesToSend);
+        getState()->requested += bytesToSend;
     }
 
     if(getTcpMain()->request_for_data){
@@ -1269,6 +1268,8 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 
         if(maxWindow > (flow->mptcp_snd_nxt - flow->mptcp_snd_una))
             maxWindow = maxWindow - (flow->mptcp_snd_nxt - flow->mptcp_snd_una);
+        else
+            maxWindow = 0;
         if(congestionWindow > (state->getSndNxt() - state->snd_una))
             effectiveWin = std::min(congestionWindow- (state->getSndNxt() - state->snd_una),maxWindow);
         else
@@ -1293,7 +1294,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     uint32 bytesToSend = effectiveWin;
     uint32 effectiveMaxBytesSend = state->snd_mss;// FIXME std::min(bytesToSend,state->snd_mss);
     // Organize data
-    orderBytesForQueue(0);
+    orderBytesForQueue(bytesToSend);
     ulong buffered = sendQueue->getBytesAvailable(state->getSndNxt());
 
     if(buffered == 0)
@@ -1409,7 +1410,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
-    this->orderBytesForQueue(state->getSndNxt()-old_snd_nxt);
+    this->orderBytesForQueue(state->getSndNxt()-old_snd_nxt, true);
     return true;
 }
 

@@ -644,7 +644,7 @@ public:
     virtual bool sendData(bool fullSegmentsOnly, uint32 congestionWindow);
 
 #ifdef PRIVATE
-    virtual bool orderBytesForQueue(uint32 bytesToSend);
+    virtual bool orderBytesForQueue(uint32 bytesToSend,bool request=false);
     virtual bool  sendKeepAlive();
 #endif
     /** Utility: sends 1 bytes as "probe", called by the "persist" mechanism */

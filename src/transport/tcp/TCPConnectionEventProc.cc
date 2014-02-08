@@ -437,7 +437,7 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
                  TCPConnection* conn = entry->subflow;
                  conn->getState()->sendQueueLimit = tcpCommand->getUserId();
                  conn->getTcpMain()->request_for_data = true;
-                 conn->orderBytesForQueue(conn->getState()->sendQueueLimit);
+                 conn->orderBytesForQueue(conn->getState()->sendQueueLimit, true);
            }
         flow->commonSendQueueLimit = tcpCommand->getUserId();
     }

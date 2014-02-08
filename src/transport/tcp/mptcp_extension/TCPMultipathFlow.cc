@@ -410,7 +410,7 @@ int MPTCP_Flow::addSubflow(int id, TCPConnection* subflow) {
             t->subflow->tmp_msg_buf = tmp_msg_buf;
         }
         subflow_list.push_back(t);
-        subflow->orderBytesForQueue(commonSendQueueLimit);
+        subflow->orderBytesForQueue(commonSendQueueLimit, true);
     }
 
     // ###################################
@@ -815,11 +815,9 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         if (opportunisticRetransmission) {
                          _opportunisticRetransmission(tmp);
                         }
-
-                        //anyway if the window is too small, break out
-                        break;
                     }
                 }
+               else break;
             }
         }
         path_order.clear();
@@ -900,8 +898,8 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         mptcp_snd_nxt = mptcp_highestRTX;
 
         // send
-        if(another_state->snd_wnd > (another_state->getSndNxt() - another_state->snd_una) + another_state->snd_mss
-                && (another_state->snd_cwnd > sent_by_opp + another_state->snd_mss)){
+        if(another_state->snd_wnd > (another_state->getSndNxt() - another_state->snd_una)
+                && (another_state->snd_cwnd > sent_by_opp + (another_state->getSndNxt() - another_state->snd_una))){
             sub->sendOneNewSegment(true, another_state->snd_cwnd);
         }
         // set back
