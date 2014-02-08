@@ -773,9 +773,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
 
             }
         }
-
-        int count = 0;
-        refreshSendMPTCPWindow();
         // Steps to do
         // get first path of the list (e.g. best RTT path)
         // try to send
@@ -787,38 +784,30 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
         for (std::map<double, int>::iterator o = path_order.begin();
                 o != path_order.end(); o++) {
             TCPConnection* tmp = (*(subflow_list.begin() + o->second))->subflow;
-
+            refreshSendMPTCPWindow();
             if (tmp->isQueueAble) {
                 TCPTahoeRenoFamilyStateVariables* another_state =
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
 
-
-                uint32 test = another_state->getSndNxt();
                tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
-      //         std::cerr << "Sent "<< another_state->getSndNxt()-test << " ID " << tmp->connId << " IDX " << tmp->appGateIndex << " local "<< tmp->localAddr << " remote " << tmp->remoteAddr << std::endl;
 
-                // if we sent something -> break out
-               if(test == another_state->getSndNxt()){
+                 // if we are blocked -> correct behavior
+                if ((another_state->snd_cwnd > (4*another_state->snd_mss))
+                    && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una))
+                    && (mptcp_snd_nxt != mptcp_snd_una) ) {
 
-                    // if we are blocked -> correct behavior
-                    if ((another_state->snd_cwnd > (4*another_state->snd_mss))
-                        && (mptcp_snd_wnd  < (mptcp_snd_nxt- mptcp_snd_una) + another_state->snd_mss)
-                        && (mptcp_snd_nxt != mptcp_snd_una) ) {
+                    // The window is too small,
+                    // if we not in an initial state do
+                    // penalizing and opportunistic retransmission
 
-                        // The window is too small,
-                        // if we not in an initial state do
-                        // penalizing and opportunistic retransmission
-
-                        // Penalize the flow with the smallest DSS
-                        penalize(tmp, mptcp_snd_una);
-                        if (opportunisticRetransmission) {
-                         _opportunisticRetransmission(tmp);
-                        }
-                        break;
+                    // Penalize the flow with the smallest DSS
+                    penalize(tmp, mptcp_snd_una);
+                    if (opportunisticRetransmission) {
+                     _opportunisticRetransmission(tmp);
                     }
+                    //break;
                 }
-
             }
         }
         path_order.clear();
