@@ -1960,8 +1960,10 @@ void MPTCP_Flow::refreshSendMPTCPWindow() {
         // Delete the entries marked as delivered
     }
 
-
-    mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
+    if(maxBuffer > mptcp_receiveQueue->getOccupiedMemory())
+        mptcp_rcv_wnd = maxBuffer - mptcp_receiveQueue->getOccupiedMemory();
+    else
+        mptcp_rcv_wnd = 0;
 }
 
 void MPTCP_Flow::sendToApp() {
