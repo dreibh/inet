@@ -770,7 +770,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                         } else
                             sRTT += 0.001;
                     }
-
             }
         }
         // Steps to do
@@ -780,7 +779,6 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
         //  - if not ok
         //      -> try optimizing
         //      -> next path
-
         for (std::map<double, int>::iterator o = path_order.begin();
                 o != path_order.end(); o++) {
             TCPConnection* tmp = (*(subflow_list.begin() + o->second))->subflow;

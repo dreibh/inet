@@ -1282,7 +1282,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
 #endif
     if(maxWindow > (state->getSndNxt() - state->snd_una))
        effectiveWin = maxWindow - (state->getSndNxt() - state->snd_una);
-
 #ifdef PRIVATE
     }
 
@@ -1332,7 +1331,6 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     // start sending 'bytesToSend' bytes
     tcpEV << "Will send " << bytesToSend << " bytes (effectiveWindow " << effectiveWin
         << ", in buffer " << buffered << " bytes)\n";
-
 
     ASSERT(bytesToSend > 0);
 
