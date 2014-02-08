@@ -2071,7 +2071,7 @@ void MPTCP_Flow::enqueueMPTCPData(uint64 dss_start_seq, uint32 data_len) {
         std::cerr << "RECEIVER occupied more than allowed: "
                 << mptcp_receiveQueue->getOccupiedMemory() << " - Allowed are: "
                 << maxBuffer << std::endl;
-        ASSERT(false && "What is wrong here");
+        // ASSERT(false && "What is wrong here");
     }
     //if (maxBuffer < mptcp_receiveQueue->getOccupiedMemory() + 1500)
     //    std::cerr << "RECEIVER waiting for " << mptcp_rcv_nxt << std::endl;
