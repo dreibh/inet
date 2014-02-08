@@ -190,15 +190,15 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 #ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg));  // queue up for later
 #else
-            if(state->sendQueueLimit) getTcpMain()->request_for_data = true;
             if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
                 sendQueue->enqueueAppData((PK(msg)));
-            if(state->sendQueueLimit){
+            if(getState()->requested){
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
                 getState()->enqueued += PK(msg)->getByteLength();
             }
+            if(getState()->requested) getTcpMain()->request_for_data = false;
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -209,15 +209,16 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 #ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg)); // queue up for later
 #else
-            if(state->sendQueueLimit) getTcpMain()->request_for_data = true;
+
             if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
                 sendQueue->enqueueAppData((PK(msg)));
-            if(state->sendQueueLimit){
+            if(getState()->requested){
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
                 getState()->enqueued += PK(msg)->getByteLength();
             }
+            if(getState()->requested) getTcpMain()->request_for_data = false;
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -227,15 +228,15 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
 #ifndef PRIVATE
             sendQueue->enqueueAppData(PK(msg));
 #else
-            if(state->sendQueueLimit) getTcpMain()->request_for_data = true;
-            if(getTcpMain()->multipath)
+           if(getTcpMain()->multipath)
                 tmp_msg_buf->push(PK(msg));
             else
                 sendQueue->enqueueAppData((PK(msg)));
-            if(state->sendQueueLimit){
+            if(getState()->requested){
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
                 getState()->enqueued += PK(msg)->getByteLength();
             }
+            if(getState()->requested) getTcpMain()->request_for_data = false;
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue, plus "
                  << (state->snd_max-state->snd_una) << " bytes unacknowledged\n";
@@ -435,9 +436,12 @@ void TCPConnection::process_QUEUE_BYTES_LIMIT(TCPEventCode& event, TCPCommand *t
                  TCP_subflow_t* entry = (*it);
                  TCPConnection* conn = entry->subflow;
                  conn->getState()->sendQueueLimit = tcpCommand->getUserId();
+                 conn->getTcpMain()->request_for_data = true;
+                 conn->orderBytesForQueue(conn->getState()->sendQueueLimit);
            }
         flow->commonSendQueueLimit = tcpCommand->getUserId();
     }
+
     delete msg;
     delete tcpCommand;
 }

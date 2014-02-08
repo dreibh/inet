@@ -792,6 +792,8 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                 TCPTahoeRenoFamilyStateVariables* another_state =
                         check_and_cast<TCPTahoeRenoFamilyStateVariables*>(
                                 tmp->getTcpAlgorithm()->getStateVariables());
+
+
                 uint32 test = another_state->getSndNxt();
                 tmp->sendData(fullSegmentsOnly, another_state->snd_cwnd);
 
@@ -1480,7 +1482,8 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
         //if(offset > 0) // we know this segment.... send only segment size
         //    bytes = offset - subflow->getState()->snd_una; // FIXME: In this case we overwrite for a retransmission the sending window
     }
-
+/////    if(bytes == 0)
+/////        return t;
     while (bytes + options_len > subflow->getState()->snd_mss)
         bytes--;
 

@@ -75,9 +75,6 @@ void MPTCP_RoundRobinScheduler::_next(uint32 bytes, TCPConnection* conn){
             TCP_subflow_t*  entry = (*it);
             tmp = entry->subflow;
 
-            if(tmp->getState()->sendQueueLimit == 0){
-                break;
-            }
             if(tmp == conn->flow->lastenqueued && firstrun){
                 firstrun = false;
                 cnt = 0;
