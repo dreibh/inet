@@ -2221,6 +2221,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
         orderBytesForQueue(state->snd_mss);
 
         // check how many bytes we have
+        this->orderBytesForQueue(state->snd_mss);
         ulong buffered = sendQueue->getBytesAvailable(state->snd_max);
 
         if (buffered >= state->snd_mss || (!fullSegmentsOnly && buffered > 0))
@@ -2229,6 +2230,9 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
             ulong outstandingData = 0;
             outstandingData = state->snd_max - state->snd_una;
 
+            if(tcpMain->multipath && (flow != NULL) && (flow->isMPTCP_RTX)){
+                outstandingData = 0;
+            }
             // check conditions from RFC 3042
             if (outstandingData + state->snd_mss <= state->snd_wnd &&
                 outstandingData + state->snd_mss <= congestionWindow + 2 * state->snd_mss)
@@ -2258,6 +2262,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
                     // notify
                     tcpAlgorithm->ackSent();
                     tcpAlgorithm->dataSent(old_snd_nxt);
+                    this->orderBytesForQueue(state->snd_mss, true);
                 }
             }
             else{
