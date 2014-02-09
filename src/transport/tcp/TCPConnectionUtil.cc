@@ -1189,7 +1189,7 @@ bool TCPConnection::sendSegment(uint32 bytes)
     
     // send it
     sendToIP(tcpseg);
-
+    //this->orderBytesForQueue(bytes, true);
     return true;
 }
 
@@ -1411,7 +1411,7 @@ bool TCPConnection::sendData(bool fullSegmentsOnly, uint32 congestionWindow)
     else // don't measure RTT for retransmitted packets
         tcpAlgorithm->dataSent(old_snd_nxt);
 
-    this->orderBytesForQueue(state->getSndNxt()-old_snd_nxt, true);
+    //this->orderBytesForQueue(state->getSndNxt()-old_snd_nxt, true);
     return true;
 }
 
@@ -2262,7 +2262,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
                     // notify
                     tcpAlgorithm->ackSent();
                     tcpAlgorithm->dataSent(old_snd_nxt);
-                    this->orderBytesForQueue(state->snd_mss, true);
+                    //this->orderBytesForQueue(state->snd_mss, true);
                 }
             }
             else{
