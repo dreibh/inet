@@ -868,7 +868,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
                   break;
               }
               else{
-                  return;
+                  //return;
               }
           }
           s_itr++;
@@ -887,7 +887,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         mptcp_snd_nxt = mptcp_highestRTX;
 
         // send
-        if((another_state->snd_cwnd > sent_by_opp + (another_state->getSndNxt() - another_state->snd_una))){
+        if((another_state->snd_cwnd > sent_by_opp + (another_state->snd_max - another_state->snd_una) + 1*another_state->snd_mss)){
             sub->orderBytesForQueue(another_state->snd_mss);
             sub->sendOneNewSegment(true, another_state->snd_cwnd);
         }
