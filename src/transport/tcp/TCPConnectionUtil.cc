@@ -1196,8 +1196,9 @@ bool TCPConnection::sendSegment(uint32 bytes)
 bool TCPConnection::orderBytesForQueue(uint32 bytesToSend, bool request){
 #ifdef PRIVATE
     // OK for Multipath
-    if(!this->getState()->sendQueueLimit)
+    if(this->getState()->sendQueueLimit == 0)
         return false;
+    if(bytesToSend == 0) return false;
     uint32 buffered = sendQueue->getBytesAvailable(state->snd_max + bytesToSend);
     uint32 enq = 0;
     uint32 diff = 0;

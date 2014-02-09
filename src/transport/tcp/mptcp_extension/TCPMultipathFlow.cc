@@ -856,8 +856,9 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     for(;;){
         // search for the smallest DSS
         if(sub->highestRTX_path > mptcp_snd_nxt){
+            return;
         }
-           return;
+
         s_itr = slist.begin();
         // go through list
         while((s_itr != slist.end())){
