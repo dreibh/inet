@@ -2215,7 +2215,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
 #ifndef PRIVATE
     if (!state->sack_enabled || (state->sack_enabled && state->sackedBytes_old != state->sackedBytes))
 #else
-    if (state->sack_enabled || isMPTCP_RTX)
+    if (state->sack_enabled)
 #endif
     {
         // check how many bytes we have
