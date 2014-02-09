@@ -198,7 +198,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
                 getState()->enqueued += PK(msg)->getByteLength();
             }
-            if(getState()->requested) getTcpMain()->request_for_data = false;
+            if(getState()->requested) getTcpMain()->request_for_data = true;
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -218,7 +218,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
                 getState()->enqueued += PK(msg)->getByteLength();
             }
-            if(getState()->requested) getTcpMain()->request_for_data = false;
+            if(getState()->requested) getTcpMain()->request_for_data = true;
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue\n";
             break;
@@ -236,7 +236,7 @@ void TCPConnection::process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cM
                 (getState()->requested > PK(msg)->getByteLength())?getState()->requested -= PK(msg)->getByteLength():getState()->requested=0;
                 getState()->enqueued += PK(msg)->getByteLength();
             }
-            if(getState()->requested) getTcpMain()->request_for_data = false;
+            if(getState()->requested) getTcpMain()->request_for_data = true;
 #endif
             tcpEV << sendQueue->getBytesAvailable(state->snd_una) << " bytes in queue, plus "
                  << (state->snd_max-state->snd_una) << " bytes unacknowledged\n";

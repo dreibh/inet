@@ -1196,15 +1196,18 @@ bool TCPConnection::sendSegment(uint32 bytes)
 bool TCPConnection::orderBytesForQueue(uint32 bytesToSend, bool request){
 #ifdef PRIVATE
     // OK for Multipath
-    uint32 buffered = sendQueue->getBytesAvailable(state->getSndNxt() + bytesToSend);
+    if(!this->getState()->sendQueueLimit)
+        return false;
+    uint32 buffered = sendQueue->getBytesAvailable(state->snd_max + bytesToSend);
     uint32 enq = 0;
     uint32 diff = 0;
 
     // check if there are pre-buffered Data
-    if(buffered < bytesToSend)
-        diff = bytesToSend - buffered;
+    if(buffered < this->getState()->sendQueueLimit)
+        diff = this->getState()->sendQueueLimit - buffered;
+    else return false;
 
-    if(diff && (!request) && this->getTcpMain()->multipath && (flow != NULL)){
+    if(diff && this->getTcpMain()->multipath && (flow != NULL)){
         while(!tmp_msg_buf->empty()){
             if(enq <= diff){ // ONLY COMPLETE MESSAGES -> We don t fragment user Messages
                 cPacket* pkt = tmp_msg_buf->front();
@@ -1215,23 +1218,16 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend, bool request){
             else
                 break;
         }
-        if(enq < diff)
-            std::cerr << std::endl;
     }
-    if(request){
-        sendIndicationToApp(TCP_I_SEND_MSG, bytesToSend);
-        getState()->requested += bytesToSend;
-    }
+    uint32 tocall = 0;
+    if(this->getState()->sendQueueLimit > (buffered + getState()->requested))
+        tocall =  this->getState()->sendQueueLimit - (buffered + getState()->requested);
+    else return false;
 
-    if(getTcpMain()->request_for_data){
+    sendIndicationToApp(TCP_I_SEND_MSG, tocall);
+    getState()->requested += tocall;
+    getTcpMain()->request_for_data = false;
 
-        uint32 tocall = this->getState()->rcv_wnd;
-        if(this->getState()->sendQueueLimit){
-            tocall = this->getState()->sendQueueLimit;
-        }
-        getState()->requested += tocall;
-        getTcpMain()->request_for_data = true;
-    }
 
     return true;
 #endif
@@ -1456,7 +1452,7 @@ void TCPConnection::retransmitOneSegment(bool called_at_rto)
 
     // retransmit one segment at snd_una, and set snd_nxt accordingly (if not called at RTO)
     state->setSndNxt(state->snd_una);
-
+    orderBytesForQueue(state->snd_mss);
 #ifndef PRIVATE
    // When FIN sent the snd_max - snd_nxt larger than bytes available in queue
     ulong bytes = std::min((ulong)std::min(state->snd_mss, state->snd_max - state->snd_nxt),
