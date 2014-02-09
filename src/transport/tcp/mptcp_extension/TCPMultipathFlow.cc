@@ -1507,6 +1507,7 @@ int MPTCP_Flow::_writeDSSHeaderandProcessSQN(uint t,
 
 
         // check for special cases
+        if(!subflow->dss_dataMapofSubflow.empty())
         if((subflow->getState()->snd_max) > snd_nxt_tmp && (it == subflow->dss_dataMapofSubflow.end())) {
                 if ((subflow->dss_dataMapofSubflow.begin()->first <= snd_nxt_tmp)
                         && (snd_nxt_tmp

@@ -2215,10 +2215,11 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
 #ifndef PRIVATE
     if (!state->sack_enabled || (state->sack_enabled && state->sackedBytes_old != state->sackedBytes))
 #else
-    if (state->sack_enabled)
+    if (state->sack_enabled || isMPTCP_RTX)
 #endif
     {
         // check how many bytes we have
+        this->orderBytesForQueue(state->snd_mss);
         ulong buffered = sendQueue->getBytesAvailable(state->snd_max);
 
         if (buffered >= state->snd_mss || (!fullSegmentsOnly && buffered > 0))
@@ -2227,26 +2228,16 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
             ulong outstandingData = 0;
             outstandingData = state->snd_max - state->snd_una;
 
+            if(tcpMain->multipath && (flow != NULL) && (flow->isMPTCP_RTX)){
+                outstandingData = 0;
+            }
             // check conditions from RFC 3042
             if (outstandingData + state->snd_mss <= state->snd_wnd &&
                 outstandingData + state->snd_mss <= congestionWindow + 2 * state->snd_mss)
             {
                 // RFC 3042, page 3: "(...)the sender can only send two segments beyond the congestion window (cwnd)."
                 uint32 effectiveWin = std::min(state->snd_wnd, congestionWindow) - outstandingData + 2 * state->snd_mss;
-#ifdef PRIVATE
-                if(tcpMain->multipath && (flow != NULL) && (!flow->isMPTCP_RTX)){
-                    uint32 sent = 0;
-                    const TCP_SubFlowVector_t *subflow_list = flow->getSubflows();
-                    for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
-                              i != subflow_list->end(); i++) {
-                          TCPConnection *conn = (*i)->subflow;
-                          sent += conn->getState()->snd_max - conn->getState()->snd_una;
-                    }
-                    sent += state->snd_mss;
-                    if(flow->mptcp_snd_wnd <  std::max(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una ) + state->snd_mss))
-                        return;
-                }
-#endif
+
                 // bytes: number of bytes we're allowed to send now
                 uint32 bytes = std::min(effectiveWin, state->snd_mss);
 
@@ -2269,6 +2260,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
                     // notify
                     tcpAlgorithm->ackSent();
                     tcpAlgorithm->dataSent(old_snd_nxt);
+                    this->orderBytesForQueue(state->snd_mss, true);
                 }
             }
             else{
