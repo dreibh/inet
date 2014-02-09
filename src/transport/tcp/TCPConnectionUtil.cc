@@ -2218,6 +2218,8 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
     if (state->sack_enabled)
 #endif
     {
+        orderBytesForQueue(state->snd_mss);
+
         // check how many bytes we have
         ulong buffered = sendQueue->getBytesAvailable(state->snd_max);
 
@@ -2233,20 +2235,7 @@ void TCPConnection::sendOneNewSegment(bool fullSegmentsOnly, uint32 congestionWi
             {
                 // RFC 3042, page 3: "(...)the sender can only send two segments beyond the congestion window (cwnd)."
                 uint32 effectiveWin = std::min(state->snd_wnd, congestionWindow) - outstandingData + 2 * state->snd_mss;
-#ifdef PRIVATE
-                if(tcpMain->multipath && (flow != NULL) && (!flow->isMPTCP_RTX)){
-                    uint32 sent = 0;
-                    const TCP_SubFlowVector_t *subflow_list = flow->getSubflows();
-                    for (TCP_SubFlowVector_t::const_iterator i = subflow_list->begin();
-                              i != subflow_list->end(); i++) {
-                          TCPConnection *conn = (*i)->subflow;
-                          sent += conn->getState()->snd_max - conn->getState()->snd_una;
-                    }
-                    sent += state->snd_mss;
-                    if(flow->mptcp_snd_wnd <  std::max(sent,(uint32) ((flow->mptcp_snd_nxt - 1) - flow->mptcp_snd_una ) + state->snd_mss))
-                        return;
-                }
-#endif
+
                 // bytes: number of bytes we're allowed to send now
                 uint32 bytes = std::min(effectiveWin, state->snd_mss);
 

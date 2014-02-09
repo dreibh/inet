@@ -800,10 +800,10 @@ bool MPTCP_Flow::sendData(bool fullSegmentsOnly) {
                     // penalizing and opportunistic retransmission
 
                     // Penalize the flow with the smallest DSS
-                    penalize(tmp, mptcp_snd_una);
+                    if (multipath_penalizing)
+                        penalize(tmp, mptcp_snd_una);
                     if (opportunisticRetransmission) {
-
-                     _opportunisticRetransmission(tmp);
+                        _opportunisticRetransmission(tmp);
                     }
                     //break;
                 }
@@ -888,9 +888,10 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
 
         // send
         if((another_state->snd_cwnd > sent_by_opp + (another_state->getSndNxt() - another_state->snd_una))){
-            sub->orderBytesForQueue(another_state->snd_mss);
+
             sub->sendOneNewSegment(true, another_state->snd_cwnd);
         }
+
         // set back
         isMPTCP_RTX = false;
 
@@ -898,7 +899,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         // check if send successfull
         if (mptcp_snd_nxt != mptcp_highestRTX) {
             // new successful highest rtx
-            sub->highestRTX_path = mptcp_highestRTX;
+
             // count sent data
             sent_by_opp += (mptcp_snd_nxt - mptcp_highestRTX - 1);
             sub->orderBytesForQueue((mptcp_snd_nxt - mptcp_highestRTX - 1),true);
@@ -906,6 +907,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
             mptcp_highestRTX = mptcp_snd_nxt;
             // set back mptcp next
             mptcp_snd_nxt = old_mptcp_snd_nxt;
+            sub->highestRTX_path = mptcp_highestRTX;
         }else{
             mptcp_snd_nxt = old_mptcp_snd_nxt;
             return;
