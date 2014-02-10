@@ -869,7 +869,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
                   break;
               }
               else{
-                  //return;
+                  return;
               }
           }
           s_itr++;

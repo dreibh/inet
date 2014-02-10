@@ -1209,6 +1209,7 @@ bool TCPConnection::orderBytesForQueue(uint32 bytesToSend, bool request){
     else return false;
 
     if(diff && this->getTcpMain()->multipath && (flow != NULL)){
+        if(tmp_msg_buf->empty()) return false;
         while(!tmp_msg_buf->empty()){
             if(enq <= diff){ // ONLY COMPLETE MESSAGES -> We don t fragment user Messages
                 cPacket* pkt = tmp_msg_buf->front();
