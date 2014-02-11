@@ -110,7 +110,7 @@ MPTCP_Flow::MPTCP_Flow(int connID, int aAppGateIndex, TCPConnection* subflow,
 //    totalCwndBasedBandwidth = 0;
     cmtCC_alpha = 0;
     tmp_msg_buf = subflow->tmp_msg_buf;
-    mptcp_highestRTX = 0;
+///    mptcp_highestRTX = 0;
     old_mptcp_highestRTX = 0;
     isMPTCP_RTX = false;
     buffer_blocked = false;
@@ -842,7 +842,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         sub->highestRTX_path = mptcp_snd_una;
     }
 
-    mptcp_highestRTX = sub->highestRTX_path;
+
 
     // save current state,
     // - to compare for max range
@@ -863,13 +863,14 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         // go through list
         while((s_itr != slist.end())){
           if((s_itr->first > sub->highestRTX_path)){
+              sub->highestRTX_path = s_itr->first;
               if(sub != s_itr->second){
                   // found
-                  sub->highestRTX_path = s_itr->first;
+
                   break;
               }
               else{
-                  sub->highestRTX_path = s_itr->first;
+
                   return;
               }
           }
@@ -877,7 +878,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
         }
 
         // break condition is end of list
-        if(s_itr == slist.end() || (mptcp_highestRTX >= old_mptcp_snd_nxt)){
+        if(s_itr == slist.end() || ( sub->highestRTX_path >= old_mptcp_snd_nxt)){
             return;
         }
 
@@ -886,7 +887,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
                 TCPTahoeRenoFamilyStateVariables*>(
                 sub->getTcpAlgorithm()->getStateVariables());
         isMPTCP_RTX = true;
-        mptcp_snd_nxt = mptcp_highestRTX;
+        mptcp_snd_nxt =  sub->highestRTX_path;
 
         // send
 
@@ -901,17 +902,17 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
 
 
         // check if send successfull
-        if (mptcp_snd_nxt != mptcp_highestRTX) {
+        if (mptcp_snd_nxt !=  sub->highestRTX_path) {
             // new successful highest rtx
 
             // count sent data
-            sent_by_opp += (mptcp_snd_nxt - mptcp_highestRTX - 1);
+            sent_by_opp += (mptcp_snd_nxt -  sub->highestRTX_path - 1);
            // sub->orderBytesForQueue((mptcp_snd_nxt - mptcp_highestRTX - 1),true);
             // store new highestRTX
-            mptcp_highestRTX = mptcp_snd_nxt;
+            sub->highestRTX_path = mptcp_snd_nxt;
             // set back mptcp next
             mptcp_snd_nxt = old_mptcp_snd_nxt;
-            sub->highestRTX_path = mptcp_highestRTX;
+
         }else{
             mptcp_snd_nxt = old_mptcp_snd_nxt;
             return;

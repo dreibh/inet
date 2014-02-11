@@ -144,7 +144,7 @@ class INET_API MPTCP_Flow
     uint64_t mptcp_rcv_wnd;                       // B.1.2
     uint64_t mptcp_rcv_adv;                       // B.1.2
 
-    uint64_t mptcp_highestRTX;
+    //uint64_t mptcp_highestRTX;
     uint64_t old_mptcp_highestRTX;
 
     Delivered_list dlist;
