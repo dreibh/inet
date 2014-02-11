@@ -856,6 +856,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
     for(;;){
         // search for the smallest DSS
         if(sub->highestRTX_path > mptcp_snd_nxt){
+            sub->highestRTX_path = mptcp_snd_nxt - 1;
             return;
         }
 
@@ -869,16 +870,17 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
 
                   break;
               }
-              else{
-
-                  return;
-              }
+             // else{
+             //     sub->highestRTX_path--;
+             //     return;
+             // }
           }
           s_itr++;
         }
 
         // break condition is end of list
         if(s_itr == slist.end() || ( sub->highestRTX_path >= old_mptcp_snd_nxt)){
+            sub->highestRTX_path = old_mptcp_snd_nxt - 1;
             return;
         }
 
@@ -914,6 +916,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
             mptcp_snd_nxt = old_mptcp_snd_nxt;
 
         }else{
+            sub->highestRTX_path = mptcp_snd_nxt - 1;
             mptcp_snd_nxt = old_mptcp_snd_nxt;
             return;
         }
