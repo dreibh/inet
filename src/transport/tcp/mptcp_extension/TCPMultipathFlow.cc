@@ -909,7 +909,7 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
             sent_by_opp += (mptcp_snd_nxt -  sub->highestRTX_path - 1);
            // sub->orderBytesForQueue((mptcp_snd_nxt - mptcp_highestRTX - 1),true);
             // store new highestRTX
-            sub->highestRTX_path = mptcp_snd_nxt;
+            sub->highestRTX_path = mptcp_snd_nxt - 1;
             // set back mptcp next
             mptcp_snd_nxt = old_mptcp_snd_nxt;
 
