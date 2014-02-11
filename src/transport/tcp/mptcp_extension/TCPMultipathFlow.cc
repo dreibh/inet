@@ -865,10 +865,11 @@ void MPTCP_Flow::_opportunisticRetransmission(TCPConnection* sub) {
           if((s_itr->first > sub->highestRTX_path)){
               if(sub != s_itr->second){
                   // found
-                  mptcp_highestRTX = s_itr->first;
+                  sub->highestRTX_path = s_itr->first;
                   break;
               }
               else{
+                  sub->highestRTX_path = s_itr->first;
                   return;
               }
           }
