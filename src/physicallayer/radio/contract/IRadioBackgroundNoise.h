@@ -15,31 +15,24 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IRADIOFRAME_H_
-#define __INET_IRADIOFRAME_H_
+#ifndef __INET_IRADIOBACKGROUNDNOISE_H_
+#define __INET_IRADIOBACKGROUNDNOISE_H_
 
-#include "IPhysicalLayerFrame.h"
-#include "IRadioSignal.h"
-#include "IRadioSignalTransmission.h"
+#include "IRadioSignalReception.h"
+#include "IRadioSignalListening.h"
+#include "IRadioSignalNoise.h"
 
-/**
- * This purely virtual interface provides an abstraction for different radio frames.
- */
-class INET_API OldIRadioFrame : public IPhysicalLayerFrame
+// TODO: rename to isotropicbackgroundnoise
+// TODO: what about noise sources the have direction and transmission origin (e.g. microwave oven)?
+// TODO: add IRadioSignalSource, etc.?
+class INET_API IRadioBackgroundNoise
 {
     public:
-        virtual ~OldIRadioFrame() { }
+        virtual ~IRadioBackgroundNoise() {}
 
-        virtual IRadioSignal *getRadioSignal() = 0;
-};
-
-// TODO: merge with OldIRadioFrame
-class INET_API IRadioFrame
-{
-    public:
-        virtual ~IRadioFrame() {}
-
-        virtual const IRadioSignalTransmission *getTransmission() const = 0;
+        // TODO: merge the two?
+        virtual const IRadioSignalNoise *computeNoise(const IRadioSignalListening *listening) const = 0;
+        virtual const IRadioSignalNoise *computeNoise(const IRadioSignalReception *reception) const = 0;
 };
 
 #endif

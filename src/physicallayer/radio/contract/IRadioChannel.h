@@ -37,4 +37,25 @@ class INET_API OldIRadioChannel
         virtual int getNumChannels() = 0;
 };
 
+// TODO: merge with OldIRadioChannel
+class INET_API IRadioChannel
+{
+    public:
+        virtual ~IRadioChannel() {}
+
+        virtual void addRadio(const IRadio *radio) = 0;
+        virtual void removeRadio(const IRadio *radio) = 0;
+
+        virtual double getPropagationSpeed() const = 0;
+        virtual simtime_t computeTransmissionStartArrivalTime(const IRadioSignalTransmission *transmission, IMobility *mobility) const = 0;
+        virtual simtime_t computeTransmissionEndArrivalTime(const IRadioSignalTransmission *transmission, IMobility *mobility) const = 0;
+
+        virtual void transmitToChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) = 0;
+        virtual void sendToChannel(IRadio *radio, const IRadioFrame *frame) = 0;
+
+        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const = 0;
+        virtual const IRadioSignalListeningDecision *listenOnChannel(const IRadio *radio, const IRadioSignalListening *listening) const = 0;
+        virtual bool isPotentialReceiver(const IRadio *radio, const IRadioSignalTransmission *transmission) const = 0;
+};
+
 #endif

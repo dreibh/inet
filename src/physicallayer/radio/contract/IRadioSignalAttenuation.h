@@ -15,31 +15,21 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IRADIOFRAME_H_
-#define __INET_IRADIOFRAME_H_
+#ifndef __INET_IRADIOSIGNALATTENUATION_H_
+#define __INET_IRADIOSIGNALATTENUATION_H_
 
-#include "IPhysicalLayerFrame.h"
-#include "IRadioSignal.h"
+#include "IRadio.h"
 #include "IRadioSignalTransmission.h"
+#include "IRadioSignalReception.h"
+#include "IRadioSignalLoss.h"
 
-/**
- * This purely virtual interface provides an abstraction for different radio frames.
- */
-class INET_API OldIRadioFrame : public IPhysicalLayerFrame
+class INET_API IRadioSignalAttenuation
 {
     public:
-        virtual ~OldIRadioFrame() { }
+        virtual ~IRadioSignalAttenuation() {}
 
-        virtual IRadioSignal *getRadioSignal() = 0;
-};
-
-// TODO: merge with OldIRadioFrame
-class INET_API IRadioFrame
-{
-    public:
-        virtual ~IRadioFrame() {}
-
-        virtual const IRadioSignalTransmission *getTransmission() const = 0;
+        virtual const IRadioSignalLoss *computeLoss(const IRadio *radio, const IRadioSignalTransmission *transmission, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition) const = 0;
+        virtual const IRadioSignalReception *computeReception(const IRadio *radio, const IRadioSignalTransmission *transmission) const = 0;
 };
 
 #endif

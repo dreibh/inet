@@ -257,4 +257,25 @@ class INET_API OldIRadio : public IRadioSignalSource, public IPhysicalLayer
         static const char *getRadioTransmissionStateName(TransmissionState transmissionState);
 };
 
+class IRadioChannel;
+
+// TODO: merge with OldIRadio
+class INET_API IRadio : public IRadioSignalSource
+{
+    public:
+        virtual ~IRadio() {}
+
+        virtual unsigned int getId() const = 0;
+
+        virtual const IRadioSignalModulator *getModulator() const = 0;
+        virtual const IRadioAntenna *getReceiverAntenna() const = 0;
+        virtual const IRadioAntenna *getTransmitterAntenna() const = 0;
+        virtual const IRadioDecider *getDecider() const = 0;
+        // TODO: rename to getRadioChannel
+        virtual const IRadioChannel *getXRadioChannel() const = 0;
+
+        virtual IRadioFrame *transmitPacket(cPacket *packet, simtime_t startTime) = 0;
+        virtual cPacket *receivePacket(IRadioFrame *frame) = 0;
+};
+
 #endif
