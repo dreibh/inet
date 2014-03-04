@@ -19,6 +19,10 @@ package inet.physicallayer.radio.ideal;
 
 import inet.physicallayer.radio.common.RadioBase;
 
+module Dummy
+{
+}
+
 //
 // Implements a unit disk radio for use in ~IdealWirelessNic.
 //
@@ -34,4 +38,8 @@ simple IdealRadio extends RadioBase
         double interferenceRange @unit("m") = default(1m/0); // max. distance from sender where interference is possible
         bool drawCoverage = default(true);                   // draw the coverage area in Tkenv
         @class(IdealRadio);
+    submodules:
+        modulator: Dummy;
+        antenna: Dummy;
+        decider: Dummy;
 }

@@ -19,6 +19,10 @@ package inet.physicallayer.radio.ideal;
 
 import inet.physicallayer.radio.common.RadioChannelBase;
 
+module dummy
+{
+}
+
 //
 // Radio channel module for ~IdealRadio.
 //
@@ -31,4 +35,6 @@ simple IdealRadioChannel extends RadioChannelBase
 {
     parameters:
         @class(IdealRadioChannel);
+    submodules:
+        attenuation: dummy;
 }
