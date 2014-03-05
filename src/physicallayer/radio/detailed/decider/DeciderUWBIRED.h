@@ -19,7 +19,6 @@
 #include "UWBIRPacket.h"
 
 class UWBIRRadio;
-class SimplifiedRadioFrame;
 
 /**
  * @brief  This class implements a model of an energy detection receiver

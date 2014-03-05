@@ -21,7 +21,6 @@ package inet.examples.wireless.scaling;
 import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 import inet.nodes.inet.WirelessHost;
 import inet.physicallayer.radio.contract.IRadioChannel;
-import inet.physicallayer.radio.new.TestRadio;
 
 network TestRadioScaling
 {
@@ -29,7 +28,6 @@ network TestRadioScaling
         int numHosts;
         string radioChannelType;
     submodules:
-        //testRadio: TestRadio;
         radioChannel: <radioChannelType> like IRadioChannel {
             parameters:
                 @display("p=50,50");

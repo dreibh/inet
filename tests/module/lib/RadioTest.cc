@@ -16,7 +16,7 @@
 //
 
 #include <iostream>
-#include "TestRadio.h"
+#include "RadioTest.h"
 #include "StationaryMobility.h"
 #include "Radio.h"
 #include "RadioChannel.h"
