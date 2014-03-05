@@ -1,7 +1,11 @@
 %description:
 
-This is a test for ideal radio receiving reception state.
-The received signal is strong enough to receive.
+This is a test for ideal radio interference handling.
+The first signal is stronger than the reception threshold.
+The second signal is stronger than the reception threshold.
+The first signal is much stronger than the second signal.
+The second signal is strong enough to cause bit errors.
+No signals are expected to be received.
 
 %file: test.ned
 
@@ -14,8 +18,9 @@ network Test
     submodules:
         radioChannel: IdealRadioChannel;
         configurator: IPv4NetworkConfigurator;
-        host1: WirelessHost;
-        host2: WirelessHost;
+        hostSender1: WirelessHost;
+        hostSender2: WirelessHost;
+        hostReceiver: WirelessHost;
 }
 
 %inifile: omnetpp.ini
@@ -38,8 +43,9 @@ ned-path = .;../../../../src
 **.mobility.initialY = 500m
 **.mobility.initialZ = 0m
 *.host*.mobilityType = "StationaryMobility"
-*.host1.mobility.initialX = 100m
-*.host2.mobility.initialX = 200m
+*.hostSender1.mobility.initialX = 200m
+*.hostSender2.mobility.initialX = 800m
+*.hostReceiver.mobility.initialX = 400m
 
 # nic
 *.host*.wlan[*].typename = "IdealWirelessNic"
@@ -48,19 +54,27 @@ ned-path = .;../../../../src
 *.host*.wlan[*].mac.fullDuplex = false
 *.host*.wlan[*].radioType = "IdealRadio"
 *.host*.wlan[*].radio.modulator.bitrate = 2Mbps
-*.host*.wlan[*].radio.modulator.maximumCommunicationRange = 200m
-*.host*.wlan[*].radio.modulator.maximumInterferenceRange = 500m
-*.host*.wlan[*].radio.decider.ignoreInterference = true
+*.host*.wlan[*].radio.decider.ignoreInterference = false
+*.hostSender1.wlan[*].radio.modulator.maximumCommunicationRange = 300m
+*.hostSender1.wlan[*].radio.modulator.maximumInterferenceRange = 600m
+*.hostSender2.wlan[*].radio.modulator.maximumCommunicationRange = 1km
+*.hostSender2.wlan[*].radio.modulator.maximumInterferenceRange = 2km
+*.hostReceiver.wlan[*].radio.modulator.maximumCommunicationRange = 0m
+*.hostReceiver.wlan[*].radio.modulator.maximumInterferenceRange = 0m
 
 # ping app
-*.host1.numPingApps = 1
-*.host1.pingApp[0].count = 1
-*.host1.pingApp[0].printPing = true
-*.host1.pingApp[0].destAddr = "host2"
-*.host1.pingApp[0].startTime = 0s
+*.hostSender*.numPingApps = 1
+*.hostSender*.pingApp[0].count = 1
+*.hostSender*.pingApp[0].printPing = true
+*.hostSender*.pingApp[0].destAddr = "hostReceiver"
+*.hostSender*.pingApp[0].startTime = 0s
 
 %contains: results/General-0.elog
  - Changing radio reception state from IDLE to RECEIVING.
+%contains: results/General-0.elog
+ - Received (IdealMacFrame)ping0 contains bit errors or collision, dropping it
+%not-contains: results/General-0.elog
+ - Passing up contained packet `ping0' to higher layer
 %#--------------------------------------------------------------------------------------------------------------
 %not-contains: stdout
 undisposed object:

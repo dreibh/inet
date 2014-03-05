@@ -20,7 +20,7 @@ package inet.examples.adhoc.idealwireless;
 
 import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 import inet.nodes.inet.AdhocHost;
-import inet.physicallayer.radio.new.NewRadioChannel;
+import inet.physicallayer.radio.new.IdealRadioChannel;
 
 
 network Net
@@ -33,7 +33,7 @@ network Net
             parameters:
                 @display("r=,,#707070;p=250,58");
         }
-        radioChannel: NewRadioChannel {
+        radioChannel: IdealRadioChannel {
             parameters:
                 @display("p=60,50");
         }
