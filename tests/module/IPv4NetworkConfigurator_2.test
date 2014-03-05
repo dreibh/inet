@@ -11,7 +11,7 @@ import inet.nodes.inet.Router;
 import inet.nodes.inet.StandardHost;
 import inet.nodes.inet.WirelessHost;
 import inet.nodes.wireless.AccessPoint;
-import inet.physicallayer.radio.simplified.SimplifiedRadioChannel;
+import inet.physicallayer.radio.new.ScalarRadioChannel;
 
 network Test
 {
@@ -22,7 +22,7 @@ network Test
             parameters:
                 dumpAddresses = true;
         }
-        radioChannel: SimplifiedRadioChannel;
+        radioChannel: ScalarRadioChannel;
         server: StandardHost;
         router: Router;
         accessPoint: AccessPoint;

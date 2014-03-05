@@ -1,29 +1,33 @@
 %description:
 
-This is a test for NewRadio busy reception state.
-The received signal is strong enough to sense but too weak to receive.
-Transmission and reception parameters must match with DetailedRadio.
+This is a test for scalar radio interference handling.
+The first signal is stronger than the reception threshold.
+The second signal is stronger than the reception threshold.
+The first signal is much stronger than the second signal.
+The second signal is strong enough to cause bit errors.
+No signals are expected to be received.
 
 %file: test.ned
 
 import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 import inet.nodes.inet.WirelessHost;
-import inet.physicallayer.radio.new.NewRadioChannel;
+import inet.physicallayer.radio.new.ScalarRadioChannel;
 
 network Test
 {
     submodules:
-        radioChannel: NewRadioChannel;
+        radioChannel: ScalarRadioChannel;
         configurator: IPv4NetworkConfigurator;
-        host1: WirelessHost;
-        host2: WirelessHost;
+        hostSender1: WirelessHost;
+        hostSender2: WirelessHost;
+        hostReceiver: WirelessHost;
 }
 
 %inifile: omnetpp.ini
 
 [General]
 network = Test
-sim-time-limit = 80us
+sim-time-limit = 400us
 record-eventlog = true
 ned-path = .;../../../../src
 
@@ -39,13 +43,12 @@ ned-path = .;../../../../src
 **.mobility.initialY = 500m
 **.mobility.initialZ = 0m
 *.host*.mobilityType = "StationaryMobility"
-*.host1.mobility.initialX = 200m
-*.host2.mobility.initialX = 800m
+*.hostSender1.mobility.initialX = 200m
+*.hostSender2.mobility.initialX = 800m
+*.hostReceiver.mobility.initialX = 400m
 
 # radio channel
-*.radioChannel.backgroundNoise.typename = "ScalarRadioBackgroundNoise"
 *.radioChannel.backgroundNoise.power = 1E-14W
-*.radioChannel.attenuation.typename = "ScalarRadioSignalFreeSpaceAttenuation"
 *.radioChannel.attenuation.alpha = 2
 
 # nic
@@ -53,27 +56,30 @@ ned-path = .;../../../../src
 *.host*.wlan[*].bitrate = 2Mbps
 *.host*.wlan[*].mac.headerLength = 10B
 *.host*.wlan[*].mac.fullDuplex = false
-*.host*.wlan[*].radioType = "NewRadio"
-*.host*.wlan[*].radio.modulator.typename = "ScalarRadioSignalModulator"
+*.host*.wlan[*].radioType = "ScalarRadio"
 *.host*.wlan[*].radio.modulator.bitrate = 2Mbps
 *.host*.wlan[*].radio.modulator.headerBitLength = 100b
-*.host*.wlan[*].radio.modulator.power = 10mW
 *.host*.wlan[*].radio.modulator.carrierFrequency = 2.4GHz
 *.host*.wlan[*].radio.modulator.bandwidth = 2MHz
-*.host*.wlan[*].radio.antenna.typename = "IsotropicRadioAntenna"
-*.host*.wlan[*].radio.decider.typename = "ScalarSNRRadioDecider"
 *.host*.wlan[*].radio.decider.sensitivity = 1E-11W
 *.host*.wlan[*].radio.decider.snrThreshold = 10
+*.hostSender1.wlan[*].radio.modulator.power = 100mW
+*.hostSender2.wlan[*].radio.modulator.power = 100mW
+*.hostReceiver.wlan[*].radio.modulator.power = 0W
 
 # ping app
-*.host1.numPingApps = 1
-*.host1.pingApp[0].count = 1
-*.host1.pingApp[0].printPing = true
-*.host1.pingApp[0].destAddr = "host2"
-*.host1.pingApp[0].startTime = 0s
+*.hostSender*.numPingApps = 1
+*.hostSender*.pingApp[0].count = 1
+*.hostSender*.pingApp[0].printPing = true
+*.hostSender*.pingApp[0].destAddr = "hostReceiver"
+*.hostSender*.pingApp[0].startTime = 0s
 
 %contains: results/General-0.elog
- - Changing radio reception state from IDLE to BUSY.
+ - Changing radio reception state from IDLE to RECEIVING.
+%contains: results/General-0.elog
+ - Received (IdealMacFrame)ping0 contains bit errors or collision, dropping it
+%not-contains: results/General-0.elog
+ - Passing up contained packet `ping0' to higher layer
 %#--------------------------------------------------------------------------------------------------------------
 %not-contains: stdout
 undisposed object:

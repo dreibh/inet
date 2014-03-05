@@ -1,22 +1,21 @@
 %description:
 
-This is a test for NewRadio interference handling.
+This is a test for scalar radio interference handling.
 The first signal is stronger than the reception threshold.
-The second signal is stronger than the reception threshold.
-The second signal is much stronger than the first signal.
-The radio cannot switch to receiving the second signal.
-No signals are expected to be received.
+The second signal is weaker than the reception threshold.
+The second signal is too weak to cause bit errors.
+The first signal is expected to be received correctly.
 
 %file: test.ned
 
 import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 import inet.nodes.inet.WirelessHost;
-import inet.physicallayer.radio.new.NewRadioChannel;
+import inet.physicallayer.radio.new.ScalarRadioChannel;
 
 network Test
 {
     submodules:
-        radioChannel: NewRadioChannel;
+        radioChannel: ScalarRadioChannel;
         configurator: IPv4NetworkConfigurator;
         hostSender1: WirelessHost;
         hostSender2: WirelessHost;
@@ -48,9 +47,7 @@ ned-path = .;../../../../src
 *.hostReceiver.mobility.initialX = 400m
 
 # radio channel
-*.radioChannel.backgroundNoise.typename = "ScalarRadioBackgroundNoise"
 *.radioChannel.backgroundNoise.power = 1E-14W
-*.radioChannel.attenuation.typename = "ScalarRadioSignalFreeSpaceAttenuation"
 *.radioChannel.attenuation.alpha = 2
 
 # nic
@@ -58,18 +55,15 @@ ned-path = .;../../../../src
 *.host*.wlan[*].bitrate = 2Mbps
 *.host*.wlan[*].mac.headerLength = 10B
 *.host*.wlan[*].mac.fullDuplex = false
-*.host*.wlan[*].radioType = "NewRadio"
-*.host*.wlan[*].radio.modulator.typename = "ScalarRadioSignalModulator"
+*.host*.wlan[*].radioType = "ScalarRadio"
 *.host*.wlan[*].radio.modulator.bitrate = 2Mbps
 *.host*.wlan[*].radio.modulator.headerBitLength = 100b
 *.host*.wlan[*].radio.modulator.carrierFrequency = 2.4GHz
 *.host*.wlan[*].radio.modulator.bandwidth = 2MHz
-*.host*.wlan[*].radio.antenna.typename = "IsotropicRadioAntenna"
-*.host*.wlan[*].radio.decider.typename = "ScalarSNRRadioDecider"
 *.host*.wlan[*].radio.decider.sensitivity = 1E-11W
 *.host*.wlan[*].radio.decider.snrThreshold = 10
-*.hostSender1.wlan[*].radio.modulator.power = 10mW
-*.hostSender2.wlan[*].radio.modulator.power = 1000mW
+*.hostSender1.wlan[*].radio.modulator.power = 100mW
+*.hostSender2.wlan[*].radio.modulator.power = 10mW
 *.hostReceiver.wlan[*].radio.modulator.power = 0W
 
 # ping app
@@ -82,9 +76,11 @@ ned-path = .;../../../../src
 %contains: results/General-0.elog
  - Changing radio reception state from IDLE to RECEIVING.
 %contains: results/General-0.elog
- - Received (IdealMacFrame)ping0 contains bit errors or collision, dropping it
-%not-contains: results/General-0.elog
+ - Changing radio reception state from RECEIVING to BUSY.
+%contains: results/General-0.elog
  - Passing up contained packet `ping0' to higher layer
+%contains: results/General-0.elog
+ - Sending datagram `ping0-reply' with dest=10.0.0.1
 %#--------------------------------------------------------------------------------------------------------------
 %not-contains: stdout
 undisposed object:

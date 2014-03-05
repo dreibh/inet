@@ -20,13 +20,13 @@
 
 package inet.tests.traci;
 
-import inet.physicallayer.radio.simplified.SimplifiedRadioChannel;
+import inet.physicallayer.radio.new.ScalarRadioChannel;
 import inet.world.traci.TraCIScenarioManagerLaunchd;
 
 module Highway
 {
     submodules:
-        radioChannel: SimplifiedRadioChannel {
+        radioChannel: ScalarRadioChannel {
             parameters:
                 @display("p=256,128");
         }

@@ -6,12 +6,12 @@ Carrier sense test for Ieee80211 out of range concurrent and delayed mutual tran
 
 import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 import inet.nodes.inet.AdhocHost;
-import inet.physicallayer.radio.simplified.SimplifiedRadioChannel;
+import inet.physicallayer.radio.scalar.ScalarRadioChannel;
 
 network Test
 {
     submodules:
-        radioChannel: SimplifiedRadioChannel;
+        radioChannel: ScalarRadioChannel;
         configurator: IPv4NetworkConfigurator;
         host1: AdhocHost;
         host2: AdhocHost;
@@ -38,6 +38,10 @@ cmdenv-express-mode = false
 **.mobility.constraintAreaMaxY = 1000m
 **.mobility.constraintAreaMaxZ = 0m
 
+# radio channel
+*.radioChannel.backgroundNoise.power = 1E-14W
+*.radioChannel.attenuation.alpha = 2
+
 # ping app
 *.host*.numPingApps = 1
 *.host*.pingApp[0].count = 1
@@ -56,10 +60,9 @@ cmdenv-express-mode = false
 
 %#--------------------------------------------------------------------------------------------------------------
 %contains: results/General-0.elog
-- reception of noise message over, removing recvdPower from noiseLevel....
+reception decision, impossible and unsuccessful
 %#--------------------------------------------------------------------------------------------------------------
 %contains-regex: stdout
-frame ping0 with rcvdPower .*? is just noise
 Changing radio reception state from IDLE to BUSY\.
 %#--------------------------------------------------------------------------------------------------------------
 %not-contains: stdout
