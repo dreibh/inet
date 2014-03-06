@@ -48,4 +48,7 @@ simple SimplifiedRadioChannel extends RadioChannelBase
         @class(SimplifiedRadioChannel);
         @display("i=misc/sun");
         @labels(node);
+    submodules:
+        backgroundNoise: dummy;
+        attenuation: dummy;
 }

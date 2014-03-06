@@ -1,9 +1,9 @@
 # workingdir,                        args,                                          simtimelimit,    fingerprint
-/examples/adhoc/hostautoconf/,       -f omnetpp.ini -c General -r 0,                100s,            35b1-a71c
+/examples/adhoc/hostautoconf/,       -f omnetpp.ini -c General -r 0,                100s,            e3ca-710b
 /examples/adhoc/idealwireless/,      -f omnetpp.ini -c Ping1 -r 0,                  100s,            be06-6947
 #/examples/adhoc/idealwireless/,      -f omnetpp.ini -c Ping2 -r 0,                   100s,          0000-0000    # interactive config, needed a *.numHosts parameter
-/examples/adhoc/ieee80211/,          -f fingerprints.ini -c Ping1 -r 0,             1000s,           788c-4199
-/examples/adhoc/ieee80211/,          -f omnetpp.ini -c Ping1 -r 0,                  100s,            0369-8531
+/examples/adhoc/ieee80211/,          -f fingerprints.ini -c Ping1 -r 0,             1000s,           5c46-e49a
+/examples/adhoc/ieee80211/,          -f omnetpp.ini -c Ping1 -r 0,                  100s,            19b0-3b95
 # /examples/adhoc/ieee80211/,          -f omnetpp.ini -c Ping2 -r 0,                  100s,         0000-0000   # [Config Ping2]    # interactive config, needed a *.numHosts parameter
 
 /examples/bgpv4/BGP2RoutersInAS/,    -f omnetpp.ini -c config1 -r 0,                1000s,           ce6f-cb15
@@ -15,7 +15,7 @@
 /examples/bgpv4/BGPandOSPFSimple/,   -f omnetpp.ini -c config1 -r 0,                1000s,           c5df-dddc
 
 /examples/dhcp/,                     -f omnetpp.ini -c WiredDHCP -r 0,              5000s,           96c0-ffc2
-/examples/dhcp/,                     -f omnetpp.ini -c WirelessDHCP -r 0,           500s,            f168-5b32
+/examples/dhcp/,                     -f omnetpp.ini -c WirelessDHCP -r 0,           500s,            6d7b-2143
 /examples/dhcp/,                     -f omnetpp.ini -c RebootingDHCP -r 0,          500s,            2b2f-f6a6
 
 /examples/diffserv/onedomain,        -f omnetpp.ini -c Exp11 -r 0,                  10s,             0af0-44ee
@@ -215,7 +215,7 @@
 
 ### /examples/manetrouting/* : see manet.csv
 
-/examples/mobileipv6/,               -f omnetpp.ini -c One -r 0,                    25s,             62d9-17cd
+/examples/mobileipv6/,               -f omnetpp.ini -c One -r 0,                    25s,             bc75-b138
 
 /examples/mobility/,                 -f omnetpp.ini -c ANSimMobility -r 0,          10000s,          7108-73d8
 /examples/mobility/,                 -f omnetpp.ini -c BonnMotionMobility1 -r 0,    10000s,          1764-abd7
@@ -304,25 +304,25 @@
 /examples/voipstream/VoIPStreamTest/, -f omnetpp.ini -c pcm_s16le -r 0,              5s,              6b31-2a71
 /examples/voipstream/VoIPStreamTrafficTest/, -f omnetpp.ini -c General -r 0,                2s,              9ca9-46ed
 
-/examples/wireless/handover/,        -f omnetpp.ini -c General -r 0,                1500s,           10fa-9f13
-/examples/wireless/hosttohost/,      -f omnetpp.ini -c Throughput1 -r 0,            5s,              2f2b-522b
-/examples/wireless/lan80211/,        -f omnetpp-ftp.ini -c TwoHosts -r 0,           100s,            0433-678d
+/examples/wireless/handover/,        -f omnetpp.ini -c General -r 0,                1500s,           d823-2b37
+/examples/wireless/hosttohost/,      -f omnetpp.ini -c Throughput1 -r 0,            5s,              cc10-bb7d
+/examples/wireless/lan80211/,        -f omnetpp-ftp.ini -c TwoHosts -r 0,           100s,            7166-940f
 # /examples/wireless/lan80211/,        -f omnetpp-ftp.ini -c NHosts -r 0,             100s,         0000-0000   # interactive config, needed a *.numHosts parameter
 
-/examples/wireless/lan80211/,        -f omnetpp-streaming.ini -c Streaming1 -r 0,   50s,             ad00-f5d5
+/examples/wireless/lan80211/,        -f omnetpp-streaming.ini -c Streaming1 -r 0,   50s,             7129-86f2
 # /examples/wireless/lan80211/,        -f omnetpp-streaming.ini -c Streaming2 -r 0,   100s,         0000-0000   # interactive config, needed a *.numHosts parameter
-/examples/wireless/lan80211/,        -f omnetpp.ini -c Ping1 -r 0,                  25s,             291d-efeb
+/examples/wireless/lan80211/,        -f omnetpp.ini -c Ping1 -r 0,                  25s,             4278-9254
 
 # /examples/wireless/lan80211/,        -f omnetpp.ini -c Ping2 -r 0,                  ---100s,         0000-0000   # [Config Ping2] # __interactive__
 
-/examples/wireless/multiradio/,      -f omnetpp.ini -c IndependentWlans -r 0,       100s,            7473-b3c3
-/examples/wireless/multiradio/,      -f omnetpp.ini -c SwitchedWlans -r 0,          100s,            5823-b866
-/examples/wireless/multiradio/,      -f omnetpp.ini -c RoutedWlans -r 0,            100s,            7f8e-2613
-/examples/wireless/synchronized/,    -f omnetpp.ini -c Synchronized -r 0,           2s,              34d8-db2c
-/examples/wireless/synchronized/,    -f omnetpp.ini -c NonSynchronized -r 0,        2s,              32a3-4307
-/examples/wireless/throughput/,      -f omnetpp.ini -c Throughput1 -r 0,            20s,             f95f-07f0
-/examples/wireless/throughput/,      -f omnetpp.ini -c Throughput2 -r 0,            10s,             fdbb-d552
-/examples/wireless/wiredandwirelesshostswithap/, -f omnetpp.ini -c General -r 0,                100s,            631b-054b
+/examples/wireless/multiradio/,      -f omnetpp.ini -c IndependentWlans -r 0,       100s,            b94e-5db6
+/examples/wireless/multiradio/,      -f omnetpp.ini -c SwitchedWlans -r 0,          100s,            6315-e14a
+/examples/wireless/multiradio/,      -f omnetpp.ini -c RoutedWlans -r 0,            100s,            c3ce-6caf
+/examples/wireless/synchronized/,    -f omnetpp.ini -c Synchronized -r 0,           2s,              7d7a-a3a9
+/examples/wireless/synchronized/,    -f omnetpp.ini -c NonSynchronized -r 0,        2s,              6f35-ffb3
+/examples/wireless/throughput/,      -f omnetpp.ini -c Throughput1 -r 0,            20s,             e50e-60ac
+/examples/wireless/throughput/,      -f omnetpp.ini -c Throughput2 -r 0,            10s,             8886-8322
+/examples/wireless/wiredandwirelesshostswithap/, -f omnetpp.ini -c General -r 0,                100s,            e3d9-25b9
 
 /examples/inet/hierarchical99/,      -f networklayer.ini -c IPv4 -r 0,              10000s,          6404-cc69
 /examples/inet/hierarchical99/,      -f networklayer.ini -c IPv6 -r 0,              10000s,          1ede-0379
@@ -333,21 +333,21 @@
 /examples/inet/hierarchical99/,      -f networklayer.ini -c WiseRoute -r 0,         10000s,          1e2c-cb98
 
 /examples/wireless/nic/,             -f omnetpp.ini -c IdealMacWithIdealRadio -r 0,          100s,             9016-142a
-/examples/wireless/nic/,             -f omnetpp.ini -c IdealMacWithSimplifiedRadio -r 0,     100s,             add5-7995
+/examples/wireless/nic/,             -f omnetpp.ini -c IdealMacWithSimplifiedRadio -r 0,     100s,             3f06-0436
 /examples/wireless/nic/,             -f omnetpp.ini -c IdealMacWithDetailedRadio -r 0,       100s,             a4cc-d112
 /examples/wireless/nic/,             -f omnetpp.ini -c IdealMacWithUWBIRRadio -r 0,          100s,             f234-5426
 /examples/wireless/nic/,             -f omnetpp.ini -c BMacWithIdealRadio -r 0,              100s,             4da1-6fba
-/examples/wireless/nic/,             -f omnetpp.ini -c BMacWithSimplifiedRadio -r 0,         100s,             b037-1cc3
+/examples/wireless/nic/,             -f omnetpp.ini -c BMacWithSimplifiedRadio -r 0,         100s,             0485-6831
 /examples/wireless/nic/,             -f omnetpp.ini -c BMacWithDetailedRadio -r 0,           100s,             b1c0-5580
 /examples/wireless/nic/,             -f omnetpp.ini -c BMacWithUWBIRRadio -r 0,              100s,             3624-60f6
 /examples/wireless/nic/,             -f omnetpp.ini -c LMacWithIdealRadio -r 0,              100s,             aae2-ad06
-/examples/wireless/nic/,             -f omnetpp.ini -c LMacWithSimplifiedRadio -r 0,         100s,             db7a-ffb7
+/examples/wireless/nic/,             -f omnetpp.ini -c LMacWithSimplifiedRadio -r 0,         100s,             767e-c3f0
 /examples/wireless/nic/,             -f omnetpp.ini -c LMacWithDetailedRadio -r 0,           100s,             645c-f891
 /examples/wireless/nic/,             -f omnetpp.ini -c LMacWithUWBIRRadio -r 0,              100s,             8631-fc93
 /examples/wireless/nic/,             -f omnetpp.ini -c CSMAWithIdealRadio -r 0,              100s,             b8a9-aa36
-/examples/wireless/nic/,             -f omnetpp.ini -c CSMAWithSimplifiedRadio -r 0,         100s,             e397-28c5
+/examples/wireless/nic/,             -f omnetpp.ini -c CSMAWithSimplifiedRadio -r 0,         100s,             2adb-8219
 /examples/wireless/nic/,             -f omnetpp.ini -c CSMAWithDetailedRadio -r 0,           100s,             d9a4-2ade
 /examples/wireless/nic/,             -f omnetpp.ini -c CSMAWithUWBIRRadio -r 0,              100s,             87e5-71f9
 /examples/wireless/nic/,             -f omnetpp.ini -c Ieee80211MacWithIdealRadio -r 0,      100s,             16a9-5169
-/examples/wireless/nic/,             -f omnetpp.ini -c Ieee80211MacWithSimplifiedRadio -r 0, 100s,             ea19-d6a8
+/examples/wireless/nic/,             -f omnetpp.ini -c Ieee80211MacWithSimplifiedRadio -r 0, 100s,             70f5-1747
 /examples/wireless/nic/,             -f omnetpp.ini -c Ieee80211MacWithDetailedRadio -r 0,   100s,             f5d5-ee51
