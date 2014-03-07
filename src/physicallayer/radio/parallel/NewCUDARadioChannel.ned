@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2013 OpenSim Ltd
+// Copyright (C) 2013 OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,12 +15,12 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.parallel;
 
-simple ScalarRadio extends NewRadio
+import inet.physicallayer.radio.generic.NewRadioChannel;
+
+simple NewCUDARadioChannel extends NewRadioChannel
 {
     parameters:
-        modulatorType = default("ScalarRadioSignalModulator");
-        antennaType = default("IsotropicRadioAntenna");
-        deciderType = default("ScalarSNRRadioDecider");
+        @class(NewCUDARadioChannel);
 }

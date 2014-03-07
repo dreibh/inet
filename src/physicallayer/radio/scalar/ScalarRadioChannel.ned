@@ -15,12 +15,13 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.scalar;
 
-import inet.physicallayer.radio.common.RadioChannelBase;
+import inet.physicallayer.radio.generic.NewRadioChannel;
 
-simple NewMultiThreadedRadioChannel extends RadioChannelBase
+simple ScalarRadioChannel extends NewRadioChannel
 {
     parameters:
-        @class(NewMultiThreadedRadioChannel);
+        backgroundNoiseType = default("ScalarRadioBackgroundNoise");
+        attenuationType = default("ScalarRadioSignalFreeSpaceAttenuation");
 }

@@ -20,7 +20,7 @@
 
 package inet.tests.traci;
 
-import inet.physicallayer.radio.new.ScalarRadioChannel;
+import inet.physicallayer.radio.scalar.ScalarRadioChannel;
 import inet.world.traci.TraCIScenarioManagerLaunchd;
 
 module Highway

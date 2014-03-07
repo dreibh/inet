@@ -15,11 +15,12 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.ideal;
 
-module ScalarRadioSignalFreeSpaceAttenuation like IRadioSignalAttenuation
+import inet.physicallayer.radio.contract.IRadioSignalAttenuation;
+
+module IdealRadioSignalFreeSpaceAttenuation like IRadioSignalAttenuation
 {
     parameters:
-        double alpha;    
-        @class(ScalarRadioSignalFreeSpaceAttenuation);
+        @class(IdealRadioSignalFreeSpaceAttenuation);
 }

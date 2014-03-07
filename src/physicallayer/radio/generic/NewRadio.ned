@@ -15,15 +15,23 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_NEWMULTITHREADEDRADIOCHANNEL_H_
-#define __INET_NEWMULTITHREADEDRADIOCHANNEL_H_
+package inet.physicallayer.radio.generic;
 
-#include "MultiThreadedRadioChannel.h"
+import inet.physicallayer.radio.common.RadioBase;
+import inet.physicallayer.radio.contract.IRadioAntenna;
+import inet.physicallayer.radio.contract.IRadioDecider;
+import inet.physicallayer.radio.contract.IRadioSignalModulator;
 
-class INET_API NewMultiThreadedRadioChannel : public MultiThreadedRadioChannel
+simple NewRadio extends RadioBase
 {
-  protected:
-    virtual void initialize(int stage);
-};
+    parameters:
+        string modulatorType;
+        string antennaType;
+        string deciderType;
+        @class(NewRadio);
 
-#endif
+    submodules:
+        modulator: <modulatorType> like IRadioSignalModulator;
+        antenna: <antennaType> like IRadioAntenna;
+        decider: <deciderType> like IRadioDecider;
+}

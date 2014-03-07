@@ -8,7 +8,7 @@ Testing manetrouting with AODVUU routing protocol, UDP forwarding
 
 import inet.networklayer.autorouting.ipv4.FlatNetworkConfigurator;
 import inet.nodes.inet.AdhocHost;
-import inet.physicallayer.radio.new.ScalarRadioChannel;
+import inet.physicallayer.radio.scalar.ScalarRadioChannel;
 
 
 // 

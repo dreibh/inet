@@ -11,7 +11,7 @@ import inet.nodes.inet.Router;
 import inet.nodes.inet.StandardHost;
 import inet.nodes.inet.WirelessHost;
 import inet.nodes.wireless.AccessPoint;
-import inet.physicallayer.radio.new.ScalarRadioChannel;
+import inet.physicallayer.radio.scalar.ScalarRadioChannel;
 
 network Test
 {

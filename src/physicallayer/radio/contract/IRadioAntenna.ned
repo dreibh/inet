@@ -15,15 +15,8 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.contract;
 
-module ScalarRadioSignalModulator like IRadioSignalModulator
+moduleinterface IRadioAntenna
 {
-    parameters:
-        double bitrate @unit(bps);
-        double headerBitLength @unit(b);
-        double power @unit(W);
-        double carrierFrequency @unit(Hz);
-        double bandwidth @unit(Hz);       
-        @class(ScalarRadioSignalModulator);
 }

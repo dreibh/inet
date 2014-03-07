@@ -7,7 +7,7 @@ Testing TCP communication speed
 %#--------------------------------------------------------------------------------------------------------------
 %file: test.ned
 
-import inet.physicallayer.radio.new.ScalarRadioChannel;
+import inet.physicallayer.radio.scalar.ScalarRadioChannel;
 import inet.nodes.wireless.AccessPoint;
 import inet.mobility.models.StationaryMobility;
 import inet.mobility.models.CircleMobility;

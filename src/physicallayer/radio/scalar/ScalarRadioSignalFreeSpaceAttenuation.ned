@@ -15,11 +15,13 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.scalar;
 
-module ScalarRadioBackgroundNoise like IRadioBackgroundNoise
+import inet.physicallayer.radio.contract.IRadioSignalAttenuation;
+
+module ScalarRadioSignalFreeSpaceAttenuation like IRadioSignalAttenuation
 {
     parameters:
-        double power @unit(W);        
-        @class(ScalarRadioBackgroundNoise);
+        double alpha;
+        @class(ScalarRadioSignalFreeSpaceAttenuation);
 }

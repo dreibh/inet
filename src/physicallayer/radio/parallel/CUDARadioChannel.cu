@@ -307,12 +307,13 @@ void CUDARadioChannel::computeCache(const std::vector<const IRadio *> *radios, c
 
 void CUDARadioChannel::transmitToChannel(const IRadio *radio, const IRadioSignalTransmission *transmission)
 {
+    // TODO: start computation here in a background thread
     RadioChannel::transmitToChannel(radio, transmission);
 }
 
 const IRadioSignalReceptionDecision *CUDARadioChannel::receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const
 {
-    // TODO: use a background thread?
+    // KLUDGE: for testing
     if (cachedDecisions.size() == 0)
         const_cast<CUDARadioChannel *>(this)->computeCache((const std::vector<const IRadio *> *)(&radios), (const std::vector<const IRadioSignalTransmission *> *)(&transmissions));
     return CachedRadioChannel::receiveFromChannel(radio, transmission);

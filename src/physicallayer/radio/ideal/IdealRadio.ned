@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2013 OpenSim Ltd.
+// Copyright (C) 2013 OpenSim Ltd
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,11 +15,14 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.ideal;
 
-simple ScalarRadioChannel extends NewRadioChannel
+import inet.physicallayer.radio.generic.NewRadio;
+
+simple IdealRadio extends NewRadio
 {
     parameters:
-        backgroundNoiseType = default("ScalarRadioBackgroundNoise");
-        attenuationType = default("ScalarRadioSignalFreeSpaceAttenuation");
+        modulatorType = default("IdealRadioSignalModulator");
+        antennaType = default("IsotropicRadioAntenna");
+        deciderType = default("IdealRadioDecider");
 }

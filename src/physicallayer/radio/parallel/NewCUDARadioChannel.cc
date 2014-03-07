@@ -15,11 +15,6 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+#include "NewCUDARadioChannel.h"
 
-module IdealRadioDecider like IRadioDecider
-{
-    parameters:
-        bool ignoreInterference;
-        @class(IdealRadioDecider);
-}
+Define_Module(NewCUDARadioChannel);

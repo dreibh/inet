@@ -37,7 +37,7 @@ record-eventlog = true
 import inet.base.LifecycleController;
 import inet.nodes.inet.AdhocHost;
 import inet.status.NodeStatus;
-import inet.physicallayer.radio.new.ScalarRadioChannel;
+import inet.physicallayer.radio.scalar.ScalarRadioChannel;
 import inet.world.scenario.ScenarioManager;
 
 network Test

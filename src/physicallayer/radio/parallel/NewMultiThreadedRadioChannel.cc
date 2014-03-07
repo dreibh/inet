@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2013 OpenSim Ltd.
+// Copyright (C) 2013 OpenSim Ltd
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,26 +15,15 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+#include "NewMultiThreadedRadioChannel.h"
 
-import inet.physicallayer.radio.common.RadioChannelBase;
+Define_Module(NewMultiThreadedRadioChannel);
 
-moduleinterface IRadioSignalAttenuation
+void NewMultiThreadedRadioChannel::initialize(int stage)
 {
-}
-
-moduleinterface IRadioBackgroundNoise
-{
-}
-
-simple NewRadioChannel extends RadioChannelBase
-{
-    parameters:
-        string backgroundNoiseType;
-        string attenuationType;
-        @class(NewRadioChannel);
-        
-    submodules:
-        backgroundNoise: <backgroundNoiseType> like IRadioBackgroundNoise if backgroundNoiseType != "";
-        attenuation: <attenuationType> like IRadioSignalAttenuation if attenuationType != "";
+    MultiThreadedRadioChannel::initialize(stage);
+    if (stage == INITSTAGE_LOCAL)
+    {
+        initializeWorkers(3);
+    }
 }

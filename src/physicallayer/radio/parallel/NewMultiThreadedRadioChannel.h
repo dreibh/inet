@@ -15,19 +15,15 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "NewMultiThreadedRadioChannel.h"
-#include "NewRadio.h"
-#include "ScalarImplementation.h"
+#ifndef __INET_NEWMULTITHREADEDRADIOCHANNEL_H_
+#define __INET_NEWMULTITHREADEDRADIOCHANNEL_H_
 
-Define_Module(NewMultiThreadedRadioChannel);
+#include "MultiThreadedRadioChannel.h"
 
-void NewMultiThreadedRadioChannel::initialize(int stage)
+class INET_API NewMultiThreadedRadioChannel : public MultiThreadedRadioChannel
 {
-    RadioChannelBase::initialize(stage);
-    if (stage == 0)
-    {
-        backgroundNoise = new ScalarRadioBackgroundNoise(1E-12);
-        attenuation = new ScalarRadioSignalFreeSpaceAttenuation(2);
-        initializeWorkers(3);
-    }
-}
+    protected:
+        virtual void initialize(int stage);
+};
+
+#endif

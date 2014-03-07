@@ -15,31 +15,13 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.ieee80211;
 
-import inet.physicallayer.radio.common.RadioBase;
+import inet.physicallayer.radio.scalar.ScalarRadioSignalModulator;
 
-moduleinterface IRadioSignalModulator
-{
-}
-
-moduleinterface IRadioDecider
-{
-}
-
-moduleinterface IRadioAntenna
-{
-}
-
-simple NewRadio extends RadioBase
+module Ieee80211ScalarRadioSignalModulator extends ScalarRadioSignalModulator
 {
     parameters:
-        string modulatorType;
-        string antennaType;
-        string deciderType;
-        @class(NewRadio);
-    submodules:
-        modulator: <modulatorType> like IRadioSignalModulator;
-        antenna: <antennaType> like IRadioAntenna;
-        decider: <deciderType> like IRadioDecider;
+        string preambleMode @enum("long", "short"); // preambre mode according to Ieee 2007, 19.3.2
+        @class(Ieee80211ScalarRadioSignalModulator);
 }

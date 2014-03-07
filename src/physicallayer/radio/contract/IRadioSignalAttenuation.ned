@@ -15,11 +15,8 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.contract;
 
-simple IdealRadioChannel extends NewRadioChannel
+moduleinterface IRadioSignalAttenuation
 {
-    parameters:
-        backgroundNoiseType = default("");
-        attenuationType = default("IdealRadioSignalFreeSpaceAttenuation");
 }

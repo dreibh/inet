@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2013 OpenSim Ltd.
+// Copyright (C) 2013 OpenSim Ltd
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,27 +15,15 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IEEE80211IMPLEMENTATION_H_
-#define __INET_IEEE80211IMPLEMENTATION_H_
+package inet.physicallayer.radio.ideal;
 
-#include "ScalarImplementation.h"
-#include "WifiPreambleType.h"
+import inet.physicallayer.radio.contract.IRadioSignalModulator;
 
-class INET_API Ieee80211ScalarRadioSignalModulator : public ScalarRadioSignalModulator
+module IdealRadioSignalModulator like IRadioSignalModulator
 {
-    protected:
-        WifiPreamble preambleMode;
-
-    protected:
-        virtual void initialize(int stage);
-
-        virtual simtime_t computeDuration(const cPacket *packet) const;
-
-    public:
-        Ieee80211ScalarRadioSignalModulator() :
-            ScalarRadioSignalModulator(),
-            preambleMode((WifiPreamble)-1)
-        {}
-};
-
-#endif
+    parameters:
+        double bitrate @unit(bps);
+        double maximumCommunicationRange @unit(m);
+        double maximumInterferenceRange @unit(m);
+        @class(IdealRadioSignalModulator);
+}

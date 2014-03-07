@@ -1,7 +1,7 @@
 
 import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 import inet.nodes.inet.AdhocHost;
-import inet.physicallayer.radio.new.IdealRadioChannel;
+import inet.physicallayer.radio.ideal.IdealRadioChannel;
 
 
 network NetIdealRadios

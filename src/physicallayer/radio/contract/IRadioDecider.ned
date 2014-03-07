@@ -15,10 +15,8 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.contract;
 
-module IsotropicRadioAntenna like IRadioAntenna
+moduleinterface IRadioDecider
 {
-    parameters:
-        @class(IsotropicRadioAntenna);
 }

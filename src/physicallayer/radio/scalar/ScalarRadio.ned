@@ -15,13 +15,14 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.scalar;
 
-module IdealRadioSignalModulator like IRadioSignalModulator
+import inet.physicallayer.radio.generic.NewRadio;
+
+simple ScalarRadio extends NewRadio
 {
     parameters:
-        double bitrate @unit(bps);
-        double maximumCommunicationRange @unit(m);
-        double maximumInterferenceRange @unit(m);
-        @class(IdealRadioSignalModulator);
+        modulatorType = default("ScalarRadioSignalModulator");
+        antennaType = default("IsotropicRadioAntenna");
+        deciderType = default("ScalarSNRRadioDecider");
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2013 OpenSim Ltd
+// Copyright (C) 2013 OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,18 +15,12 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "NewCUDARadioChannel.h"
-#include "NewRadio.h"
-#include "ScalarImplementation.h"
+package inet.physicallayer.radio.parallel;
 
-Define_Module(NewCUDARadioChannel);
+import inet.physicallayer.radio.generic.NewRadioChannel;
 
-void NewCUDARadioChannel::initialize(int stage)
+simple NewMultiThreadedRadioChannel extends NewRadioChannel
 {
-    RadioChannelBase::initialize(stage);
-    if (stage == 0)
-    {
-        backgroundNoise = new ScalarRadioBackgroundNoise(1E-12);
-        attenuation = new ScalarRadioSignalFreeSpaceAttenuation(2);
-    }
+    parameters:
+        @class(NewMultiThreadedRadioChannel);
 }

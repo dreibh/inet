@@ -15,7 +15,7 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "Ieee80211Implementation.h"
+#include "Ieee80211ScalarRadioSignalModulator.h"
 #include "WifiMode.h"
 #include "ModulationType.h"
 #include "PhyControlInfo_m.h"

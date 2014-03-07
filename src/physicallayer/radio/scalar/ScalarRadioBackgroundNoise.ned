@@ -15,12 +15,13 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.physicallayer.radio.new;
+package inet.physicallayer.radio.scalar;
 
-module ScalarSNRRadioDecider like IRadioDecider
+import inet.physicallayer.radio.contract.IRadioBackgroundNoise;
+
+module ScalarRadioBackgroundNoise like IRadioBackgroundNoise
 {
     parameters:
-        double sensitivity @unit(W);
-        double snrThreshold;
-        @class(ScalarSNRRadioDecider);
+        double power @unit(W);
+        @class(ScalarRadioBackgroundNoise);
 }

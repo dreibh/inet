@@ -15,15 +15,14 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_NEWCUDARADIOCHANNEL_H_
-#define __INET_NEWCUDARADIOCHANNEL_H_
+package inet.physicallayer.radio.scalar;
 
-#include "CUDARadioChannel.h"
+import inet.physicallayer.radio.contract.IRadioDecider;
 
-class INET_API NewCUDARadioChannel : public CUDARadioChannel
+module ScalarSNRRadioDecider like IRadioDecider
 {
-  protected:
-    virtual void initialize(int stage);
-};
-
-#endif
+    parameters:
+        double sensitivity @unit(W);
+        double snrThreshold;
+        @class(ScalarSNRRadioDecider);
+}
