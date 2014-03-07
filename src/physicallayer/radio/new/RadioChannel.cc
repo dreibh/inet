@@ -195,30 +195,43 @@ void RadioChannel::transmitToChannel(const IRadio *radio, const IRadioSignalTran
 
 void RadioChannel::sendToChannel(IRadio *radio, const IRadioFrame *frame)
 {
+    const Radio *transmitterRadio = check_and_cast<Radio *>(radio);
     const RadioFrame *radioFrame = check_and_cast<const RadioFrame *>(frame);
     const IRadioSignalTransmission *transmission = frame->getTransmission();
+    EV_DEBUG << "Sending " << radioFrame << " with " << radioFrame->getBitLength() << " bits in " << radioFrame->getDuration() * 1E+6 << " us transmission duration"
+             << " from " << transmitterRadio << " to " << this << "." << endl;
     for (std::vector<const IRadio *>::const_iterator it = radios.begin(); it != radios.end(); it++)
     {
         const Radio *receiverRadio = check_and_cast<const Radio *>(*it);
-        if (receiverRadio != radio && isPotentialReceiver(receiverRadio, transmission))
+        if (receiverRadio != transmitterRadio && isPotentialReceiver(receiverRadio, transmission))
         {
             cGate *gate = receiverRadio->RadioBase::getRadioGate()->getPathStartGate();
-            simtime_t propagationTime = computeTransmissionStartArrivalTime(transmission, receiverRadio->getTransmitterAntenna()->getMobility()) - simTime();
+            IMobility *receiverAntennaMobility = receiverRadio->getReceiverAntenna()->getMobility();
+            simtime_t startArrivalTime = computeTransmissionStartArrivalTime(transmission, receiverAntennaMobility);
+            simtime_t propagationTime = startArrivalTime - simTime();
+            EV_DEBUG << "Sending " << radioFrame
+                     << " from " << transmitterRadio << " at " << transmission->getStartPosition()
+                     << " to " << receiverRadio << " at " << receiverAntennaMobility->getPosition(startArrivalTime)
+                     << " in " << propagationTime * 1E+6 << " us propagation time." << endl;
             RadioFrame *frameCopy = new RadioFrame(radioFrame->getTransmission());
             frameCopy->encapsulate(radioFrame->getEncapsulatedPacket()->dup());
-            check_and_cast<cSimpleModule *>(radio)->sendDirect(frameCopy, propagationTime, radioFrame->getDuration(), gate);
+            const_cast<Radio *>(transmitterRadio)->sendDirect(frameCopy, propagationTime, radioFrame->getDuration(), gate);
         }
     }
 }
 
 const IRadioSignalReceptionDecision *RadioChannel::receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const
 {
-    return computeReceptionDecision(radio, transmission, const_cast<const std::vector<const IRadioSignalTransmission *> *>(&transmissions));
+    const IRadioSignalReceptionDecision *decision = computeReceptionDecision(radio, transmission, const_cast<const std::vector<const IRadioSignalTransmission *> *>(&transmissions));
+    EV_DEBUG << "Receiving " << transmission << " from channel by " << radio << " arrives as " << decision->getReception() << " and results in " << decision << endl;
+    return decision;
 }
 
 const IRadioSignalListeningDecision *RadioChannel::listenOnChannel(const IRadio *radio, const IRadioSignalListening *listening) const
 {
-    return computeListeningDecision(radio, listening, const_cast<const std::vector<const IRadioSignalTransmission *> *>(&transmissions));
+    const IRadioSignalListeningDecision *decision = computeListeningDecision(radio, listening, const_cast<const std::vector<const IRadioSignalTransmission *> *>(&transmissions));
+    EV_DEBUG << "Listening " << listening << " on channel by " << radio << " results in " << decision << endl;
+    return decision;
 }
 
 bool RadioChannel::isPotentialReceiver(const IRadio *radio, const IRadioSignalTransmission *transmission) const

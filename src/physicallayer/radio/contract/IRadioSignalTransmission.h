@@ -19,10 +19,11 @@
 #define __INET_IRADIOSIGNALTRANSMISSION_H_
 
 #include "Coord.h"
+#include "IPrintableObject.h"
 
 class IRadio;
 
-class INET_API IRadioSignalTransmission
+class INET_API IRadioSignalTransmission : public IPrintableObject
 {
     public:
         virtual ~IRadioSignalTransmission() {}

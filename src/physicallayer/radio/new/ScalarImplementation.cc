@@ -23,6 +23,18 @@ Define_Module(ScalarRadioBackgroundNoise);
 Define_Module(ScalarSNRRadioDecider);
 Define_Module(ScalarRadioSignalModulator);
 
+void ScalarRadioSignalTransmission::printToStream(std::ostream &stream) const
+{
+    RadioSignalTransmissionBase::printToStream(stream);
+    stream << ", power = " << power << ", carrier frequency = " << carrierFrequency << ", bandwidth = " << bandwidth;
+}
+
+void ScalarRadioSignalReception::printToStream(std::ostream &stream) const
+{
+    RadioSignalReceptionBase::printToStream(stream);
+    stream << ", power = " << power << ", carrier frequency = " << carrierFrequency << ", bandwidth = " << bandwidth;
+}
+
 double ScalarRadioSignalNoise::computeMaximumPower(simtime_t startTime, simtime_t endTime) const
 {
     double noisePower = 0;
@@ -106,6 +118,18 @@ const IRadioSignalNoise *ScalarRadioBackgroundNoise::computeNoise(const IRadioSi
     return new ScalarRadioSignalNoise(startTime, endTime, powerChanges);
 }
 
+void ScalarRadioSignalListeningDecision::printToStream(std::ostream &stream) const
+{
+    RadioSignalListeningDecision::printToStream(stream);
+    stream << ", maximum power = " << powerMaximum;
+}
+
+void ScalarRadioSignalReceptionDecision::printToStream(std::ostream &stream) const
+{
+    RadioSignalReceptionDecision::printToStream(stream);
+    stream << ", SNR minimum = " << snrMinimum;
+}
+
 bool ScalarSNRRadioDecider::isReceptionPossible(const IRadioSignalReception *reception) const
 {
     const ScalarRadioSignalReception *scalarReception = check_and_cast<const ScalarRadioSignalReception *>(reception);
@@ -160,6 +184,15 @@ const IRadioSignalListeningDecision *ScalarSNRRadioDecider::computeListeningDeci
     return new ScalarRadioSignalListeningDecision(listening, maximumPower > (sensitivity / 10), maximumPower);
 }
 
+const IRadioSignalReceptionDecision *ScalarSNRRadioDecider::computeReceptionDecision(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
+{
+    const IRadioSignalNoise *noise = computeNoise(overlappingReceptions, backgroundNoise);
+    double snrMinimum = computeSNRMinimum(reception, noise);
+    bool isReceptionPossible = computeIsReceptionPossible(reception, overlappingReceptions);
+    bool isReceptionSuccessful = isReceptionPossible && snrMinimum > snrThreshold;
+    return new ScalarRadioSignalReceptionDecision(reception, isReceptionPossible, isReceptionSuccessful, snrMinimum);
+}
+
 double ScalarSNRRadioDecider::computeSNRMinimum(const IRadioSignalReception *reception, const IRadioSignalNoise *noise) const
 {
     const ScalarRadioSignalNoise *scalarNoise = check_and_cast<const ScalarRadioSignalNoise *>(noise);
@@ -179,9 +212,14 @@ void ScalarRadioSignalModulator::initialize(int stage)
     }
 }
 
+simtime_t ScalarRadioSignalModulator::computeDuration(const cPacket *packet) const
+{
+    return (packet->getBitLength() + headerBitLength) / bitrate;
+}
+
 const IRadioSignalTransmission *ScalarRadioSignalModulator::createTransmission(const IRadio *radio, const cPacket *packet, simtime_t startTime) const
 {
-    simtime_t duration = (packet->getBitLength() + headerBitLength) / bitrate;
+    simtime_t duration = computeDuration(packet);
     simtime_t endTime = startTime + duration;
     IMobility *mobility = radio->getTransmitterAntenna()->getMobility();
     Coord startPosition = mobility->getPosition(startTime);

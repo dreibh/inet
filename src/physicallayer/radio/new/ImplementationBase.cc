@@ -22,6 +22,24 @@ Define_Module(IsotropicRadioAntenna);
 
 unsigned int RadioSignalTransmissionBase::nextId = 0;
 
+void RadioSignalTransmissionBase::printToStream(std::ostream &stream) const
+{
+    // TODO: members
+    stream << "transmission";
+}
+
+void RadioSignalListeningBase::printToStream(std::ostream &stream) const
+{
+    // TODO: members
+    stream << "listening";
+}
+
+void RadioSignalReceptionBase::printToStream(std::ostream &stream) const
+{
+    // TODO: members
+    stream << "reception";
+}
+
 void RadioAntennaBase::initialize(int stage)
 {
     if (stage == INITSTAGE_LOCAL)
@@ -54,6 +72,17 @@ double RadioSignalFreeSpaceAttenuationBase::computePathLoss(const IRadioSignalTr
     // NOTE: this check allows to get the same result from the GPU and the CPU when the alpha is exactly 2
     double raisedDistance = alpha == 2.0 ? distance * distance : pow(distance, alpha);
     return distance == 0.0 ? 1.0 : waveLength * waveLength / (16.0 * M_PI * M_PI * raisedDistance);
+}
+
+void RadioSignalListeningDecision::printToStream(std::ostream &stream) const
+{
+    stream << "listening " << (isListeningPossible_ ? "possible" : "impossible");
+}
+
+void RadioSignalReceptionDecision::printToStream(std::ostream &stream) const
+{
+    stream << "reception " << (isReceptionPossible_ ? "possible" : "impossible");
+    stream << " and " << (isReceptionSuccessful_ ? "successful" : "unsuccessful");
 }
 
 void RadioDeciderBase::initialize(int stage)
@@ -94,6 +123,6 @@ const IRadioSignalReceptionDecision *SNRRadioDecider::computeReceptionDecision(c
     const IRadioSignalNoise *noise = computeNoise(overlappingReceptions, backgroundNoise);
     double snrMinimum = computeSNRMinimum(reception, noise);
     bool isReceptionPossible = computeIsReceptionPossible(reception, overlappingReceptions);
-    bool isReceptionSuccessful = snrMinimum > snrThreshold;
+    bool isReceptionSuccessful = isReceptionPossible && snrMinimum > snrThreshold;
     return new RadioSignalReceptionDecision(reception, isReceptionPossible, isReceptionSuccessful);
 }

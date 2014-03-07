@@ -35,6 +35,8 @@ class INET_API ScalarRadioSignalTransmission : public RadioSignalTransmissionBas
             bandwidth(bandwidth)
         {}
 
+        virtual void printToStream(std::ostream &stream) const;
+
         virtual double getPower() const { return power; }
         virtual double getCarrierFrequency() const { return carrierFrequency; }
         virtual double getBandwidth() const { return bandwidth; }
@@ -84,6 +86,8 @@ class INET_API ScalarRadioSignalReception : public RadioSignalReceptionBase
             carrierFrequency(carrierFrequency),
             bandwidth(bandwidth)
         {}
+
+        virtual void printToStream(std::ostream &stream) const;
 
         virtual double getPower() const { return power; }
         virtual double getCarrierFrequency() const { return carrierFrequency; }
@@ -171,6 +175,8 @@ class INET_API ScalarRadioSignalListeningDecision : public RadioSignalListeningD
             powerMaximum(powerMaximum)
         {}
 
+        virtual void printToStream(std::ostream &stream) const;
+
         virtual double getPowerMaximum() const { return powerMaximum; }
 };
 
@@ -185,6 +191,8 @@ class INET_API ScalarRadioSignalReceptionDecision : public RadioSignalReceptionD
             RadioSignalReceptionDecision(reception, isReceptionPossible, isReceptionSuccessful),
             snrMinimum(snrMinimum)
         {}
+
+        virtual void printToStream(std::ostream &stream) const;
 
         virtual double getSNRMinimum() const { return snrMinimum; }
 };
@@ -206,6 +214,7 @@ class INET_API ScalarSNRRadioDecider : public SNRRadioDecider
         {}
 
         virtual const IRadioSignalListeningDecision *computeListeningDecision(const IRadioSignalListening *listening, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const;
+        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const;
 };
 
 class INET_API ScalarRadioSignalModulator : public IRadioSignalModulator, public cCompoundModule
@@ -220,6 +229,8 @@ class INET_API ScalarRadioSignalModulator : public IRadioSignalModulator, public
 
     protected:
         virtual void initialize(int stage);
+
+        virtual simtime_t computeDuration(const cPacket *packet) const;
 
     public:
         ScalarRadioSignalModulator() :

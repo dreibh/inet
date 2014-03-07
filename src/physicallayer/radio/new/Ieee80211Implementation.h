@@ -15,20 +15,27 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IRADIOSIGNALLISTENINGDECISION_H_
-#define __INET_IRADIOSIGNALLISTENINGDECISION_H_
+#ifndef __INET_IEEE80211IMPLEMENTATION_H_
+#define __INET_IEEE80211IMPLEMENTATION_H_
 
-#include "IPrintableObject.h"
-#include "IRadioSignalListening.h"
+#include "ScalarImplementation.h"
+#include "WifiPreambleType.h"
 
-class INET_API IRadioSignalListeningDecision : public IPrintableObject
+class INET_API Ieee80211ScalarRadioSignalModulator : public ScalarRadioSignalModulator
 {
+    protected:
+        WifiPreamble preambleMode;
+
+    protected:
+        virtual void initialize(int stage);
+
+        virtual simtime_t computeDuration(const cPacket *packet) const;
+
     public:
-        virtual ~IRadioSignalListeningDecision() {}
-
-        virtual const IRadioSignalListening *getListening() const = 0;
-
-        virtual bool isListeningPossible() const = 0;
+        Ieee80211ScalarRadioSignalModulator() :
+            ScalarRadioSignalModulator(),
+            preambleMode((WifiPreamble)-1)
+        {}
 };
 
 #endif

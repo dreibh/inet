@@ -19,10 +19,11 @@
 #define __INET_IRADIOSIGNALLISTENING_H_
 
 #include "Coord.h"
+#include "IPrintableObject.h"
 
 class IRadio;
 
-class INET_API IRadioSignalListening
+class INET_API IRadioSignalListening : public IPrintableObject
 {
     public:
         virtual ~IRadioSignalListening() {}

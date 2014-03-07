@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2013 OpenSim Ltd.
+// Copyright (C) 2013 OpenSim Ltd
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,20 +15,19 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IRADIOSIGNALLISTENINGDECISION_H_
-#define __INET_IRADIOSIGNALLISTENINGDECISION_H_
+package inet.physicallayer.radio.new;
 
-#include "IPrintableObject.h"
-#include "IRadioSignalListening.h"
-
-class INET_API IRadioSignalListeningDecision : public IPrintableObject
+simple Ieee80211Radio extends ScalarRadio
 {
-    public:
-        virtual ~IRadioSignalListeningDecision() {}
-
-        virtual const IRadioSignalListening *getListening() const = 0;
-
-        virtual bool isListeningPossible() const = 0;
-};
-
-#endif
+    parameters:
+        modulatorType = default("Ieee80211ScalarRadioSignalModulator");
+        modulator.bitrate = default(2Mbps);
+        // TODO: meaningless, factor and delete
+        modulator.headerBitLength = default(192b);
+        modulator.carrierFrequency = default(2.4GHz);
+        modulator.bandwidth = default(2MHz);
+        modulator.preambleMode = default("long");
+        decider.sensitivity = default(1E-11W);
+        decider.snrThreshold = default(10);
+        modulator.power = default(100mW);
+}

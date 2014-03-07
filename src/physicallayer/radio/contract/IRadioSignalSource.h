@@ -15,8 +15,10 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IRADIOSIGNALSOURCE_H_
+#ifndef __INET_IRADIOSIGNALSOURCEH_
 #define __INET_IRADIOSIGNALSOURCE_H_
+
+#include "INETDefs.h"
 
 class INET_API IRadioSignalSource
 {

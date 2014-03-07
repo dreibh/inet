@@ -15,20 +15,29 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IRADIOSIGNALLISTENINGDECISION_H_
-#define __INET_IRADIOSIGNALLISTENINGDECISION_H_
+#ifndef __INET_IPRINTABLEOBJECT_H_
+#define __INET_IPRINTABLEOBJECT_H_
 
-#include "IPrintableObject.h"
-#include "IRadioSignalListening.h"
+#include "INETDefs.h"
 
-class INET_API IRadioSignalListeningDecision : public IPrintableObject
+class INET_API IPrintableObject
 {
     public:
-        virtual ~IRadioSignalListeningDecision() {}
+        virtual ~IPrintableObject() {}
 
-        virtual const IRadioSignalListening *getListening() const = 0;
+        virtual void printToStream(std::ostream &stream) const = 0;
+};
 
-        virtual bool isListeningPossible() const = 0;
+inline std::ostream &operator<<(std::ostream &stream, const IPrintableObject *object)
+{
+    object->printToStream(stream);
+    return stream;
+};
+
+inline std::ostream &operator<<(std::ostream &stream, const IPrintableObject &object)
+{
+    object.printToStream(stream);
+    return stream;
 };
 
 #endif

@@ -18,9 +18,10 @@
 #ifndef __INET_IRADIOSIGNALRECEPTIONDECISION_H_
 #define __INET_IRADIOSIGNALRECEPTIONDECISION_H_
 
+#include "IPrintableObject.h"
 #include "IRadioSignalReception.h"
 
-class INET_API IRadioSignalReceptionDecision
+class INET_API IRadioSignalReceptionDecision : public IPrintableObject
 {
     public:
         virtual ~IRadioSignalReceptionDecision() {}

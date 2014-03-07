@@ -23,6 +23,7 @@
 #include "IRadioSignalAttenuation.h"
 #include "IRadioSignalModulator.h"
 
+// TODO: use NaN instead of -1 for uninitialized double values
 // TODO: revise all names here and also in contract.h
 // TODO: optimize interface in terms of constness, use of references, etc.
 // TODO: add proper destructors with freeing resources
@@ -73,6 +74,8 @@ class INET_API RadioSignalTransmissionBase : public IRadioSignalTransmission
 
         virtual unsigned int getId() const { return id; }
 
+        virtual void printToStream(std::ostream &stream) const;
+
         virtual simtime_t getStartTime() const { return startTime; }
         virtual simtime_t getEndTime() const { return endTime; }
         virtual simtime_t getDuration() const { return endTime - startTime; }
@@ -105,6 +108,8 @@ class INET_API RadioSignalListeningBase : public IRadioSignalListening
             endPosition(endPosition)
         {}
 
+        virtual void printToStream(std::ostream &stream) const;
+
         virtual simtime_t getStartTime() const { return startTime; }
         virtual simtime_t getEndTime() const { return endTime; }
         virtual simtime_t getDuration() const { return endTime - startTime; }
@@ -136,6 +141,8 @@ class INET_API RadioSignalReceptionBase : public IRadioSignalReception
             startPosition(startPosition),
             endPosition(endPosition)
         {}
+
+        virtual void printToStream(std::ostream &stream) const;
 
         virtual simtime_t getStartTime() const { return startTime; }
         virtual simtime_t getEndTime() const { return endTime; }
@@ -255,9 +262,12 @@ class INET_API RadioSignalListeningDecision : public IRadioSignalListeningDecisi
             isListeningPossible_(isListeningPossible_)
         {}
 
+        virtual void printToStream(std::ostream &stream) const;
+
         virtual const IRadioSignalListening *getListening() const { return listening; }
 
         virtual bool isListeningPossible() const { return isListeningPossible_; }
+
 };
 
 class INET_API RadioSignalReceptionDecision : public IRadioSignalReceptionDecision, public cObject
@@ -273,6 +283,8 @@ class INET_API RadioSignalReceptionDecision : public IRadioSignalReceptionDecisi
             isReceptionPossible_(isReceptionPossible),
             isReceptionSuccessful_(isReceptionSuccessful)
         {}
+
+        virtual void printToStream(std::ostream &stream) const;
 
         virtual const IRadioSignalReception *getReception() const { return reception; }
 
