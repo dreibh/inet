@@ -719,7 +719,7 @@ void SimplifiedRadio::setRadioChannel(int channel)
 
         // time for the message to reach us
         double distance = getRadioPosition().distance(radioFrame->getSenderPos());
-        simtime_t propagationDelay = distance / 3.0E+8;
+        simtime_t propagationDelay = distance / SPEED_OF_LIGHT;
 
         // if this transmission is on our new channel and it would reach us in the future, then schedule it
         if (channel == radioFrame->getChannelNumber())
@@ -1005,7 +1005,7 @@ void SimplifiedRadio::connectReceiver()
 
         // time for the message to reach us
         double distance = getRadioPosition().distance(radioFrame->getSenderPos());
-        simtime_t propagationDelay = distance / 3.0E+8;
+        simtime_t propagationDelay = distance / SPEED_OF_LIGHT;
 
         // if there is a message on the air which will reach us in the future
         if (radioFrame->getTimestamp() + propagationDelay >= simTime())

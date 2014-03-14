@@ -243,15 +243,6 @@ void SimplifiedRadioChannel::addOngoingTransmission(RadioRef h, SimplifiedRadioF
 {
     Enter_Method_Silent();
 
-    // we only keep track of ongoing transmissions so that we can support
-    // NICs switching channels -- so there's no point doing it if there's only
-    // one channel
-    if (numChannels == 1)
-    {
-        delete frame;
-        return;
-    }
-
     // purge old transmissions from time to time
     if (simTime() - lastOngoingTransmissionsUpdate > TRANSMISSION_PURGE_INTERVAL)
     {
