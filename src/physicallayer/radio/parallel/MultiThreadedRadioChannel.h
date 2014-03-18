@@ -42,12 +42,14 @@ class INET_API MultiThreadedRadioChannel : public CachedRadioChannel
         {
             public:
                 const IRadio *radio;
+                const IRadioSignalListening *listening;
                 const IRadioSignalTransmission *transmission;
                 simtime_t receptionStartTime;
 
             public:
-                ComputeCacheJob(const IRadio *radio, const IRadioSignalTransmission *transmission, simtime_t receptionStartTime) :
+                ComputeCacheJob(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission, simtime_t receptionStartTime) :
                     radio(radio),
+                    listening(listening),
                     transmission(transmission),
                     receptionStartTime(receptionStartTime)
                 {}
@@ -100,7 +102,7 @@ class INET_API MultiThreadedRadioChannel : public CachedRadioChannel
         virtual ~MultiThreadedRadioChannel();
 
         virtual void transmitToChannel(const IRadio *radio, const IRadioSignalTransmission *transmission);
-        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const;
+        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission) const;
 };
 
 #endif

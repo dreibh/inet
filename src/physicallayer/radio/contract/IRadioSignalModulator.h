@@ -28,6 +28,8 @@ class INET_API IRadioSignalModulator
         virtual ~IRadioSignalModulator() {}
 
         virtual const IRadioSignalTransmission *createTransmission(const IRadio *radio, const cPacket *packet, simtime_t startTime) const = 0;
+
+        virtual const IRadioSignalListening *createListening(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition) const = 0;
 };
 
 #endif

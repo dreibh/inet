@@ -55,7 +55,7 @@ class INET_API CachedRadioChannel : public RadioChannel
             baseTransmissionId(0)
         {}
 
-        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const;
+        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission) const;
 };
 
 #endif

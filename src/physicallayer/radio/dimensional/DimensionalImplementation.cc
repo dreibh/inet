@@ -80,7 +80,8 @@ double DimensionalSNRRadioDecider::computeSNRMinimum(const IRadioSignalReception
 
 const IRadioSignalListeningDecision *DimensionalSNRRadioDecider::computeListeningDecision(const IRadioSignalListening *listening, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
 {
-    return NULL;
+    // TODO:
+    throw cRuntimeError("Not yet implemented");
 }
 
 const IRadioSignalTransmission *DimensionalRadioSignalModulator::createTransmission(const IRadio *radio, const cPacket *packet, simtime_t startTime) const
@@ -103,4 +104,10 @@ const IRadioSignalTransmission *DimensionalRadioSignalModulator::createTransmiss
     position.setTime(endTime);
     powerMapping->setValue(position, power);
     return new DimensionalRadioSignalTransmission(radio, startTime, endTime, startPosition, endPosition, powerMapping, carrierFrequency);
+}
+
+const IRadioSignalListening *DimensionalRadioSignalModulator::createListening(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition) const
+{
+    // TODO:
+    throw cRuntimeError("Not yet implemented");
 }

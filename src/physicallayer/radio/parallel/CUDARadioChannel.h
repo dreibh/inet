@@ -37,7 +37,7 @@ class INET_API CUDARadioChannel : public CachedRadioChannel
         {}
 
         virtual void transmitToChannel(const IRadio *radio, const IRadioSignalTransmission *transmission);
-        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const;
+        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission) const;
 };
 
 #endif

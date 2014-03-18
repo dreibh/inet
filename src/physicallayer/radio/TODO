@@ -1,0 +1,27 @@
+1. Packet Domain
+part of MAC
+
+2. Bit Domain
+cyclic redundancy check insertion/removal (CRC)
+forward error correction coding/encoding (FEC)
+bit interleaving/deinterleaving
+
+3. Symbol Domain
+modulation/demodulation
+pilot/preamble insertion/removal
+spreading/despreading
+antenna beamforming
+space-time coding/decoding
+spatial multiplexing/demultiplexing
+
+4. sample or waveform domain
+pulse shaping/matching filter
+carrier sensing/energy detection
+synchronization/pll
+
+5. analog domain
+DA/AD conversion
+IF up/down conversion
+PLL
+
+decider -> snir

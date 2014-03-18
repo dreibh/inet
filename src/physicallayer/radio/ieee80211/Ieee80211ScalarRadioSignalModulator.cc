@@ -19,6 +19,7 @@
 #include "WifiMode.h"
 #include "ModulationType.h"
 #include "PhyControlInfo_m.h"
+#include "Ieee80211Consts.h"
 
 Define_Module(Ieee80211ScalarRadioSignalModulator);
 
@@ -34,13 +35,20 @@ void Ieee80211ScalarRadioSignalModulator::initialize(int stage)
             preambleMode = WIFI_PREAMBLE_LONG;
         else
             throw cRuntimeError("Unknown preamble mode");
+        carrierFrequency = CENTER_FREQUENCIES[par("channelNumber")];
     }
 }
 
-simtime_t Ieee80211ScalarRadioSignalModulator::computeDuration(const cPacket *packet) const
+const IRadioSignalTransmission *Ieee80211ScalarRadioSignalModulator::createTransmission(const IRadio *radio, const cPacket *packet, simtime_t startTime) const
 {
+    // KLUDGE: TODO: operation mode
     PhyControlInfo *controlInfo = dynamic_cast<PhyControlInfo *>(packet->getControlInfo());
-    // TODO: operation mode
-    ModulationType modulationType = WifiModulationType::getModulationType('g', controlInfo ? controlInfo->getBitrate() : bitrate);
-    return SIMTIME_DBL(WifiModulationType::calculateTxDuration(packet->getBitLength(), modulationType, preambleMode));
+    double bitrate = controlInfo ? controlInfo->getBitrate() : this->bitrate;
+    ModulationType modulationType = WifiModulationType::getModulationType('g', bitrate);
+    simtime_t duration = SIMTIME_DBL(WifiModulationType::calculateTxDuration(packet->getBitLength(), modulationType, preambleMode));
+    simtime_t endTime = startTime + duration;
+    IMobility *mobility = radio->getTransmitterAntenna()->getMobility();
+    Coord startPosition = mobility->getPosition(startTime);
+    Coord endPosition = mobility->getPosition(endTime);
+    return new ScalarRadioSignalTransmission(radio, startTime, endTime, startPosition, endPosition, bitrate, power, carrierFrequency, bandwidth);
 }

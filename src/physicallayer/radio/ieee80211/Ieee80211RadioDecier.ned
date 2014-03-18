@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2013 OpenSim Ltd.
+// Copyright (C) 2013 OpenSim Ltd
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,15 +15,15 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IRADIOSIGNALSOURCE_H_
-#define __INET_IRADIOSIGNALSOURCE_H_
+package inet.physicallayer.radio.ieee80211;
 
-#include "INETDefs.h"
+import inet.physicallayer.radio.scalar.ScalarSNRRadioDecider;
 
-class INET_API IRadioSignalSource
+module Ieee80211RadioDecider extends ScalarSNRRadioDecider
 {
-    public:
-        virtual ~IRadioSignalSource() {}
-};
-
-#endif
+    parameters:
+        string opMode @enum("b","g","a","p") = default("g");
+        string errorModel @enum("yans","nist") = default("nist");
+        bool autoHeaderSize = default(false); // in the receiver the radio model compute the header size in function of timers and bitrate
+        @class(Ieee80211RadioDecider);
+}

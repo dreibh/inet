@@ -22,6 +22,7 @@ import inet.physicallayer.radio.scalar.ScalarRadioSignalModulator;
 module Ieee80211ScalarRadioSignalModulator extends ScalarRadioSignalModulator
 {
     parameters:
-        string preambleMode @enum("long", "short"); // preambre mode according to Ieee 2007, 19.3.2
+        int channelNumber = default(0);
+        string preambleMode @enum("long", "short");
         @class(Ieee80211ScalarRadioSignalModulator);
 }

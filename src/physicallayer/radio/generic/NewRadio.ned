@@ -34,4 +34,11 @@ simple NewRadio extends RadioBase
         modulator: <modulatorType> like IRadioSignalModulator;
         antenna: <antennaType> like IRadioAntenna;
         decider: <deciderType> like IRadioDecider;
+        
+        // TODO:
+        // codec or coder
+        // modem or modulator
+        // shaper/filter
+        // preamble/synchronizer
+        // decider -> snir
 }

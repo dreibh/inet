@@ -23,13 +23,16 @@
 class INET_API ScalarRadioSignalTransmission : public RadioSignalTransmissionBase
 {
     protected:
+        // TODO: move bitrate?
+        const double bitrate;
         const double power;
         const double carrierFrequency;
         const double bandwidth;
 
     public:
-        ScalarRadioSignalTransmission(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition, double power, double carrierFrequency, double bandwidth) :
+        ScalarRadioSignalTransmission(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition, double bitrate, double power, double carrierFrequency, double bandwidth) :
             RadioSignalTransmissionBase(radio, startTime, endTime, startPosition, endPosition),
+            bitrate(bitrate),
             power(power),
             carrierFrequency(carrierFrequency),
             bandwidth(bandwidth)
@@ -37,6 +40,7 @@ class INET_API ScalarRadioSignalTransmission : public RadioSignalTransmissionBas
 
         virtual void printToStream(std::ostream &stream) const;
 
+        virtual double getBitrate() const { return bitrate; }
         virtual double getPower() const { return power; }
         virtual double getCarrierFrequency() const { return carrierFrequency; }
         virtual double getBandwidth() const { return bandwidth; }
@@ -98,16 +102,21 @@ class INET_API ScalarRadioSignalNoise : public RadioSignalNoiseBase
 {
     protected:
         const std::map<simtime_t, double> *powerChanges;
-        // TODO: where's carrierFrequency and bandwidth
+        const double carrierFrequency;
+        const double bandwidth;
 
     public:
-        ScalarRadioSignalNoise(simtime_t startTime, simtime_t endTime, const std::map<simtime_t, double> *powerChanges) :
+        ScalarRadioSignalNoise(simtime_t startTime, simtime_t endTime, const std::map<simtime_t, double> *powerChanges, double carrierFrequency, double bandwidth) :
             RadioSignalNoiseBase(startTime, endTime),
-            powerChanges(powerChanges)
+            powerChanges(powerChanges),
+            carrierFrequency(carrierFrequency),
+            bandwidth(bandwidth)
         {}
 
         virtual const std::map<simtime_t, double> *getPowerChanges() const { return powerChanges; }
         virtual double computeMaximumPower(simtime_t startTime, simtime_t endTime) const;
+        virtual double getCarrierFrequency() const { return carrierFrequency; }
+        virtual double getBandwidth() const { return bandwidth; }
 };
 
 class INET_API ScalarRadioSignalAttenuationBase : public virtual IRadioSignalAttenuation
@@ -214,7 +223,7 @@ class INET_API ScalarSNRRadioDecider : public SNRRadioDecider
         {}
 
         virtual const IRadioSignalListeningDecision *computeListeningDecision(const IRadioSignalListening *listening, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const;
-        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const;
+        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadioSignalListening *listening, const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const;
 };
 
 class INET_API ScalarRadioSignalModulator : public IRadioSignalModulator, public cCompoundModule
@@ -229,8 +238,6 @@ class INET_API ScalarRadioSignalModulator : public IRadioSignalModulator, public
 
     protected:
         virtual void initialize(int stage);
-
-        virtual simtime_t computeDuration(const cPacket *packet) const;
 
     public:
         ScalarRadioSignalModulator() :
@@ -250,6 +257,23 @@ class INET_API ScalarRadioSignalModulator : public IRadioSignalModulator, public
         {}
 
         virtual const IRadioSignalTransmission *createTransmission(const IRadio *radio, const cPacket *packet, simtime_t startTime) const;
+
+        virtual const IRadioSignalListening *createListening(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition) const;
+
+        virtual double getBitrate() const { return bitrate; }
+        virtual void setBitrate(double bitrate) { this->bitrate = bitrate; }
+
+        virtual double getHeaderBitLength() const { return headerBitLength; }
+        virtual void setHeaderBitLength(double headerBitLength) { this->headerBitLength = headerBitLength; }
+
+        virtual double getPower() const { return power; }
+        virtual void setPower(double power) { this->power = power; }
+
+        virtual double getCarrierFrequency() const { return carrierFrequency; }
+        virtual void setCarrierFrequency(double carrierFrequency) { this->carrierFrequency = carrierFrequency; }
+
+        virtual double getBandwidth() const { return bandwidth; }
+        virtual void setBandwidth(double bandwidth) { this->bandwidth = bandwidth; }
 };
 
 #endif

@@ -81,7 +81,7 @@ const IRadioSignalListeningDecision *IdealRadioDecider::computeListeningDecision
     return new RadioSignalListeningDecision(listening, false);
 }
 
-const IRadioSignalReceptionDecision *IdealRadioDecider::computeReceptionDecision(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
+const IRadioSignalReceptionDecision *IdealRadioDecider::computeReceptionDecision(const IRadioSignalListening *listening, const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
 {
     const IdealRadioSignalReception::Power power = check_and_cast<const IdealRadioSignalReception *>(reception)->getPower();
     if (power == IdealRadioSignalReception::POWER_RECEIVABLE)
@@ -122,4 +122,10 @@ const IRadioSignalTransmission *IdealRadioSignalModulator::createTransmission(co
     Coord startPosition = mobility->getPosition(startTime);
     Coord endPosition = mobility->getPosition(endTime);
     return new IdealRadioSignalTransmission(radio, startTime, endTime, startPosition, endPosition, maximumCommunicationRange, maximumInterferenceRange);
+}
+
+const IRadioSignalListening *IdealRadioSignalModulator::createListening(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition) const
+{
+    // TODO:
+    throw cRuntimeError("Not yet implemented");
 }

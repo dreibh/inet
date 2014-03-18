@@ -1535,6 +1535,10 @@ simtime_t Ieee80211Mac::computeBackoffPeriod(Ieee80211Frame *msg, int r)
             cw = cwMax();
     }
 
+    if (simulation.getContextModule())
+        EV << "CONTEXT MODULE " << simulation.getContextModule()->getFullName() << endl;
+    else
+        EV << "NO CONTEXT MODULE\n";
     int c = intrand(cw + 1);
 
     EV << "generated backoff slot number: " << c << " , cw: " << cw << " ,cwMin:cwMax = " << cwMin() << ":" << cwMax() << endl;

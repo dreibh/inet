@@ -22,14 +22,17 @@ import inet.physicallayer.radio.scalar.ScalarRadio;
 simple Ieee80211Radio extends ScalarRadio
 {
     parameters:
+//        string errorModel @enum("YansModel", "NistModel") = default("NistModel");
+        int channelNumber = default(0);
         modulatorType = default("Ieee80211ScalarRadioSignalModulator");
-        modulator.bitrate = default(2Mbps);
-        // TODO: meaningless, factor and delete
+        modulator.bitrate = default(11Mbps);
         modulator.headerBitLength = default(192b);
         modulator.carrierFrequency = default(2.4GHz);
         modulator.bandwidth = default(2MHz);
         modulator.preambleMode = default("long");
-        decider.sensitivity = default(1E-11W);
-        decider.snrThreshold = default(10);
-        modulator.power = default(100mW);
+        deciderType = default("Ieee80211RadioDecider");
+        decider.sensitivity = default(3.1622776602e-12W); // TODO: -85dBm
+        decider.snrThreshold = default(2.51188643151); // TODO: 4dB
+        modulator.power = default(20mW);
+        **.channelNumber = channelNumber;
 }

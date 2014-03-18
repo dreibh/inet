@@ -305,7 +305,9 @@
 /examples/voipstream/VoIPStreamTrafficTest/, -f omnetpp.ini -c General -r 0,                2s,              9ca9-46ed
 
 /examples/wireless/handover/,        -f omnetpp.ini -c General -r 0,                1500s,           d823-2b37
+/examples/wireless/handoverold/,     -f omnetpp.ini -c General -r 0,                1500s,           d823-2b37
 /examples/wireless/hosttohost/,      -f omnetpp.ini -c Throughput1 -r 0,            5s,              9127-06f9
+/examples/wireless/hosttohostold/,   -f omnetpp.ini -c Throughput1 -r 0,            5s,              9127-06f9
 /examples/wireless/lan80211/,        -f omnetpp-ftp.ini -c TwoHosts -r 0,           100s,            7166-940f
 # /examples/wireless/lan80211/,        -f omnetpp-ftp.ini -c NHosts -r 0,             100s,         0000-0000   # interactive config, needed a *.numHosts parameter
 
@@ -319,7 +321,9 @@
 /examples/wireless/multiradio/,      -f omnetpp.ini -c SwitchedWlans -r 0,          100s,            6315-e14a
 /examples/wireless/multiradio/,      -f omnetpp.ini -c RoutedWlans -r 0,            100s,            c3ce-6caf
 /examples/wireless/synchronized/,    -f omnetpp.ini -c Synchronized -r 0,           2s,              5c5d-5891
+/examples/wireless/synchronizedold/,    -f omnetpp.ini -c Synchronized -r 0,           2s,              5c5d-5891
 /examples/wireless/synchronized/,    -f omnetpp.ini -c NonSynchronized -r 0,        2s,              9352-bc5c
+/examples/wireless/synchronizedold/,    -f omnetpp.ini -c NonSynchronized -r 0,        2s,              9352-bc5c
 /examples/wireless/throughput/,      -f omnetpp.ini -c Throughput1 -r 0,            20s,             5c71-b3ee
 /examples/wireless/throughput/,      -f omnetpp.ini -c Throughput2 -r 0,            10s,             a24f-6cd8
 /examples/wireless/wiredandwirelesshostswithap/, -f omnetpp.ini -c General -r 0,                100s,            1bd7-488f

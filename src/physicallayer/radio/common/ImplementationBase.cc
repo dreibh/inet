@@ -68,6 +68,7 @@ double RadioSignalFreeSpaceAttenuationBase::computePathLoss(const IRadioSignalTr
 //    double endDistance = transmission->getEndPosition().distance(receptionEndPosition);
 //    double distance = (startDistance + endDistance) / 2;
     double distance = transmission->getStartPosition().distance(receptionStartPosition);
+    EV << "Frequency: " << carrierFrequency << ", distance: " << distance << endl;
     double waveLength = transmission->getPropagationSpeed() / carrierFrequency;
     // NOTE: this check allows to get the same result from the GPU and the CPU when the alpha is exactly 2
     double raisedDistance = alpha == 2.0 ? distance * distance : pow(distance, alpha);
@@ -76,12 +77,12 @@ double RadioSignalFreeSpaceAttenuationBase::computePathLoss(const IRadioSignalTr
 
 void RadioSignalListeningDecision::printToStream(std::ostream &stream) const
 {
-    stream << "listening " << (isListeningPossible_ ? "possible" : "impossible");
+    stream << "listening decision, " << (isListeningPossible_ ? "possible" : "impossible");
 }
 
 void RadioSignalReceptionDecision::printToStream(std::ostream &stream) const
 {
-    stream << "reception " << (isReceptionPossible_ ? "possible" : "impossible");
+    stream << "reception decision, " << (isReceptionPossible_ ? "possible" : "impossible");
     stream << " and " << (isReceptionSuccessful_ ? "successful" : "unsuccessful");
 }
 
@@ -93,6 +94,8 @@ void RadioDeciderBase::initialize(int stage)
     }
 }
 
+// TODO: whether we capture a signal or not is a very important decision
+// TODO: so I guess we need to factor this out to be more visible in the radio class
 bool RadioDeciderBase::computeIsReceptionPossible(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions) const
 {
     if (!isReceptionPossible(reception))
@@ -102,7 +105,15 @@ bool RadioDeciderBase::computeIsReceptionPossible(const IRadioSignalReception *r
         for (std::vector<const IRadioSignalReception *>::const_iterator it = overlappingReceptions->begin(); it != overlappingReceptions->end(); it++)
         {
             const IRadioSignalReception *overlappingReception = *it;
-            if (overlappingReception->getStartTime() < reception->getStartTime() && isReceptionPossible(overlappingReception))
+            // KLUDGE: to match old radio fingerprint when two signals arrive at the exact same time
+            // KLUDGE: only receive one of them
+            if (isReceptionPossible(overlappingReception) &&
+                (overlappingReception->getStartTime() < reception->getStartTime() ||
+                 (overlappingReception->getStartTime() == reception->getStartTime() &&
+                  overlappingReception->getTransmission()->getEventNumber() < reception->getTransmission()->getEventNumber()
+                 )
+                )
+               )
                 return false;
         }
         return true;
@@ -118,7 +129,7 @@ void SNRRadioDecider::initialize(int stage)
     }
 }
 
-const IRadioSignalReceptionDecision *SNRRadioDecider::computeReceptionDecision(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
+const IRadioSignalReceptionDecision *SNRRadioDecider::computeReceptionDecision(const IRadioSignalListening *listening, const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
 {
     const IRadioSignalNoise *noise = computeNoise(overlappingReceptions, backgroundNoise);
     double snrMinimum = computeSNRMinimum(reception, noise);

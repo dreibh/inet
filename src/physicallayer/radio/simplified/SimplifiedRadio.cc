@@ -25,6 +25,7 @@
 #include "Radio80211aControlInfo_m.h"
 #include "NodeStatus.h"
 #include "NodeOperations.h"
+#include "Ieee80211Consts.h"
 
 simsignal_t SimplifiedRadio::bitrateSignal = registerSignal("bitrate");
 simsignal_t SimplifiedRadio::lossRateSignal = registerSignal("lossRate");
@@ -535,6 +536,7 @@ void SimplifiedRadio::handleLowerMsgStart(SimplifiedRadioFrame* radioFrame)
     if (distance<MIN_DISTANCE)
         distance = MIN_DISTANCE;
 
+    EV << "Power: " << radioFrame->getPSend() << ", frequency: " << frequency << ", distance: " << distance << endl;
     double rcvdPower = receptionModel->calculateReceivedPower(radioFrame->getPSend(), frequency, distance);
     if (obstacles && distance > MIN_DISTANCE)
         rcvdPower = obstacles->calculateReceivedPower(rcvdPower, carrierFrequency, framePos, 0, getRadioPosition(), 0);
@@ -697,6 +699,7 @@ void SimplifiedRadio::setRadioChannel(int channel)
     EV << "Changing from channel " << radioChannel << " to " << channel << "\n";
     radioChannel = channel;
     emit(radioChannelChangedSignal, channel);
+    carrierFrequency = CENTER_FREQUENCIES[radioChannel];
 
     cc->setRadioChannel(myRadioRef, radioChannel);
 

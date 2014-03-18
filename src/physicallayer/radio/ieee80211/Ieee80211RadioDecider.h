@@ -15,27 +15,36 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IEEE80211SCALARRADIOSIGNALMODULATOR_H_
-#define __INET_IEEE80211SCALARRADIOSIGNALMODULATOR_H_
+#ifndef __INET_IEEE80211RADIODECIDER_H_
+#define __INET_IEEE80211RADIODECIDER_H_
 
 #include "ScalarImplementation.h"
 #include "WifiPreambleType.h"
+#include "IErrorModel.h"
+#include "BerParseFile.h"
 
-class INET_API Ieee80211ScalarRadioSignalModulator : public ScalarRadioSignalModulator
+class INET_API Ieee80211RadioDecider : public ScalarSNRRadioDecider
 {
     protected:
-        WifiPreamble preambleMode;
+        char opMode;
+        IErrorModel *errorModel;
+        WifiPreamble wifiPreamble;
+        bool autoHeaderSize;
+        BerParseFile *parseTable;
 
     protected:
         virtual void initialize(int stage);
 
     public:
-        Ieee80211ScalarRadioSignalModulator() :
-            ScalarRadioSignalModulator(),
-            preambleMode((WifiPreamble)-1)
+        Ieee80211RadioDecider() :
+            ScalarSNRRadioDecider()
         {}
 
-        virtual const IRadioSignalTransmission *createTransmission(const IRadio *radio, const cPacket *packet, simtime_t startTime) const;
+        Ieee80211RadioDecider(double sensitivity, double snrThreshold) :
+            ScalarSNRRadioDecider(sensitivity, snrThreshold)
+        {}
+
+        virtual bool isPacketOK(double snirMin, int lengthMPDU, double bitrate) const;
 };
 
 #endif

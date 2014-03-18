@@ -15,15 +15,15 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_IRADIOSIGNALSOURCE_H_
-#define __INET_IRADIOSIGNALSOURCE_H_
+#ifndef __INET_IRADIOSIGNALMODULATION_H_
+#define __INET_IRADIOSIGNALMODULATION_H_
 
 #include "INETDefs.h"
 
-class INET_API IRadioSignalSource
+class INET_API IRadioSignalModulation
 {
     public:
-        virtual ~IRadioSignalSource() {}
+        virtual ~IRadioSignalModulation() {}
 };
 
 #endif

@@ -33,6 +33,7 @@ class INET_API IRadioSignalReception : public IPrintableObject
         virtual Coord getStartPosition() const = 0;
         virtual Coord getEndPosition() const = 0;
 
+        // TODO: should not be needed
         virtual const IRadio *getRadio() const = 0;
         virtual const IRadioSignalTransmission *getTransmission() const = 0;
 };

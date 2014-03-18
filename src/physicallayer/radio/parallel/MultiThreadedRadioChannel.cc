@@ -105,7 +105,7 @@ void *MultiThreadedRadioChannel::workerMain(void *argument)
             EV_DEBUG << "Worker " << pthread_self() << " is computing reception at " << computeCacheJob.receptionStartTime << endl;
             std::vector<const IRadioSignalTransmission *> *transmissionsCopy = new std::vector<const IRadioSignalTransmission *>(transmissions);
             pthread_mutex_unlock(&pendingJobsLock);
-            const IRadioSignalReceptionDecision *decision = computeReceptionDecision(computeCacheJob.radio, computeCacheJob.transmission, transmissionsCopy);
+            const IRadioSignalReceptionDecision *decision = computeReceptionDecision(computeCacheJob.radio, computeCacheJob.listening, computeCacheJob.transmission, transmissionsCopy);
             setCachedDecision(computeCacheJob.radio, computeCacheJob.transmission, decision);
         }
         else
@@ -152,9 +152,10 @@ void MultiThreadedRadioChannel::invalidateCachedDecision(const IRadioSignalRecep
     const IRadioSignalReception *reception = decision->getReception();
     const IRadio *radio = reception->getRadio();
     const IRadioSignalTransmission *transmission = reception->getTransmission();
+    const IRadioSignalListening *listening = radio->getModulator()->createListening(radio, transmission->getStartTime(), transmission->getEndTime(), transmission->getStartPosition(), transmission->getEndPosition());
     simtime_t startTime = reception->getStartTime();
     pthread_mutex_lock(&pendingJobsLock);
-    pendingComputeCacheJobs.push(ComputeCacheJob(radio, transmission, startTime));
+    pendingComputeCacheJobs.push(ComputeCacheJob(radio, listening, transmission, startTime));
     pthread_mutex_unlock(&pendingJobsLock);
 }
 
@@ -169,7 +170,8 @@ void MultiThreadedRadioChannel::transmitToChannel(const IRadio *transmitterRadio
         // TODO: merge with sendRadioFrame!
         if (transmitterRadio != receiverRadio && isPotentialReceiver(receiverRadio, transmission)) {
             simtime_t receptionStartTime = computeTransmissionStartArrivalTime(transmission, receiverRadio->getReceiverAntenna()->getMobility());
-            pendingComputeCacheJobs.push(ComputeCacheJob(receiverRadio, transmission, receptionStartTime));
+            const IRadioSignalListening *listening = receiverRadio->getModulator()->createListening(receiverRadio, transmission->getStartTime(), transmission->getEndTime(), transmission->getStartPosition(), transmission->getEndPosition());
+            pendingComputeCacheJobs.push(ComputeCacheJob(receiverRadio, listening, transmission, receptionStartTime));
         }
     }
     // TODO: what shall we do with already running computation jobs?
@@ -178,12 +180,12 @@ void MultiThreadedRadioChannel::transmitToChannel(const IRadio *transmitterRadio
     pthread_mutex_unlock(&pendingJobsLock);
 }
 
-const IRadioSignalReceptionDecision *MultiThreadedRadioChannel::receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const
+const IRadioSignalReceptionDecision *MultiThreadedRadioChannel::receiveFromChannel(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission) const
 {
     EV_DEBUG << "Radio " << radio << " receives signal " << transmission << endl;
     pthread_mutex_lock(&pendingJobsLock);
     while (!pendingInvalidateCacheJobs.empty())
         pthread_cond_wait(&pendingJobsCondition, &pendingJobsLock);
     pthread_mutex_unlock(&pendingJobsLock);
-    return CachedRadioChannel::receiveFromChannel(radio, transmission);
+    return CachedRadioChannel::receiveFromChannel(radio, listening, transmission);
 }

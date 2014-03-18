@@ -157,6 +157,8 @@ class INET_API DimensionalRadioSignalModulator : public IRadioSignalModulator
         {}
 
         virtual const IRadioSignalTransmission *createTransmission(const IRadio *radio, const cPacket *packet, simtime_t startTime) const;
+
+        virtual const IRadioSignalListening *createListening(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition) const;
 };
 
 #endif

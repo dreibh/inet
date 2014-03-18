@@ -15,8 +15,10 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <Radio.h>
-#include <RadioChannel.h>
+#include "Radio.h"
+#include "RadioChannel.h"
+// TODO: should not be here
+#include "ScalarImplementation.h"
 
 RadioChannel::~RadioChannel()
 {
@@ -172,12 +174,12 @@ const std::vector<const IRadioSignalReception *> *RadioChannel::computeOverlappi
     return overlappingReceptions;
 }
 
-const IRadioSignalReceptionDecision *RadioChannel::computeReceptionDecision(const IRadio *radio, const IRadioSignalTransmission *transmission, const std::vector<const IRadioSignalTransmission *> *transmissions) const
+const IRadioSignalReceptionDecision *RadioChannel::computeReceptionDecision(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission, const std::vector<const IRadioSignalTransmission *> *transmissions) const
 {
     const IRadioSignalReception *reception = attenuation->computeReception(radio, transmission);
     const std::vector<const IRadioSignalReception *> *overlappingReceptions = computeOverlappingReceptions(reception, transmissions);
     const IRadioSignalNoise *noise = backgroundNoise ? backgroundNoise->computeNoise(reception) : NULL;
-    return radio->getDecider()->computeReceptionDecision(reception, overlappingReceptions, noise);
+    return radio->getDecider()->computeReceptionDecision(listening, reception, overlappingReceptions, noise);
 }
 
 const IRadioSignalListeningDecision *RadioChannel::computeListeningDecision(const IRadio *radio, const IRadioSignalListening *listening, const std::vector<const IRadioSignalTransmission *> *transmissions) const
@@ -220,9 +222,9 @@ void RadioChannel::sendToChannel(IRadio *radio, const IRadioFrame *frame)
     }
 }
 
-const IRadioSignalReceptionDecision *RadioChannel::receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const
+const IRadioSignalReceptionDecision *RadioChannel::receiveFromChannel(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission) const
 {
-    const IRadioSignalReceptionDecision *decision = computeReceptionDecision(radio, transmission, const_cast<const std::vector<const IRadioSignalTransmission *> *>(&transmissions));
+    const IRadioSignalReceptionDecision *decision = computeReceptionDecision(radio, listening, transmission, const_cast<const std::vector<const IRadioSignalTransmission *> *>(&transmissions));
     EV_DEBUG << "Receiving " << transmission << " from channel by " << radio << " arrives as " << decision->getReception() << " and results in " << decision << endl;
     return decision;
 }
@@ -236,7 +238,12 @@ const IRadioSignalListeningDecision *RadioChannel::listenOnChannel(const IRadio 
 
 bool RadioChannel::isPotentialReceiver(const IRadio *radio, const IRadioSignalTransmission *transmission) const
 {
-    if (maximumCommunicationRange == -1)
+    // KLUDGE: fingerprint
+    const ScalarRadioSignalModulator *scalarModulator = dynamic_cast<const ScalarRadioSignalModulator *>(radio->getModulator());
+    const ScalarRadioSignalTransmission *scalarTransmission = dynamic_cast<const ScalarRadioSignalTransmission *>(transmission);
+    if (scalarModulator && scalarTransmission && scalarTransmission->getCarrierFrequency() != scalarModulator->getCarrierFrequency())
+        return false;
+    else if (maximumCommunicationRange == -1)
         return true;
     else
     {

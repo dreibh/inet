@@ -30,6 +30,9 @@ class INET_API IRadioSignalTransmission : public IPrintableObject
 
         virtual unsigned int getId() const = 0;
 
+        // KLUDGE: fingerprint
+        virtual eventnumber_t getEventNumber() const = 0;
+
         virtual simtime_t getStartTime() const = 0;
         virtual simtime_t getEndTime() const = 0;
         virtual simtime_t getDuration() const = 0;
@@ -39,7 +42,13 @@ class INET_API IRadioSignalTransmission : public IPrintableObject
 
         virtual double getPropagationSpeed() const = 0;
 
+        // TODO: do we really need this?
         virtual const IRadio *getRadio() const = 0;
+
+        // virtual cPacket *getPacketModel() const = 0;
+        // virtual IRadioSignalBitModel *getBitModel() const = 0;
+        // virtual IRadioSignalSymbolModel *getSymbolModel() const = 0;
+        // virtual IRadioSignalSampleModel *getSampleModel() const = 0;
 };
 
 #endif

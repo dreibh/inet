@@ -49,7 +49,7 @@ class INET_API RadioChannel : public RadioChannelBase, public IRadioChannel
         virtual const std::vector<const IRadioSignalTransmission *> *computeOverlappingTransmissions(const IRadioSignalReception *reception, const std::vector<const IRadioSignalTransmission *> *transmissions) const;
         virtual const std::vector<const IRadioSignalReception *> *computeOverlappingReceptions(const IRadioSignalListening *listening, const std::vector<const IRadioSignalTransmission *> *transmissions) const;
         virtual const std::vector<const IRadioSignalReception *> *computeOverlappingReceptions(const IRadioSignalReception *reception, const std::vector<const IRadioSignalTransmission *> *transmissions) const;
-        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadio *radio, const IRadioSignalTransmission *transmission, const std::vector<const IRadioSignalTransmission *> *transmissions) const;
+        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission, const std::vector<const IRadioSignalTransmission *> *transmissions) const;
         virtual const IRadioSignalListeningDecision *computeListeningDecision(const IRadio *radio, const IRadioSignalListening *listening, const std::vector<const IRadioSignalTransmission *> *transmissions) const;
 
     public:
@@ -83,7 +83,7 @@ class INET_API RadioChannel : public RadioChannelBase, public IRadioChannel
         virtual void transmitToChannel(const IRadio *radio, const IRadioSignalTransmission *transmission);
         virtual void sendToChannel(IRadio *radio, const IRadioFrame *frame);
 
-        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const;
+        virtual const IRadioSignalReceptionDecision *receiveFromChannel(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission) const;
         virtual const IRadioSignalListeningDecision *listenOnChannel(const IRadio *radio, const IRadioSignalListening *listening) const;
         virtual bool isPotentialReceiver(const IRadio *radio, const IRadioSignalTransmission *transmission) const;
 };

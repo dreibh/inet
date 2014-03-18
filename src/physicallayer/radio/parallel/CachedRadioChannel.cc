@@ -83,7 +83,7 @@ void CachedRadioChannel::invalidateCachedDecision(const IRadioSignalReceptionDec
     cachedTransmissionDecisions[radio->getId()] = NULL;
 }
 
-const IRadioSignalReceptionDecision *CachedRadioChannel::receiveFromChannel(const IRadio *radio, const IRadioSignalTransmission *transmission) const
+const IRadioSignalReceptionDecision *CachedRadioChannel::receiveFromChannel(const IRadio *radio, const IRadioSignalListening *listening, const IRadioSignalTransmission *transmission) const
 {
     cacheGetCount++;
     const IRadioSignalReceptionDecision *decision = getCachedDecision(radio, transmission);
@@ -93,5 +93,5 @@ const IRadioSignalReceptionDecision *CachedRadioChannel::receiveFromChannel(cons
         return decision;
     }
     else
-        return RadioChannel::receiveFromChannel(radio, transmission);
+        return RadioChannel::receiveFromChannel(radio, listening, transmission);
 }

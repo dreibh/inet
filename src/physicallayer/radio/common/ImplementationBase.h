@@ -51,6 +51,8 @@ class INET_API RadioSignalTransmissionBase : public IRadioSignalTransmission
 
         const IRadio *radio;
 
+        const eventnumber_t eventNumber;
+
         const simtime_t startTime;
         const simtime_t endTime;
 
@@ -65,6 +67,7 @@ class INET_API RadioSignalTransmissionBase : public IRadioSignalTransmission
         RadioSignalTransmissionBase(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition) :
             id(nextId++),
             radio(radio),
+            eventNumber(simulation.getEventNumber()),
             startTime(startTime),
             endTime(endTime),
             startPosition(startPosition),
@@ -75,6 +78,8 @@ class INET_API RadioSignalTransmissionBase : public IRadioSignalTransmission
         virtual unsigned int getId() const { return id; }
 
         virtual void printToStream(std::ostream &stream) const;
+
+        virtual eventnumber_t getEventNumber() const { return eventNumber; }
 
         virtual simtime_t getStartTime() const { return startTime; }
         virtual simtime_t getEndTime() const { return endTime; }
@@ -327,7 +332,7 @@ class INET_API SNRRadioDecider : public RadioDeciderBase
         {}
 
         virtual double getSNRThreshold() const { return snrThreshold; }
-        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const;
+        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadioSignalListening *listening, const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const;
 };
 
 #endif

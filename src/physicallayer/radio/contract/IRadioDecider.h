@@ -33,7 +33,7 @@ class INET_API IRadioDecider
 
         // TODO: extract reception, totalNoise interface
         // TODO: virtual const IRadioDecision *computeDecision(const IRadioSignalReception *reception, const IRadioSignalNoise *noise) const = 0;
-        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const = 0;
+        virtual const IRadioSignalReceptionDecision *computeReceptionDecision(const IRadioSignalListening *listening, const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const = 0;
         virtual const IRadioSignalListeningDecision *computeListeningDecision(const IRadioSignalListening *listening, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const = 0;
 };
 

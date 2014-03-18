@@ -22,6 +22,10 @@
 #include "NodeStatus.h"
 // TODO: should not be here
 #include "ScalarImplementation.h"
+// TODO: should not be here
+#include "PhyControlInfo_m.h"
+// TODO: should not be here
+#include "Ieee80211Consts.h"
 
 Define_Module(NewRadio);
 
@@ -47,6 +51,9 @@ void NewRadio::initialize(int stage)
         modulator = check_and_cast<IRadioSignalModulator *>(getSubmodule("modulator"));
         antenna = check_and_cast<IRadioAntenna *>(getSubmodule("antenna"));
         decider = check_and_cast<IRadioDecider *>(getSubmodule("decider"));
+        // KLUDGE:
+        if (hasPar("channelNumber"))
+            setRadioChannel(par("channelNumber"));
     }
 }
 
@@ -55,7 +62,25 @@ void NewRadio::setRadioMode(RadioMode newRadioMode)
     Enter_Method_Silent();
     if (radioMode != newRadioMode)
     {
-        cancelAndDeleteEndReceptionTimers();
+        // KLUDGE: to keep fingerprint
+        if (newRadioMode == OldIRadio::RADIO_MODE_RECEIVER)
+        {
+            for (EndReceptionTimers::iterator it = endReceptionTimers.begin(); it != endReceptionTimers.end(); it++)
+            {
+                cMessage *timer = *it;
+                RadioFrame *radioFrame = check_and_cast<RadioFrame*>(timer->getControlInfo());
+                const IRadioSignalTransmission *transmission = radioFrame->getTransmission();
+                double distance = antenna->getMobility()->getCurrentPosition().distance(transmission->getStartPosition());
+                simtime_t propagationTime = distance / SPEED_OF_LIGHT;
+                simtime_t endArrivalTime = transmission->getStartTime() + radioFrame->getDuration() + propagationTime;
+//                if (transmission->getStartTime() + propagationTime > simTime())
+//                    TODO:
+                if (endArrivalTime > simTime())
+                    scheduleAt(endArrivalTime, timer);
+            }
+        }
+        else
+            cancelAndDeleteEndReceptionTimers();
         EV << "Changing radio mode from " << getRadioModeName(radioMode) << " to " << getRadioModeName(newRadioMode) << ".\n";
         radioMode = newRadioMode;
         emit(radioModeChangedSignal, newRadioMode);
@@ -87,8 +112,15 @@ void NewRadio::handleMessageWhenUp(cMessage *message)
             handleLowerFrame(check_and_cast<RadioFrame*>(message));
         else
         {
+            // KLUDGE: fingerprint
+            {
+                cMessage *endReceptionTimer = new cMessage("endReception");
+                endReceptionTimer->setControlInfo(message);
+                endReceptionTimer->setKind(false);
+                endReceptionTimers.push_back(endReceptionTimer);
+            }
             EV << "Radio is not in receiver or transceiver mode, dropping frame.\n";
-            delete message;
+//            delete message;
         }
     }
     else
@@ -131,7 +163,29 @@ void NewRadio::handleSelfMessage(cMessage *message)
 
 void NewRadio::handleUpperCommand(cMessage *message)
 {
-    throw cRuntimeError("Unsupported command");
+    // TODO: revise interface
+    if (message->getKind() == PHY_C_CONFIGURERADIO)
+    {
+        PhyControlInfo *phyControlInfo = check_and_cast<PhyControlInfo *>(message->getControlInfo());
+        int newChannelNumber = phyControlInfo->getChannelNumber();
+        double newBitrate = phyControlInfo->getBitrate();
+        delete phyControlInfo;
+
+        // KLUDGE: scalar
+        ScalarRadioSignalModulator *scalarModulator = const_cast<ScalarRadioSignalModulator *>(check_and_cast<const ScalarRadioSignalModulator *>(modulator));
+        if (newChannelNumber != -1)
+        {
+            scalarModulator->setCarrierFrequency(CENTER_FREQUENCIES[newChannelNumber]);
+            // KLUDGE: channel
+            setRadioChannel(newChannelNumber);
+        }
+        else if (newBitrate != -1)
+        {
+            scalarModulator->setBitrate(newBitrate);
+        }
+    }
+    else
+        throw cRuntimeError("Unsupported command");
 }
 
 void NewRadio::handleLowerCommand(cMessage *message)
@@ -157,7 +211,9 @@ void NewRadio::handleLowerFrame(RadioFrame *radioFrame)
     EV << "Reception of " << radioFrame << " started.\n";
     cMessage *endReceptionTimer = new cMessage("endReception");
     endReceptionTimer->setControlInfo(radioFrame);
-    const IRadioSignalReceptionDecision *receptionDecision = channel->receiveFromChannel(this, radioFrame->getTransmission());
+    const IRadioSignalTransmission *transmission = radioFrame->getTransmission();
+    const IRadioSignalListening *listening = modulator->createListening(this, transmission->getStartTime(), transmission->getEndTime(), transmission->getStartPosition(), transmission->getEndPosition());
+    const IRadioSignalReceptionDecision *receptionDecision = channel->receiveFromChannel(this, listening, transmission);
     endReceptionTimer->setKind(receptionDecision->isReceptionPossible());
     endReceptionTimers.push_back(endReceptionTimer);
 // TODO:   scheduleAt(receptionDecision->getReception()->getEndTime(), endReceptionTimer);
@@ -200,7 +256,7 @@ void NewRadio::updateTransceiverState()
     for (EndReceptionTimers::iterator it = endReceptionTimers.begin(); it != endReceptionTimers.end(); it++)
         isReceiving |= (*it)->getKind();
     // TODO: use the demodulator to create a listening? use 2 * minimumOverlappingTime for lookahead?
-    const IRadioSignalListeningDecision *listeningDecision = channel->listenOnChannel(this, new ScalarRadioSignalListening(this, now, now + 1E-9, position, position, 2.4E+9, 1E+6));
+    const IRadioSignalListeningDecision *listeningDecision = channel->listenOnChannel(this, modulator->createListening(this, now, now + 1E-9, position, position));
     if (radioMode == RADIO_MODE_OFF || radioMode == RADIO_MODE_SLEEP || radioMode == RADIO_MODE_TRANSMITTER)
         newRadioReceptionState = RECEPTION_STATE_UNDEFINED;
     else if (isReceiving)

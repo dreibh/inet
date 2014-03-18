@@ -100,22 +100,24 @@ void ScalarRadioBackgroundNoise::initialize(int stage)
 
 const IRadioSignalNoise *ScalarRadioBackgroundNoise::computeNoise(const IRadioSignalListening *listening) const
 {
+    const ScalarRadioSignalListening *scalarListening = check_and_cast<const ScalarRadioSignalListening *>(listening);
     simtime_t startTime = listening->getStartTime();
     simtime_t endTime = listening->getEndTime();
     std::map<simtime_t, double> *powerChanges = new std::map<simtime_t, double>();
     powerChanges->insert(std::pair<simtime_t, double>(startTime, power));
     powerChanges->insert(std::pair<simtime_t, double>(endTime, -power));
-    return new ScalarRadioSignalNoise(startTime, endTime, powerChanges);
+    return new ScalarRadioSignalNoise(startTime, endTime, powerChanges, scalarListening->getCarrierFrequency(), scalarListening->getBandwidth());
 }
 
 const IRadioSignalNoise *ScalarRadioBackgroundNoise::computeNoise(const IRadioSignalReception *reception) const
 {
+    const ScalarRadioSignalReception *scalarReception = check_and_cast<const ScalarRadioSignalReception *>(reception);
     simtime_t startTime = reception->getStartTime();
     simtime_t endTime = reception->getEndTime();
     std::map<simtime_t, double> *powerChanges = new std::map<simtime_t, double>();
     powerChanges->insert(std::pair<simtime_t, double>(startTime, power));
     powerChanges->insert(std::pair<simtime_t, double>(endTime, -power));
-    return new ScalarRadioSignalNoise(startTime, endTime, powerChanges);
+    return new ScalarRadioSignalNoise(startTime, endTime, powerChanges, scalarReception->getCarrierFrequency(), scalarReception->getBandwidth());
 }
 
 void ScalarRadioSignalListeningDecision::printToStream(std::ostream &stream) const
@@ -138,12 +140,22 @@ bool ScalarSNRRadioDecider::isReceptionPossible(const IRadioSignalReception *rec
 
 const IRadioSignalNoise *ScalarSNRRadioDecider::computeNoise(const std::vector<const IRadioSignalReception *> *receptions, const IRadioSignalNoise *backgroundNoise) const
 {
+    double carrierFrequency = -1;
+    double bandwidth = -1;
     simtime_t noiseStartTime = SimTime::getMaxTime();
     simtime_t noiseEndTime = 0;
     std::map<simtime_t, double> *powerChanges = new std::map<simtime_t, double>();
     for (std::vector<const IRadioSignalReception *>::const_iterator it = receptions->begin(); it != receptions->end(); it++)
     {
         const ScalarRadioSignalReception *reception = check_and_cast<const ScalarRadioSignalReception *>(*it);
+        if (carrierFrequency == -1)
+            carrierFrequency = reception->getCarrierFrequency();
+        else if (carrierFrequency != reception->getCarrierFrequency())
+            throw cRuntimeError("Carrier frequency mismatch while computing noise");
+        if (bandwidth == -1)
+            bandwidth = reception->getBandwidth();
+        else if (bandwidth != reception->getBandwidth())
+            throw cRuntimeError("Bandwidth mismatch while computing noise");
         double power = reception->getPower();
         simtime_t startTime = reception->getStartTime();
         simtime_t endTime = reception->getEndTime();
@@ -164,6 +176,15 @@ const IRadioSignalNoise *ScalarSNRRadioDecider::computeNoise(const std::vector<c
     }
     if (backgroundNoise)
     {
+        const ScalarRadioSignalNoise *scalarBackgroundNoise = check_and_cast<const ScalarRadioSignalNoise *>(backgroundNoise);
+        if (carrierFrequency == -1)
+            carrierFrequency = scalarBackgroundNoise->getCarrierFrequency();
+        else if (carrierFrequency != scalarBackgroundNoise->getCarrierFrequency())
+            throw cRuntimeError("Carrier frequency mismatch while computing noise");
+        if (bandwidth == -1)
+            bandwidth = scalarBackgroundNoise->getBandwidth();
+        else if (bandwidth != scalarBackgroundNoise->getBandwidth())
+            throw cRuntimeError("Bandwidth mismatch while computing noise");
         const std::map<simtime_t, double> *backgroundNoisePowerChanges = check_and_cast<const ScalarRadioSignalNoise *>(backgroundNoise)->getPowerChanges();
         for (std::map<simtime_t, double>::const_iterator it = backgroundNoisePowerChanges->begin(); it != backgroundNoisePowerChanges->end(); it++)
         {
@@ -174,23 +195,37 @@ const IRadioSignalNoise *ScalarSNRRadioDecider::computeNoise(const std::vector<c
                 powerChanges->insert(std::pair<simtime_t, double>(it->first, it->second));
         }
     }
-    return new ScalarRadioSignalNoise(noiseStartTime, noiseEndTime, powerChanges);
+    return new ScalarRadioSignalNoise(noiseStartTime, noiseEndTime, powerChanges, carrierFrequency, bandwidth);
 }
 
 const IRadioSignalListeningDecision *ScalarSNRRadioDecider::computeListeningDecision(const IRadioSignalListening *listening, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
 {
     const ScalarRadioSignalNoise *scalarNoise = check_and_cast<const ScalarRadioSignalNoise *>(computeNoise(overlappingReceptions, backgroundNoise));
     double maximumPower = scalarNoise->computeMaximumPower(listening->getStartTime(), listening->getEndTime());
-    return new ScalarRadioSignalListeningDecision(listening, maximumPower > (sensitivity / 10), maximumPower);
+    // TODO: KLUDGE: what is this / 10?
+    return new ScalarRadioSignalListeningDecision(listening, maximumPower > sensitivity, maximumPower);
+//    return new ScalarRadioSignalListeningDecision(listening, maximumPower > (sensitivity / 10), maximumPower);
 }
 
-const IRadioSignalReceptionDecision *ScalarSNRRadioDecider::computeReceptionDecision(const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
+const IRadioSignalReceptionDecision *ScalarSNRRadioDecider::computeReceptionDecision(const IRadioSignalListening *listening, const IRadioSignalReception *reception, const std::vector<const IRadioSignalReception *> *overlappingReceptions, const IRadioSignalNoise *backgroundNoise) const
 {
-    const IRadioSignalNoise *noise = computeNoise(overlappingReceptions, backgroundNoise);
-    double snrMinimum = computeSNRMinimum(reception, noise);
-    bool isReceptionPossible = computeIsReceptionPossible(reception, overlappingReceptions);
-    bool isReceptionSuccessful = isReceptionPossible && snrMinimum > snrThreshold;
-    return new ScalarRadioSignalReceptionDecision(reception, isReceptionPossible, isReceptionSuccessful, snrMinimum);
+    const ScalarRadioSignalListening *scalarListening = check_and_cast<const ScalarRadioSignalListening *>(listening);
+    const ScalarRadioSignalReception *scalarReception = check_and_cast<const ScalarRadioSignalReception *>(reception);
+    if (scalarListening->getCarrierFrequency() == scalarReception->getCarrierFrequency() && scalarListening->getBandwidth() == scalarReception->getBandwidth())
+    {
+        const IRadioSignalNoise *noise = computeNoise(overlappingReceptions, backgroundNoise);
+        double snrMinimum = computeSNRMinimum(reception, noise);
+        bool isReceptionPossible = computeIsReceptionPossible(reception, overlappingReceptions);
+        bool isReceptionSuccessful = isReceptionPossible && snrMinimum > snrThreshold;
+        return new ScalarRadioSignalReceptionDecision(reception, isReceptionPossible, isReceptionSuccessful, snrMinimum);
+    }
+    else if ((scalarListening->getCarrierFrequency() + scalarListening->getBandwidth() / 2 < scalarReception->getCarrierFrequency() - scalarReception->getBandwidth() / 2) ||
+             (scalarListening->getCarrierFrequency() - scalarListening->getBandwidth() / 2 > scalarReception->getCarrierFrequency() + scalarReception->getBandwidth() / 2))
+    {
+        return new ScalarRadioSignalReceptionDecision(reception, false, false, 0);
+    }
+    else
+        throw cRuntimeError("Overlapping carrier frequency and bandwidth is not supported");
 }
 
 double ScalarSNRRadioDecider::computeSNRMinimum(const IRadioSignalReception *reception, const IRadioSignalNoise *noise) const
@@ -212,17 +247,18 @@ void ScalarRadioSignalModulator::initialize(int stage)
     }
 }
 
-simtime_t ScalarRadioSignalModulator::computeDuration(const cPacket *packet) const
-{
-    return (packet->getBitLength() + headerBitLength) / bitrate;
-}
-
 const IRadioSignalTransmission *ScalarRadioSignalModulator::createTransmission(const IRadio *radio, const cPacket *packet, simtime_t startTime) const
 {
-    simtime_t duration = computeDuration(packet);
+    simtime_t duration = (packet->getBitLength() + headerBitLength) / bitrate;
     simtime_t endTime = startTime + duration;
     IMobility *mobility = radio->getTransmitterAntenna()->getMobility();
     Coord startPosition = mobility->getPosition(startTime);
     Coord endPosition = mobility->getPosition(endTime);
-    return new ScalarRadioSignalTransmission(radio, startTime, endTime, startPosition, endPosition, power, carrierFrequency, bandwidth);
+    return new ScalarRadioSignalTransmission(radio, startTime, endTime, startPosition, endPosition, bitrate, power, carrierFrequency, bandwidth);
+}
+
+const IRadioSignalListening *ScalarRadioSignalModulator::createListening(const IRadio *radio, simtime_t startTime, simtime_t endTime, Coord startPosition, Coord endPosition) const
+{
+    // TODO:
+    return new ScalarRadioSignalListening(radio, startTime, endTime, startPosition, endPosition, carrierFrequency, bandwidth);
 }
