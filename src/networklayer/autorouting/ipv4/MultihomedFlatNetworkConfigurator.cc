@@ -425,8 +425,7 @@ void MultihomedFlatNetworkConfigurator::computeRouting(cTopology&         topolo
             route->setDestination(destinationAddress);
             route->setNetmask(IPv4Address(255,255,255,255));      // full match needed
             route->setInterface(outputInterfaceEntry);
-            //route->setType(IPv4Route::DIRECT);
-            route->setSource(IPv4Route::MANUAL);
+            route->setSourceType(IPv4Route::MANUAL);
             route->setMetric(atNode->getDistanceToTarget());    // hop count metric
             updateIfMetricIsBetter(routingTable, route);
          }
