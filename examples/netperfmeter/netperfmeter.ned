@@ -32,8 +32,7 @@ import inet.nodes.inet.Router;
 import ned.DatarateChannel;
 import ned.DelayChannel;
 import ned.IdealChannel;
-import inet.networklayer.autorouting.ipv4.FlatNetworkConfigurator;
-
+import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 
 import inet.linklayer.IOutputQueue;
 import inet.linklayer.queue.DropTailQueue;
@@ -44,8 +43,8 @@ module REDQueue like IOutputQueue
 {
    gates:
       input in;
-      output out;      
-      
+      output out;
+
    submodules:
       red: REDDropper {
          numGates = 1;
@@ -93,7 +92,7 @@ network testNetwork
     // ====== Network Components ============================================
    submodules:
       // ------ Routing Auto-Configuration --------------------------------
-      configurator: FlatNetworkConfigurator {
+      configurator: IPv4NetworkConfigurator {
          parameters:
             @display("p=850,75;i=abstract/penguin_l,gold");
       }
