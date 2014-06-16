@@ -35,6 +35,35 @@ import ned.IdealChannel;
 import inet.networklayer.autorouting.ipv4.FlatNetworkConfigurator;
 
 
+import inet.linklayer.IOutputQueue;
+import inet.linklayer.queue.DropTailQueue;
+import inet.linklayer.queue.FIFOQueue;
+import inet.linklayer.queue.REDDropper;
+
+module REDQueue like IOutputQueue
+{
+   gates:
+      input in;
+      output out;      
+      
+   submodules:
+      red: REDDropper {
+         numGates = 1;
+         wq = default(0.002);
+         minths = default("30");
+         maxths = default("90");
+         maxps = default("0.10");
+         pkrates = default("8333.333");
+      }
+      fifo: FIFOQueue;
+
+   connections:
+      in --> red.in[0];
+      red.out[0] --> fifo.in++;
+      fifo.out --> out;
+}
+
+
 channel coreChannel extends DatarateChannel
 {
    datarate  = default(1 Mbps);
