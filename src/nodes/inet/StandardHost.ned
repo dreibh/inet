@@ -18,6 +18,7 @@
 
 package inet.nodes.inet;
 
+import inet.applications.INetPerfMeterApp;
 import inet.applications.IPingApp;
 import inet.applications.ISCTPApp;
 import inet.applications.ITCPApp;
@@ -48,19 +49,24 @@ module StandardHost extends NodeBase
 {
     parameters:
         @display("i=device/pc2");
+        int numNetPerfMeterApps = default(0);   // T.D. 17.11.09
         int numTcpApps = default(0);  // no of TCP apps. Specify the app types in INI file with tcpApp[0..1].typename="TCPEchoApp" syntax
         int numUdpApps = default(0);  // no of UDP apps. Specify the app types in INI file with udpApp[0..1].typename="UDPVideoStreamCli" syntax
         int numSctpApps = default(0); // no of SCTP apps. Specify the app types in INI file with sctpApp[0..1].typename="SCTPServer" syntax
         int numPingApps = default(0);  // no of PING apps. Specify the app types in INI file with pingApp[0..1].typename="PingApp" syntax
-        bool hasTcp = default(numTcpApps>0);
-        bool hasUdp = default(numUdpApps>0);
-        bool hasSctp = default(numSctpApps>0);
+        bool hasTcp = default(numTcpApps+numNetPerfMeterApps>0);
+        bool hasUdp = default(numUdpApps+numNetPerfMeterApps>0);
+        bool hasSctp = default(numSctpApps+numNetPerfMeterApps>0);
         string tcpType = default(firstAvailable("TCP", "TCP_lwIP", "TCP_NSC", "TCP_None"));  // tcp implementation (e.g. ~TCP, ~TCP_lwIP, ~TCP_NSC) or ~TCPSpoof
         string udpType = default(firstAvailable("UDP","UDP_None"));
         string sctpType = default(firstAvailable("SCTP","SCTP_None"));
         IPForward = default(false);  // disable routing by default
         networkLayer.proxyARP = default(false);
     submodules:
+        netPerfMeterApp[numNetPerfMeterApps]: <default("NetPerfMeter")> like INetPerfMeterApp {  // T.D. 17.11.09
+            parameters:
+                @display("p=262,36");
+        }
         tcpApp[numTcpApps]: <> like ITCPApp {
             parameters:
                 @display("p=147,54,row,60");
@@ -89,6 +95,15 @@ module StandardHost extends NodeBase
                 @display("p=635,141,row,60");
         }
     connections allowunconnected:
+        for i=0..numNetPerfMeterApps-1 {
+            netPerfMeterApp[i].tcpOut --> tcp.appIn++;
+            netPerfMeterApp[i].tcpIn <-- tcp.appOut++;
+            netPerfMeterApp[i].sctpOut --> sctp.from_appl++;
+            netPerfMeterApp[i].sctpIn <-- sctp.to_appl++;
+            netPerfMeterApp[i].udpOut --> udp.appIn++;
+            netPerfMeterApp[i].udpIn <-- udp.appOut++;
+        }
+
         for i=0..numTcpApps-1 {
             tcpApp[i].tcpOut --> tcp.appIn++;
             tcpApp[i].tcpIn <-- tcp.appOut++;
