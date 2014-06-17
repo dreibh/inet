@@ -32,8 +32,7 @@ import inet.nodes.inet.Router;
 import ned.DatarateChannel;
 import ned.DelayChannel;
 import ned.IdealChannel;
-import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
-import inet.networklayer.autorouting.MultihomedFlatNetworkConfigurator;
+import inet.networklayer.autorouting.ipv4.MultihomedFlatNetworkConfigurator;
 
 import inet.linklayer.IOutputQueue;
 import inet.linklayer.queue.DropTailQueue;
@@ -94,7 +93,7 @@ network testNetwork
     // ====== Network Components ============================================
    submodules:
       // ------ Routing Auto-Configuration --------------------------------
-      configurator: IPv4NetworkConfigurator {
+      configurator: MultihomedFlatNetworkConfigurator {
          parameters:
             @display("p=850,75;i=abstract/penguin_l,gold");
       }
