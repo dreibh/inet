@@ -541,6 +541,7 @@ void NetPerfMeter::successfullyEstablishedConnection(cMessage*          msg,
          }
          IncomingSocketTCP = new TCPSocket(msg);
          IncomingSocketTCP->setOutputGate(gate("tcpOut"));
+         IncomingSocketTCP->readDataTransferModePar(*this);
       }
 
       TCPCommand* connectInfo = check_and_cast<TCPCommand*>(msg->getControlInfo());
@@ -617,6 +618,7 @@ void NetPerfMeter::createAndBindSocket()
       assert(SocketTCP == NULL);
       SocketTCP = new TCPSocket;
       SocketTCP->setOutputGate(gate("tcpOut"));
+      SocketTCP->readDataTransferModePar(*this);
       SocketTCP->bind((localAddress[0] != 0x00) ?
                        IPvXAddress(localAddress) : IPvXAddress(),
                        localPort);
