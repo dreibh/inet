@@ -32,7 +32,7 @@ import inet.nodes.inet.Router;
 import ned.DatarateChannel;
 import ned.DelayChannel;
 import ned.IdealChannel;
-import inet.networklayer.autorouting.ipv4.MultihomedFlatNetworkConfigurator;
+import inet.networklayer.autorouting.ipv4.IPv4NetworkConfigurator;
 
 import inet.linklayer.IOutputQueue;
 import inet.linklayer.queue.DropTailQueue;
@@ -65,6 +65,7 @@ module REDQueue like IOutputQueue
 
 channel coreChannel extends DatarateChannel
 {
+   int netID = default(0);        // NOTE: nedID==0 => shared by all networks!
    datarate  = default(1 Mbps);
    delay     = default(0ms);
    ber       = default(0);
@@ -74,6 +75,7 @@ channel coreChannel extends DatarateChannel
 
 channel accessChannel extends DatarateChannel
 {
+   int netID = default(1);        // NOTE: nedID>0 => separate network!
    datarate  = default(1 Gbps);
    delay     = default(0.1ms);
    ber       = default(0);
@@ -93,7 +95,7 @@ network testNetwork
     // ====== Network Components ============================================
    submodules:
       // ------ Routing Auto-Configuration --------------------------------
-      configurator: MultihomedFlatNetworkConfigurator {
+      configurator: IPv4NetworkConfigurator {
          parameters:
             @display("p=850,75;i=abstract/penguin_l,gold");
       }
@@ -134,21 +136,21 @@ network testNetwork
             IPForward = false;
             @display("p=50,50,c,200;i=device/laptop_l,green");
          gates:
-            pppg[1];
+            pppg[networks];
       }
       serverMain[systems] : StandardHost {
          parameters:
             IPForward = false;
             @display("p=1650,50,c,200;i=device/server_l,green");
          gates:
-            pppg[1];
+            pppg[networks];
       }
 
    // ====== Connections ====================================================
    connections:
       for n=0..networks-1 {
          westernCoreRouter[n].pppg[0]
-            <--> coreChannel { @display("ls=blue,3"); }
+            <--> coreChannel { @display("ls=red,3"); }
             <--> easternCoreRouter[n].pppg[0];
 
          westernBorderRouter[n].pppg[0]
@@ -161,11 +163,11 @@ network testNetwork
 
       for n=0..networks-1,
          for s=0..systems-1 {
-            clientMain[s].pppg[0]
+            clientMain[s].pppg[n]
                <--> accessChannel { @display("ls=green,5"); }
-               <--> westernBorderRouter[n].pppg[1 + (n * networks) + s];
-            serverMain[s].pppg[0]
+               <--> westernBorderRouter[n].pppg++;
+            serverMain[s].pppg[n]
                <--> accessChannel { @display("ls=green,5"); }
-               <--> easternBorderRouter[n].pppg[1 + (n * networks) + s];
+               <--> easternBorderRouter[n].pppg++;
       }
 }
