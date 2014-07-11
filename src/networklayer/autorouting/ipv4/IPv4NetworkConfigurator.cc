@@ -111,8 +111,8 @@ void IPv4NetworkConfigurator::initialize(int stage)
         configuration = par("config");
     }
     else if (stage == 2) {
-        ensureConfigurationComputed(topology);
-        dumpLinks(topology);  // ????
+        ensureConfigurationComputed(fullTopology);
+        dumpLinks(fullTopology);  // ????
     }
     else if (stage == 3)
         dumpConfiguration();
@@ -121,56 +121,56 @@ void IPv4NetworkConfigurator::initialize(int stage)
 void IPv4NetworkConfigurator::computeConfiguration()
 {
     long initializeStartTime = clock();
-    topology.clear();
-    // extract topology into the IPv4Topology object, then fill in a LinkInfo[] vector
-    T(extractTopology(topology));
+    fullTopology.clear();
+    // extract fullTopology into the IPv4Topology object, then fill in a LinkInfo[] vector
+    T(extractTopology(fullTopology));
     // read the configuration from XML; it will serve as input for address assignment
-    T(readInterfaceConfiguration(topology));
+    T(readInterfaceConfiguration(fullTopology));
     // assign addresses to IPv4 nodes
     if (assignAddressesParameter)
-        T(assignAddresses(topology));
+        T(assignAddresses(fullTopology));
     // read and configure multicast groups from the XML configuration
-    T(readMulticastGroupConfiguration(topology));
+    T(readMulticastGroupConfiguration(fullTopology));
     // read and configure manual routes from the XML configuration
-    readManualRouteConfiguration(topology);
+    readManualRouteConfiguration(fullTopology);
     // read and configure manual multicast routes from the XML configuration
-    readManualMulticastRouteConfiguration(topology);
+    readManualMulticastRouteConfiguration(fullTopology);
     // calculate shortest paths, and add corresponding static routes
     if (addStaticRoutesParameter)
-        T(addStaticRoutes(topology));
+        T(addStaticRoutes(fullTopology));
     printElapsedTime("initialize", initializeStartTime);
 }
 
-void IPv4NetworkConfigurator::ensureConfigurationComputed(IPv4Topology& topology)
+void IPv4NetworkConfigurator::ensureConfigurationComputed(IPv4Topology& fullTopology)
 {
-    if (topology.getNumNodes() == 0)
+    if (fullTopology.getNumNodes() == 0)
         computeConfiguration();
 }
 
 void IPv4NetworkConfigurator::dumpConfiguration()
 {
-    // print topology to module output
+    // print fullTopology to module output
     if (par("dumpTopology").boolValue())
-        T(dumpTopology(topology));
+        T(dumpTopology(fullTopology));
     // print links to module output
     if (par("dumpLinks").boolValue())
-        T(dumpLinks(topology));
+        T(dumpLinks(fullTopology));
     // print unicast and multicast addresses and other interface data to module output
     if (par("dumpAddresses").boolValue())
-        T(dumpAddresses(topology));
+        T(dumpAddresses(fullTopology));
     // print routes to module output
     if (par("dumpRoutes").boolValue())
-        T(dumpRoutes(topology));
+        T(dumpRoutes(fullTopology));
     // print current configuration to an XML file
     if (!isEmpty(par("dumpConfig")))
-        T(dumpConfig(topology));
+        T(dumpConfig(fullTopology));
 }
 
 void IPv4NetworkConfigurator::configureAllInterfaces()
 {
-    ensureConfigurationComputed(topology);
-    for (int i = 0; i < topology.getNumNodes(); i++) {
-        Node *node = (Node *)topology.getNode(i);
+    ensureConfigurationComputed(fullTopology);
+    for (int i = 0; i < fullTopology.getNumNodes(); i++) {
+        Node *node = (Node *)fullTopology.getNode(i);
         for (int i = 0; i < (int)node->interfaceInfos.size(); i++) {
             InterfaceInfo *interfaceInfo = node->interfaceInfos.at(i);
             if (interfaceInfo->configure)
@@ -181,9 +181,9 @@ void IPv4NetworkConfigurator::configureAllInterfaces()
 
 void IPv4NetworkConfigurator::configureInterface(InterfaceEntry *interfaceEntry)
 {
-    ensureConfigurationComputed(topology);
-    std::map<InterfaceEntry *, InterfaceInfo *>::iterator it = topology.interfaceInfos.find(interfaceEntry);
-    if (it != topology.interfaceInfos.end()) {
+    ensureConfigurationComputed(fullTopology);
+    std::map<InterfaceEntry *, InterfaceInfo *>::iterator it = fullTopology.interfaceInfos.find(interfaceEntry);
+    if (it != fullTopology.interfaceInfos.end()) {
         InterfaceInfo * interfaceInfo = it->second;
         if (interfaceInfo->configure)
             configureInterface(interfaceInfo);
@@ -192,9 +192,9 @@ void IPv4NetworkConfigurator::configureInterface(InterfaceEntry *interfaceEntry)
 
 void IPv4NetworkConfigurator::configureAllRoutingTables()
 {
-    ensureConfigurationComputed(topology);
-    for (int i = 0; i < topology.getNumNodes(); i++) {
-        Node *node = (Node *)topology.getNode(i);
+    ensureConfigurationComputed(fullTopology);
+    for (int i = 0; i < fullTopology.getNumNodes(); i++) {
+        Node *node = (Node *)fullTopology.getNode(i);
         if (node->routingTable)
             configureRoutingTable(node);
     }
@@ -202,10 +202,10 @@ void IPv4NetworkConfigurator::configureAllRoutingTables()
 
 void IPv4NetworkConfigurator::configureRoutingTable(IRoutingTable *routingTable)
 {
-    ensureConfigurationComputed(topology);
+    ensureConfigurationComputed(fullTopology);
     // TODO: avoid linear search
-    for (int i = 0; i < topology.getNumNodes(); i++) {
-        Node *node = (Node *)topology.getNode(i);
+    for (int i = 0; i < fullTopology.getNumNodes(); i++) {
+        Node *node = (Node *)fullTopology.getNode(i);
         if (node->routingTable == routingTable)
             configureRoutingTable(node);
     }
@@ -284,7 +284,6 @@ static bool nodeFilter(cModule* module, void* userData)
                if( (interfaceNetworkID == 0) ||
                    (interfaceNetworkID == parameters->NetworkID) ) {
                   // Node has an interface in the right network => add it.
-      std::cout << "IF: " << module->getFullPath() << "\t" << interfaceNetworkID << std::endl;
                   return(true);
                }
             }
@@ -295,7 +294,7 @@ static bool nodeFilter(cModule* module, void* userData)
    return(false);
 }
 
-void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology, std::set<unsigned int>* networkSet)
+void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology)
 {
     const unsigned int networkID = 0;
 
@@ -334,9 +333,7 @@ void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology, std::set<u
                     const unsigned int linkNetworkID = getNetworkID(node->module, interfaceEntry);
                     if( (linkNetworkID == networkID) || (linkNetworkID == 0) ||
                         (networkID == 0) ) {
-                        if(networkSet != NULL) {
-                            networkSet->insert(linkNetworkID);
-                        }
+                        topology.networkSet.insert(linkNetworkID);
 
                         // create a new network link
                         LinkInfo *linkInfo = new LinkInfo();
@@ -2261,8 +2258,8 @@ void IPv4NetworkConfigurator::optimizeRoutes(std::vector<IPv4Route *>& originalR
 
 bool IPv4NetworkConfigurator::getInterfaceIPv4Address(IPvXAddress &ret, InterfaceEntry * interfaceEntry, bool netmask)
 {
-    std::map<InterfaceEntry *, InterfaceInfo *>::iterator it = topology.interfaceInfos.find(interfaceEntry);
-    if (it == topology.interfaceInfos.end())
+    std::map<InterfaceEntry *, InterfaceInfo *>::iterator it = fullTopology.interfaceInfos.find(interfaceEntry);
+    if (it == fullTopology.interfaceInfos.end())
         return false;
     else {
         InterfaceInfo * interfaceInfo = it->second;

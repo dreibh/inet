@@ -205,7 +205,7 @@ class INET_API IPv4NetworkConfigurator : public cSimpleModule, public IPvXAddres
         cXMLElement *configuration;
 
         // internal state
-        IPv4Topology topology;
+        IPv4Topology fullTopology;
 
     public:
         /**
@@ -244,7 +244,7 @@ class INET_API IPv4NetworkConfigurator : public cSimpleModule, public IPvXAddres
          * Creates vertices from modules having @node property.
          * Creates edges from connections (wired and wireless) between network interfaces.
          */
-        virtual void extractTopology(IPv4Topology& topology, std::set<unsigned int>* networkSet = NULL);
+        virtual void extractTopology(IPv4Topology& topology);
 
         /**
          * Reads interface elements from the configuration file and stores result.
