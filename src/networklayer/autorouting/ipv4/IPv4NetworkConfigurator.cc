@@ -29,6 +29,11 @@
 
 Define_Module(IPv4NetworkConfigurator);
 
+// ?????
+#define EV_INFO std::cout
+#define EV_DEBUG std::cout
+// ?????
+
 #define ADDRLEN_BITS 32
 #define T(CODE)  {long startTime=clock(); CODE; printElapsedTime(#CODE, startTime);}
 
@@ -73,6 +78,22 @@ IPv4NetworkConfigurator::RouteInfo *IPv4NetworkConfigurator::RoutingTableInfo::f
             return const_cast<RouteInfo *>(routeInfo);
     }
     return NULL;
+}
+
+// ###### Get Network ID from gate ##########################################
+static unsigned int getNetworkID(cModule*        module,
+                                 InterfaceEntry* interfaceEntry)
+{
+   unsigned int networkID    = 0;   // default behaviour: link belongs to all networks.
+   int          outputGateID = interfaceEntry->getNodeOutputGateId();
+   cGate*       outputGate   = module->gate(outputGateID);
+   cChannel*    channel      = outputGate->getChannel();
+   if(channel) {
+      if(channel->hasPar("netID")) {
+         networkID = channel->par("netID");
+      }
+   }
+   return(networkID);
 }
 
 void IPv4NetworkConfigurator::initialize(int stage)
@@ -272,6 +293,10 @@ void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology)
                     InterfaceInfo *interfaceInfo = createInterfaceInfo(topology, node, linkInfo, interfaceEntry);
                     linkInfo->interfaceInfos.push_back(interfaceInfo);
                     interfacesSeen.insert(interfaceEntry);
+
+                    // handle independent networks
+                    linkInfo->networkID = getNetworkID(node->module, interfaceEntry);
+                    topology.networkSet.insert(linkInfo->networkID);
 
                     // visit neighbors (and potentially the whole LAN, recursively)
                     if (isWirelessInterface(interfaceEntry))
@@ -1176,8 +1201,8 @@ void IPv4NetworkConfigurator::dumpLinks(IPv4Topology& topology)
 {
     for (int i = 0; i < (int)topology.linkInfos.size(); i++)
     {
-        EV_INFO << "Link " << i << endl;
         LinkInfo *linkInfo = topology.linkInfos[i];
+        EV_INFO << "Link " << i << " (networkID " << linkInfo->networkID << ")" << endl;
         for (int j = 0; j < (int)linkInfo->interfaceInfos.size(); j++)
         {
             InterfaceInfo *interfaceInfo = linkInfo->interfaceInfos[j];

@@ -110,6 +110,7 @@ class INET_API IPv4NetworkConfigurator : public cSimpleModule, public IPvXAddres
             public:
                 std::vector<InterfaceInfo *> interfaceInfos; // interfaces on that LAN or point-to-point link
                 InterfaceInfo* gatewayInterfaceInfo; // non-NULL if all hosts have 1 non-loopback interface except one host that has two of them (this will be the gateway)
+                unsigned int networkID; // Identifier of the network
 
             public:
                 LinkInfo() { gatewayInterfaceInfo = NULL; }
@@ -123,6 +124,7 @@ class INET_API IPv4NetworkConfigurator : public cSimpleModule, public IPvXAddres
             public:
                 std::vector<LinkInfo *> linkInfos; // all links in the network
                 std::map<InterfaceEntry *, InterfaceInfo *> interfaceInfos; // all interfaces in the network
+                std::set<unsigned int> networkSet; // independent networks set
 
             public:
                 virtual ~IPv4Topology() { for (int i = 0; i < (int)linkInfos.size(); i++) delete linkInfos[i]; }
