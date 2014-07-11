@@ -256,10 +256,53 @@ void IPv4NetworkConfigurator::configureRoutingTable(Node *node)
     }
 }
 
-void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology)
+// ###### Search filter to find nodes #######################################
+struct NodeFilterParameters
 {
+   unsigned int NetworkID;
+};
+
+static bool nodeFilter(cModule* module, void* userData)
+{
+   const NodeFilterParameters* parameters = (const NodeFilterParameters*)userData;
+
+   // ====== Are nodes in arbitrary networks requested? =====================
+   if(parameters->NetworkID == 0) {
+      return(true);   // return all nodes
+   }
+
+   // ====== Check whether node qualifies for specified networkID ===========
+   cProperty* nodeProperty = module->getProperties()->get("node");
+   if(nodeProperty) {
+      // ====== Is there an interface in the right network? =================
+      IInterfaceTable* interfaceTable = IPvXAddressResolver().findInterfaceTableOf(module);
+      if(interfaceTable) {
+         for(int k = 0;k < interfaceTable->getNumInterfaces(); k++) {
+            InterfaceEntry* interfaceEntry = interfaceTable->getInterface(k);
+            if(!interfaceEntry->isLoopback()) {
+               const unsigned int interfaceNetworkID = getNetworkID(module, interfaceEntry);
+               if( (interfaceNetworkID == 0) ||
+                   (interfaceNetworkID == parameters->NetworkID) ) {
+                  // Node has an interface in the right network => add it.
+      std::cout << "IF: " << module->getFullPath() << "\t" << interfaceNetworkID << std::endl;
+                  return(true);
+               }
+            }
+         }
+      }
+   }
+
+   return(false);
+}
+
+void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology, std::set<unsigned int>* networkSet)
+{
+    const unsigned int networkID = 0;
+
     // extract topology
-    topology.extractByProperty("node");
+    NodeFilterParameters parameters;
+    parameters.NetworkID = networkID;
+    topology.extractFromNetwork(nodeFilter, &parameters);
     EV_DEBUG << "Topology found " << topology.getNumNodes() << " nodes\n";
 
     // extract nodes, fill in interfaceTable and routingTable members in node
@@ -287,34 +330,43 @@ void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology)
                 InterfaceEntry *interfaceEntry = interfaceTable->getInterface(j);
                 if (!interfaceEntry->isLoopback() && interfacesSeen.count(interfaceEntry) == 0)
                 {
-                    // create a new network link
-                    LinkInfo *linkInfo = new LinkInfo();
-                    topology.linkInfos.push_back(linkInfo);
-
-                    // store interface as belonging to the new network link
-                    InterfaceInfo *interfaceInfo = createInterfaceInfo(topology, node, linkInfo, interfaceEntry);
-                    linkInfo->interfaceInfos.push_back(interfaceInfo);
-                    interfacesSeen.insert(interfaceEntry);
-
                     // handle independent networks
-                    linkInfo->networkID = getNetworkID(node->module, interfaceEntry);
-                    topology.networkSet.insert(linkInfo->networkID);
+                    const unsigned int linkNetworkID = getNetworkID(node->module, interfaceEntry);
+                    if( (linkNetworkID == networkID) || (linkNetworkID == 0) ||
+                        (networkID == 0) ) {
+                        if(networkSet != NULL) {
+                            networkSet->insert(linkNetworkID);
+                        }
 
-                    // visit neighbors (and potentially the whole LAN, recursively)
-                    if (isWirelessInterface(interfaceEntry))
-                    {
-                        std::vector<Node *> empty;
-                        const char *wirelessId = getWirelessId(interfaceEntry);
-                        extractWirelessNeighbors(topology, wirelessId, linkInfo, interfacesSeen, empty);
-                    }
-                    else
-                    {
-                        Topology::LinkOut *linkOut = findLinkOut(node, interfaceEntry->getNodeOutputGateId());
-                        if (linkOut)
+                        // create a new network link
+                        LinkInfo *linkInfo = new LinkInfo();
+                        linkInfo->networkID = linkNetworkID;
+                        topology.linkInfos.push_back(linkInfo);
+  
+                        // store interface as belonging to the new network link
+                        InterfaceInfo *interfaceInfo = createInterfaceInfo(topology, node, linkInfo, interfaceEntry);
+                        linkInfo->interfaceInfos.push_back(interfaceInfo);
+                        interfacesSeen.insert(interfaceEntry);
+
+                        // visit neighbors (and potentially the whole LAN, recursively)
+                        if (isWirelessInterface(interfaceEntry))
                         {
                             std::vector<Node *> empty;
-                            extractWiredNeighbors(topology, linkOut, linkInfo, interfacesSeen, empty);
+                            const char *wirelessId = getWirelessId(interfaceEntry);
+                            extractWirelessNeighbors(topology, wirelessId, linkInfo, interfacesSeen, empty);
                         }
+                        else
+                        {
+                            Topology::LinkOut *linkOut = findLinkOut(node, interfaceEntry->getNodeOutputGateId());
+                            if (linkOut)
+                            {
+                               std::vector<Node *> empty;
+                               extractWiredNeighbors(topology, linkOut, linkInfo, interfacesSeen, empty);
+                            }
+                        }
+                    }
+                    else {
+                        std::cout << "DROP: " << linkNetworkID << std::endl;
                     }
                 }
             }

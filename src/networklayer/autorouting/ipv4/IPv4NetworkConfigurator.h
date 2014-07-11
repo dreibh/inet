@@ -244,7 +244,7 @@ class INET_API IPv4NetworkConfigurator : public cSimpleModule, public IPvXAddres
          * Creates vertices from modules having @node property.
          * Creates edges from connections (wired and wireless) between network interfaces.
          */
-        virtual void extractTopology(IPv4Topology& topology);
+        virtual void extractTopology(IPv4Topology& topology, std::set<unsigned int>* networkSet = NULL);
 
         /**
          * Reads interface elements from the configuration file and stores result.
