@@ -151,7 +151,7 @@ network testNetwork
    connections allowunconnected:
       for n=0..networks-1 {
          westernCoreRouter[n].pppg[0]
-            <--> coreChannel { netID = 1 + n; @display("ls=red,3"); }
+            <--> coreChannel { netID = 1000 + n; @display("ls=red,3"); }
             <--> easternCoreRouter[n].pppg[0];
 
          // ------ Disjoint paths -------------------------

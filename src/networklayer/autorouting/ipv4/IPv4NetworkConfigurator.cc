@@ -112,15 +112,28 @@ void IPv4NetworkConfigurator::initialize(int stage)
     }
     else if (stage == 2) {
         ensureConfigurationComputed(fullTopology);
-        dumpLinks(fullTopology);  // ????
     }
     else if (stage == 3)
         dumpConfiguration();
 }
 
+void IPv4NetworkConfigurator::performConfigurations(IPv4Topology& topology)
+{
+    // read and configure multicast groups from the XML configuration
+    T(readMulticastGroupConfiguration(topology));
+    // read and configure manual routes from the XML configuration
+    readManualRouteConfiguration(topology);
+    // read and configure manual multicast routes from the XML configuration
+    readManualMulticastRouteConfiguration(topology);
+    // calculate shortest paths, and add corresponding static routes
+    if (addStaticRoutesParameter)
+        T(addStaticRoutes(topology));
+}
+
 void IPv4NetworkConfigurator::computeConfiguration()
 {
     long initializeStartTime = clock();
+
     fullTopology.clear();
     // extract fullTopology into the IPv4Topology object, then fill in a LinkInfo[] vector
     T(extractTopology(fullTopology));
@@ -129,15 +142,51 @@ void IPv4NetworkConfigurator::computeConfiguration()
     // assign addresses to IPv4 nodes
     if (assignAddressesParameter)
         T(assignAddresses(fullTopology));
-    // read and configure multicast groups from the XML configuration
-    T(readMulticastGroupConfiguration(fullTopology));
-    // read and configure manual routes from the XML configuration
-    readManualRouteConfiguration(fullTopology);
-    // read and configure manual multicast routes from the XML configuration
-    readManualMulticastRouteConfiguration(fullTopology);
-    // calculate shortest paths, and add corresponding static routes
-    if (addStaticRoutesParameter)
-        T(addStaticRoutes(fullTopology));
+
+    // NOTE: We need to configure the IP addresses already here.
+    // They are needed for the pruned topologies!
+    if (assignAddressesParameter) {
+        for (int i = 0; i < fullTopology.getNumNodes(); i++) {
+            Node *node = (Node *)fullTopology.getNode(i);
+            for (int i = 0; i < (int)node->interfaceInfos.size(); i++) {
+               InterfaceInfo *interfaceInfo = node->interfaceInfos.at(i);
+               InterfaceEntry *interfaceEntry = interfaceInfo->interfaceEntry;
+               IPv4InterfaceData *interfaceData = interfaceEntry->ipv4Data();
+                if (interfaceInfo->configure) {
+                    interfaceData->setIPAddress(IPv4Address(interfaceInfo->address));                     
+                    interfaceData->setNetmask(IPv4Address(interfaceInfo->netmask));
+                }
+            }
+        }
+    }
+
+    bool hasConfiguration = false;
+    for(std::set<unsigned int>::iterator iterator = fullTopology.networkSet.begin();
+        iterator != fullTopology.networkSet.end(); iterator++) {
+       const unsigned int networkID = *iterator;
+       if(networkID != 0) {
+           EV_INFO << "Computing configuration for network " << networkID << " ..." << endl;
+
+           IPv4Topology prunedTopology;
+           T(extractTopology(prunedTopology, networkID));
+           performConfigurations(prunedTopology);
+
+           dumpAddresses(prunedTopology);
+           
+           for (int i = 0; i < prunedTopology.getNumNodes(); i++) {
+               Node *node = (Node *)prunedTopology.getNode(i);
+               configureRoutingTable(node);
+           }
+           hasConfiguration = true;
+       }
+    }
+    if(!hasConfiguration) {
+       EV_INFO << "Computing configuration for FULL TOPOLOGY ..." << endl;
+       performConfigurations(fullTopology);
+    }
+
+    dumpRoutes(fullTopology);
+    
     printElapsedTime("initialize", initializeStartTime);
 }
 
@@ -294,15 +343,13 @@ static bool nodeFilter(cModule* module, void* userData)
    return(false);
 }
 
-void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology)
+void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology, const unsigned int networkID)
 {
-    const unsigned int networkID = 0;
-
     // extract topology
     NodeFilterParameters parameters;
     parameters.NetworkID = networkID;
     topology.extractFromNetwork(nodeFilter, &parameters);
-    EV_DEBUG << "Topology found " << topology.getNumNodes() << " nodes\n";
+    EV_DEBUG << "Topology found " << topology.getNumNodes() << " nodes for network " << networkID << "\n";
 
     // extract nodes, fill in interfaceTable and routingTable members in node
     for (int i = 0; i < topology.getNumNodes(); i++)
@@ -339,7 +386,7 @@ void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology)
                         LinkInfo *linkInfo = new LinkInfo();
                         linkInfo->networkID = linkNetworkID;
                         topology.linkInfos.push_back(linkInfo);
-  
+
                         // store interface as belonging to the new network link
                         InterfaceInfo *interfaceInfo = createInterfaceInfo(topology, node, linkInfo, interfaceEntry);
                         linkInfo->interfaceInfos.push_back(interfaceInfo);
@@ -361,9 +408,6 @@ void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology)
                                extractWiredNeighbors(topology, linkOut, linkInfo, interfacesSeen, empty);
                             }
                         }
-                    }
-                    else {
-                        std::cout << "DROP: " << linkNetworkID << std::endl;
                     }
                 }
             }
@@ -1925,9 +1969,10 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                 }
             }
 
-            // optimize routing table to save memory and increase lookup performance
-            if (optimizeRoutesParameter)
-                optimizeRoutes(sourceNode->staticRoutes);
+            // ?????????????????????????????????? COMMENTED OUT
+//             // optimize routing table to save memory and increase lookup performance
+//             if (optimizeRoutesParameter)
+//                 optimizeRoutes(sourceNode->staticRoutes);
         }
     }
 }

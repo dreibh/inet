@@ -35,6 +35,8 @@
 #include "NodeStatus.h"
 #include "opp_utils.h"
 
+#define EV std::cout
+
 using namespace OPP_Global;
 
 Define_Module(RoutingTable);
