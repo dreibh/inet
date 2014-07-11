@@ -88,8 +88,9 @@ network testNetwork
 {
     // ====== System Parameters =============================================
     parameters:
-        int networks = default(1);
-        int systems  = default(3);
+        int networks          = default(2);
+        int systems           = default(1);
+        bool sharedBottleneck = default(false);
     @display("bgi=maps/world,s");
 
     // ====== Network Components ============================================
@@ -113,14 +114,14 @@ network testNetwork
             IPForward = true;
             @display("p=700,150,c,150;i=abstract/router_l,gold");
          gates:
-            pppg[2];
+            pppg[1 + networks];
       }
       easternCoreRouter[networks] : StandardHost {
          parameters:
             IPForward = true;
             @display("p=1000,150,c,150;i=abstract/router_l,gold");
          gates:
-            pppg[2];
+            pppg[1 + networks];
       }
       easternBorderRouter[networks] : StandardHost {
          parameters:
@@ -147,18 +148,27 @@ network testNetwork
       }
 
    // ====== Connections ====================================================
-   connections:
+   connections allowunconnected:
       for n=0..networks-1 {
          westernCoreRouter[n].pppg[0]
             <--> coreChannel { @display("ls=red,3"); }
             <--> easternCoreRouter[n].pppg[0];
 
+         // ------ Disjoint paths -------------------------
          westernBorderRouter[n].pppg[0]
             <--> accessChannel { @display("ls=blue,5"); }
-            <--> westernCoreRouter[n].pppg[1];
+            <--> westernCoreRouter[n].pppg[1] if sharedBottleneck == false;
          easternBorderRouter[n].pppg[0]
             <--> accessChannel { @display("ls=blue,5"); }
-            <--> easternCoreRouter[n].pppg[1];
+            <--> easternCoreRouter[n].pppg[1] if sharedBottleneck == false;
+
+         // ------ Shared Bottleneck paths ----------------
+         westernBorderRouter[n].pppg[0]
+            <--> accessChannel { @display("ls=blue,5"); }
+            <--> westernCoreRouter[0].pppg++ if sharedBottleneck == true;
+         easternBorderRouter[n].pppg[0]
+            <--> accessChannel { @display("ls=blue,5"); }
+            <--> easternCoreRouter[0].pppg++ if sharedBottleneck == true;
       }
 
       for n=0..networks-1,
