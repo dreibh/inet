@@ -170,14 +170,19 @@ void IPv4NetworkConfigurator::computeConfiguration()
            IPv4Topology prunedTopology;
            T(extractTopology(prunedTopology, networkID));
            performConfigurations(prunedTopology);
-
-           dumpAddresses(prunedTopology);
            
            for (int i = 0; i < prunedTopology.getNumNodes(); i++) {
                Node *node = (Node *)prunedTopology.getNode(i);
                configureRoutingTable(node);
            }
            hasConfiguration = true;
+           
+           
+
+           dumpAddresses(prunedTopology);
+           dumpRoutes(prunedTopology);
+::exit(1);
+           
        }
     }
     if(!hasConfiguration) {
@@ -1962,7 +1967,7 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                                 delete route;
                             else {
                                 sourceNode->staticRoutes.push_back(route);
-                                EV_DEBUG << "Adding route " << sourceInterfaceEntry->getFullPath() << " -> " << destinationInterfaceEntry->getFullPath() << " as " << route->info() << endl;
+                                std::cout << "Adding route " << sourceInterfaceEntry->getFullPath() << " -> " << destinationInterfaceEntry->getFullPath() << " as " << route->info() << endl;
                             }
                         }
                     }
