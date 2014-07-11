@@ -80,12 +80,28 @@ IPv4NetworkConfigurator::RouteInfo *IPv4NetworkConfigurator::RoutingTableInfo::f
     return NULL;
 }
 
-// ###### Get Network ID from gate ##########################################
+// ###### Get Network ID from InterfaceEntry ################################
 static unsigned int getNetworkID(cModule*        module,
                                  InterfaceEntry* interfaceEntry)
 {
    unsigned int networkID    = 0;   // default behaviour: link belongs to all networks.
    int          outputGateID = interfaceEntry->getNodeOutputGateId();
+   cGate*       outputGate   = module->gate(outputGateID);
+   cChannel*    channel      = outputGate->getChannel();
+   if(channel) {
+      if(channel->hasPar("netID")) {
+         networkID = channel->par("netID");
+      }
+   }
+   return(networkID);
+}
+
+// ###### Get Network ID from LinkOut #######################################
+static unsigned int getNetworkID(cModule*           module,
+                                 Topology::LinkOut* link)
+{
+   unsigned int networkID    = 0;   // default behaviour: link belongs to all networks.
+   int          outputGateID = link->getLocalGateId();
    cGate*       outputGate   = module->gate(outputGateID);
    cChannel*    channel      = outputGate->getChannel();
    if(channel) {
@@ -170,19 +186,15 @@ void IPv4NetworkConfigurator::computeConfiguration()
            IPv4Topology prunedTopology;
            T(extractTopology(prunedTopology, networkID));
            performConfigurations(prunedTopology);
-           
+
            for (int i = 0; i < prunedTopology.getNumNodes(); i++) {
                Node *node = (Node *)prunedTopology.getNode(i);
                configureRoutingTable(node);
            }
            hasConfiguration = true;
-           
-           
 
            dumpAddresses(prunedTopology);
            dumpRoutes(prunedTopology);
-::exit(1);
-           
        }
     }
     if(!hasConfiguration) {
@@ -318,16 +330,15 @@ struct NodeFilterParameters
 
 static bool nodeFilter(cModule* module, void* userData)
 {
-   const NodeFilterParameters* parameters = (const NodeFilterParameters*)userData;
-
-   // ====== Are nodes in arbitrary networks requested? =====================
-   if(parameters->NetworkID == 0) {
-      return(true);   // return all nodes
-   }
-
    // ====== Check whether node qualifies for specified networkID ===========
-   cProperty* nodeProperty = module->getProperties()->get("node");
+   const NodeFilterParameters* parameters   = (const NodeFilterParameters*)userData;
+   cProperty*                  nodeProperty = module->getProperties()->get("node");
    if(nodeProperty) {
+      // ====== Are nodes in arbitrary networks requested? =====================
+      if(parameters->NetworkID == 0) {
+         return(true);   // return all nodes
+      }
+
       // ====== Is there an interface in the right network? =================
       IInterfaceTable* interfaceTable = IPvXAddressResolver().findInterfaceTableOf(module);
       if(interfaceTable) {
@@ -350,10 +361,23 @@ static bool nodeFilter(cModule* module, void* userData)
 
 void IPv4NetworkConfigurator::extractTopology(IPv4Topology& topology, const unsigned int networkID)
 {
-    // extract topology
+    // ====== Extract topology ==============================================
     NodeFilterParameters parameters;
     parameters.NetworkID = networkID;
     topology.extractFromNetwork(nodeFilter, &parameters);
+
+    // The topology is already pruned from nodes without connection in this network.
+    // However, the links have not been pruned yet (between still-existing nodes)!
+    for (int i = 0; i < topology.getNumNodes(); i++) {
+        Node* node = (Node *)topology.getNode(i);
+        for (int j = 0; j < node->getNumOutLinks(); j++) {
+            Topology::LinkOut* link          = node->getLinkOut(j);
+            const unsigned int linkNetworkID = getNetworkID(node->getModule(), link);
+            if( (linkNetworkID != 0) && (networkID != 0) && (linkNetworkID != networkID) ) {
+               link->disable();   // Not possible to prune in Topology => disable link.
+            }
+        }
+    }
     EV_DEBUG << "Topology found " << topology.getNumNodes() << " nodes for network " << networkID << "\n";
 
     // extract nodes, fill in interfaceTable and routingTable members in node
