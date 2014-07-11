@@ -151,33 +151,33 @@ network testNetwork
    connections allowunconnected:
       for n=0..networks-1 {
          westernCoreRouter[n].pppg[0]
-            <--> coreChannel { @display("ls=red,3"); }
+            <--> coreChannel { netID = 1 + n; @display("ls=red,3"); }
             <--> easternCoreRouter[n].pppg[0];
 
          // ------ Disjoint paths -------------------------
          westernBorderRouter[n].pppg[0]
-            <--> accessChannel { @display("ls=blue,5"); }
+            <--> accessChannel { netID = 0; @display("ls=blue,5"); }
             <--> westernCoreRouter[n].pppg[1] if sharedBottleneck == false;
          easternBorderRouter[n].pppg[0]
-            <--> accessChannel { @display("ls=blue,5"); }
+            <--> accessChannel { netID = 0; @display("ls=blue,5"); }
             <--> easternCoreRouter[n].pppg[1] if sharedBottleneck == false;
 
          // ------ Shared Bottleneck paths ----------------
          westernBorderRouter[n].pppg[0]
-            <--> accessChannel { @display("ls=blue,5"); }
+            <--> accessChannel { netID = 0; @display("ls=blue,5"); }
             <--> westernCoreRouter[0].pppg++ if sharedBottleneck == true;
          easternBorderRouter[n].pppg[0]
-            <--> accessChannel { @display("ls=blue,5"); }
+            <--> accessChannel { netID = 0; @display("ls=blue,5"); }
             <--> easternCoreRouter[0].pppg++ if sharedBottleneck == true;
       }
 
       for n=0..networks-1,
          for s=0..systems-1 {
             clientMain[s].pppg[n]
-               <--> accessChannel { @display("ls=green,5"); }
+               <--> accessChannel { netID = 0; @display("ls=green,5"); }
                <--> westernBorderRouter[n].pppg++;
             serverMain[s].pppg[n]
-               <--> accessChannel { @display("ls=green,5"); }
+               <--> accessChannel { netID = 0; @display("ls=green,5"); }
                <--> easternBorderRouter[n].pppg++;
       }
 }

@@ -110,8 +110,10 @@ void IPv4NetworkConfigurator::initialize(int stage)
         optimizeRoutesParameter = par("optimizeRoutes");
         configuration = par("config");
     }
-    else if (stage == 2)
+    else if (stage == 2) {
         ensureConfigurationComputed(topology);
+        dumpLinks(topology);  // ????
+    }
     else if (stage == 3)
         dumpConfiguration();
 }
