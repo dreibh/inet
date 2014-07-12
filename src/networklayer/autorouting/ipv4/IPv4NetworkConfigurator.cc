@@ -1955,16 +1955,36 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                         nextHopInterfaceInfo = link->sourceInterfaceInfo;
                     node = (Node *)node->getPath(0)->getRemoteNode();
                 }
+                Link* lastLink = (Link*)destinationNode->getPath(0);
 
                 // determine source interface
                 if (link->destinationInterfaceInfo && link->destinationInterfaceInfo->addStaticRoute)
                 {
-                    InterfaceEntry *sourceInterfaceEntry = link->destinationInterfaceInfo->interfaceEntry;
-
+                    InterfaceEntry* sourceInterfaceEntry    = link->destinationInterfaceInfo->interfaceEntry;
+                    IRoutingTable*  destinationRoutingTable = IPvXAddressResolver().routingTableOf(destinationNode->getModule());
+                    
                     // add the same routes for all destination interfaces (IP packets are accepted from any interface at the destination)
                     for (int j = 0; j < (int)destinationNode->interfaceInfos.size(); j++)
                     {
                         InterfaceInfo *destinationInterfaceInfo = destinationNode->interfaceInfos[j];
+
+                        
+                        
+                           std::cout << "XXX "
+                           << sourceInterfaceEntry->getFullPath() << " --> "
+                           << destinationInterfaceInfo->interfaceEntry->getFullPath()
+                           << "   lastHop=" << ((lastLink != NULL) ? lastLink->sourceInterfaceInfo->interfaceEntry->getFullPath() : "---") << "  fw="
+                           << destinationRoutingTable->isIPForwardingEnabled()
+                           << endl;
+                        
+                           
+                        printf("xxx %p %p  %d\n",destinationInterfaceInfo, lastLink->sourceInterfaceInfo,destinationInterfaceInfo != lastLink->sourceInterfaceInfo);
+                        if( (!destinationRoutingTable->isIPForwardingEnabled()) &&
+                            (destinationInterfaceInfo != lastLink->sourceInterfaceInfo) ) {
+                           std::cout << "XXX-DROP"  << endl;
+                           continue;
+                        }
+                        
                         InterfaceEntry *destinationInterfaceEntry = destinationInterfaceInfo->interfaceEntry;
                         IPv4Address destinationAddress = destinationInterfaceInfo->getAddress();
                         IPv4Address destinationNetmask = destinationInterfaceInfo->getNetmask();
