@@ -192,17 +192,17 @@ void IPv4NetworkConfigurator::computeConfiguration()
                configureRoutingTable(node);
            }
            hasConfiguration = true;
-
-           dumpAddresses(prunedTopology);
-           dumpRoutes(prunedTopology);
+//            dumpAddresses(prunedTopology);
+//            dumpRoutes(prunedTopology);
        }
     }
     if(!hasConfiguration) {
+       // There are no separate networks => just compute configuration for full topology.
        EV_INFO << "Computing configuration for FULL TOPOLOGY ..." << endl;
        performConfigurations(fullTopology);
     }
 
-    dumpRoutes(fullTopology);
+//     dumpRoutes(fullTopology);
     
     printElapsedTime("initialize", initializeStartTime);
 }
@@ -1955,7 +1955,7 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                         nextHopInterfaceInfo = link->sourceInterfaceInfo;
                     node = (Node *)node->getPath(0)->getRemoteNode();
                 }
-                Link* lastLink = (Link*)destinationNode->getPath(0);
+                const InterfaceInfo* ingressInterfaceInfo = ((Link*)destinationNode->getPath(0))->sourceInterfaceInfo;
 
                 // determine source interface
                 if (link->destinationInterfaceInfo && link->destinationInterfaceInfo->addStaticRoute)
@@ -1968,20 +1968,10 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                     {
                         InterfaceInfo *destinationInterfaceInfo = destinationNode->interfaceInfos[j];
 
-                        
-                        
-                           std::cout << "XXX "
-                           << sourceInterfaceEntry->getFullPath() << " --> "
-                           << destinationInterfaceInfo->interfaceEntry->getFullPath()
-                           << "   lastHop=" << ((lastLink != NULL) ? lastLink->sourceInterfaceInfo->interfaceEntry->getFullPath() : "---") << "  fw="
-                           << destinationRoutingTable->isIPForwardingEnabled()
-                           << endl;
-                        
-                           
-                        printf("xxx %p %p  %d\n",destinationInterfaceInfo, lastLink->sourceInterfaceInfo,destinationInterfaceInfo != lastLink->sourceInterfaceInfo);
+//                         std::cout << sourceInterfaceEntry->getFullPath() << " --> "
+//                                   << destinationInterfaceInfo->interfaceEntry->getFullPath() << endl;
                         if( (!destinationRoutingTable->isIPForwardingEnabled()) &&
-                            (destinationInterfaceInfo != lastLink->sourceInterfaceInfo) ) {
-                           std::cout << "XXX-DROP"  << endl;
+                            (destinationInterfaceInfo != ingressInterfaceInfo) ) {
                            continue;
                         }
                         
@@ -2011,7 +2001,7 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                                 delete route;
                             else {
                                 sourceNode->staticRoutes.push_back(route);
-                                std::cout << "Adding route " << sourceInterfaceEntry->getFullPath() << " -> " << destinationInterfaceEntry->getFullPath() << " as " << route->info() << endl;
+                                EV << "Adding route " << sourceInterfaceEntry->getFullPath() << " -> " << destinationInterfaceEntry->getFullPath() << " as " << route->info() << endl;
                             }
                         }
                     }
