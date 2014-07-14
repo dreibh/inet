@@ -151,23 +151,23 @@ network testNetwork
    connections allowunconnected:
       for n=0..networks-1 {
          westernCoreRouter[n].pppg[0]
-            <--> coreChannel { netID = 1000 + n; @display("ls=red,3"); }
+            <--> coreChannel { netID = 0; @display("ls=red,3"); }
             <--> easternCoreRouter[n].pppg[0];
 
          // ------ Disjoint paths -------------------------
          westernBorderRouter[n].pppg[0]
-            <--> accessChannel { netID = 0; @display("ls=blue,5"); }
+            <--> accessChannel { netID = 1000 + n; @display("ls=blue,5"); }
             <--> westernCoreRouter[n].pppg[1] if sharedBottleneck == false;
          easternBorderRouter[n].pppg[0]
-            <--> accessChannel { netID = 0; @display("ls=blue,5"); }
+            <--> accessChannel { netID = 1000 + n; @display("ls=blue,5"); }
             <--> easternCoreRouter[n].pppg[1] if sharedBottleneck == false;
 
          // ------ Shared Bottleneck paths ----------------
          westernBorderRouter[n].pppg[0]
-            <--> accessChannel { netID = 0; @display("ls=blue,5"); }
+            <--> accessChannel { netID = 1000 + n; @display("ls=blue,5"); }
             <--> westernCoreRouter[0].pppg++ if sharedBottleneck == true;
          easternBorderRouter[n].pppg[0]
-            <--> accessChannel { netID = 0; @display("ls=blue,5"); }
+            <--> accessChannel { netID = 1000 + n; @display("ls=blue,5"); }
             <--> easternCoreRouter[0].pppg++ if sharedBottleneck == true;
       }
 
