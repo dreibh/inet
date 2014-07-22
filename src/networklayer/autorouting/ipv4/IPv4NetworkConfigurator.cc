@@ -29,11 +29,6 @@
 
 Define_Module(IPv4NetworkConfigurator);
 
-// ?????
-#define EV_INFO std::cout
-#define EV_DEBUG std::cout
-// ?????
-
 #define ADDRLEN_BITS 32
 #define T(CODE)  {long startTime=clock(); CODE; printElapsedTime(#CODE, startTime);}
 
@@ -133,7 +128,7 @@ void IPv4NetworkConfigurator::initialize(int stage)
         dumpConfiguration();
 }
 
-void IPv4NetworkConfigurator::performConfigurations(IPv4Topology& topology)
+void IPv4NetworkConfigurator::performConfigurations(IPv4Topology& topology, unsigned int networkID)
 {
     // read and configure multicast groups from the XML configuration
     T(readMulticastGroupConfiguration(topology));
@@ -143,7 +138,7 @@ void IPv4NetworkConfigurator::performConfigurations(IPv4Topology& topology)
     readManualMulticastRouteConfiguration(topology);
     // calculate shortest paths, and add corresponding static routes
     if (addStaticRoutesParameter)
-        T(addStaticRoutes(topology));
+        T(addStaticRoutes(topology, networkID));
 }
 
 void IPv4NetworkConfigurator::computeConfiguration()
@@ -185,7 +180,7 @@ void IPv4NetworkConfigurator::computeConfiguration()
 
            IPv4Topology prunedTopology;
            T(extractTopology(prunedTopology, networkID));
-           performConfigurations(prunedTopology);
+           performConfigurations(prunedTopology, networkID);
 
            for (int i = 0; i < prunedTopology.getNumNodes(); i++) {
                Node *node = (Node *)prunedTopology.getNode(i);
@@ -199,7 +194,7 @@ void IPv4NetworkConfigurator::computeConfiguration()
     if(!hasConfiguration) {
        // There are no separate networks => just compute configuration for full topology.
        EV_INFO << "Computing configuration for FULL TOPOLOGY ..." << endl;
-       performConfigurations(fullTopology);
+       performConfigurations(fullTopology, 0);
     }
 
 //     dumpRoutes(fullTopology);
@@ -1884,7 +1879,7 @@ bool IPv4NetworkConfigurator::containsRoute(const std::vector<IPv4Route *>& rout
     return false;
 }
 
-void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
+void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology, unsigned int networkID)
 {
     // TODO: it should be configurable (via xml?) which nodes need static routes filled in automatically
     // add static routes for all routing tables
@@ -1962,7 +1957,7 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                 {
                     InterfaceEntry* sourceInterfaceEntry    = link->destinationInterfaceInfo->interfaceEntry;
                     IRoutingTable*  destinationRoutingTable = IPvXAddressResolver().routingTableOf(destinationNode->getModule());
-                    
+
                     // add the same routes for all destination interfaces (IP packets are accepted from any interface at the destination)
                     for (int j = 0; j < (int)destinationNode->interfaceInfos.size(); j++)
                     {
@@ -1974,7 +1969,7 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                             (destinationInterfaceInfo != ingressInterfaceInfo) ) {
                            continue;
                         }
-                        
+
                         InterfaceEntry *destinationInterfaceEntry = destinationInterfaceInfo->interfaceEntry;
                         IPv4Address destinationAddress = destinationInterfaceInfo->getAddress();
                         IPv4Address destinationNetmask = destinationInterfaceInfo->getNetmask();
@@ -1997,6 +1992,7 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                             if (gatewayAddress != destinationAddress)
                                 route->setGateway(gatewayAddress);
                             route->setSourceType(IPv4Route::MANUAL);
+                            route->setMetric(10 + networkID);
                             if (containsRoute(sourceNode->staticRoutes, route))
                                 delete route;
                             else {
@@ -2008,10 +2004,9 @@ void IPv4NetworkConfigurator::addStaticRoutes(IPv4Topology& topology)
                 }
             }
 
-            // ?????????????????????????????????? COMMENTED OUT
-//             // optimize routing table to save memory and increase lookup performance
-//             if (optimizeRoutesParameter)
-//                 optimizeRoutes(sourceNode->staticRoutes);
+            // optimize routing table to save memory and increase lookup performance
+            if ((optimizeRoutesParameter) && (networkID == 0))
+                optimizeRoutes(sourceNode->staticRoutes);
         }
     }
 }

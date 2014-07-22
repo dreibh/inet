@@ -277,7 +277,7 @@ class INET_API IPv4NetworkConfigurator : public cSimpleModule, public IPvXAddres
          * The algorithm uses Dijkstra's weighted shortest path algorithm.
          * May add default routes and subnet routes if possible and requested.
          */
-        virtual void addStaticRoutes(IPv4Topology& topology);
+        virtual void addStaticRoutes(IPv4Topology& topology, unsigned int networkID);
 
         /**
          * Destructively optimizes the given IPv4 routes by merging some of them.
@@ -303,7 +303,7 @@ class INET_API IPv4NetworkConfigurator : public cSimpleModule, public IPvXAddres
         virtual void dumpConfig(IPv4Topology& topology);
 
         // helper functions
-        virtual void performConfigurations(IPv4Topology& topology);
+        virtual void performConfigurations(IPv4Topology& topology, unsigned int networkID);
         virtual void extractWiredNeighbors(IPv4Topology& topology, Topology::LinkOut *linkOut, LinkInfo* linkInfo, std::set<InterfaceEntry *>& interfacesSeen, std::vector<Node *>& nodesVisited);
         virtual void extractWirelessNeighbors(IPv4Topology& topology, const char *wirelessId, LinkInfo* linkInfo, std::set<InterfaceEntry *>& interfacesSeen, std::vector<Node *>& nodesVisited);
         virtual void extractDeviceNeighbors(IPv4Topology& topology, Node *node, LinkInfo* linkInfo, std::set<InterfaceEntry *>& interfacesSeen, std::vector<Node *>& deviceNodesVisited);
