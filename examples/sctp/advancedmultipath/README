@@ -12,8 +12,8 @@ grep "Total Reception Bit R" scalars.sca | grep testNetwork.serverMain
 
 The resulting output should look like this:
 ...
-scalar testNetwork.serverMain[0].netPerfMeter[0]        "Total Reception Bit Rate"      1846556.8
-scalar testNetwork.serverMain[1].netPerfMeter[0]        "Total Reception Bit Rate"      1850622.4
-scalar testNetwork.serverMain[2].netPerfMeter[0]        "Total Reception Bit Rate"      1999694.4
-scalar testNetwork.serverMain[3].netPerfMeter[0]        "Total Reception Bit Rate"      1956134.4
-scalar testNetwork.serverMain[4].netPerfMeter[0]        "Total Reception Bit Rate"      1936000
+scalar testNetwork.serverMain[0].netPerfMeterApp[0]     "Total Reception Bit Rate"      3766488
+scalar testNetwork.serverMain[1].netPerfMeterApp[0]     "Total Reception Bit Rate"      3825342.4
+scalar testNetwork.serverMain[2].netPerfMeterApp[0]     "Total Reception Bit Rate"      4136264
+scalar testNetwork.serverMain[3].netPerfMeterApp[0]     "Total Reception Bit Rate"      3616254.4
+scalar testNetwork.serverMain[4].netPerfMeterApp[0]     "Total Reception Bit Rate"      3857286.4
