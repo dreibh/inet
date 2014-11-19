@@ -188,7 +188,7 @@ module Core
       }
 
    // ====== Connections ====================================================
-   connections allowunconnected:
+   connections:
 
       // Core Router [disjointTrails]:
       // ppp0 <--> other core router
@@ -288,29 +288,29 @@ module Core
       // ------ Uplinks -----------------------------------------------------
       for u=0..uplinkTrails-1 {
          westernUplinkRouter[u].pppg[0]
-            <--> connectorChannel { netID = netIDBase + disjointTrails * (1 + bottleneckTrails) + u;  @display("ls=darkgray,5"); }
+            <--> connectorChannel { netID = 0;  @display("ls=darkgray,5"); }
             <--> westernUplink[u];
          easternUplinkRouter[u].pppg[0]
-            <--> connectorChannel { netID = netIDBase + disjointTrails * (1 + bottleneckTrails) + u;  @display("ls=darkgray,5"); }
+            <--> connectorChannel { netID = 0;  @display("ls=darkgray,5"); }
             <--> easternUplink[u];
       }
       for u=0..uplinkTrails-1,
          for s=0..max(systemsMain, systemsReference)-1 {
             clientMain[s].pppg[disjointTrails * (1 + bottleneckTrails) + u]
-               <--> accessChannel { netID = netIDBase + disjointTrails * (1 + bottleneckTrails) + u;  @display("ls=darkgray,5"); }
+               <--> accessChannel { netID = 0;  @display("ls=darkgray,5"); }
                <--> westernUplinkRouter[u].pppg[1 + s]
                if (s < systemsMain);
             serverMain[s].pppg[disjointTrails * (1 + bottleneckTrails) + u]
-               <--> accessChannel { netID = netIDBase + disjointTrails * (1 + bottleneckTrails) + u;  @display("ls=darkgray,5"); }
+               <--> accessChannel { netID = 0;  @display("ls=darkgray,5"); }
                <--> easternUplinkRouter[u].pppg[1 + s]
                if (s < systemsMain);
 
             clientReference[s].pppg[disjointTrails * (1 + bottleneckTrails) + u]
-               <--> accessChannel { netID = netIDBase + disjointTrails * (1 + bottleneckTrails) + u;  @display("ls=darkgray,5"); }
+               <--> accessChannel { netID = 0;  @display("ls=darkgray,5"); }
                <--> westernUplinkRouter[u].pppg[1 + systemsMain + s]
                if (s < systemsReference);
             serverReference[s].pppg[disjointTrails * (1 + bottleneckTrails) + u]
-               <--> accessChannel { netID = netIDBase + disjointTrails * (1 + bottleneckTrails) + u;  @display("ls=darkgray,5"); }
+               <--> accessChannel { netID = 0;  @display("ls=darkgray,5"); }
                <--> easternUplinkRouter[u].pppg[1 + systemsMain + s]
                if (s < systemsReference);
       }
