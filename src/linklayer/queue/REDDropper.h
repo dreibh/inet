@@ -26,8 +26,9 @@
 /**
  * Implementation of Random Early Detection (RED).
  */
-class REDDropper: public AlgorithmicDropperBase {
-protected:
+class REDDropper : public AlgorithmicDropperBase
+{
+  protected:
     double wq;
     double *minths;
     double *maxths;
@@ -38,11 +39,9 @@ protected:
     double avg;
     simtime_t q_time;
 
-public:
-    REDDropper() :
-            wq(0), minths(NULL), maxths(NULL), maxps(NULL), avg(0.0) {
-    }
-protected:
+  public:
+    REDDropper() : wq(0), minths(NULL), maxths(NULL), maxps(NULL), avg(0.0) {}
+  protected:
     virtual ~REDDropper();
     virtual void initialize();
     virtual bool shouldDrop(cPacket *packet);
