@@ -138,8 +138,12 @@ void NetPerfMeter::initialize()
         traceEntry.InterFrameDelay = 0;
         traceEntry.FrameSize       = 0;
         traceEntry.StreamID        = 0;
-        traceFile >> traceEntry.InterFrameDelay >> traceEntry.FrameSize >> traceEntry.StreamID;
-        std::cout << "Frame: " << traceEntry.InterFrameDelay << traceEntry.FrameSize << traceEntry.StreamID << endl;
+
+        char line[256];
+        traceFile.getline((char*)&line, sizeof(line), '\n');
+        sscanf(line, "%lf %u %u", &traceEntry.InterFrameDelay, &traceEntry.FrameSize, &traceEntry.StreamID);
+        // std::cout << "Frame: " << traceEntry.InterFrameDelay << "\t" << traceEntry.FrameSize << "\t" << traceEntry.StreamID << endl;
+
         TraceVector.push_back(traceEntry);
       }
    }
@@ -429,8 +433,10 @@ void NetPerfMeter::handleMessage(cMessage* msg)
             assert(sendQueueAbatedIndication != NULL);
             // Queue is underfull again -> give it more data.
             SendingAllowed = true;
-            sendDataOfSaturatedStreams(sendQueueAbatedIndication->getBytesAvailable(),
-                                       sendQueueAbatedIndication);
+            if(TraceVector.size() == 0) {
+               sendDataOfSaturatedStreams(sendQueueAbatedIndication->getBytesAvailable(),
+                                          sendQueueAbatedIndication);
+            }
            }
           break;
          case SCTP_I_SENDQUEUE_FULL:
@@ -474,7 +480,9 @@ void NetPerfMeter::handleMessage(cMessage* msg)
             // Queue is underfull again -> give it more data.
             if(SocketTCP != NULL) {   // T.D. 16.11.2011: Ensure that there is still a TCP socket!
                SendingAllowed = true;
-               sendDataOfSaturatedStreams(tcpCommand->getUserId(), NULL);
+               if(TraceVector.size() == 0) {
+                  sendDataOfSaturatedStreams(tcpCommand->getUserId(), NULL);
+               }
             }
            }
           break;
@@ -1087,13 +1095,10 @@ void NetPerfMeter::sendDataOfTraceFile(const unsigned long long bytesAvailableIn
         }
         streamID = 0;
       }
-      printf("%1.6f:\tTX: %u %u\n",(double)simTime().dbl(), frameSize,streamID);
       transmitFrame(frameSize, streamID);
-      puts("OK!");
       TraceIndex++;
    }
    else {
-      puts("REWIND!");
       TraceIndex = 0;
    }
 
@@ -1105,8 +1110,8 @@ void NetPerfMeter::sendDataOfTraceFile(const unsigned long long bytesAvailableIn
       TransmitTimerVector[0]->setKind(TIMER_TRANSMIT);
       TransmitTimerVector[0]->setStreamID(0);
 
-      std::cout << simTime() << ", " << getFullPath()
-         << ": Next in " << nextFrameTime << "s" << endl;
+      // std::cout << simTime() << ", " << getFullPath()
+      //           << ": Next in " << nextFrameTime << "s" << endl;
 
       scheduleAt(simTime() + nextFrameTime, TransmitTimerVector[0]);
    }
