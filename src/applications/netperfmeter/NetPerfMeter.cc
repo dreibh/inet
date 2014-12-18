@@ -8,7 +8,7 @@
 // *
 // * --------------------------------------------------------------------------
 // *
-// *   Copyright (C) 2009-2014 by Thomas Dreibholz
+// *   Copyright (C) 2009-2015 by Thomas Dreibholz
 // *
 // *   This program is free software: you can redistribute it and/or modify
 // *   it under the terms of the GNU General Public License as published by
@@ -127,6 +127,23 @@ void NetPerfMeter::initialize()
    parseExpressionVector(FrameRateExpressionVector, par("frameRateString"), ";");
    parseExpressionVector(FrameSizeExpressionVector, par("frameSizeString"), ";");
 
+   TraceIndex = ~0;
+   if(strcmp((const char*)par("traceFile"), "") != 0) {
+      std::fstream traceFile((const char*)par("traceFile"));
+      if(!traceFile.good()) {
+         opp_error("Unable to load trace file: " + par("traceFile"));
+      }
+      while(!traceFile.eof()) {
+        TraceEntry traceEntry;
+        traceEntry.InterFrameDelay = 0;
+        traceEntry.FrameSize       = 0;
+        traceEntry.StreamID        = 0;
+        traceFile >> traceEntry.InterFrameDelay >> traceEntry.FrameSize >> traceEntry.StreamID;
+        std::cout << "Frame: " << traceEntry.InterFrameDelay << traceEntry.FrameSize << traceEntry.StreamID << endl;
+        TraceVector.push_back(traceEntry);
+      }
+   }
+
    // ====== Initialize and bind socket =====================================
    SocketSCTP = IncomingSocketSCTP = NULL;
    SocketTCP  = IncomingSocketTCP  = NULL;
@@ -230,7 +247,12 @@ void NetPerfMeter::handleTimer(cMessage* msg)
       dynamic_cast<NetPerfMeterTransmitTimer*>(msg);
    if(transmitTimer) {
       TransmitTimerVector[transmitTimer->getStreamID()] = NULL;
-      sendDataOfNonSaturatedStreams(QueueSize, transmitTimer->getStreamID());
+      if(TraceVector.size() > 0) {
+         sendDataOfTraceFile(QueueSize);
+      }
+      else {
+         sendDataOfNonSaturatedStreams(QueueSize, transmitTimer->getStreamID());
+      }
    }
 
    // ====== Disconnect timer ===============================================
@@ -322,10 +344,15 @@ void NetPerfMeter::handleTimer(cMessage* msg)
       ev << simTime() << ", " << getFullPath() << ": Start" << endl;
 
       StartTimer = NULL;
-      for(unsigned int streamID = 0; streamID < ActualOutboundStreams; streamID++) {
-         sendDataOfNonSaturatedStreams(QueueSize, streamID);
+      if(TraceVector.size() > 0) {
+         sendDataOfTraceFile(QueueSize);
       }
-      sendDataOfSaturatedStreams(QueueSize, NULL);
+      else {
+         for(unsigned int streamID = 0; streamID < ActualOutboundStreams; streamID++) {
+            sendDataOfNonSaturatedStreams(QueueSize, streamID);
+         }
+         sendDataOfSaturatedStreams(QueueSize, NULL);
+      }
 
       // ------ On/Off handling in active mode ------------------------------
       if(ActiveMode) {
@@ -1003,7 +1030,7 @@ void NetPerfMeter::sendDataOfNonSaturatedStreams(const unsigned long long bytesA
 {
    if(!ActiveMode)
         return;
-   // ====== Is there something to send? =================================
+   // ====== Is there something to send? ====================================
    const double frameRate = getFrameRate(streamID);
    if(frameRate <= 0.0) {
       // No non-saturated transmission on this stream
@@ -1045,6 +1072,44 @@ void NetPerfMeter::sendDataOfNonSaturatedStreams(const unsigned long long bytesA
       << ": Next on stream #" << streamID << " in " << nextFrameTime << "s" << endl;
 */
    scheduleAt(simTime() + nextFrameTime, TransmitTimerVector[streamID]);
+}
+
+
+// ###### Send data of non-saturated streams ################################
+void NetPerfMeter::sendDataOfTraceFile(const unsigned long long bytesAvailableInQueue)
+{
+   if(TraceIndex < TraceVector.size()) {
+      const unsigned int frameSize = TraceVector[TraceIndex].FrameSize;
+      unsigned int streamID        = TraceVector[TraceIndex].StreamID;
+      if(streamID >= ActualOutboundStreams) {
+        if(TransportProtocol == SCTP) {
+           opp_error("Invalid streamID in trace");
+        }
+        streamID = 0;
+      }
+      printf("%1.6f:\tTX: %u %u\n",(double)simTime().dbl(), frameSize,streamID);
+      transmitFrame(frameSize, streamID);
+      puts("OK!");
+      TraceIndex++;
+   }
+   else {
+      puts("REWIND!");
+      TraceIndex = 0;
+   }
+
+   // ====== Schedule next frame transmission ===============================
+   if(TraceIndex < TraceVector.size()) {
+      const double nextFrameTime = TraceVector[TraceIndex].InterFrameDelay;
+      assert(TransmitTimerVector[0] == NULL);
+      TransmitTimerVector[0] = new NetPerfMeterTransmitTimer("TransmitTimer");
+      TransmitTimerVector[0]->setKind(TIMER_TRANSMIT);
+      TransmitTimerVector[0]->setStreamID(0);
+
+      std::cout << simTime() << ", " << getFullPath()
+         << ": Next in " << nextFrameTime << "s" << endl;
+
+      scheduleAt(simTime() + nextFrameTime, TransmitTimerVector[0]);
+   }
 }
 
 
