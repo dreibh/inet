@@ -131,7 +131,7 @@ void NetPerfMeter::initialize()
    if(strcmp((const char*)par("traceFile"), "") != 0) {
       std::fstream traceFile((const char*)par("traceFile"));
       if(!traceFile.good()) {
-         opp_error("Unable to load trace file: " + par("traceFile"));
+         opp_error("Unable to load trace file");
       }
       while(!traceFile.eof()) {
         TraceEntry traceEntry;
