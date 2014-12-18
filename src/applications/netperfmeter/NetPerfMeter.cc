@@ -141,10 +141,10 @@ void NetPerfMeter::initialize()
 
         char line[256];
         traceFile.getline((char*)&line, sizeof(line), '\n');
-        sscanf(line, "%lf %u %u", &traceEntry.InterFrameDelay, &traceEntry.FrameSize, &traceEntry.StreamID);
-        // std::cout << "Frame: " << traceEntry.InterFrameDelay << "\t" << traceEntry.FrameSize << "\t" << traceEntry.StreamID << endl;
-
-        TraceVector.push_back(traceEntry);
+        if(sscanf(line, "%lf %u %u", &traceEntry.InterFrameDelay, &traceEntry.FrameSize, &traceEntry.StreamID) >= 2) {
+           // std::cout << "Frame: " << traceEntry.InterFrameDelay << "\t" << traceEntry.FrameSize << "\t" << traceEntry.StreamID << endl;
+           TraceVector.push_back(traceEntry);
+        }
       }
    }
 
@@ -1098,20 +1098,21 @@ void NetPerfMeter::sendDataOfTraceFile(const unsigned long long bytesAvailableIn
       transmitFrame(frameSize, streamID);
       TraceIndex++;
    }
-   else {
+
+   if(TraceIndex >= TraceVector.size()) {
       TraceIndex = 0;
    }
 
    // ====== Schedule next frame transmission ===============================
-   if(TraceIndex < TraceVector.size()) {
+   if(TraceIndex < TraceVector.size()) {    
       const double nextFrameTime = TraceVector[TraceIndex].InterFrameDelay;
       assert(TransmitTimerVector[0] == NULL);
       TransmitTimerVector[0] = new NetPerfMeterTransmitTimer("TransmitTimer");
       TransmitTimerVector[0]->setKind(TIMER_TRANSMIT);
       TransmitTimerVector[0]->setStreamID(0);
 
-      // std::cout << simTime() << ", " << getFullPath()
-      //           << ": Next in " << nextFrameTime << "s" << endl;
+       std::cout << simTime() << ", " << getFullPath()
+                 << ": Next in " << nextFrameTime << "s" << endl;
 
       scheduleAt(simTime() + nextFrameTime, TransmitTimerVector[0]);
    }
