@@ -1111,8 +1111,8 @@ void NetPerfMeter::sendDataOfTraceFile(const unsigned long long bytesAvailableIn
       TransmitTimerVector[0]->setKind(TIMER_TRANSMIT);
       TransmitTimerVector[0]->setStreamID(0);
 
-       std::cout << simTime() << ", " << getFullPath()
-                 << ": Next in " << nextFrameTime << "s" << endl;
+      // std::cout << simTime() << ", " << getFullPath()
+      //           << ": Next in " << nextFrameTime << "s" << endl;
 
       scheduleAt(simTime() + nextFrameTime, TransmitTimerVector[0]);
    }
