@@ -1235,7 +1235,8 @@ void SCTPAssociation::stateEntered(int32 status)
                state->cmtCCVariant = SCTPStateVariables::CCCV_CMT;
                state->allowCMT     = true;
             }
-            else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
+            else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "lia") == 0) ||
+                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
                      (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
                state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
                state->allowCMT     = true;
