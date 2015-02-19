@@ -703,8 +703,14 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
         sctpEV3 << pathId->remoteAddress;
     }
     sctpEV3 << ") at t=" << simTime() << " #####" << endl;
+
+    unsigned int safetyCounter = 0;
     while (sendingAllowed)
     {
+        if (safetyCounter++ >= 1000) {
+           throw cRuntimeError("Endless loop in SCTPAssociation::sendOnPath()?! This should not happen ...");
+        }
+
         headerCreated = false;
         if (state->bytesToRetransmit > 0) {
             // There are bytes in the transmissionQ. They have to be sent first.
