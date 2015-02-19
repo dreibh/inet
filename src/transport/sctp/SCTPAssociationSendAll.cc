@@ -832,6 +832,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                 sctpAlgorithm->sackSent();
                 state->sackAllowed = false;
                 sendSACKviaSelectedPath(sctpMsg);
+                sctpMsg = NULL;
                 return;
             }
         }
@@ -977,6 +978,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                                 state->sackAllowed = false;
                                 sctpEV3 << "RTX: send only SACK\n";
                                 sendSACKviaSelectedPath(sctpMsg);
+                                sctpMsg = NULL;
                                 if (datVar != NULL)  {
                                     sctpMsg = new SCTPMessage("send");
                                     sctpMsg->setByteLength(SCTP_COMMON_HEADER);
@@ -1107,6 +1109,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                                     state->sackAllowed = false;
                                     sctpEV3 << assocId << ": send SACK and make new header for datMsg (" << &datMsg << "). scount=" << scount << "\n";
                                     sendSACKviaSelectedPath(sctpMsg);
+                                    sctpMsg = NULL;
                                     if (datMsg != NULL)  {
                                         sctpMsg = new SCTPMessage("send");
                                         sctpMsg->setByteLength(SCTP_COMMON_HEADER);
@@ -1355,6 +1358,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                 if (packetFull) {
                     if (chunksAdded == 0) {   // Nothing to send
                         delete sctpMsg;
+                        sctpMsg = NULL;
                         sendingAllowed = false;   // sendingAllowed==false => leave outer while loop
                     }
                     else {
@@ -1393,6 +1397,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                         }
                         sctpEV3 << assocId << ":sendToIP: packet size=" << sctpMsg->getByteLength() << " numChunks=" << sctpMsg->getChunksArraySize() << "\n";
                         sendToIP(sctpMsg, path->remoteAddress);
+                        sctpMsg = NULL;
                         pmDataIsSentOn(path);
                         totalPacketsSent++;
                         path->lastTransmission = simTime();
@@ -1420,6 +1425,7 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
             else {
                 packetFull = true;  // Leave inner while loop
                 delete sctpMsg;     // T.D. 19.01.2010: Free unsent message
+                sctpMsg = NULL;
             }
 
             sctpEV3 << "packetFull=" << packetFull << endl;
