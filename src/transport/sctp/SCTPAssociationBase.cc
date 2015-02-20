@@ -1236,12 +1236,15 @@ void SCTPAssociation::stateEntered(int32 status)
                state->allowCMT     = true;
             }
             else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "lia") == 0) ||
+                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-lia") == 0) ||
+                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "lia-like") == 0) ||
                      (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
                      (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
                state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
                state->allowCMT     = true;
             }
-            else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "olia-like") == 0) ||
+            else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "olia") == 0) ||
+                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "olia-like") == 0) ||
                      (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-olia") == 0) ) {
                state->cmtCCVariant = SCTPStateVariables::CCCV_CMT_OLIA;
                state->allowCMT     = true;
