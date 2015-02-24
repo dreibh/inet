@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2007-2009 Irene Ruengeler
-// Copyright (C) 2009-2012 Thomas Dreibholz
+// Copyright (C) 2009-2015 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -878,8 +878,8 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
         while (!packetFull && headerCreated) {
             assert(headerCreated == true);
             sctpEV3 << assocId << ": bytesToSend=" << bytesToSend
-                      << " bytes.chunk="     << bytes.chunk
-                      << " bytes.packet=" << bytes.packet << endl;
+                    << " bytes.chunk="  << bytes.chunk
+                    << " bytes.packet=" << bytes.packet << endl;
 
             // ====== How many bytes may be transmitted in next packet? ========
             int32 allowance = path->pmtu;     // Default behaviour: send 1 path MTU
@@ -1378,6 +1378,9 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
                                 sctpEV3 << "sendAll: RTX Timer already scheduled -> no need to schedule it\n";
                             }
                         }
+                        else {
+                           bytes.packet = false;   // TD 23.02.2015: no DATA chunks => done.
+                        }
                         if (sendOneMorePacket) {
                             sendOneMorePacket = false;
                             bytesToSend = 0;
@@ -1431,8 +1434,8 @@ void SCTPAssociation::sendOnPath(SCTPPathVariables* pathId, bool firstPass)
         }    // while(!packetFull)
 
         sctpEV3 << "bytesToSend="    << bytesToSend
-                  << " bytes.chunk="     << bytes.chunk
-                  << " bytes.packet=" << bytes.packet << endl;
+                << " bytes.chunk="     << bytes.chunk
+                << " bytes.packet=" << bytes.packet << endl;
         if (!(bytesToSend > 0 || bytes.chunk || bytes.packet)) {
             sendingAllowed = false;
         }
