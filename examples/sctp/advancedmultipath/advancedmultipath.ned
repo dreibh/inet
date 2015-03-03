@@ -104,28 +104,24 @@ network testNetwork
       // ------ Routers -----------------------------------------------------
       westernBorderRouter[networks] : Router {
          parameters:
-            IPForward = true;
             @display("p=500,150,c,150;i=abstract/router_l,gold");
          gates:
             pppg[1 + systems];
       }
       westernCoreRouter[networks] : Router {
          parameters:
-            IPForward = true;
             @display("p=700,150,c,150;i=abstract/router_l,gold");
          gates:
             pppg[1 + networks];
       }
       easternCoreRouter[networks] : Router {
          parameters:
-            IPForward = true;
             @display("p=1000,150,c,150;i=abstract/router_l,gold");
          gates:
             pppg[1 + networks];
       }
       easternBorderRouter[networks] : Router {
          parameters:
-            IPForward = true;
             @display("p=1200,150,c,150;i=abstract/router_l,gold");
          gates:
             pppg[1 + systems];
@@ -134,14 +130,12 @@ network testNetwork
       // ------ Systems -----------------------------------------------------
       clientMain[systems] : NetPerfMeterHost {
          parameters:
-            IPForward = false;
             @display("p=50,50,c,200;i=device/laptop_l,green");
          gates:
             pppg[networks];
       }
       serverMain[systems] : NetPerfMeterHost {
          parameters:
-            IPForward = false;
             @display("p=1650,50,c,200;i=device/server_l,green");
          gates:
             pppg[networks];
