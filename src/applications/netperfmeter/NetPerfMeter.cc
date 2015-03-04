@@ -283,7 +283,8 @@ void NetPerfMeter::handleTimer(cMessage* msg)
       // ------ Schedule reconnect timer ------------------------------------
       const simtime_t offTime = par("offTime");
       if( (offTime.dbl() > 0.0) &&
-          (EstablishedConnections + 1 <= MaxReconnects) ) {
+          ((MaxReconnects < 0) ||
+           (EstablishedConnections <= (unsigned int)MaxReconnects)) ) {
          ReconnectTimer = new cMessage("ReconnectTimer");
          ReconnectTimer->setKind(TIMER_RECONNECT);
          scheduleAt(simTime() + offTime, ReconnectTimer);
@@ -292,6 +293,7 @@ void NetPerfMeter::handleTimer(cMessage* msg)
 
    // ====== Reconnect timer ================================================
    else if(msg == ReconnectTimer) {
+      puts("REC");
       EV << simTime() << ", " << getFullPath() << ": Reconnect" << endl;
 
       ReconnectTimer = NULL;

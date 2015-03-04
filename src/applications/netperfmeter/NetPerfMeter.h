@@ -107,7 +107,7 @@ class INET_API NetPerfMeter : public cSimpleModule
    cMessage*             DisconnectTimer;
    cMessage*             ReconnectTimer;
    unsigned int          EstablishedConnections;
-   unsigned int          MaxReconnects;
+   int                   MaxReconnects;
    std::vector<NetPerfMeterTransmitTimer*>
                          TransmitTimerVector;
 
