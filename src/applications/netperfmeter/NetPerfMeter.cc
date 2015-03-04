@@ -712,7 +712,6 @@ void NetPerfMeter::teardownConnection(const bool stopTimeReached)
       }
       else if(TransportProtocol == UDP) {
          if(SocketUDP != NULL) {
-            SocketUDP->close();
             delete SocketUDP;
             SocketUDP = NULL;
          }
