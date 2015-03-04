@@ -27,7 +27,7 @@
 
 package inet.examples.sctp.cmttest4;
 
-import inet.nodes.inet.StandardHost;
+import inet.applications.netperfmeter.NetPerfMeterHost;
 import inet.nodes.inet.Router;
 import ned.DatarateChannel;
 import ned.DelayChannel;
@@ -113,73 +113,69 @@ module Core
    // ====== Network Components =============================================
    submodules:
       // ------ Routers -----------------------------------------------------
-      westernBorderRouter[disjointTrails * (1 + bottleneckTrails)] : StandardHost {
+      westernBorderRouter[disjointTrails * (1 + bottleneckTrails)] : Router {
          parameters:
-            IPForward = true;
             @display("p=500,150,c,150;i=abstract/router_l,gold");
          gates:
             pppg[1 + systemsMain + systemsReference + (downlinkTrails > 0 ? 1 : 0)];
       }
-      westernCoreRouter[disjointTrails] : StandardHost {
+      westernCoreRouter[disjointTrails] : NetPerfMeterHost {   // NOTE: may have background traffic generators!
          parameters:
             IPForward = true;
             @display("p=700,150,c,150;i=abstract/router_l,gold");
          gates:
             pppg[1 + (1 + bottleneckTrails)];
       }
-      easternCoreRouter[disjointTrails] : StandardHost {
+      easternCoreRouter[disjointTrails] : NetPerfMeterHost {   // NOTE: may have background traffic generators!
          parameters:
             IPForward = true;
             @display("p=1000,150,c,150;i=abstract/router_l,gold");
          gates:
             pppg[1 + (1 + bottleneckTrails)];
       }
-      easternBorderRouter[disjointTrails * (1 + bottleneckTrails)] : StandardHost {
+      easternBorderRouter[disjointTrails * (1 + bottleneckTrails)] : Router {
          parameters:
-            IPForward = true;
             @display("p=1200,150,c,150;i=abstract/router_l,gold");
          gates:
             pppg[1 + systemsMain + systemsReference + (downlinkTrails > 0 ? 1 : 0)];
       }
 
-      westernUplinkRouter[uplinkTrails] : StandardHost {
+      westernUplinkRouter[uplinkTrails] : Router {
          parameters:
-            IPForward = true;
             @display("p=350,50,r,150;i=abstract/router_l,gray");
          gates:
             pppg[1 + systemsMain + systemsReference];
       }
-      easternUplinkRouter[uplinkTrails] : StandardHost {
+      easternUplinkRouter[uplinkTrails] : Router {
          parameters:
-            IPForward = true;
             @display("p=1250,50,r,150;i=abstract/router_l,gray");
          gates:
             pppg[1 + systemsMain + systemsReference];
       }
 
       // ------ Systems -----------------------------------------------------
-      clientMain[systemsMain] : StandardHost {
+      clientMain[systemsMain] : NetPerfMeterHost {
          parameters:
             IPForward = false;
             @display("p=50,50,c,200;i=device/laptop_l,green");
          gates:
             pppg[disjointTrails * (1 + bottleneckTrails) + uplinkTrails];
       }
-      clientReference[systemsReference] : StandardHost {
+      clientReference[systemsReference] : NetPerfMeterHost {
          parameters:
             IPForward = false;
             @display("p=150,150,c,200;i=device/laptop_l,red");
          gates:
             pppg[disjointTrails * (1 + bottleneckTrails) + uplinkTrails];
       }
-      serverMain[systemsMain] : StandardHost {
+      serverMain[systemsMain] : NetPerfMeterHost {
          parameters:
             IPForward = false;
             @display("p=1650,50,c,200;i=device/server_l,green");
          gates:
             pppg[disjointTrails * (1 + bottleneckTrails) + uplinkTrails];
       }
-      serverReference[systemsReference] : StandardHost {
+      serverReference[systemsReference] : NetPerfMeterHost {
          parameters:
             IPForward = false;
             @display("p=1550,150,c,200;i=device/server_l,red");
