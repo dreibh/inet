@@ -114,7 +114,7 @@ SCTPPathVariables::SCTPPathVariables(const IPvXAddress& addr, SCTPAssociation* a
     blockingTimeout = simTime();
     packetsInBurst = 0;
     highSpeedCCThresholdIdx = 0;
-    olia_sent_bytes = 0;
+    oliaSentBytes = 0;
     numberOfFastRetransmissions = 0;
     numberOfTimerBasedRetransmissions = 0;
     numberOfHeartbeatsSent = 0;
@@ -1235,22 +1235,15 @@ void SCTPAssociation::stateEntered(int32 status)
                state->cmtCCVariant = SCTPStateVariables::CCCV_CMT;
                state->allowCMT     = true;
             }
-            else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "lia") == 0) ||
-                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-lia") == 0) ||
-                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "lia-like") == 0) ||
-                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-mptcp") == 0) ||
-                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "mptcp-like") == 0) ) {
-               state->cmtCCVariant = SCTPStateVariables::CCCV_Like_MPTCP;
+            else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "lia") == 0){
+               state->cmtCCVariant = SCTPStateVariables::CCCV_CMT_LIA;
                state->allowCMT     = true;
             }
-            else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "olia") == 0) ||
-                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "olia-like") == 0) ||
-                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "like-olia") == 0) ) {
+            else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "olia") == 0){
                state->cmtCCVariant = SCTPStateVariables::CCCV_CMT_OLIA;
                state->allowCMT     = true;
             }
-            else if( (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrp") == 0) ||
-                     (strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0) ) {
+            else if(strcmp((const char*)sctpMain->par("cmtCCVariant"), "cmtrpv1") == 0){
                state->cmtCCVariant = SCTPStateVariables::CCCV_CMTRPv1;
                state->allowCMT     = true;
             }
