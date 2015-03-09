@@ -1076,8 +1076,6 @@ void NetPerfMeter::sendDataOfSaturatedStreams(const unsigned long long   bytesAv
 void NetPerfMeter::sendDataOfNonSaturatedStreams(const unsigned long long bytesAvailableInQueue,
                                                  const unsigned int       streamID)
 {
-   if(!ActiveMode)
-        return;
    // ====== Is there something to send? ====================================
    const double frameRate = getFrameRate(streamID);
    if(frameRate <= 0.0) {
