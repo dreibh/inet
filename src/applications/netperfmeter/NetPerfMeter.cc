@@ -33,6 +33,9 @@
 Define_Module(NetPerfMeter);
 
 
+// #define EV std::cout
+
+
 // ###### Get pareto-distributed double random value ########################
 // Parameters:
 // location = the location parameter (also: scale parameter): x_m, x_min or m
@@ -555,12 +558,13 @@ void NetPerfMeter::handleMessage(cMessage* msg)
 // ###### Establish connection ##############################################
 void NetPerfMeter::establishConnection()
 {
+   const char* remoteAddress = par("remoteAddress");
+   const int   remotePort    = par("remotePort");
+
    // ====== Establish connection ===========================================
    if(ActiveMode == true) {
       createAndBindSocket();
 
-      const char* remoteAddress = par("remoteAddress");
-      const int   remotePort    = par("remotePort");
       const char* primaryPath   = par("primaryPath");
       PrimaryPath = (primaryPath[0] != 0x00) ?
                        IPvXAddressResolver().resolve(primaryPath) : IPvXAddress();
@@ -581,6 +585,13 @@ void NetPerfMeter::establishConnection()
          successfullyEstablishedConnection(NULL, 0);
       }
       ConnectionEstablishmentTime = simTime();
+   }
+   else {
+      // ------ Handle UDP on passive side ----------------
+      if(TransportProtocol == UDP) {
+         SocketUDP->connect(IPvXAddressResolver().resolve(remoteAddress), remotePort);
+         successfullyEstablishedConnection(NULL, 0);
+      }
    }
    EV << getFullPath() << ": Sending allowed" << endl;
    SendingAllowed = true;
