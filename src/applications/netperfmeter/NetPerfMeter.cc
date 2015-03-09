@@ -34,6 +34,43 @@
 Define_Module(NetPerfMeter);
 
 
+// ###### Get pareto-distributed double random value ########################
+// Parameters:
+// location = the location parameter (also: scale parameter): x_m, x_min or m
+// shape    = the shape parameter: alpha or k
+//
+// Based on rpareto from GNU R's VGAM package
+// (http://cran.r-project.org/web/packages/VGAM/index.html):
+// rpareto <- function (n, location, shape) 
+// {
+//     ans <- location/runif(n)^(1/shape)
+//     ans[location <= 0] <- NaN
+//     ans[shape <= 0] <- NaN
+//     ans
+// }
+//
+// Some description:
+// http://en.wikipedia.org/wiki/Pareto_distribution
+//
+// Mean: E(X) = shape*location / (shape - 1) for alpha > 1
+// => location = E(X)*(shape - 1) / shape
+//
+static cNEDValue pareto(cComponent *context, cNEDValue argv[], int argc)
+{
+    const int    rng      = argc==3 ? (int)argv[2] : 0;
+    const double location = argv[0].doubleValueInUnit(argv[0].getUnit());
+    const double shape    = argv[1].doubleValueInUnit(argv[1].getUnit());
+
+    const double r      = uniform(0.0, 1.0, rng);
+    const double result = location / pow(r, 1.0 / shape);
+
+    // printf("%1.6f  => %1.6f   (location=%1.6f shape=%1.6f)\n", r, result, location, shape);
+    return cNEDValue(result, argv[0].getUnit());
+}
+
+Define_NED_Function(pareto, "quantity pareto(quantity location, quantity shape, long rng?)");
+
+
 // ###### Constructor #######################################################
 NetPerfMeter::NetPerfMeter()
 {
