@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2005-2010 Irene Ruengeler
-// Copyright (C) 2009-2012 Thomas Dreibholz
+// Copyright (C) 2009-2015 Thomas Dreibholz
 // Copyright (C) 2015 Martin Becke
 //
 // This program is free software; you can redistribute it and/or
@@ -712,7 +712,7 @@ class INET_API SCTPStateVariables : public cObject
             CCCV_CMT         = 1,   // CMT-SCTP
             CCCV_CMTRPv1     = 2,   // CMT/RP-SCTP with path MTU optimization
             CCCV_CMTRPv2     = 3,   // CMT/RP-SCTP with path MTU optimization and bandwidth consideration
-            CCCV_CMT_LIA  = 4,   // RP like MPTCP
+            CCCV_CMT_LIA     = 4,   // LIA CC
             CCCV_CMT_OLIA    = 5,   // OLIA CC
             CCCV_CMTRP_Test1 = 100,
             CCCV_CMTRP_Test2 = 101
