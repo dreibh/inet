@@ -30,7 +30,6 @@
 
 #include "IPvXAddressResolver.h"
 
-
 Define_Module(NetPerfMeter);
 
 
@@ -330,7 +329,6 @@ void NetPerfMeter::handleTimer(cMessage* msg)
 
    // ====== Reconnect timer ================================================
    else if(msg == ReconnectTimer) {
-      puts("REC");
       EV << simTime() << ", " << getFullPath() << ": Reconnect" << endl;
 
       ReconnectTimer = NULL;
@@ -584,6 +582,7 @@ void NetPerfMeter::establishConnection()
       }
       ConnectionEstablishmentTime = simTime();
    }
+   EV << getFullPath() << ": Sending allowed" << endl;
    SendingAllowed = true;
 }
 
@@ -603,7 +602,7 @@ void NetPerfMeter::successfullyEstablishedConnection(cMessage*          msg,
    // ====== Update queue size ==============================================
    if(queueSize != 0) {
       QueueSize = queueSize;
-      EV << "Got queue size " << QueueSize << " from transport protocol" << endl;
+      EV << getFullPath() << ": Got queue size " << QueueSize << " from transport protocol" << endl;
    }
 
    // ====== Get connection ID ==============================================
@@ -879,6 +878,9 @@ unsigned long NetPerfMeter::transmitFrame(const unsigned int frameSize,
 {
    unsigned long newlyQueuedBytes = 0;
 
+   EV << getFullPath() << ": Transmit frame of size "
+                       << frameSize << " on stream #" << streamID << endl;
+   
    // ====== TCP ============================================================
    if(TransportProtocol == TCP) {
       // TCP is stream-oriented: just pass the amount of frame data.
