@@ -158,10 +158,12 @@ void SCTP::handleMessage(cMessage *msg)
         sctpEV3<<"selfMessage\n";
 
         SCTPAssociation *assoc = (SCTPAssociation *) msg->getContextPointer();
-        bool ret = assoc->processTimer(msg);
+        if(assoc) {
+           bool ret = assoc->processTimer(msg);
 
-        if (!ret)
-            removeAssociation(assoc);
+           if (!ret)
+               removeAssociation(assoc);
+        }
     }
     else if (msg->arrivedOn("from_ip") || msg->arrivedOn("from_ipv6"))
     {
