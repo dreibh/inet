@@ -201,16 +201,16 @@ void NetPerfMeter::initialize()
       ReceiverStatisticsMap.insert(std::pair<unsigned int, ReceiverStatistics*>(i, receiverStatistics));
    }
 
-   HasFinished            = false;
-   ConnectTime            = par("connectTime");
-   StartTime              = par("startTime");
-   ResetTime              = par("resetTime");
-   StopTime               = par("stopTime");
+   ConnectTime       = par("connectTime");
+   StartTime         = par("startTime");
+   ResetTime         = par("resetTime");
+   StopTime          = par("stopTime");
+   MaxOnOffCycles    = par("maxOnOffCycles");
 
-   OffTimer               = NULL;
-   OnTimer                = NULL;
-   MaxReconnects          = par("maxReconnects");
-   EstablishedConnections = 0;
+   HasFinished       = false;
+   OffTimer          = NULL;
+   OnTimer           = NULL;
+   OnOffCycleCounter = 0;
 
    EV << simTime() << ", " << getFullPath() << ": Initialize"
       << "\tConnectTime=" << ConnectTime
@@ -566,7 +566,6 @@ void NetPerfMeter::successfullyEstablishedConnection(cMessage*          msg,
       newSocket.abort();
       return;
    }
-   EstablishedConnections++;
 
    // ====== Update queue size ==============================================
    if(queueSize != 0) {
@@ -612,7 +611,7 @@ void NetPerfMeter::successfullyEstablishedConnection(cMessage*          msg,
    }
 
    // ====== Schedule Start Timer to begin transmission =====================
-   if(EstablishedConnections == 1) {
+   if(OnOffCycleCounter == 0) {
       assert(StartTimer == NULL);
       StartTimer = new cMessage("StartTimer");
       StartTimer->setKind(TIMER_START);
@@ -669,12 +668,13 @@ void NetPerfMeter::stopSending()
       cancelAndDelete(*iterator);
       *iterator = NULL;
    }
+   OnOffCycleCounter++;
 
    // ------ Schedule On timer ----------------------------------------------
    const simtime_t offDuration = par("offTime");
    if( (offDuration.dbl() > 0.0) &&
-       ((MaxReconnects < 0) ||
-        (EstablishedConnections <= (unsigned int)MaxReconnects)) ) {
+       ((MaxOnOffCycles < 0) ||
+        (OnOffCycleCounter <= (unsigned int)MaxOnOffCycles)) ) {
       OnTimer = new cMessage("OnTimer");
       OnTimer->setKind(TIMER_ON);
       scheduleAt(simTime() + offDuration, OnTimer);
@@ -805,7 +805,7 @@ void NetPerfMeter::writeStatistics()
    const double    duration           = statisticsStopTime.dbl() - StatisticsStartTime.dbl();
 
    recordScalar("Total Measurement Duration", duration);
-   recordScalar("Established Connections",    EstablishedConnections);
+   recordScalar("On-Off Cycles",              OnOffCycleCounter);
 
    // ====== Per-Stream Statistics ==========================================
    unsigned long long totalSentBytes    = 0;
