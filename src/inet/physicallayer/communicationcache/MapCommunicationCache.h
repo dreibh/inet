@@ -15,8 +15,8 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_VECTORCOMMUNICATIONCACHE_H
-#define __INET_VECTORCOMMUNICATIONCACHE_H
+#ifndef __INET_MAPCOMMUNICATIONCACHE_H
+#define __INET_MAPCOMMUNICATIONCACHE_H
 
 #include "inet/physicallayer/base/CommunicationCacheBase.h"
 
@@ -24,32 +24,18 @@ namespace inet {
 
 namespace physicallayer {
 
-class INET_API VectorCommunicationCache : public CommunicationCacheBase
+class INET_API MapCommunicationCache : public CommunicationCacheBase
 {
   protected:
+    /**
+     * Caches intermediate computation results for radios.
+     */
+    std::map<const IRadio *, RadioCacheEntry> radioCache;
     /** @name Cache */
-    //@{
     /**
-     * The smallest radio id of all radios on the medium.
+     * Caches intermediate computation results for transmissions.
      */
-    int baseRadioId;
-    /**
-     * The smallest transmission id of all ongoing transmissions on the medium.
-     */
-    int baseTransmissionId;
-    /**
-     * Caches intermediate computation results for transmissions. The outer
-     * vector is indexed by transmission id (offset with base transmission id)
-     * and the inner vector is indexed by radio id. Values that are no longer
-     * needed are removed from the beginning only. May contain nullptr values
-     * for not yet computed information.
-     */
-    std::vector<TransmissionCacheEntry> transmissionCache;
-    /**
-     * Caches intermediate computation results for radios. The vector is indexed
-     * by radio id (offset with base transmission id).
-     */
-    std::vector<RadioCacheEntry> radioCache;
+    std::map<const ITransmission *, TransmissionCacheEntry> transmissionCache;
     //@}
 
   protected:
@@ -61,10 +47,10 @@ class INET_API VectorCommunicationCache : public CommunicationCacheBase
     //@}
 
   public:
-    VectorCommunicationCache();
-    virtual ~VectorCommunicationCache();
+    MapCommunicationCache();
+    virtual ~MapCommunicationCache();
 
-    virtual void printToStream(std::ostream &stream) const { stream << "VectorCommunicationCache"; }
+    virtual void printToStream(std::ostream &stream) const { stream << "MapCommunicationCache"; }
 
     /** @name Medium state change notifications */
     //@{
@@ -85,5 +71,5 @@ class INET_API VectorCommunicationCache : public CommunicationCacheBase
 
 } // namespace inet
 
-#endif // ifndef __INET_VECTORCOMMUNICATIONCACHE_H
+#endif // ifndef __INET_MAPCOMMUNICATIONCACHE_H
 
