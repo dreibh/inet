@@ -346,10 +346,11 @@ void NetPerfMeter::handleTimer(cMessage* msg)
 
       if(TransportProtocol == SCTP) {
          if(IncomingSocketSCTP != NULL) {
-            IncomingSocketSCTP->close();
+            IncomingSocketSCTP->shutdown();
          }
          else if(SocketSCTP != NULL) {
-            SocketSCTP->close();
+            SocketSCTP->shutdown();
+            SocketSCTP->abort();
          }
       }
       else if(TransportProtocol == TCP) {
