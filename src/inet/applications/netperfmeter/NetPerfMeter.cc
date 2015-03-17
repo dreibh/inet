@@ -45,7 +45,7 @@ Define_Module(NetPerfMeter);
 //
 // Based on rpareto from GNU R's VGAM package
 // (http://cran.r-project.org/web/packages/VGAM/index.html):
-// rpareto <- function (n, location, shape)
+// rpareto <- function (n, location, shape) 
 // {
 //     ans <- location/runif(n)^(1/shape)
 //     ans[location <= 0] <- NaN
@@ -349,9 +349,8 @@ void NetPerfMeter::handleTimer(cMessage* msg)
             IncomingSocketSCTP->close();
          }
          else if(SocketSCTP != NULL) {
-            SocketSCTP->shutdown();
+            SocketSCTP->abort();
          }
-         SendingAllowed = false;
       }
       else if(TransportProtocol == TCP) {
          if(SocketTCP != NULL) {
@@ -428,20 +427,17 @@ void NetPerfMeter::handleMessage(cMessage* msg)
           break;
          // ------ Queue indication -----------------------------------------
          case SCTP_I_SENDQUEUE_ABATED: {
-            if ((SocketSCTP && SocketSCTP->getState() == SCTPSocket::CONNECTED) ||
-                  (IncomingSocketSCTP && IncomingSocketSCTP->getState() == SCTPSocket::CONNECTED)) {
-               const SCTPSendQueueAbated* sendQueueAbatedIndication =
-                  check_and_cast<SCTPSendQueueAbated*>(msg->getControlInfo());
-               assert(sendQueueAbatedIndication != NULL);
-               // Queue is underfull again -> give it more data.
-               SendingAllowed = true;
-               if(TraceVector.size() == 0) {
-                  sendDataOfSaturatedStreams(sendQueueAbatedIndication->getBytesAvailable(),
-                                             sendQueueAbatedIndication);
-               }
+            const SCTPSendQueueAbated* sendQueueAbatedIndication =
+               check_and_cast<SCTPSendQueueAbated*>(msg->getControlInfo());
+            assert(sendQueueAbatedIndication != NULL);
+            // Queue is underfull again -> give it more data.
+            SendingAllowed = true;
+            if(TraceVector.size() == 0) {
+               sendDataOfSaturatedStreams(sendQueueAbatedIndication->getBytesAvailable(),
+                                          sendQueueAbatedIndication);
             }
-         }
-         break;
+           }
+          break;
          case SCTP_I_SENDQUEUE_FULL:
             SendingAllowed = false;
           break;
@@ -1162,7 +1158,7 @@ void NetPerfMeter::sendDataOfTraceFile(const unsigned long long bytesAvailableIn
    }
 
    // ====== Schedule next frame transmission ===============================
-   if(TraceIndex < TraceVector.size()) {
+   if(TraceIndex < TraceVector.size()) {    
       const double nextFrameTime = TraceVector[TraceIndex].InterFrameDelay;
       assert(TransmitTimerVector[0] == NULL);
       TransmitTimerVector[0] = new NetPerfMeterTransmitTimer("TransmitTimer");
