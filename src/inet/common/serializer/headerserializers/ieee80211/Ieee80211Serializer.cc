@@ -21,14 +21,11 @@
 #include "inet/linklayer/ieee80211/mgmt/Ieee80211MgmtFrames_m.h"
 #include "inet/common/serializer/headerserializers/ieee80211/headers/ieee80211.h"
 
-namespace INETFw // load headers into a namespace, to avoid conflicts with platform definitions of the same stuff
-{
 #include "inet/common/serializer/headers/bsdint.h"
 #include "inet/common/serializer/headers/in.h"
 #include "inet/common/serializer/headers/in_systm.h"
-#include "inet/common/serializer/headerserializers/headers/ethernet.h"
+#include "inet/common/serializer/headers/ethernethdr.h"
 #include "inet/common/serializer/headerserializers/arp/headers/arp.h"
-};
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined(WIN32) && !defined(__CYGWIN__) && !defined(_WIN64)
 #include <netinet/in.h>  // htonl, ntohl, ...
@@ -36,13 +33,13 @@ namespace INETFw // load headers into a namespace, to avoid conflicts with platf
 
 #ifdef WITH_IPv4
 #include "inet/common/serializer/ipv4/IPv4Serializer.h"
+#include "inet/common/serializer/headerserializers/arp/ARPSerializer.h"
 #endif
 
 #ifdef WITH_IPv6
 #include "inet/common/serializer/ipv6/IPv6Serializer.h"
 #endif
 
-#include "inet/common/serializer/headerserializers/arp/ARPSerializer.h"
 
 #include "inet/common/serializer/headerserializers/EthernetCRC.h"
 
@@ -52,7 +49,6 @@ namespace INETFw // load headers into a namespace, to avoid conflicts with platf
 namespace inet {
 namespace serializer {
 
-using namespace INETFw;
 using namespace ieee80211;
 
 int Ieee80211Serializer::serialize(Ieee80211Frame *pkt, unsigned char *buf, unsigned int bufsize)
@@ -130,8 +126,8 @@ int Ieee80211Serializer::serialize(Ieee80211Frame *pkt, unsigned char *buf, unsi
             snap_hdr->dsap = 0xAA;
             snap_hdr->ssap = 0xAA;
             snap_hdr->ctrl = 0x03;
-            snap_hdr->snap = htons(dataFrame->getEtherType());
-            snap_hdr->snap <<= 24;
+            memset(snap_hdr->oui, 0, sizeof(snap_hdr->oui));
+            snap_hdr->ethertype = htons(dataFrame->getEtherType());
 
             packetLength += 8;
             cMessage *encapPacket = dataFrame->getEncapsulatedPacket();
@@ -139,14 +135,14 @@ int Ieee80211Serializer::serialize(Ieee80211Frame *pkt, unsigned char *buf, unsi
             switch (dataFrame->getEtherType())
             {
 #ifdef WITH_IPv4
-                case ETHERTYPE_IP:
+                case ETHERTYPE_IPv4:
                     packetLength += IPv4Serializer().serialize(check_and_cast<IPv4Datagram *>(encapPacket),
                                                                        buf+packetLength, bufsize-packetLength, true);
                     break;
 #endif
 
 #ifdef WITH_IPv6
-                case ETHERTYPE_IPV6:
+                case ETHERTYPE_IPv6:
                     packetLength += IPv6Serializer().serialize(check_and_cast<IPv6Datagram *>(encapPacket),
                                                                        buf+packetLength, bufsize-packetLength);
                     break;
@@ -555,9 +551,7 @@ cPacket* Ieee80211Serializer::parse(const unsigned char *buf, unsigned int bufsi
             unsigned int packetLength = parseDataOrMgmtFrame(buf, bufsize, pkt, ST_DATA);
             Ieee80211DataFrameWithSNAP *dataFrame = (Ieee80211DataFrameWithSNAP*)pkt;
             struct snap_header *snap_hdr = (struct snap_header *) (buf + packetLength);
-            uint64_t temp64 = snap_hdr->snap;
-            temp64 >>= 24;
-            dataFrame->setEtherType(ntohs(snap_hdr->snap >> 24));
+            dataFrame->setEtherType(ntohs(snap_hdr->ethertype));
 
             packetLength += 8;
 
@@ -566,23 +560,25 @@ cPacket* Ieee80211Serializer::parse(const unsigned char *buf, unsigned int bufsi
             switch (dataFrame->getEtherType())
             {
 #ifdef WITH_IPv4
-                case ETHERTYPE_IP:
+                case ETHERTYPE_IPv4:
                     encapPacket = new IPv4Datagram("ipv4-from-wire");
                     IPv4Serializer().parse(buf+packetLength, bufsize-packetLength, (IPv4Datagram *)encapPacket);
                     break;
 #endif
 
 #ifdef WITH_IPv6
-                case ETHERTYPE_IPV6:
+                case ETHERTYPE_IPv6:
                     encapPacket = new IPv6Datagram("ipv6-from-wire");
                     IPv6Serializer().parse(buf+packetLength, bufsize-packetLength, (IPv6Datagram *)encapPacket);
                     break;
 #endif
 
+#ifdef WITH_IPv4
                 case ETHERTYPE_ARP:
                     encapPacket = new ARPPacket("arp-from-wire");
                     ARPSerializer().parse(buf+packetLength, bufsize-packetLength, (ARPPacket *)encapPacket);
                     break;
+#endif
 
                 default:
                     throw cRuntimeError("Ieee80211Serializer: cannot parse protocol %x", dataFrame->getEtherType());

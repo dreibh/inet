@@ -73,6 +73,7 @@
                        inet.networklayer.configurator.ipv4
                        inet.networklayer.arp.ipv4
                        inet.common.serializer.ipv4
+                       inet.common.serializer.headerserializers.arp
                       "
         extraSourceFolders = ""
         compileFlags = "-DWITH_IPv4"
@@ -253,6 +254,7 @@
         labels = ""
         nedPackages = "
                        inet.applications.sctpapp
+                       inet.applications.sctpapp
                        inet.transportlayer.sctp
                        inet.common.serializer.sctp
                       "
@@ -316,6 +318,7 @@
                        inet.applications.ethernet
                        inet.linklayer.ethernet
                        inet.node.ethernet
+                       inet.common.serializer.headerserializers.ethernet
                       "
         extraSourceFolders = ""
         compileFlags = "-DWITH_ETHERNET"
@@ -677,21 +680,32 @@
         requires = ""
         labels = ""
         nedPackages = "
-                       inet.physicallayer.apsk
-                       inet.physicallayer.base
-                       inet.physicallayer.backgroundnoise
+                       inet.physicallayer.analogmodel
                        inet.physicallayer.antenna
+                       inet.physicallayer.backgroundnoise
+                       inet.physicallayer.base
                        inet.physicallayer.common
+                       inet.physicallayer.communicationcache
+                       inet.physicallayer.energyconsumer
                        inet.physicallayer.errormodel
-                       inet.physicallayer.ideal
-                       inet.physicallayer.mapping
                        inet.physicallayer.modulation
                        inet.physicallayer.neighborcache
                        inet.physicallayer.obstacleloss
                        inet.physicallayer.pathloss
-                       inet.physicallayer.energyconsumer
                        inet.physicallayer.propagation
-                       inet.physicallayer.analogmodel
+                      "
+        extraSourceFolders = ""
+        compileFlags = "-DWITH_RADIO"
+        linkerFlags = ""
+        />
+    <feature
+        id="apskradio"
+        name="APSK radio"
+        description = "APSK radio support for wireless simulations"
+        requires = ""
+        labels = ""
+        nedPackages = "
+                       inet.physicallayer.apskradio
                       "
         extraSourceFolders = ""
         compileFlags = "-DWITH_RADIO"
@@ -742,7 +756,7 @@
                        inet.physicallayer.ieee802154
                       "
         extraSourceFolders = ""
-        compileFlags = "-DWITH_IEEE80211"
+        compileFlags = "-DWITH_IEEE802154"
         linkerFlags = ""
         />
     <feature
@@ -752,12 +766,13 @@
         	of a unit disk radio and no real MAC protocol. It offers simplicity
         	for scenarios where Layer 1 and 2 effects can be completely ignored.
         	Parts: IdealWirelessNic (IdealWirelessMac plus IdealRadio), and
-        	IdealChannelModel."
+            IdealRadioMedium."
         initiallyEnabled = "true"
         requires = "mobility radio"
         labels = "nic wireless"
         nedPackages = "
                        inet.linklayer.ideal
+                       inet.physicallayer.idealradio
                       "
         extraSourceFolders = ""
         compileFlags = "-DWITH_IDEALWIRELESS"

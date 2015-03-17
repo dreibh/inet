@@ -16,14 +16,11 @@
 #include "platdep/sockets.h"  // htonl, ntohl, etc. on Windows
 #include "inet/common/serializer/headerserializers/ethernet/EthernetSerializer.h"
 
-namespace INETFw // load headers into a namespace, to avoid conflicts with platform definitions of the same stuff
-{
 #include "inet/common/serializer/headers/bsdint.h"
+#include "inet/common/serializer/headers/ethernethdr.h"
 #include "inet/common/serializer/headers/in.h"
 #include "inet/common/serializer/headers/in_systm.h"
-#include "inet/common/serializer/headerserializers/headers/ethernet.h"
 #include "inet/common/serializer/headerserializers/arp/headers/arp.h"
-};
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined(WIN32) && !defined(__CYGWIN__) && !defined(_WIN64)
 #include <netinet/in.h>  // htonl, ntohl, ...
@@ -45,8 +42,6 @@ namespace inet {
 
 namespace serializer {
 
-using namespace INETFw;
-
 int EthernetSerializer::serialize(const EthernetIIFrame *pkt, unsigned char *buf, unsigned int bufsize)
 {
     int packetLength = ETHER_HDR_LEN;
@@ -62,14 +57,14 @@ int EthernetSerializer::serialize(const EthernetIIFrame *pkt, unsigned char *buf
     switch (pkt->getEtherType())
     {
 #ifdef WITH_IPv4
-        case ETHERTYPE_IP:
+        case ETHERTYPE_IPv4:
             packetLength += IPv4Serializer().serialize(check_and_cast<IPv4Datagram *>(encapPacket),
                                                                buf+ETHER_HDR_LEN, bufsize-ETHER_HDR_LEN, true);
             break;
 #endif
 
 #ifdef WITH_IPv6
-        case ETHERTYPE_IPV6:
+        case ETHERTYPE_IPv6:
             packetLength += IPv6Serializer().serialize(check_and_cast<IPv6Datagram *>(encapPacket),
                                                                buf+ETHER_HDR_LEN, bufsize-ETHER_HDR_LEN);
             break;
@@ -109,14 +104,14 @@ cPacket* EthernetSerializer::parse(const unsigned char *buf, unsigned int bufsiz
     switch (etherPacket->getEtherType())
     {
 #ifdef WITH_IPv4
-        case ETHERTYPE_IP:
+        case ETHERTYPE_IPv4:
             encapPacket = new IPv4Datagram("ipv4-from-wire");
             IPv4Serializer().parse(buf+ETHER_HDR_LEN, bufsize-ETHER_HDR_LEN, (IPv4Datagram *)encapPacket);
             break;
 #endif
 
 #ifdef WITH_IPv6
-        case ETHERTYPE_IPV6:
+        case ETHERTYPE_IPv6:
             encapPacket = new IPv6Datagram("ipv6-from-wire");
             IPv6Serializer().parse(buf+ETHER_HDR_LEN, bufsize-ETHER_HDR_LEN, (IPv6Datagram *)encapPacket);
             break;

@@ -16,14 +16,12 @@
 #include "platdep/sockets.h"  // htonl, ntohl, etc. on Windows
 #include "inet/common/serializer/headerserializers/arp/ARPSerializer.h"
 
-namespace INETFw // load headers into a namespace, to avoid conflicts with platform definitions of the same stuff
-{
 #include "inet/common/serializer/headers/bsdint.h"
 #include "inet/common/serializer/headers/in.h"
 #include "inet/common/serializer/headers/in_systm.h"
-#include "inet/common/serializer/headerserializers/headers/ethernet.h"
+#include "inet/common/serializer/headers/ethernethdr.h"
 #include "inet/common/serializer/headerserializers/arp/headers/arp.h"
-};
+#include "inet/linklayer/common/Ieee802Ctrl_m.h"
 
 #if !defined(_WIN32) && !defined(__WIN32__) && !defined(WIN32) && !defined(__CYGWIN__) && !defined(_WIN64)
 #include <netinet/in.h>  // htonl, ntohl, ...
@@ -32,14 +30,12 @@ namespace INETFw // load headers into a namespace, to avoid conflicts with platf
 namespace inet {
 namespace serializer {
 
-using namespace INETFw;
-
 int ARPSerializer::serialize(const ARPPacket *pkt, unsigned char *buf, unsigned int bufsize)
 {
     struct arphdr *arphdr = (struct arphdr *) (buf);
 
     arphdr->ar_hrd = htons(1); //ethernet
-    arphdr->ar_pro = htons(ETHERTYPE_IP);
+    arphdr->ar_pro = htons(ETHERTYPE_IPv4);
     arphdr->ar_hln = ETHER_ADDR_LEN;
     arphdr->ar_pln = 4; //IPv4
     arphdr->ar_op = htons(pkt->getOpcode());
