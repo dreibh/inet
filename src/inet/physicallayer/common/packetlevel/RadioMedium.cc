@@ -15,15 +15,15 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "inet/common/NotifierConsts.h"
+#include "inet/common/ModuleAccess.h"
+#include "inet/environment/contract/IPhysicalEnvironment.h"
 #include "inet/physicallayer/common/packetlevel/Radio.h"
 #include "inet/physicallayer/common/packetlevel/RadioMedium.h"
 #include "inet/physicallayer/common/packetlevel/Interference.h"
 #include "inet/physicallayer/contract/packetlevel/RadioControlInfo_m.h"
 #include "inet/linklayer/contract/IMACFrame.h"
-#include "inet/common/NotifierConsts.h"
-#include "inet/common/ModuleAccess.h"
 #include "inet/networklayer/contract/IInterfaceTable.h"
-#include "inet/environment/PhysicalEnvironment.h"
 
 namespace inet {
 
@@ -37,6 +37,8 @@ RadioMedium::RadioMedium() :
     obstacleLoss(nullptr),
     analogModel(nullptr),
     backgroundNoise(nullptr),
+    environment(nullptr),
+    material(nullptr),
     maxSpeed(mps(sNaN)),
     maxTransmissionPower(W(sNaN)),
     minInterferencePower(W(sNaN)),
@@ -101,6 +103,8 @@ void RadioMedium::initialize(int stage)
         backgroundNoise = dynamic_cast<IBackgroundNoise *>(getSubmodule("backgroundNoise"));
         communicationCache = dynamic_cast<ICommunicationCache *>(getSubmodule("communicationCache"));
         neighborCache = dynamic_cast<INeighborCache *>(getSubmodule("neighborCache"));
+        environment = dynamic_cast<IPhysicalEnvironment *>(simulation.getModuleByPath("environment"));
+        material = environment != nullptr ? environment->getMaterialRegistry()->getMaterial("air") : nullptr;
         const char *rangeFilterString = par("rangeFilter");
         if (!strcmp(rangeFilterString, ""))
             rangeFilter = RANGE_FILTER_ANYWHERE;
@@ -579,8 +583,7 @@ void RadioMedium::addRadio(const IRadio *radio)
         radioModule->subscribe(IRadio::listeningChangedSignal, this);
     if (macAddressFilter)
         getContainingNode(radioModule)->subscribe(NF_INTERFACE_CONFIG_CHANGED, this);
-    if (initialized())
-        updateLimits();
+    updateLimits();
 }
 
 void RadioMedium::removeRadio(const IRadio *radio)
@@ -602,8 +605,7 @@ void RadioMedium::removeRadio(const IRadio *radio)
         radioModule->unsubscribe(IRadio::listeningChangedSignal, this);
     if (macAddressFilter)
         getContainingNode(radioModule)->unsubscribe(NF_INTERFACE_CONFIG_CHANGED, this);
-    if (initialized())
-        updateLimits();
+    updateLimits();
 }
 
 void RadioMedium::addTransmission(const IRadio *transmitterRadio, const ITransmission *transmission)
@@ -703,7 +705,7 @@ IRadioFrame *RadioMedium::transmitPacket(const IRadio *radio, cPacket *macFrame)
     cMethodCallContextSwitcher contextSwitcher(this);
     communicationCache->setCachedFrame(transmission, radioFrame->dup());
     if (displayCommunication) {
-        cFigure::Point position = PhysicalEnvironment::computeCanvasPoint(transmission->getStartPosition());
+        cFigure::Point position = environment->computeCanvasPoint(transmission->getStartPosition());
         cGroupFigure *groupFigure = new cGroupFigure();
 #if OMNETPP_CANVAS_VERSION >= 0x20140908
         cFigure::Color color = cFigure::GOOD_DARK_COLORS[transmission->getId() % (sizeof(cFigure::GOOD_DARK_COLORS) / sizeof(cFigure::Color))];
@@ -761,8 +763,8 @@ cPacket *RadioMedium::receivePacket(const IRadio *radio, IRadioFrame *radioFrame
     if (leaveCommunicationTrail && decision->isReceptionSuccessful()) {
         cLineFigure *communicationFigure = new cLineFigure();
         communicationFigure->setTags("successful_reception recent_history");
-        cFigure::Point start = PhysicalEnvironment::computeCanvasPoint(transmission->getStartPosition());
-        cFigure::Point end = PhysicalEnvironment::computeCanvasPoint(decision->getReception()->getStartPosition());
+        cFigure::Point start = environment->computeCanvasPoint(transmission->getStartPosition());
+        cFigure::Point end = environment->computeCanvasPoint(decision->getReception()->getStartPosition());
         communicationFigure->setStart(start);
         communicationFigure->setEnd(end);
         communicationFigure->setLineColor(cFigure::BLUE);
@@ -883,10 +885,10 @@ void RadioMedium::updateCanvas()
             if (drawCommunication2D) {
                 // determine the rotated 2D canvas points of the four corners of flat 3D circle's bounding box
                 // it defines a 2D rotated parallelogram that needs to be filled with an oval
-                cFigure::Point topLeft = PhysicalEnvironment::computeCanvasPoint(transmissionStart + Coord(-startRadius, -startRadius, 0));
-                cFigure::Point topRight = PhysicalEnvironment::computeCanvasPoint(transmissionStart + Coord(startRadius, -startRadius, 0));
-                cFigure::Point bottomLeft = PhysicalEnvironment::computeCanvasPoint(transmissionStart + Coord(-startRadius, startRadius, 0));
-                cFigure::Point bottomRight = PhysicalEnvironment::computeCanvasPoint(transmissionStart + Coord(startRadius, startRadius, 0));
+                cFigure::Point topLeft = environment->computeCanvasPoint(transmissionStart + Coord(-startRadius, -startRadius, 0));
+                cFigure::Point topRight = environment->computeCanvasPoint(transmissionStart + Coord(startRadius, -startRadius, 0));
+                cFigure::Point bottomLeft = environment->computeCanvasPoint(transmissionStart + Coord(-startRadius, startRadius, 0));
+                cFigure::Point bottomRight = environment->computeCanvasPoint(transmissionStart + Coord(startRadius, startRadius, 0));
                 cFigure::Point bottomDirectionVector = bottomLeft - bottomRight;
                 LineSegment bottomHeight(Coord(topLeft.x, topLeft.y, 0), Coord(topLeft.x, topLeft.y, 0) + Coord(-bottomDirectionVector.y, bottomDirectionVector.x, 0));
                 LineSegment bottomSide(Coord(bottomLeft.x, bottomLeft.y, 0), Coord(bottomRight.x, bottomRight.y, 0));
@@ -904,7 +906,7 @@ void RadioMedium::updateCanvas()
                 double bottomRightCosAlpha = leftSideVector * bottomSideVector / leftSideVector.getLength() / bottomSideVector.getLength();
                 double skewXAngle = acos(bottomRightCosAlpha);
                 double rotationAngle = atan2(topRight.y - topLeft.y, topRight.x - topLeft.x);
-                cFigure::Point center = PhysicalEnvironment::computeCanvasPoint(transmissionStart);
+                cFigure::Point center = environment->computeCanvasPoint(transmissionStart);
                 communicationFigure->setTransform(cFigure::Transform());
                 communicationFigure->skewx(-skewXAngle, center.y);
                 communicationFigure->rotate(rotationAngle, center.x, center.y);
@@ -928,7 +930,7 @@ void RadioMedium::updateCanvas()
             {
 #endif
                 // a sphere looks like a circle from any view angle
-                cFigure::Point center = PhysicalEnvironment::computeCanvasPoint(transmissionStart);
+                cFigure::Point center = environment->computeCanvasPoint(transmissionStart);
                 communicationFigure->setBounds(cFigure::Rectangle(center.x - startRadius, center.y - startRadius, 2 * startRadius, 2 * startRadius));
 #if OMNETPP_CANVAS_VERSION >= 0x20140908
                 communicationFigure->setInnerRx(endRadius);

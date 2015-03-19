@@ -42,7 +42,7 @@ module RadioMedium like IRadioMedium
         string obstacleLossType = default("");    // NED type of the obstacle loss model
         string analogModelType;                   // NED type of the analog model
         string backgroundNoiseType = default(""); // NED type of the background noise model
-        string communicationCacheType = default("MapCommunicationCache"); // NED type of the communication cache model
+        string communicationCacheType = default("VectorCommunicationCache"); // NED type of the communication cache model
         string neighborCacheType = default("");   // NED type of the neighbor cache model
 
         // channel limit parameters
@@ -80,28 +80,28 @@ module RadioMedium like IRadioMedium
             parameters:
                 @display("p=100,50");
         }
-        pathLoss: <pathLossType> like IPathLoss {
+        analogModel: <analogModelType> like IAnalogModel {
             parameters:
                 @display("p=100,150");
         }
-        obstacleLoss: <obstacleLossType> like IObstacleLoss if obstacleLossType != "" {
+        backgroundNoise: <backgroundNoiseType> like IRadioBackgroundNoise if backgroundNoiseType != "" {
             parameters:
                 @display("p=100,250");
         }
-        analogModel: <analogModelType> like IAnalogModel {
+        pathLoss: <pathLossType> like IPathLoss {
             parameters:
-                @display("p=100,350");
+                @display("p=300,50");
         }
-        backgroundNoise: <backgroundNoiseType> like IRadioBackgroundNoise if backgroundNoiseType != "" {
+        obstacleLoss: <obstacleLossType> like IObstacleLoss if obstacleLossType != "" {
             parameters:
-                @display("p=100,450");
+                @display("p=300,150");
         }
         communicationCache: <communicationCacheType> like ICommunicationCache {
             parameters:
-                @display("p=100,550");
+                @display("p=500,50");
         }
         neighborCache: <neighborCacheType> like INeighborCache if neighborCacheType != "" {
             parameters:
-                @display("p=100,650");
+                @display("p=500,150");
         }
 }
