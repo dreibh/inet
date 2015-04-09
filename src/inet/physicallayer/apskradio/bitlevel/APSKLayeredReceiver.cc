@@ -28,7 +28,7 @@
 #include "inet/physicallayer/apskradio/bitlevel/APSKLayeredReceiver.h"
 #include "inet/physicallayer/apskradio/bitlevel/APSKDecoder.h"
 #include "inet/physicallayer/apskradio/bitlevel/APSKDemodulator.h"
-#include "inet/physicallayer/apskradio/bitlevel/APSKSerializer.h"
+#include "inet/physicallayer/apskradio/bitlevel/APSKPhyFrameSerializer.h"
 #include "inet/physicallayer/apskradio/bitlevel/APSKPhyFrame_m.h"
 #include "inet/physicallayer/base/packetlevel/NarrowbandNoiseBase.h"
 
@@ -93,6 +93,25 @@ const IReceptionAnalogModel *APSKLayeredReceiver::createAnalogModel(const Layere
     return nullptr;
 }
 
+std::ostream& APSKLayeredReceiver::printToStream(std::ostream& stream, int level) const
+{
+    stream << "APSKLayeredReceiver";
+    if (level >= PRINT_LEVEL_DETAIL)
+        stream << ", levelOfDetail = " << levelOfDetail
+               << ", carrierFrequency = " << carrierFrequency;
+    if (level >= PRINT_LEVEL_TRACE)
+        stream << ", errorModel = " << printObjectToString(errorModel, level - 1) 
+               << ", decoder = " << printObjectToString(decoder, level - 1) 
+               << ", demodulator = " << printObjectToString(demodulator, level - 1) 
+               << ", pulseFilter = " << printObjectToString(pulseFilter, level - 1) 
+               << ", analogDigitalConverter = " << printObjectToString(analogDigitalConverter, level - 1) 
+               << ", energyDetection = " << energyDetection
+               << ", sensitivity = " << sensitivity
+               << ", bandwidth = " << bandwidth
+               << ", snirThreshold = " << snirThreshold;
+    return stream;
+}
+
 const IReceptionSampleModel *APSKLayeredReceiver::createSampleModel(const LayeredTransmission *transmission, const ISNIR *snir, const IReceptionAnalogModel *analogModel) const
 {
     if (levelOfDetail == SAMPLE_DOMAIN)
@@ -137,7 +156,7 @@ const APSKPhyFrame *APSKLayeredReceiver::createPhyFrame(const IReceptionPacketMo
 {
     const BitVector *bits = packetModel->getSerializedPacket();
     if (bits != nullptr)
-        return APSKSerializer().deserialize(bits);
+        return APSKPhyFrameSerializer().deserialize(bits);
     else
         return check_and_cast<const APSKPhyFrame *>(packetModel->getPacket()->dup());
 }

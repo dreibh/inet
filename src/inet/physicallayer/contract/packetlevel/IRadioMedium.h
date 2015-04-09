@@ -20,6 +20,7 @@
 
 #include "inet/environment/contract/IMaterial.h"
 #include "inet/physicallayer/contract/packetlevel/IRadio.h"
+#include "inet/physicallayer/contract/packetlevel/IMediumLimitCache.h"
 #include "inet/physicallayer/contract/packetlevel/IRadioFrame.h"
 #include "inet/physicallayer/contract/packetlevel/IArrival.h"
 #include "inet/physicallayer/contract/packetlevel/IPropagation.h"
@@ -47,24 +48,6 @@ using namespace inet::physicalenvironment;
 class INET_API IRadioMedium : public IPrintableObject
 {
   public:
-    /**
-     * Returns the minimum interference power among the radio receivers is
-     * in the range [0, +infinity) or NaN if unspecified.
-     */
-    virtual W getMinInterferencePower() const = 0;
-
-    /**
-     * Returns the minimum reception power among the radio receivers is in
-     * the range [0, +infinity) or NaN if unspecified.
-     */
-    virtual W getMinReceptionPower() const = 0;
-
-    /**
-     * Returns the maximum antenna gain among the radio antennas. The value
-     * is in the range [1, +infinity) or NaN if unspecified.
-     */
-    virtual double getMaxAntennaGain() const = 0;
-
     /**
      * Returns the material of the radio medium. This function never returns nullptr.
      */
@@ -130,7 +113,7 @@ class INET_API IRadioMedium : public IPrintableObject
     virtual cPacket *receivePacket(const IRadio *receiver, IRadioFrame *radioFrame) = 0;
 
     /**
-     * Returns a listening decision that describes what the receiver detects
+     * Returns the listening decision that describes what the receiver detects
      * on the radio medium.
      */
     virtual const IListeningDecision *listenOnMedium(const IRadio *receiver, const IListening *listening) const = 0;
@@ -147,6 +130,13 @@ class INET_API IRadioMedium : public IPrintableObject
      * transmission is live on the radio medium.
      */
     virtual const IArrival *getArrival(const IRadio *receiver, const ITransmission *transmission) const = 0;
+
+    /**
+     * Returns how the radio is listening on the medium when the transmission
+     * arrives at the provided receiver. This function never returns nullptr as
+     * long as the transmission is live on the radio medium.
+     */
+    virtual const IListening *getListening(const IRadio *receiver, const ITransmission *transmission) const = 0;
 
     /**
      * Returns the reception of the transmission arriving at the provided receiver.
@@ -175,6 +165,12 @@ class INET_API IRadioMedium : public IPrintableObject
      * long as the transmission is live on the radio medium.
      */
     virtual const ISNIR *getSNIR(const IRadio *receiver, const ITransmission *transmission) const = 0;
+
+    /**
+     * Returns the reception decision that describes the end result of the
+     * reception process with respect to the given transmission.
+     */
+    virtual const IReceptionDecision *getReceptionDecision(const IRadio *receiver, const IListening *listening, const ITransmission *transmission) const = 0;
 };
 
 } // namespace physicallayer

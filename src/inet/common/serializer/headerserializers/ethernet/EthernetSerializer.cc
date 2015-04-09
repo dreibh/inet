@@ -3,15 +3,15 @@
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see http://www.gnu.org/licenses/.
-// 
+//
 
 #include "platdep/sockets.h"  // htonl, ntohl, etc. on Windows
 #include "inet/common/serializer/headerserializers/ethernet/EthernetSerializer.h"
@@ -68,6 +68,10 @@ void EthernetSerializer::serialize(const cPacket *pkt, Buffer &b, Context& c)
                 SerializerBase::lookupAndSerialize(encapPkt, b, c, UNKNOWN, frame->getLocalcode(), 4);
             }
         }
+        else if (typeid(*frame) == typeid(EtherFrameWithLLC)) {
+            cPacket *encapPkt = frame->getEncapsulatedPacket();
+            SerializerBase::lookupAndSerialize(encapPkt, b, c, UNKNOWN, 0, 4);
+        }
         else {
             throw cRuntimeError("Serializer not found for '%s'", pkt->getClassName());
         }
@@ -89,6 +93,7 @@ void EthernetSerializer::serialize(const cPacket *pkt, Buffer &b, Context& c)
 
 cPacket* EthernetSerializer::deserialize(Buffer &b, Context& c)
 {
+
     ASSERT(b.getPos() == 0);
 
     //FIXME should detect and create the real packet type.
@@ -108,9 +113,10 @@ cPacket* EthernetSerializer::deserialize(Buffer &b, Context& c)
         b.accessNBytes(b.getRemainder() - 4);
     }
     etherPacket->setFrameByteLength(etherPacket->getByteLength());
-    uint32_t calcfcs = ethernetCRC(b._getBuf(), b.getPos());
-    uint32_t storedfcs = b.readUint32();
-    if (storedfcs && calcfcs != 0xC704DD7B)
+    uint32_t calculatedFcs = ethernetCRC(b._getBuf(), b.getPos());
+    uint32_t receivedFcs = b.readUint32();
+    EV_DEBUG << "Calculated FCS: " << calculatedFcs << ", received FCS: " << receivedFcs << endl;
+    if (receivedFcs != calculatedFcs)
         etherPacket->setBitError(true);
     return etherPacket;
 }

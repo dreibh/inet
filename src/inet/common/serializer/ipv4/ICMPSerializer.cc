@@ -19,11 +19,13 @@
 
 #include "inet/common/serializer/ipv4/ICMPSerializer.h"
 
-#include "inet/applications/pingapp/PingPayload_m.h"
+#include "inet/common/serializer/headers/bsdint.h"
+#include "inet/common/serializer/headers/defs.h"
 #include "inet/common/serializer/headers/in_systm.h"
 #include "inet/common/serializer/ipv4/headers/ip.h"
 #include "inet/common/serializer/ipv4/headers/ip_icmp.h"
 #include "inet/common/serializer/TCPIPchecksum.h"
+#include "inet/applications/pingapp/PingPayload_m.h"
 #include "inet/linklayer/common/Ieee802Ctrl_m.h"
 #include "inet/networklayer/common/IPProtocolId_m.h"
 #include "inet/networklayer/ipv4/ICMPMessage_m.h"
@@ -44,7 +46,7 @@ void ICMPSerializer::serialize(const cPacket *_pkt, Buffer &b, Context& c)
             PingPayload *pp = check_and_cast<PingPayload *>(pkt->getEncapsulatedPacket());
             b.writeByte(ICMP_ECHO);
             b.writeByte(pkt->getCode());
-            b.writeUint16(0);   // crc
+            b.writeUint16(0);   // checksum
             b.writeUint16(pp->getOriginatorId());
             b.writeUint16(pp->getSeqNo());
             unsigned int datalen = pp->getDataArraySize();
@@ -59,7 +61,7 @@ void ICMPSerializer::serialize(const cPacket *_pkt, Buffer &b, Context& c)
             PingPayload *pp = check_and_cast<PingPayload *>(pkt->getEncapsulatedPacket());
             b.writeByte(ICMP_ECHOREPLY);
             b.writeByte(pkt->getCode());
-            b.writeUint16(0);   // crc
+            b.writeUint16(0);   // checksum
             b.writeUint16(pp->getOriginatorId());
             b.writeUint16(pp->getSeqNo());
             unsigned int datalen = pp->getDataArraySize();
@@ -73,7 +75,7 @@ void ICMPSerializer::serialize(const cPacket *_pkt, Buffer &b, Context& c)
         case ICMP_DESTINATION_UNREACHABLE: {
             b.writeByte(ICMP_UNREACH);
             b.writeByte(pkt->getCode());
-            b.writeUint16(0);   // crc
+            b.writeUint16(0);   // checksum
             b.writeUint16(0);   // unused
             b.writeUint16(0);   // next hop MTU
             Buffer s(b, 0);    // save buffer error bit (encapsulated packet usually larger than ICMPPacket payload size)
@@ -85,7 +87,7 @@ void ICMPSerializer::serialize(const cPacket *_pkt, Buffer &b, Context& c)
         case ICMP_TIME_EXCEEDED: {
             b.writeByte(ICMP_TIMXCEED);
             b.writeByte(ICMP_TIMXCEED_INTRANS);
-            b.writeUint16(0);   // crc
+            b.writeUint16(0);   // checksum
             b.writeUint32(0);   // unused
             Buffer s(b, 0);    // save buffer error bit (encapsulated packet usually larger than ICMPPacket payload size)
             SerializerBase::lookupAndSerialize(pkt->getEncapsulatedPacket(), s, c, ETHERTYPE, ETHERTYPE_IPv4, 0);
@@ -101,15 +103,14 @@ void ICMPSerializer::serialize(const cPacket *_pkt, Buffer &b, Context& c)
     b.writeUint16To(startpos + 2, TCPIPchecksum::checksum(b._getBuf() + startpos, b.getPos() - startpos));
 }
 
-cPacket *ICMPSerializer::deserialize(Buffer &b, Context& context)
+cPacket *ICMPSerializer::deserialize(Buffer &b, Context& c)
 {
     ASSERT(b.getPos() == 0);
 
     ICMPMessage *pkt = new ICMPMessage("parsed-icmp");
     uint8_t type = b.readByte();     // type
     uint8_t subcode = b.readByte();  // subcode
-    b.readUint16();   // crc
-    pkt->setByteLength(4);
+    b.readUint16();   // checksum
 
     switch (type) {
         case ICMP_ECHO: {
@@ -141,6 +142,7 @@ cPacket *ICMPSerializer::deserialize(Buffer &b, Context& context)
             pkt->setByteLength(4);
             pp->setOriginatorId(b.readUint16());
             uint16_t seqno = b.readUint16();
+            pp->setSeqNo(seqno);
 
             char name[32];
             sprintf(name, "parsed-ping%d-reply", seqno);
@@ -155,14 +157,41 @@ cPacket *ICMPSerializer::deserialize(Buffer &b, Context& context)
             break;
         }
 
+        case ICMP_UNREACH: {
+            pkt->setType(ICMP_DESTINATION_UNREACHABLE);
+            b.readUint16();   // unused
+            b.readUint16();   // next hop MTU
+            pkt->setByteLength(8);
+            Buffer s(b, 0);    // save buffer error bit (encapsulated packet usually larger than ICMPPacket payload size)
+            cPacket *pp = SerializerBase::lookupAndDeserialize(s, c, ETHERTYPE, ETHERTYPE_IPv4, 0);
+            b.accessNBytes(s.getPos());
+            pkt->encapsulate(pp);
+            pkt->setByteLength(b.getPos());
+            break;
+        }
+
+        case ICMP_TIMXCEED: {
+            pkt->setType(ICMP_TIME_EXCEEDED);
+            b.writeByte(ICMP_TIMXCEED);
+            ASSERT(subcode == ICMP_TIMXCEED_INTRANS);
+            b.readUint32();   // unused
+            pkt->setByteLength(8);
+            Buffer s(b, 0);    // save buffer error bit (encapsulated packet usually larger than ICMPPacket payload size)
+            cPacket *pp = SerializerBase::lookupAndDeserialize(s, c, ETHERTYPE, ETHERTYPE_IPv4, 0);
+            b.accessNBytes(s.getPos());
+            pkt->encapsulate(pp);
+            pkt->setByteLength(b.getPos());
+            break;
+        }
+
         default: {
             EV_ERROR << "Can not parse ICMP packet: type " << type << " not supported.";
             delete pkt;
             return nullptr;
         }
     }
-    uint16_t ccrc = TCPIPchecksum::checksum(b._getBuf(), b.getPos());
-    if (ccrc)
+    uint16_t cchecksum = TCPIPchecksum::checksum(b._getBuf(), b.getPos());
+    if (cchecksum)
         pkt->setBitError(true);
     return pkt;
 }

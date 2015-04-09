@@ -15,30 +15,28 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef __INET_APSKSERIALIZER_H
-#define __INET_APSKSERIALIZER_H
+#ifndef __INET_LAYEREDDIMENSIONALANALOGMODEL_H
+#define __INET_LAYEREDDIMENSIONALANALOGMODEL_H
 
-#include "inet/common/BitVector.h"
-#include "inet/physicallayer/apskradio/bitlevel/APSKPhyFrame_m.h"
+#include "inet/physicallayer/base/packetlevel/DimensionalAnalogModelBase.h"
+#include "inet/physicallayer/analogmodel/bitlevel/DimensionalSignalAnalogModel.h"
+#include "inet/physicallayer/common/bitlevel/LayeredReception.h"
 
 namespace inet {
 
 namespace physicallayer {
 
-#define APSK_PHY_FRAME_HEADER_BYTE_LENGTH    6
-
-class INET_API APSKSerializer
+class INET_API LayeredDimensionalAnalogModel : public DimensionalAnalogModelBase
 {
   public:
-    APSKSerializer();
+    virtual std::ostream& printToStream(std::ostream& stream, int level) const override;
 
-    virtual BitVector *serialize(const APSKPhyFrame *phyFrame) const;
-    virtual APSKPhyFrame *deserialize(const BitVector *bits) const;
+    virtual const IReception *computeReception(const IRadio *radio, const ITransmission *transmission, const IArrival *arrival) const;
 };
 
 } // namespace physicallayer
 
 } // namespace inet
 
-#endif // ifndef __INET_APSKSERIALIZER_H
+#endif // ifndef __INET_LAYEREDDIMENSIONALANALOGMODEL_H
 

@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2008 Andras Varga
+// Copyright (C) 2006 Andras Varga
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -12,38 +12,44 @@
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public
-// License along with this program; if not, write to the Free Software
-// Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+// License along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-
-//
-// Control info for controlling the physical layer (the radio).
-//
 cplusplus {{
-
+#include "inet/physicallayer/contract/packetlevel/RadioControlInfo_m.h"
 #include "inet/physicallayer/ieee80211/mode/IIeee80211Mode.h"
-
-using namespace inet::physicallayer;
-
-typedef IIeee80211Mode * IIeee80211ModePtr;
-
 }}
 
-namespace inet;
+namespace inet::physicallayer;
+
+cplusplus {{
+typedef IIeee80211Mode * IIeee80211ModePtr;
+}}
 
 class noncobject IIeee80211ModePtr;
+class noncobject TransmissionRequest;
+class noncobject ReceptionIndication;
 
-class Radio80211aControlInfo
+//
+// Control info attached to a mac frame that is sent down to the ~Ieee80211Radio.
+//
+class Ieee80211TransmissionRequest extends TransmissionRequest
 {
+    IIeee80211ModePtr mode;
+}
+
+//
+// Control info attached to a mac frame that is sent up from the ~Ieee80211Radio.
+//
+class Ieee80211ReceptionIndication extends ReceptionIndication
+{
+    IIeee80211ModePtr mode;
+    // TODO: remove already inherited fields
     double snr;
     double lossRate;
     double recPow;
-    IIeee80211ModePtr mode;
     bool airtimeMetric;
     double testFrameDuration;
     double testFrameError;
     int    testFrameSize;
 }
-
-

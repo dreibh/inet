@@ -23,7 +23,7 @@
 #include "inet/physicallayer/apskradio/bitlevel/APSKLayeredTransmitter.h"
 #include "inet/physicallayer/apskradio/bitlevel/APSKEncoder.h"
 #include "inet/physicallayer/apskradio/bitlevel/APSKModulator.h"
-#include "inet/physicallayer/apskradio/bitlevel/APSKSerializer.h"
+#include "inet/physicallayer/apskradio/bitlevel/APSKPhyFrameSerializer.h"
 
 namespace inet {
 
@@ -75,6 +75,23 @@ void APSKLayeredTransmitter::initialize(int stage)
     }
 }
 
+std::ostream& APSKLayeredTransmitter::printToStream(std::ostream& stream, int level) const
+{
+    stream << "APSKLayeredTransmitter";
+    if (level >= PRINT_LEVEL_DETAIL)
+        stream << ", levelOfDetail = " << levelOfDetail
+               << ", carrierFrequency = " << carrierFrequency;
+    if (level >= PRINT_LEVEL_TRACE)
+        stream << ", encoder = " << printObjectToString(encoder, level - 1) 
+               << ", modulator = " << printObjectToString(modulator, level - 1) 
+               << ", pulseShaper = " << printObjectToString(pulseShaper, level - 1) 
+               << ", digitalAnalogConverter = " << printObjectToString(digitalAnalogConverter, level - 1) 
+               << ", power = " << power
+               << ", bitrate = " << bitrate
+               << ", bandwidth = " << bandwidth;
+    return stream;
+}
+
 int APSKLayeredTransmitter::computePaddingLength(BitVector *bits) const
 {
     const ConvolutionalCode *forwardErrorCorrection = nullptr;
@@ -98,7 +115,7 @@ const APSKPhyFrame *APSKLayeredTransmitter::createPhyFrame(const cPacket *macFra
 const ITransmissionPacketModel *APSKLayeredTransmitter::createPacketModel(const APSKPhyFrame *phyFrame) const
 {
     if (levelOfDetail >= PACKET_DOMAIN) {
-        BitVector *bits = APSKSerializer().serialize(phyFrame);
+        BitVector *bits = APSKPhyFrameSerializer().serialize(phyFrame);
         bits->appendBit(0, computePaddingLength(bits));
         return new TransmissionPacketModel(phyFrame, bits, bitrate);
     }

@@ -19,20 +19,16 @@
 #define __INET_RADIOMEDIUM_H
 
 #include <algorithm>
-#include <fstream>
 #include "inet/common/IntervalTree.h"
 #include "inet/common/TrailFigure.h"
 #include "inet/environment/contract/IPhysicalEnvironment.h"
 #include "inet/environment/contract/IMaterialRegistry.h"
-#include "inet/physicallayer/contract/packetlevel/ISNIR.h"
+#include "inet/physicallayer/contract/packetlevel/IRadioMedium.h"
+#include "inet/physicallayer/contract/packetlevel/IMediumLimitCache.h"
 #include "inet/physicallayer/contract/packetlevel/INeighborCache.h"
 #include "inet/physicallayer/contract/packetlevel/ICommunicationCache.h"
-#include "inet/physicallayer/contract/packetlevel/IRadioMedium.h"
-#include "inet/physicallayer/contract/packetlevel/IArrival.h"
-#include "inet/physicallayer/contract/packetlevel/IInterference.h"
-#include "inet/physicallayer/contract/packetlevel/IPropagation.h"
-#include "inet/physicallayer/contract/packetlevel/IAnalogModel.h"
-#include "inet/physicallayer/contract/packetlevel/IBackgroundNoise.h"
+#include "inet/physicallayer/common/packetlevel/CommunicationLog.h"
+#include "inet/physicallayer/common/packetlevel/MediumVisualizer.h"
 #include "inet/linklayer/common/MACAddress.h"
 
 namespace inet {
@@ -53,22 +49,22 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     };
 
   protected:
-    /** @name Parameters that control the behavior of the radio medium. */
+    /** @name Parameters and other models that control the behavior of the radio medium. */
     //@{
     /**
-     * The propagation model of the medium is never nullptr.
+     * The propagation model is never nullptr.
      */
     const IPropagation *propagation;
     /**
-     * The path loss model of the medium is never nullptr.
+     * The path loss model is never nullptr.
      */
     const IPathLoss *pathLoss;
     /**
-     * The obstacle loss model of the medium or nullptr if unused.
+     * The obstacle loss model or nullptr if unused.
      */
     const IObstacleLoss *obstacleLoss;
     /**
-     * The analog model of the medium is never nullptr.
+     * The analog model is never nullptr.
      */
     const IAnalogModel *analogModel;
     /**
@@ -78,71 +74,14 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     /**
      * The physical environment model or nullptr if unused.
      */
-    const IPhysicalEnvironment *environment;
+    const IPhysicalEnvironment *physicalEnvironment;
     /**
-     * The physical material of the medium.
+     * The physical material of the medium is never nullptr.
      */
     const IMaterial *material;
     /**
-     * The maximum speed among the radios is in the range [0, +infinity) or
-     * NaN if unspecified.
-     */
-    mps maxSpeed;
-    /**
-     * The constraint area minimum among the radios is in the range [-infinity,
-     * +infinity] or NaN if unspecified.
-     */
-    Coord constraintAreaMin;
-    /**
-     * The constraint area maximum among the radios is in the range [-infinity,
-     * +infinity] or NaN if unspecified.
-     */
-    Coord constraintAreaMax;
-    /**
-     * The maximum transmission power among the radio transmitters is in the
-     * range [0, +infinity) or NaN if unspecified.
-     */
-    W maxTransmissionPower;
-    /**
-     * The minimum interference power among the radio receivers is in the
-     * range [0, +infinity) or NaN if unspecified.
-     */
-    W minInterferencePower;
-    /**
-     * The minimum reception power among the radio receivers is in the range
-     * [0, +infinity) or NaN if unspecified.
-     */
-    W minReceptionPower;
-    /**
-     * The maximum gain among the radio antennas is in the range [1, +infinity).
-     */
-    double maxAntennaGain;
-    /**
-     * The minimum overlapping in time needed to consider two transmissions
-     * interfering.
-     */
-    // TODO: maybe compute from longest frame duration, maximum mobility speed and signal propagation time
-    simtime_t minInterferenceTime;
-    /**
-     * The maximum transmission duration of a radio signal.
-     */
-    // TODO: maybe compute from maximum bit length and minimum bitrate
-    simtime_t maxTransmissionDuration;
-    /**
-     * The maximum communication range where a transmission can still be
-     * potentially successfully received is in the range [0, +infinity) or
-     * NaN if unspecified.
-     */
-    m maxCommunicationRange;
-    /**
-     * The maximum interference range where a transmission is still considered
-     * to some effect on other transmissions is in the range [0, +infinity)
-     * or NaN if unspecified.
-     */
-    m maxInterferenceRange;
-    /**
      * The radio medium doesn't send radio frames to a radio if it's outside
-     * the provided range.
+     * the range provided by the selected range filter.
      */
     RangeFilterKind rangeFilter;
     /**
@@ -153,45 +92,26 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     /**
      * True means the radio medium doesn't send radio frames to a radio if
      * it listens on the medium in incompatible mode (e.g. different carrier
-     * frequency and bandwidth, different modulation, etc.)
+     * frequency and/or bandwidth, different modulation, etc.)
      */
     bool listeningFilter;
     /**
      * True means the radio medium doesn't send radio frames to a radio if
-     * it the destination mac address differs.
+     * the mac address of the destination is different.
      */
     bool macAddressFilter;
     /**
      * Records all transmissions and receptions into a separate trace file.
-     * The file is at ${resultdir}/${configname}-${runnumber}.tlog
+     * The communication log file can be found at:
+     * ${resultdir}/${configname}-${runnumber}.tlog
      */
     bool recordCommunicationLog;
-    /**
-     * Displays ongoing communications on the canvas.
-     */
-    bool displayCommunication;
-    /**
-     * Determines ongoing communication figure: 3D spheres or 2D circles on the X-Y plane.
-     */
-    bool drawCommunication2D;
-    /**
-     * Leaves graphical trail of successful communication between radios.
-     */
-    bool leaveCommunicationTrail;
-    /**
-     * Update canvas interval when ongoing communication exists.
-     */
-    simtime_t updateCanvasInterval;
     //@}
 
     /** @name Timer */
     //@{
     /**
-     * The message used to update the canvas when ongoing communication exists.
-     */
-    cMessage *updateCanvasTimer;
-    /**
-     * The message used to purge internal state and cache.
+     * The message that is used to purge the internal state of the medium.
      */
     cMessage *removeNonInterferingTransmissionsTimer;
     //@}
@@ -202,13 +122,13 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
      * The list of radios that can transmit and receive radio signals on the
      * radio medium. The radios follow each other in the order of their unique
      * id. Radios are only removed from the beginning. This list may contain
-     * NULL pointers.
+     * nullptr values.
      */
     std::vector<const IRadio *> radios;
     /**
      * The list of ongoing transmissions on the radio medium. The transmissions
      * follow each other in the order of their unique id. Transmissions are only
-     * removed from the beginning. This list doesn't contain NULL pointers.
+     * removed from the beginning. This list doesn't contain nullptr values.
      */
     std::vector<const ITransmission *> transmissions;
     //@}
@@ -216,33 +136,33 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     /** @name Cache */
     //@{
     /**
-     * Caches communication for all radios.
+     * Caches various medium limits among all radios.
      */
-    mutable ICommunicationCache *communicationCache;
+    mutable IMediumLimitCache *mediumLimitCache;
     /**
      * Caches neighbors for all radios or nullptr if turned off.
      */
     mutable INeighborCache *neighborCache;
+    /**
+     * Caches intermediate results of the ongoing communication for all radios.
+     */
+    mutable ICommunicationCache *communicationCache;
     //@}
 
     /** @name Logging */
     //@{
     /**
-     * The output file where communication log is written to.
+     * The communication log output recorder.
      */
-    std::ofstream communicationLog;
+    CommunicationLog communicationLog;
     //@}
 
     /** @name Graphics */
     //@{
     /**
-     * The list figures representing ongoing communications.
+     * The visualizer for the communication on the medium.
      */
-    cGroupFigure *communicationLayer;
-    /**
-     * The list of trail figures representing successful communications.
-     */
-    TrailFigure *communicationTrail;
+    MediumVisualizer *mediumVisualizer;
     //@}
 
     /** @name Statistics */
@@ -254,7 +174,7 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     /**
      * Total number of radio frame sends.
      */
-    mutable long sendCount;
+    mutable long radioFrameSendCount;
     /**
      * Total number of reception computations.
      */
@@ -322,26 +242,6 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     virtual void handleMessage(cMessage *message) override;
     //@}
 
-    /** @name Limits */
-    //@{
-    virtual mps computeMaxSpeed() const;
-
-    virtual W computeMaxTransmissionPower() const;
-    virtual W computeMinInterferencePower() const;
-    virtual W computeMinReceptionPower() const;
-    virtual double computeMaxAntennaGain() const;
-
-    virtual const simtime_t computeMinInterferenceTime() const;
-    virtual const simtime_t computeMaxTransmissionDuration() const;
-
-    virtual m computeMaxRange(W maxTransmissionPower, W minReceptionPower) const;
-    virtual m computeMaxCommunicationRange() const;
-    virtual m computeMaxInterferenceRange() const;
-    virtual Coord computeConstraintAreaMin() const;
-    virtual Coord computeConstreaintAreaMax() const;
-    virtual void updateLimits();
-    //@}
-
     /** @name Transmission */
     //@{
     /**
@@ -389,41 +289,27 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     virtual const std::vector<const IReception *> *computeInterferingReceptions(const IListening *listening, const std::vector<const ITransmission *> *transmissions) const;
     virtual const std::vector<const IReception *> *computeInterferingReceptions(const IReception *reception, const std::vector<const ITransmission *> *transmissions) const;
 
-    virtual const IReception *computeReception(const IRadio *radio, const ITransmission *transmission) const;
+    virtual const IReception *computeReception(const IRadio *receiver, const ITransmission *transmission) const;
     virtual const IInterference *computeInterference(const IRadio *receiver, const IListening *listening, const std::vector<const ITransmission *> *transmissions) const;
     virtual const IInterference *computeInterference(const IRadio *receiver, const IListening *listening, const ITransmission *transmission, const std::vector<const ITransmission *> *transmissions) const;
-    virtual const IReceptionDecision *computeReceptionDecision(const IRadio *radio, const IListening *listening, const ITransmission *transmission, const std::vector<const ITransmission *> *transmissions) const;
-    virtual const IListeningDecision *computeListeningDecision(const IRadio *radio, const IListening *listening, const std::vector<const ITransmission *> *transmissions) const;
+    virtual const IReceptionDecision *computeReceptionDecision(const IRadio *receiver, const IListening *listening, const ITransmission *transmission, const std::vector<const ITransmission *> *transmissions) const;
+    virtual const IListeningDecision *computeListeningDecision(const IRadio *receiver, const IListening *listening, const std::vector<const ITransmission *> *transmissions) const;
 
     virtual const IArrival *getArrival(const IRadio *receiver, const ITransmission *transmission) const override;
+    virtual const IListening *getListening(const IRadio *receiver, const ITransmission *transmission) const override;
     virtual const IReception *getReception(const IRadio *receiver, const ITransmission *transmission) const override;
     virtual const IInterference *getInterference(const IRadio *receiver, const ITransmission *transmission) const override;
     virtual const IInterference *getInterference(const IRadio *receiver, const IListening *listening, const ITransmission *transmission) const;
     virtual const INoise *getNoise(const IRadio *receiver, const ITransmission *transmission) const override;
     virtual const ISNIR *getSNIR(const IRadio *receiver, const ITransmission *transmission) const override;
-    virtual const IReceptionDecision *getReceptionDecision(const IRadio *radio, const IListening *listening, const ITransmission *transmission) const;
-    //@}
-
-    /** @name Graphics */
-    //@{
-    virtual void updateCanvas();
-    virtual void scheduleUpdateCanvasTimer();
+    virtual const IReceptionDecision *getReceptionDecision(const IRadio *receiver, const IListening *listening, const ITransmission *transmission) const override;
     //@}
 
   public:
     RadioMedium();
     virtual ~RadioMedium();
 
-    virtual void printToStream(std::ostream &stream) const override;
-
-    virtual W getMinInterferencePower() const override { return minInterferencePower; }
-    virtual W getMinReceptionPower() const override { return minReceptionPower; }
-    virtual double getMaxAntennaGain() const override { return maxAntennaGain; }
-    virtual mps getMaxSpeed() const { return maxSpeed; }
-    virtual m getMaxInterferenceRange(const IRadio *radio) const;
-    virtual m getMaxCommunicationRange(const IRadio *radio) const;
-    virtual Coord getConstraintAreaMin() const { return constraintAreaMin; }
-    virtual Coord getConstraintAreaMax() const { return constraintAreaMax; }
+    virtual std::ostream& printToStream(std::ostream &stream, int level) const override;
 
     virtual const IMaterial *getMaterial() const override { return material; }
     virtual const IPropagation *getPropagation() const override { return propagation; }
@@ -431,6 +317,11 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     virtual const IObstacleLoss *getObstacleLoss() const override { return obstacleLoss; }
     virtual const IAnalogModel *getAnalogModel() const override { return analogModel; }
     virtual const IBackgroundNoise *getBackgroundNoise() const override { return backgroundNoise; }
+    virtual const IPhysicalEnvironment *getPhysicalEnvironment() const { return physicalEnvironment; }
+
+    virtual const IMediumLimitCache *getMediumLimitCache() const { return mediumLimitCache; }
+    virtual const INeighborCache *getNeighborCache() const { return neighborCache; }
+    virtual const ICommunicationCache *getCommunicationCache() const { return communicationCache; }
 
     virtual void addRadio(const IRadio *radio) override;
     virtual void removeRadio(const IRadio *radio) override;
@@ -440,7 +331,7 @@ class INET_API RadioMedium : public cSimpleModule, public cListener, public IRad
     virtual IRadioFrame *transmitPacket(const IRadio *transmitter, cPacket *macFrame) override;
     virtual cPacket *receivePacket(const IRadio *receiver, IRadioFrame *radioFrame) override;
 
-    virtual const IListeningDecision *listenOnMedium(const IRadio *radio, const IListening *listening) const override;
+    virtual const IListeningDecision *listenOnMedium(const IRadio *receiver, const IListening *listening) const override;
 
     virtual bool isReceptionAttempted(const IRadio *receiver, const ITransmission *transmission) const override;
 

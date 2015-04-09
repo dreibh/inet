@@ -26,7 +26,7 @@ namespace inet {
 
 namespace physicallayer {
 
-class INET_API DimensionalSignalAnalogModel : public NarrowbandSignalAnalogModel
+class INET_API DimensionalSignalAnalogModel : public NarrowbandSignalAnalogModel, public IDimensionalSignal
 {
   protected:
     const ConstMapping *power;
@@ -35,7 +35,7 @@ class INET_API DimensionalSignalAnalogModel : public NarrowbandSignalAnalogModel
     DimensionalSignalAnalogModel(const simtime_t duration, Hz carrierFrequency, Hz bandwidth, const ConstMapping *power);
     virtual ~DimensionalSignalAnalogModel() { delete power; }
 
-    virtual void printToStream(std::ostream& stream) const { stream << "DimensionalSignalAnalogModel"; }
+    virtual std::ostream& printToStream(std::ostream& stream, int level) const override;
 
     virtual const ConstMapping *getPower() const { return power; }
     virtual W computeMinPower(simtime_t startTime, simtime_t endTime) const;

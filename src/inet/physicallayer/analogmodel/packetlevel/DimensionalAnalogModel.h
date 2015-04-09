@@ -18,28 +18,19 @@
 #ifndef __INET_DIMENSIONALANALOGMODEL_H
 #define __INET_DIMENSIONALANALOGMODEL_H
 
-#include "inet/physicallayer/base/packetlevel/AnalogModelBase.h"
+#include "inet/physicallayer/base/packetlevel/DimensionalAnalogModelBase.h"
 #include "inet/common/mapping/MappingBase.h"
 
 namespace inet {
 
 namespace physicallayer {
 
-class INET_API DimensionalAnalogModel : public AnalogModelBase
+class INET_API DimensionalAnalogModel : public DimensionalAnalogModelBase
 {
-  protected:
-    bool attenuateWithCarrierFrequency;
-    Mapping::InterpolationMethod interpolationMode;
-
-  protected:
-    virtual void initialize(int stage) override;
-
   public:
-    virtual void printToStream(std::ostream& stream) const override;
+    virtual std::ostream& printToStream(std::ostream& stream, int level) const override;
 
     virtual const IReception *computeReception(const IRadio *radio, const ITransmission *transmission, const IArrival *arrival) const override;
-    virtual const INoise *computeNoise(const IListening *listening, const IInterference *interference) const override;
-    virtual const ISNIR *computeSNIR(const IReception *reception, const INoise *noise) const override;
 };
 
 } // namespace physicallayer
