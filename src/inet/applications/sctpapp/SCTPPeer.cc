@@ -560,6 +560,7 @@ void SCTPPeer::socketStatusArrived(int assocId, void *yourPtr, SCTPStatusInfo *s
         ps.primaryPath = false;
         sctpPathStatus[ps.pid] = ps;
     }
+    delete status;
 }
 
 void SCTPPeer::setStatusString(const char *s)
@@ -595,7 +596,7 @@ void SCTPPeer::sendRequest(bool last)
 
     // send SCTPMessage with SCTPSimpleMessage enclosed
     emit(sentPkSignal, msg);
-    clientSocket.send(cmsg, last);
+    clientSocket.send(cmsg, 0, 0.0, 0, last);
     bytesSent += numBytes;
 }
 
@@ -702,7 +703,7 @@ void SCTPPeer::socketDataArrived(int, void *, cPacket *msg, bool)
         cmsg->setKind(ind->getSendUnordered() ? SCTP_C_SEND_UNORDERED : SCTP_C_SEND_ORDERED);
         packetsSent++;
         delete msg;
-        clientSocket.send(cmsg, 0, 0, 1);
+        clientSocket.send(cmsg, 0, 0, 0, true);
     }
 
     if (par("numPacketsToReceive").longValue() > 0) {
