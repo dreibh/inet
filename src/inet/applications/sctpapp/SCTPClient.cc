@@ -338,7 +338,7 @@ void SCTPClient::socketDataArrived(int, void *, cPacket *msg, bool)
         cmsg->encapsulate(smsg);
         cmsg->setKind(ind->getSendUnordered() ? SCTP_C_SEND_UNORDERED : SCTP_C_SEND_ORDERED);
         packetsSent++;
-        socket.send(cmsg, 1);
+        socket.send(cmsg, 0, 0.0, 0, true);
     }
 
     if (par("numPacketsToReceive").longValue() > 0) {
@@ -401,7 +401,7 @@ void SCTPClient::sendRequest(bool last)
         last = true;
 
     emit(sentPkSignal, msg);
-    socket.send(cmsg, par("prMethod"), par("prValue"), last);
+    socket.send(cmsg, par("prMethod"), par("prValue"), 0, last);
     bytesSent += sendBytes;
 }
 
@@ -554,6 +554,7 @@ void SCTPClient::socketStatusArrived(int assocId, void *yourPtr, SCTPStatusInfo 
         ps.primaryPath = false;
         sctpPathStatus[ps.pid] = ps;
     }
+    delete status;
 }
 
 void SCTPClient::setPrimaryPath(const char *str)
