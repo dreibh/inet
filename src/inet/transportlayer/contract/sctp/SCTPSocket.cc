@@ -18,28 +18,12 @@
 #include "inet/common/INETDefs.h"
 
 #include "inet/transportlayer/contract/sctp/SCTPSocket.h"
-
 #include "inet/transportlayer/contract/sctp/SCTPCommand_m.h"
-
-#ifdef WITH_SCTP
 #include "inet/transportlayer/sctp/SCTP.h"
-#else // ifdef WITH_SCTP
-//#define sctpEV3 (!SCTP::testing==true)?std::cerr:std::cerr
-#define sctpEV3    EV
-#endif // ifdef WITH_SCTP
 
 namespace inet {
 
 using namespace sctp;
-
-static inline int32_t getNewAssocId()
-{
-#ifdef WITH_SCTP
-    return SCTP::getNewAssocId();
-#else // ifdef WITH_SCTP
-    return -1;
-#endif // ifdef WITH_SCTP
-}
 
 SCTPSocket::SCTPSocket(bool type)
 {
@@ -52,10 +36,10 @@ SCTPSocket::SCTPSocket(bool type)
     lastStream = -1;
     oneToOne = type;
     if (oneToOne)
-        assocId = getNewAssocId();
+        assocId = SCTP::getNewAssocId();
     else
         assocId = 0;
-    EV_INFO << "sockstate=" << sockstate << "\n";
+    EV_INFO << "sockstate=" << stateName(sockstate) << "\n";
 }
 
 SCTPSocket::SCTPSocket(cMessage *msg)
@@ -178,7 +162,7 @@ void SCTPSocket::listen(bool fork, bool reset, uint32 requests, uint32 messagesT
     if (oneToOne)
         openCmd->setAssocId(assocId);
     else
-        openCmd->setAssocId(getNewAssocId());
+        openCmd->setAssocId(SCTP::getNewAssocId());
     openCmd->setFork(fork);
     openCmd->setInboundStreams(inboundStreams);
     openCmd->setOutboundStreams(outboundStreams);
@@ -195,7 +179,7 @@ void SCTPSocket::listen(bool fork, bool reset, uint32 requests, uint32 messagesT
 
 void SCTPSocket::connect(L3Address remoteAddress, int32 remotePort, bool streamReset, int32 prMethod, uint32 numRequests)
 {
-    EV_INFO << "Socket connect. Assoc=" << assocId << ", sockstate=" << sockstate << "\n";
+    EV_INFO << "Socket connect. Assoc=" << assocId << ", sockstate=" << stateName(sockstate) << "\n";
 
     if (oneToOne && sockstate == NOT_BOUND)
        bind(0);
@@ -213,7 +197,7 @@ void SCTPSocket::connect(L3Address remoteAddress, int32 remotePort, bool streamR
     if (oneToOne)
         openCmd->setAssocId(assocId);
     else
-        openCmd->setAssocId(getNewAssocId());
+        openCmd->setAssocId(SCTP::getNewAssocId());
     EV_INFO << "Socket connect. Assoc=" << openCmd->getAssocId() << ", sockstate=" << stateName(sockstate) << "\n";
     openCmd->setLocalAddresses(localAddresses);
     openCmd->setLocalPort(localPrt);
@@ -235,7 +219,7 @@ void SCTPSocket::connect(L3Address remoteAddress, int32 remotePort, bool streamR
 
 void SCTPSocket::connectx(AddressVector remoteAddressList, int32 remotePort, bool streamReset, int32 prMethod, uint32 numRequests)
 {
-    EV_INFO << "Socket connectx.  sockstate=" << sockstate << "\n";
+    EV_INFO << "Socket connectx.  sockstate=" << stateName(sockstate) << "\n";
     remoteAddresses = remoteAddressList;
     connect(remoteAddressList.front(), remotePort, streamReset, prMethod, numRequests);
 }
@@ -406,7 +390,6 @@ void SCTPSocket::processMessage(cMessage *msg)
         case SCTP_I_CLOSED:
             EV_INFO << "SCTP_I_CLOSED called\n";
             sockstate = CLOSED;
-
             if (cb) {
                 cb->socketClosed(assocId, yourPtr);
             }
@@ -423,7 +406,6 @@ void SCTPSocket::processMessage(cMessage *msg)
 
         case SCTP_I_STATUS:
             status = check_and_cast<SCTPStatusInfo *>(msg->removeControlInfo());
-
             if (cb) {
                 cb->socketStatusArrived(assocId, yourPtr, status);
             }
