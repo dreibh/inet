@@ -170,7 +170,7 @@ void SCTPPeer::generateAndSend(SCTPConnectInfo *connectInfo)
     msg->setByteLength(numBytes);
     msg->setEncaps(false);
     cmsg->encapsulate(msg);
-    SCTPSendCommand *cmd = new SCTPSendCommand();
+    SCTPSendInfo *cmd = new SCTPSendInfo();
     cmd->setAssocId(serverAssocId);
 
     if (ordered)
@@ -239,7 +239,7 @@ void SCTPPeer::handleMessage(cMessage *msg)
         case SCTP_I_ABORT: {
             SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->getControlInfo()->dup());
             cMessage *cmsg = new cMessage("SCTP_C_ABORT");
-            SCTPSendCommand *cmd = new SCTPSendCommand();
+            SCTPSendInfo *cmd = new SCTPSendInfo();
             id = ind->getAssocId();
             cmd->setAssocId(id);
             cmd->setSid(ind->getSid());
@@ -339,7 +339,7 @@ void SCTPPeer::handleMessage(cMessage *msg)
             notificationsReceived++;
             SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->removeControlInfo());
             cMessage *cmsg = new cMessage("SCTP_C_RECEIVE");
-            SCTPSendCommand *cmd = new SCTPSendCommand();
+            SCTPSendInfo *cmd = new SCTPSendInfo();
             id = ind->getAssocId();
             cmd->setAssocId(id);
             cmd->setSid(ind->getSid());
@@ -390,11 +390,10 @@ void SCTPPeer::handleMessage(cMessage *msg)
                     delete msg;
                 }
                 else {
-                    SCTPSendCommand *cmd = new SCTPSendCommand();
+                    SCTPSendInfo *cmd = new SCTPSendInfo();
                     cmd->setAssocId(id);
 
-                    //FIXME: why do it: msg->dup(); ... ; delete msg;
-                    SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg->dup());
+                    SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg);
                     auto j = endToEndDelay.find(id);
                     j->second->record(simTime() - smsg->getCreationTime());
                     auto k = histEndToEndDelay.find(id);
@@ -411,7 +410,6 @@ void SCTPPeer::handleMessage(cMessage *msg)
                     cmsg->setKind(SCTP_C_SEND);
                     cmsg->setControlInfo(cmd);
                     packetsSent++;
-                    delete msg;
                     sendOrSchedule(cmsg);
                 }
             } else {
@@ -509,7 +507,7 @@ void SCTPPeer::socketDataNotificationArrived(int connId, void *ptr, cPacket *msg
 {
     SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->removeControlInfo());
     cMessage *cmsg = new cMessage("CMSG");
-    SCTPSendCommand *cmd = new SCTPSendCommand();
+    SCTPSendInfo *cmd = new SCTPSendInfo();
     cmd->setAssocId(ind->getAssocId());
     cmd->setSid(ind->getSid());
     cmd->setNumMsgs(ind->getNumMsgs());
@@ -594,9 +592,13 @@ void SCTPPeer::sendRequest(bool last)
     cmsg->encapsulate(msg);
     cmsg->setKind(ordered ? SCTP_C_SEND_ORDERED : SCTP_C_SEND_UNORDERED);
 
+    SCTPSendInfo* sendCommand = new SCTPSendInfo;
+    sendCommand->setLast(last);
+    cmsg->setControlInfo(sendCommand);
+    
     // send SCTPMessage with SCTPSimpleMessage enclosed
     emit(sentPkSignal, msg);
-    clientSocket.send(cmsg, 0, 0.0, 0, last);
+    clientSocket.sendMsg(cmsg);
     bytesSent += numBytes;
 }
 
@@ -694,16 +696,14 @@ void SCTPPeer::socketDataArrived(int, void *, cPacket *msg, bool)
     bytesRcvd += msg->getByteLength();
 
     if (echo) {
-        //FIXME why do it: msg->dup(); ... ; delete msg;
-        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg->dup());
+        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg);
         cPacket *cmsg = new cPacket("SCTP_C_SEND");
         echoedBytesSent += smsg->getByteLength();
         emit(echoedPkSignal, smsg);
         cmsg->encapsulate(smsg);
         cmsg->setKind(ind->getSendUnordered() ? SCTP_C_SEND_UNORDERED : SCTP_C_SEND_ORDERED);
         packetsSent++;
-        delete msg;
-        clientSocket.send(cmsg, 0, 0, 0, true);
+        clientSocket.sendMsg(cmsg);
     }
 
     if (par("numPacketsToReceive").longValue() > 0) {

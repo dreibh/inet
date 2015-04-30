@@ -1,6 +1,6 @@
 //
 // Copyright (C) 2008 Irene Ruengeler
-// Copyright (C) 2009-2012 Thomas Dreibholz
+// Copyright (C) 2009-2015 Thomas Dreibholz
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -329,16 +329,14 @@ void SCTPClient::socketDataArrived(int, void *, cPacket *msg, bool)
     bytesRcvd += msg->getByteLength();
 
     if (echo) {
-        // FIXME why do it: msg->dup(); delete msg;
-        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg->dup());
-        delete msg;
+        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg);
         cPacket *cmsg = new cPacket("SCTP_C_SEND");
         echoedBytesSent += smsg->getByteLength();
         emit(echoedPkSignal, smsg);
         cmsg->encapsulate(smsg);
         cmsg->setKind(ind->getSendUnordered() ? SCTP_C_SEND_UNORDERED : SCTP_C_SEND_ORDERED);
         packetsSent++;
-        socket.send(cmsg, 0, 0.0, 0, true);
+        socket.sendMsg(cmsg);
     }
 
     if (par("numPacketsToReceive").longValue() > 0) {
@@ -399,9 +397,15 @@ void SCTPClient::sendRequest(bool last)
 
     if (bufferSize < 0)
         last = true;
+    
+    SCTPSendInfo* sendCommand = new SCTPSendInfo;
+    sendCommand->setLast(last);
+    sendCommand->setPrMethod(par("prMethod"));
+    sendCommand->setPrValue(par("prValue"));
+    cmsg->setControlInfo(sendCommand);
 
     emit(sentPkSignal, msg);
-    socket.send(cmsg, par("prMethod"), par("prValue"), 0, last);
+    socket.sendMsg(cmsg);
     bytesSent += sendBytes;
 }
 
@@ -484,7 +488,7 @@ void SCTPClient::socketDataNotificationArrived(int connId, void *ptr, cPacket *m
 {
     SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->removeControlInfo());
     cMessage *cmsg = new cMessage("SCTP_C_RECEIVE");
-    SCTPSendCommand *cmd = new SCTPSendCommand();
+    SCTPSendInfo *cmd = new SCTPSendInfo();
     cmd->setAssocId(ind->getAssocId());
     cmd->setSid(ind->getSid());
     cmd->setNumMsgs(ind->getNumMsgs());

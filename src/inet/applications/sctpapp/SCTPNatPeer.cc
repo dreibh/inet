@@ -134,7 +134,7 @@ void SCTPNatPeer::generateAndSend()
     msg->setEncaps(false);
     msg->setBitLength(numBytes * 8);
     cmsg->encapsulate(msg);
-    SCTPSendCommand *cmd = new SCTPSendCommand();
+    SCTPSendInfo *cmd = new SCTPSendInfo();
     cmd->setAssocId(serverAssocId);
     if (ordered)
         cmd->setSendUnordered(COMPLETE_MESG_ORDERED);
@@ -236,7 +236,7 @@ void SCTPNatPeer::handleMessage(cMessage *msg)
                 else {
                     SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->getControlInfo()->dup());
                     cMessage *cmsg = new cMessage("Notification");
-                    SCTPSendCommand *cmd = new SCTPSendCommand();
+                    SCTPSendInfo *cmd = new SCTPSendInfo();
                     id = ind->getAssocId();
                     cmd->setAssocId(id);
                     cmd->setSid(ind->getSid());
@@ -341,7 +341,7 @@ void SCTPNatPeer::handleMessage(cMessage *msg)
                 notifications++;
                 SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->removeControlInfo());
                 cMessage *cmsg = new cMessage("SCTP_C_RECEIVE");
-                SCTPSendCommand *cmd = new SCTPSendCommand();
+                SCTPSendInfo *cmd = new SCTPSendInfo();
                 id = ind->getAssocId();
                 cmd->setAssocId(id);
                 cmd->setSid(ind->getSid());
@@ -409,7 +409,7 @@ void SCTPNatPeer::handleMessage(cMessage *msg)
                             delete msg;
                         }
                         else {
-                            SCTPSendCommand *cmd = new SCTPSendCommand();
+                            SCTPSendInfo *cmd = new SCTPSendInfo();
                             cmd->setAssocId(id);
 
                             SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg->dup());
@@ -544,7 +544,7 @@ void SCTPNatPeer::socketDataNotificationArrived(int32 connId, void *ptr, cPacket
 {
     SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->removeControlInfo());
     cMessage *cmsg = new cMessage("SCTP_C_RECEIVE");
-    SCTPSendCommand *cmd = new SCTPSendCommand();
+    SCTPSendInfo *cmd = new SCTPSendInfo();
     cmd->setAssocId(ind->getAssocId());
     cmd->setSid(ind->getSid());
     cmd->setNumMsgs(ind->getNumMsgs());
@@ -680,7 +680,7 @@ void SCTPNatPeer::sendRequest(bool last)
     else
         cmsg->setKind(SCTP_C_SEND_UNORDERED);
     // send SCTPMessage with SCTPSimpleMessage enclosed
-    clientSocket.send(cmsg);
+    clientSocket.sendMsg(cmsg);
     bytesSent += numBytes;
 }
 
@@ -710,7 +710,7 @@ void SCTPNatPeer::socketEstablished(int32, void *, unsigned long int buffer)
         smsg->setByteLength(16);
         smsg->setDataLen(16);
         cmsg->encapsulate(smsg);
-        clientSocket.send(cmsg, 0, 0.0, 0, true, true);
+        clientSocket.sendMsg(cmsg);
 
         if ((bool)par("multi")) {
             cMessage *cmesg = new cMessage("SCTP_C_SEND_ASCONF");
@@ -809,7 +809,7 @@ void SCTPNatPeer::socketDataArrived(int32, void *, cPacket *msg, bool)
     bytesRcvd += msg->getBitLength() / 8;
 
     if (echo) {
-        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg->dup());
+        SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg);
         cPacket *cmsg = new cPacket("SCTP_C_SEND");
         echoedBytesSent += smsg->getBitLength() / 8;
         cmsg->encapsulate(smsg);
@@ -818,10 +818,7 @@ void SCTPNatPeer::socketDataArrived(int32, void *, cPacket *msg, bool)
         else
             cmsg->setKind(SCTP_C_SEND_ORDERED);
         packetsSent++;
-        delete msg;
-        // FIXME Merge del
-        clientSocket.send(cmsg);
-        //socket.send(cmsg);
+        clientSocket.sendMsg(cmsg);
     }
     if ((int64)(long)par("numPacketsToReceive") > 0) {
         numPacketsToReceive--;
@@ -880,7 +877,12 @@ void SCTPNatPeer::addressAddedArrived(int32 assocId, L3Address localAddr, L3Addr
         smsg->setByteLength(16);
         smsg->setDataLen(16);
         cmsg->encapsulate(smsg);
-        clientSocket.send(cmsg, 0, 0.0, 0, false, true);
+        
+        SCTPSendInfo* sendCommand = new SCTPSendInfo;
+        sendCommand->setLast(false);
+        cmsg->setControlInfo(sendCommand);
+        
+        clientSocket.sendMsg(cmsg);
     }
 }
 
