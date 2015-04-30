@@ -81,7 +81,6 @@ class INET_API IPv4NetworkConfigurator : public NetworkConfiguratorBase
 
         IPv4Address getAddress() const { ASSERT(addressSpecifiedBits == 0xFFFFFFFF); return IPv4Address(address); }
         IPv4Address getNetmask() const { ASSERT(netmaskSpecifiedBits == 0xFFFFFFFF); return IPv4Address(netmask); }
-        virtual std::string getFullPath() const override { return interfaceEntry->getFullPath(); }
     };
 
     /**
@@ -197,7 +196,7 @@ class INET_API IPv4NetworkConfigurator : public NetworkConfiguratorBase
      * The algorithm uses Dijkstra's weighted shortest path algorithm.
      * May add default routes and subnet routes if possible and requested.
      */
-    virtual void addStaticRoutes(Topology& topology, unsigned int networkID);
+    virtual void addStaticRoutes(Topology& topology, cXMLElement *element, unsigned int networkID);
 
     /**
      * Destructively optimizes the given IPv4 routes by merging some of them.
