@@ -349,7 +349,7 @@ void NetPerfMeter::handleTimer(cMessage* msg)
             IncomingSocketSCTP->close();
          }
          else if(SocketSCTP != NULL) {
-            SocketSCTP->abort();
+            SocketSCTP->close();
          }
       }
       else if(TransportProtocol == TCP) {
