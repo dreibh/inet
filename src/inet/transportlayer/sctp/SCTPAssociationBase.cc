@@ -82,7 +82,7 @@ SCTPPathVariables::SCTPPathVariables(const L3Address& addr, SCTPAssociation *ass
 
     cmtCCGroup = 0;
     lastTransmission = simTime();
-    sendAllRandomizer = uniform(0, (1 << 31));
+    sendAllRandomizer = RNGCONTEXT uniform(0, (1 << 31));
     pseudoCumAck = 0;
     newPseudoCumAck = false;
     findPseudoCumAck = true;    // Set findPseudoCumAck to TRUE for new destination.
@@ -969,8 +969,8 @@ bool SCTPAssociation::processAppCommand(cMessage *msg)
             break;
 
         case SCTP_E_SET_STREAM_PRIO:
-            state->ssPriorityMap[((SCTPSendCommand *)sctpCommand)->getSid()] =
-                ((SCTPSendCommand *)sctpCommand)->getPpid();
+            state->ssPriorityMap[((SCTPSendInfo *)sctpCommand)->getSid()] =
+                ((SCTPSendInfo *)sctpCommand)->getPpid();
             break;
 
         case SCTP_E_QUEUE_BYTES_LIMIT:

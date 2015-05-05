@@ -65,7 +65,7 @@ static cNEDValue pareto(cComponent *context, cNEDValue argv[], int argc)
     const double location = argv[0].doubleValueInUnit(argv[0].getUnit());
     const double shape    = argv[1].doubleValueInUnit(argv[1].getUnit());
 
-    const double r      = uniform(0.0, 1.0, rng);
+    const double r      = RNGCONTEXT uniform(0.0, 1.0, rng);
     const double result = location / pow(r, 1.0 / shape);
 
     // printf("%1.6f  => %1.6f   (location=%1.6f shape=%1.6f)\n", r, result, location, shape);
@@ -349,7 +349,7 @@ void NetPerfMeter::handleTimer(cMessage* msg)
             IncomingSocketSCTP->close();
          }
          else if(SocketSCTP != NULL) {
-            SocketSCTP->abort();
+            SocketSCTP->close();
          }
       }
       else if(TransportProtocol == TCP) {
@@ -398,7 +398,7 @@ void NetPerfMeter::handleMessage(cMessage* msg)
             // Data has arrived -> request it from the SCTP module.
             const SCTPCommand* dataIndication =
                check_and_cast<const SCTPCommand*>(msg->getControlInfo());
-            SCTPSendCommand* command = new SCTPSendCommand("SendCommand");
+            SCTPSendInfo* command = new SCTPSendInfo("SendCommand");
             command->setAssocId(dataIndication->getAssocId());
             command->setSid(dataIndication->getSid());
             command->setNumMsgs(dataIndication->getNumMsgs());
@@ -940,7 +940,7 @@ unsigned long NetPerfMeter::transmitFrame(const unsigned int frameSize,
             */
             dataMessage->setDataLen(msgSize);
 
-            SCTPSendCommand* command = new SCTPSendCommand("SendRequest");
+            SCTPSendInfo* command = new SCTPSendInfo("SendRequest");
             command->setAssocId(ConnectionID);
             command->setSid(streamID);
             command->setSendUnordered( (sendUnordered == true) ?
@@ -951,7 +951,7 @@ unsigned long NetPerfMeter::transmitFrame(const unsigned int frameSize,
             command->setPrValue(1);
             command->setPrMethod( (sendUnreliable == true) ? 2 : 0 );   // PR-SCTP policy: RTX
 
-            SCTPSendCommand* cmsg = new SCTPSendCommand("ControlInfo");
+            SCTPSendInfo* cmsg = new SCTPSendInfo("ControlInfo");
             cmsg->encapsulate(dataMessage);
             cmsg->setKind(SCTP_C_SEND);
             cmsg->setControlInfo(command);
@@ -1180,8 +1180,8 @@ void NetPerfMeter::receiveMessage(cMessage* msg)
       const simtime_t delay    = simTime() - dataMessage->getCreationTime();
 
       if(TransportProtocol == SCTP) {
-         const SCTPRcvCommand* receiveCommand =
-            check_and_cast<const SCTPRcvCommand*>(dataMessage->getControlInfo());
+         const SCTPRcvInfo* receiveCommand =
+            check_and_cast<const SCTPRcvInfo*>(dataMessage->getControlInfo());
          streamID = receiveCommand->getSid();
       }
 

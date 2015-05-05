@@ -218,7 +218,7 @@ void SCTP::handleMessage(cMessage *msg)
                 delete sctpmsg;
             }
             else {
-                EV_INFO << "assoc " << assoc->assocId << "found\n";
+                EV_INFO << "assoc " << assoc->assocId << " found\n";
                 bool ret = assoc->processSCTPMessage(sctpmsg, srcAddr, destAddr);
                 if (!ret) {
                     EV_DEBUG << "SCTPMain:: removeAssociation \n";
@@ -295,7 +295,7 @@ void SCTP::sendAbortFromMain(SCTPMessage *sctpmsg, L3Address fromAddr, L3Address
 {
     SCTPMessage *msg = new SCTPMessage();
 
-    EV_DEBUG << "\n\nSCTPMain:sendABORT \n";
+    EV_DEBUG << "\n\nSCTP::sendAbortFromMain()\n";
 
     msg->setSrcPort(sctpmsg->getDestPort());
     msg->setDestPort(sctpmsg->getSrcPort());
@@ -460,7 +460,7 @@ SCTPAssociation *SCTP::findAssocForInitAck(SCTPInitAckChunk *initAckChunk, L3Add
 {
     SCTPAssociation *assoc = nullptr;
     int numberAddresses = initAckChunk->getAddressesArraySize();
-    for (uint32 j = 0; j < numberAddresses; j++) {
+    for (int32 j = 0; j < numberAddresses; j++) {
         if (initAckChunk->getAddresses(j).getType() == L3Address::IPv6)
             continue;
         assoc = findAssocForMessage(initAckChunk->getAddresses(j), destAddr, srcPort, destPort, findListen);
@@ -550,6 +550,16 @@ void SCTP::updateSockPair(SCTPAssociation *assoc, L3Address localAddr, L3Address
     key.remoteAddr = (assoc->remoteAddr = remoteAddr);
     key.localPort = assoc->localPort = localPort;
     key.remotePort = assoc->remotePort = remotePort;
+
+    // Do not update a sock pair that is already stored
+    for (auto i = sctpAssocMap.begin(); i != sctpAssocMap.end(); i++) {
+        if (i->second == assoc &&
+            i->first.localAddr == key.localAddr &&
+            i->first.remoteAddr == key.remoteAddr &&
+            i->first.localPort == key.localPort
+            && i->first.remotePort == key.remotePort)
+            return;
+    }
 
     for (auto i = sctpAssocMap.begin(); i != sctpAssocMap.end(); i++) {
         if (i->second == assoc) {
