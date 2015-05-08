@@ -62,7 +62,7 @@ module REDQueue like IOutputQueue
 
 channel coreChannel extends DatarateChannel
 {
-   int netID = default(0);        // NOTE: nedID==0 => shared by all networks!
+   int obsoleteNetID = default(0);        // NOTE: nedID==0 => shared by all networks!
    datarate  = default(1 Mbps);
    delay     = default(0ms);
    ber       = default(0);
@@ -72,7 +72,7 @@ channel coreChannel extends DatarateChannel
 
 channel accessChannel extends DatarateChannel
 {
-   int netID = default(1);        // NOTE: nedID>0 => separate network!
+   int obsoleteNetID = default(1);        // NOTE: nedID>0 => separate network!
    datarate  = default(1 Gbps);
    delay     = default(0.1ms);
    ber       = default(0);
@@ -142,33 +142,33 @@ network testNetwork
    connections allowunconnected:
       for n=0..networks-1 {
          westernCoreRouter[n].pppg[0]
-            <--> coreChannel { netID = 0; @display("ls=red,3"); }
+            <--> coreChannel { obsoleteNetID = 0; @display("ls=red,3"); }
             <--> easternCoreRouter[n].pppg[0];
 
          // ------ Disjoint paths -------------------------
          westernBorderRouter[n].pppg[0]
-            <--> accessChannel { netID = 1000 + n; @display("ls=blue,5"); }
+            <--> accessChannel { obsoleteNetID = 1000 + n; @display("ls=blue,5"); }
             <--> westernCoreRouter[n].pppg[1] if sharedBottleneck == false;
          easternBorderRouter[n].pppg[0]
-            <--> accessChannel { netID = 1000 + n; @display("ls=blue,5"); }
+            <--> accessChannel { obsoleteNetID = 1000 + n; @display("ls=blue,5"); }
             <--> easternCoreRouter[n].pppg[1] if sharedBottleneck == false;
 
          // ------ Shared Bottleneck paths ----------------
          westernBorderRouter[n].pppg[0]
-            <--> accessChannel { netID = 1000 + n; @display("ls=blue,5"); }
+            <--> accessChannel { obsoleteNetID = 1000 + n; @display("ls=blue,5"); }
             <--> westernCoreRouter[0].pppg++ if sharedBottleneck == true;
          easternBorderRouter[n].pppg[0]
-            <--> accessChannel { netID = 1000 + n; @display("ls=blue,5"); }
+            <--> accessChannel { obsoleteNetID = 1000 + n; @display("ls=blue,5"); }
             <--> easternCoreRouter[0].pppg++ if sharedBottleneck == true;
       }
 
       for n=0..networks-1,
          for s=0..systems-1 {
             clientMain[s].pppg[n]
-               <--> accessChannel { netID = 0; @display("ls=green,5"); }
+               <--> accessChannel { obsoleteNetID = 0; @display("ls=green,5"); }
                <--> westernBorderRouter[n].pppg++;
             serverMain[s].pppg[n]
-               <--> accessChannel { netID = 0; @display("ls=green,5"); }
+               <--> accessChannel { obsoleteNetID = 0; @display("ls=green,5"); }
                <--> easternBorderRouter[n].pppg++;
       }
 }

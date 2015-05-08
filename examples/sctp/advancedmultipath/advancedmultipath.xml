@@ -1,0 +1,14 @@
+<config>
+    <interface hosts='**' address='10.x.x.x' netmask='255.x.x.x'/>
+
+    <!-- Northern Path -->
+    <autoroute destinationInterfaces="clientMain*.ppp0 serverMain*.ppp0 westernBorderRouter0.* westernCoreRouter0.* easternBorderRouter0.* easternCoreRouter0.*">
+        <link interfaces="clientMain*.ppp1 serverMain*.ppp1 westernBorderRouter1.* westernCoreRouter1.* easternBorderRouter1.* easternCoreRouter1.*" />
+    </autoroute>
+
+    <!-- Southern Path -->
+    <autoroute destinationInterfaces="clientMain*.ppp1 serverMain*.ppp1 westernBorderRouter1.* westernCoreRouter1.* easternBorderRouter1.* easternCoreRouter1.*">
+        <link interfaces="clientMain*.ppp1 serverMain*.ppp1 westernBorderRouter1.* westernCoreRouter1.* easternBorderRouter1.* easternCoreRouter1.*" />
+    </autoroute>
+
+</config>
