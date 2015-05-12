@@ -45,4 +45,3 @@ network HttpSockPair
     connections:
         cli.ethg++ <--> gigabitline <--> srv.ethg++;
 }
-
