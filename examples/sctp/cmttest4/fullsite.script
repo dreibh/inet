@@ -2,7 +2,4 @@
 #
 # Browsing script file for the pair test scenario
 #
-900;www.test.example
-1800;www.test.example
-2700;www.test.example
-3600;www.test.example
+60;www.test.example
