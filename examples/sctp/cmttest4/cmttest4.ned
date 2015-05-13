@@ -28,11 +28,13 @@
 package inet.examples.sctp.cmttest4;
 
 import inet.applications.netperfmeter.NetPerfMeterHost;
+import inet.applications.httptools.configurator.HttpController;
+import inet.applications.contract.ISCTPApp;
+import inet.networklayer.configurator.ipv4.IPv4NetworkConfigurator;
+import inet.node.inet.Router;
 import inet.common.queue.FIFOQueue;
 import inet.common.queue.IOutputQueue;
 import inet.common.queue.REDDropper;
-import inet.networklayer.configurator.ipv4.IPv4NetworkConfigurator;
-import inet.node.inet.Router;
 import ned.DatarateChannel;
 import ned.IdealChannel;
 
@@ -85,6 +87,26 @@ channel connectorChannel extends IdealChannel
 {
    int netID = default(1);
    @display("ls=darkgray,5;t=NetID=$netID");
+}
+
+
+//
+// NetPerfMeter application host with HTTP submodules
+//
+module NetPerfMeterHostWithHTTP extends NetPerfMeterHost
+{
+    parameters:
+        int numSctpApps = default(0);
+    submodules:
+        sctpApp[numSctpApps]: <> like ISCTPApp if (numSctpApps > 0) {
+            parameters:
+                @display("p=362,36");
+        }
+    connections allowunconnected:
+        for i=0..numSctpApps-1 {
+            sctpApp[i].sctpOut --> sctp.from_appl++;
+            sctpApp[i].sctpIn <-- sctp.to_appl++;
+        }
 }
 
 
@@ -152,28 +174,28 @@ module Core
       }
 
       // ------ Systems -----------------------------------------------------
-      clientMain[systemsMain] : NetPerfMeterHost {
+      clientMain[systemsMain] : NetPerfMeterHostWithHTTP {
          parameters:
             forwarding = false;
             @display("p=50,50,c,200;i=device/laptop_l,green");
          gates:
             pppg[disjointTrails * (1 + bottleneckTrails) + uplinkTrails];
       }
-      clientReference[systemsReference] : NetPerfMeterHost {
+      clientReference[systemsReference] : NetPerfMeterHostWithHTTP {
          parameters:
             forwarding = false;
             @display("p=150,150,c,200;i=device/laptop_l,red");
          gates:
             pppg[disjointTrails * (1 + bottleneckTrails) + uplinkTrails];
       }
-      serverMain[systemsMain] : NetPerfMeterHost {
+      serverMain[systemsMain] : NetPerfMeterHostWithHTTP {
          parameters:
             forwarding = false;
             @display("p=1650,50,c,200;i=device/server_l,green");
          gates:
             pppg[disjointTrails * (1 + bottleneckTrails) + uplinkTrails];
       }
-      serverReference[systemsReference] : NetPerfMeterHost {
+      serverReference[systemsReference] : NetPerfMeterHostWithHTTP {
          parameters:
             forwarding = false;
             @display("p=1550,150,c,200;i=device/server_l,red");
@@ -328,10 +350,17 @@ network cmttest4
                @display("p=600,250;i=abstract/penguin_vl,gold");
         }
 
+        // ------ HTTP Controller -------------------------------------------
+        controller: HttpController {
+            parameters:
+               @display("p=600,500;i=block/cogwheel");
+        }
+
+        // ------ Network Setup ---------------------------------------------
         core[cores] : Core {
-           parameters:
-              netIDBase = 1024 + (index * 1024);
-              @display("p=150,150,c,200;i=block/network2_vl,blue");
+            parameters:
+               netIDBase = 1024 + (index * 1024);
+               @display("p=150,150,c,200;i=block/network2_vl,blue");
         }
 
    // ====== Connections ====================================================
