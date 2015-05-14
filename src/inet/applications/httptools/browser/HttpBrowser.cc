@@ -1,5 +1,6 @@
 //
 // Copyright (C) 2009 Kristjan V. Jonsson, LDSS (kristjanvj@gmail.com)
+// Copyright (C) 2015 Thomas Dreibholz (dreibh@simula.no)
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License version 3
@@ -30,7 +31,7 @@ HttpBrowser::HttpBrowser()
 HttpBrowser::~HttpBrowser()
 {
     // @todo Delete socket data structures
-    sockCollection.deleteSockets();
+    tcpSockCollection.deleteSockets();
 }
 
 void HttpBrowser::initialize(int stage)
@@ -70,16 +71,30 @@ void HttpBrowser::handleMessage(cMessage *msg)
         }
 
         // Locate the socket for the incoming message. One should definitely exist.
-        TCPSocket *socket = sockCollection.findSocketFor(msg);
-        if (socket == nullptr) {
-            // Handle errors. @todo error instead of warning?
-            EV_WARN << "No socket found for message " << msg->getName() << endl;
-            delete msg;
-            return;
+        if (!useSCTP) {
+            TCPSocket *tcpSocket = tcpSockCollection.findSocketFor(msg);
+            if (tcpSocket == nullptr) {
+                // Handle errors. @todo error instead of warning?
+                EV_WARN << "No socket found for message " << msg->getName() << endl;
+                delete msg;
+                return;
+            }
+            // Submit to the socket handler. Calls the TCPSocket::CallbackInterface methods.
+            // Message is deleted in the socket handler
+            tcpSocket->processMessage(msg);
         }
-        // Submit to the socket handler. Calls the TCPSocket::CallbackInterface methods.
-        // Message is deleted in the socket handler
-        socket->processMessage(msg);
+        else {
+            SCTPSocket *sctpSocket = sctpSockCollection.findSocketFor(msg);
+            if (sctpSocket == nullptr) {
+                // Handle errors. @todo error instead of warning?
+                EV_WARN << "No socket found for message " << msg->getName() << endl;
+                delete msg;
+                return;
+            }
+            // Submit to the socket handler. Calls the SCTPSocket::CallbackInterface methods.
+            // Message is deleted in the socket handler
+            sctpSocket->processMessage(msg);
+        }
     }
 }
 
@@ -160,10 +175,16 @@ void HttpBrowser::socketEstablished(int connId, void *yourPtr)
 
     // Get the socket and associated data structure.
     SockData *sockdata = (SockData *)yourPtr;
-    TCPSocket *socket = sockdata->socket;
+    TCPSocket *tcpSocket = sockdata->tcpSocket;
+    SCTPSocket *sctpSocket = sockdata->sctpSocket;
     if (sockdata->messageQueue.empty()) {
         EV_INFO << "No data to send on socket with connection id " << connId << ". Closing" << endl;
-        socket->close();
+        if (!useSCTP) {
+            tcpSocket->close();
+        }
+        else {
+            sctpSocket->close();
+        }
         return;
     }
 
@@ -171,12 +192,22 @@ void HttpBrowser::socketEstablished(int connId, void *yourPtr)
     EV_DEBUG << "Proceeding to send messages on socket " << connId << endl;
     while (!sockdata->messageQueue.empty()) {
         cMessage *msg = sockdata->messageQueue.back();
-        cPacket *pckt = check_and_cast<cPacket *>(msg);
+        SCTPSimpleMessage *pckt = check_and_cast<SCTPSimpleMessage *>(msg);
         sockdata->messageQueue.pop_back();
         EV_DEBUG << "Submitting request " << msg->getName() << " to socket " << connId << ". size is " << pckt->getByteLength() << " bytes" << endl;
-        socket->send(msg);
+        if (!useSCTP) {
+            tcpSocket->send(pckt);
+        }
+        else {
+            sctpSocket->send(pckt);
+        }
         sockdata->pending++;
     }
+}
+
+void HttpBrowser::socketEstablished(int assocId, void *yourPtr, unsigned long int buffer)
+{
+    socketEstablished(assocId, yourPtr);
 }
 
 void HttpBrowser::socketDataArrived(int connId, void *yourPtr, cPacket *msg, bool urgent)
@@ -187,15 +218,49 @@ void HttpBrowser::socketDataArrived(int connId, void *yourPtr, cPacket *msg, boo
         return;
     }
 
+    if (dynamic_cast<HttpFragmentMessage*>(msg) != nullptr) {
+        delete msg;
+        return;    // SCTP: wait for last fragment.
+    }
+
     SockData *sockdata = (SockData *)yourPtr;
-    TCPSocket *socket = sockdata->socket;
+    TCPSocket *tcpSocket = sockdata->tcpSocket;
+    SCTPSocket *sctpSocket = sockdata->sctpSocket;
     handleDataMessage(msg);
 
     if (--sockdata->pending == 0) {
         EV_DEBUG << "Received last expected reply on this socket. Issuing a close" << endl;
-        socket->close();
+        if (!useSCTP) {
+            tcpSocket->close();
+        }
+        else {
+            sctpSocket->close();
+        }
+
+        if (tcpSockCollection.size() + sctpSockCollection.size() == 1) {
+            ASSERT(sessionStartTime.dbl() >= 0.0);
+            const simtime_t completionTime = simTime();
+            recordScalar("Website Download Duration", completionTime - sessionStartTime);
+            sessionStartTime = -1.0;
+        }
     }
     // Message deleted in handler - do not delete here!
+}
+
+void HttpBrowser::socketDataNotificationArrived(int assocId, void *yourPtr, cPacket *msg)
+{
+    // SCTP data is available => tell SCTP to forward it!
+    const SCTPCommand* dataIndication = check_and_cast<const SCTPCommand*>(msg->getControlInfo());
+
+    SCTPSendInfo* command = new SCTPSendInfo("SendInfo");
+    command->setAssocId(dataIndication->getAssocId());
+    command->setSid(dataIndication->getSid());
+    command->setNumMsgs(dataIndication->getNumMsgs());
+
+    cPacket* cmsg = new cPacket("SCTP_C_RECEIVE");
+    cmsg->setKind(SCTP_C_RECEIVE);
+    cmsg->setControlInfo(command);
+    send(cmsg, "sctpOut");
 }
 
 void HttpBrowser::socketStatusArrived(int connId, void *yourPtr, TCPStatusInfo *status)
@@ -212,50 +277,79 @@ void HttpBrowser::socketPeerClosed(int connId, void *yourPtr)
         return;
     }
 
-    SockData *sockdata = (SockData *)yourPtr;
-    TCPSocket *socket = sockdata->socket;
+    if (!useSCTP) {
+        SockData *sockdata = (SockData *)yourPtr;
+        TCPSocket *tcpSocket = sockdata->tcpSocket;
 
-    // close the connection (if not already closed)
-    if (socket->getState() == TCPSocket::PEER_CLOSED) {
-        EV_INFO << "remote TCP closed, closing here as well. Connection id is " << connId << endl;
-        socket->close();
+        // close the connection (if not already closed)
+        if (tcpSocket->getState() == TCPSocket::PEER_CLOSED) {
+            EV_INFO << "remote TCP closed, closing here as well. Connection id is " << connId << endl;
+            tcpSocket->close();
+        }
+    }
+    else {
+        SockData *sockdata = (SockData *)yourPtr;
+        SCTPSocket *sctpSocket = sockdata->sctpSocket;
+
+        // close the connection (if not already closed)
+        if (sctpSocket->getState() == SCTPSocket::PEER_CLOSED) {
+            EV_INFO << "remote TCP closed, closing here as well. Connection id is " << connId << endl;
+            sctpSocket->close();
+        }
     }
 }
 
 void HttpBrowser::socketClosed(int connId, void *yourPtr)
 {
     EV_INFO << "Socket " << connId << " closed" << endl;
-
     if (yourPtr == nullptr) {
         EV_ERROR << "socketClosed failure. Null pointer" << endl;
         return;
     }
 
-    SockData *sockdata = (SockData *)yourPtr;
-    TCPSocket *socket = sockdata->socket;
-    sockCollection.removeSocket(socket);
-    delete socket;
+    // Clean-up
+    if (!useSCTP) {
+        SockData *sockdata = (SockData *)yourPtr;
+        TCPSocket *tcpSocket = sockdata->tcpSocket;
+        tcpSockCollection.removeSocket(tcpSocket);
+        delete tcpSocket;
+    }
+    else {
+        SockData *sockdata = (SockData *)yourPtr;
+        SCTPSocket *sctpSocket = sockdata->sctpSocket;
+        sctpSockCollection.removeSocket(sctpSocket);
+        delete sctpSocket;
+    }
 }
 
 void HttpBrowser::socketFailure(int connId, void *yourPtr, int code)
 {
     EV_WARN << "connection broken. Connection id " << connId << endl;
     numBroken++;
-
     if (yourPtr == nullptr) {
         EV_ERROR << "socketFailure failure. Null pointer" << endl;
         return;
     }
 
-    if (code == TCP_I_CONNECTION_RESET)
-        EV_WARN << "Connection reset!\n";
-    else if (code == TCP_I_CONNECTION_REFUSED)
-        EV_WARN << "Connection refused!\n";
-
-    SockData *sockdata = (SockData *)yourPtr;
-    TCPSocket *socket = sockdata->socket;
-    sockCollection.removeSocket(socket);
-    delete socket;
+    // Clean-up
+    if (!useSCTP) {
+        if (code == TCP_I_CONNECTION_RESET) {
+            EV_WARN << "Connection reset!\n";
+        }
+        else if (code == TCP_I_CONNECTION_REFUSED) {
+            EV_WARN << "Connection refused!\n";
+        }
+        SockData *sockdata = (SockData *)yourPtr;
+        TCPSocket *tcpSocket = sockdata->tcpSocket;
+        tcpSockCollection.removeSocket(tcpSocket);
+        delete tcpSocket;
+    }
+    else {
+        SockData *sockdata = (SockData *)yourPtr;
+        SCTPSocket *sctpSocket = sockdata->sctpSocket;
+        sctpSockCollection.removeSocket(sctpSocket);
+        delete sctpSocket;
+    }
 }
 
 void HttpBrowser::socketDeleted(int connId, void *yourPtr)
@@ -265,8 +359,14 @@ void HttpBrowser::socketDeleted(int connId, void *yourPtr)
     }
 
     SockData *sockdata = (SockData *)yourPtr;
-    TCPSocket *socket = sockdata->socket;
-    ASSERT(connId == socket->getConnectionId());
+    if (!useSCTP) {
+        TCPSocket *tcpSocket = sockdata->tcpSocket;
+        ASSERT(connId == tcpSocket->getConnectionId());
+    }
+    else {
+        SCTPSocket *sctpSocket = sockdata->sctpSocket;
+        ASSERT(connId == sctpSocket->getConnectionId());
+    }
     HttpRequestQueue& queue = sockdata->messageQueue;
     while (!queue.empty()) {
         HttpRequestMessage *msg = queue.back();
@@ -295,24 +395,45 @@ void HttpBrowser::submitToSocket(const char *moduleName, int connectPort, HttpRe
 
     EV_DEBUG << "Submitting to socket. Module: " << moduleName << ", port: " << connectPort << ". Total messages: " << queue.size() << endl;
 
-    // Create and initialize the socket
-    TCPSocket *socket = new TCPSocket();
-    socket->setDataTransferMode(TCP_TRANSFER_OBJECT);
-    socket->setOutputGate(gate("tcpOut"));
-    sockCollection.addSocket(socket);
+    if(sessionStartTime <= 0.0) {   // Start website download duration measurement
+       sessionStartTime = simTime();
+    }
 
-    // Initialize the associated data structure
-    SockData *sockdata = new SockData;
-    sockdata->messageQueue = HttpRequestQueue(queue);
-    sockdata->socket = socket;
-    sockdata->pending = 0;
-    socket->setCallbackObject(this, sockdata);
+    if (!useSCTP) {
+        // Create and initialize the socket
+        TCPSocket *tcpSocket = new TCPSocket();
+        tcpSocket->setDataTransferMode(TCP_TRANSFER_OBJECT);
+        tcpSocket->setOutputGate(gate("tcpOut"));
+        tcpSockCollection.addSocket(tcpSocket);
 
-    // Issue a connect to the socket for the specified module and port.
-    socket->connect(L3AddressResolver().resolve(moduleName), connectPort);
+        // Initialize the associated data structure
+        SockData *sockdata = new SockData;
+        sockdata->messageQueue = HttpRequestQueue(queue);
+        sockdata->tcpSocket = tcpSocket;
+        sockdata->pending = 0;
+        tcpSocket->setCallbackObject(this, sockdata);
+
+        // Issue a connect to the socket for the specified module and port.
+        tcpSocket->connect(L3AddressResolver().resolve(moduleName), connectPort);
+    }
+    else {
+        // Create and initialize the socket
+        SCTPSocket *sctpSocket = new SCTPSocket();
+        sctpSocket->setOutputGate(gate("sctpOut"));
+        sctpSockCollection.addSocket(sctpSocket);
+
+        // Initialize the associated data structure
+        SockData *sockdata = new SockData;
+        sockdata->messageQueue = HttpRequestQueue(queue);
+        sockdata->sctpSocket = sctpSocket;
+        sockdata->pending = 0;
+        sctpSocket->setCallbackObject(this, sockdata);
+
+        // Issue a connect to the socket for the specified module and port.
+        sctpSocket->connect(L3AddressResolver().resolve(moduleName), connectPort);
+    }
 }
 
 } // namespace httptools
 
 } // namespace inet
-

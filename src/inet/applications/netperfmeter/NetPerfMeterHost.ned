@@ -61,7 +61,7 @@ module NetPerfMeterHost extends NodeBase
             parameters:
                 @display("p=329,141");
         }
-        sctp: <sctpType> like ISCTP if (numNetPerfMeterApps > 0) {
+        sctp: <sctpType> like ISCTP {
             @display("p=527,141");
         }
 
@@ -79,6 +79,6 @@ module NetPerfMeterHost extends NodeBase
         tcp.ipIn <-- networkLayer.transportOut++ if (numNetPerfMeterApps > 0);
         udp.ipOut --> networkLayer.transportIn++ if (numNetPerfMeterApps > 0);
         udp.ipIn <-- networkLayer.transportOut++ if (numNetPerfMeterApps > 0);
-        sctp.to_ip --> networkLayer.transportIn++ if (numNetPerfMeterApps > 0);
-        networkLayer.transportOut++ --> sctp.from_ip if (numNetPerfMeterApps > 0);
+        sctp.to_ip --> networkLayer.transportIn++;
+        networkLayer.transportOut++ --> sctp.from_ip;
 }

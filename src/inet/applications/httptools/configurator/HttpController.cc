@@ -1,5 +1,6 @@
 //
 // Copyright (C) 2009 Kristjan V. Jonsson, LDSS (kristjanvj@gmail.com)
+// Copyright (C) 2015 Thomas Dreibholz (dreibh@simula.no)
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License version 3
@@ -270,22 +271,17 @@ int HttpController::getAnyServerInfo(char *wwwName, char *module, int& port)
     return 0;
 }
 
-cModule *HttpController::getTcpApp(std::string node)
+cModule *HttpController::getTcpApp(const char *node)
 {
-    int pos = node.find("[");
-    int rpos = node.rfind("]");
-    cModule *receiverModule = nullptr;
-    if (pos > -1 && rpos > -1) {
-        std::string id = node.substr(pos + 1, pos - rpos - 1);
-        std::string name = node.substr(0, pos);
-        int numid = atoi(id.c_str());
-        receiverModule = getSimulation()->getSystemModule()->getSubmodule(name.c_str(), numid);
-    }
-    else {
-        receiverModule = getSimulation()->getSystemModule()->getSubmodule(node.c_str());
-    }
+    cModule *receiverModule = getSimulation()->getModuleByPath(node);
+    ASSERT(receiverModule != nullptr);
 
-    return receiverModule->getSubmodule("tcpApp", 0);    // TODO: CHECK INDEX
+    cModule* module = receiverModule->getSubmodule("tcpApp", 0);    // TODO: CHECK INDEX
+    if (module == nullptr) {
+        // There is no tcpApp. If we are using SCTP, return the sctpApp instead.
+        module = receiverModule->getSubmodule("sctpApp", 0);    // TODO: CHECK INDEX
+    }
+    return module;
 }
 
 void HttpController::setSpecialStatus(const char *www, ServerStatus status, double p, double amortize)
