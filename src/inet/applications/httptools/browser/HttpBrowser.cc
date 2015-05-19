@@ -17,6 +17,8 @@
 //
 
 #include "inet/applications/httptools/browser/HttpBrowser.h"
+#include "inet/networklayer/contract/IInterfaceTable.h"
+#include "inet/common/ModuleAccess.h"
 
 namespace inet {
 
@@ -98,6 +100,47 @@ void HttpBrowser::handleMessage(cMessage *msg)
     }
 }
 
+void HttpBrowser::checkStartDownloadDurationMeasurement()
+{
+    if(sessionStartTime <= 0.0) {   // Start website download duration measurement
+       sessionStartTime = simTime();
+    }
+}
+
+void HttpBrowser::checkEndOfDownloadDurationMeasurement()
+{
+
+    if (tcpSockCollection.size() + sctpSockCollection.size() == 0) {
+        ASSERT(sessionStartTime.dbl() >= 0.0);
+        const simtime_t completionTime = simTime();
+        recordScalar("Website Download Duration", completionTime - sessionStartTime);
+        sessionStartTime = -1.0;
+    }
+}
+
+void HttpBrowser::appendRemoteInterface(char* szModuleName)
+{
+    if (!useSCTP)
+       return;
+    if (strcmp((const char*)par("primaryRemoteInterface"), "") == 0)
+       return;
+
+    // Add desired interface to server module name, to choose SCTP primary path
+    cModule *serverModule = getSimulation()->getModuleByPath(szModuleName);
+    ASSERT(serverModule != nullptr);
+    IInterfaceTable* ift = L3AddressResolver().interfaceTableOf(serverModule);
+    ASSERT(ift != nullptr);
+    for (int32 i = 0; i < ift->getNumInterfaces(); i++) {
+        if(strcmp(ift->getInterface(i)->getName(), (const char*)par("primaryRemoteInterface")) == 0) {
+            strcat(szModuleName, "%");
+            strcat(szModuleName, (const char*)par("primaryRemoteInterface"));
+            break;
+        }
+    }
+    EV_ERROR << "No interface " << (const char*)par("primaryRemoteInterface")
+             << " at server " << szModuleName << endl;
+}
+
 void HttpBrowser::sendRequestToServer(BrowseEvent be)
 {
     int connectPort;
@@ -107,6 +150,7 @@ void HttpBrowser::sendRequestToServer(BrowseEvent be)
         EV_ERROR << "Unable to get server info for URL " << be.wwwhost << endl;
         return;
     }
+    appendRemoteInterface(szModuleName);
 
     EV_DEBUG << "Sending request to server " << be.wwwhost << " (" << szModuleName << ") on port " << connectPort << endl;
     submitToSocket(szModuleName, connectPort, generatePageRequest(be.wwwhost, be.resourceName));
@@ -122,6 +166,7 @@ void HttpBrowser::sendRequestToServer(HttpRequestMessage *request)
         delete request;
         return;
     }
+    appendRemoteInterface(szModuleName);
 
     EV_DEBUG << "Sending request to server " << request->targetUrl() << " (" << szModuleName << ") on port " << connectPort << endl;
     submitToSocket(szModuleName, connectPort, request);
@@ -137,6 +182,7 @@ void HttpBrowser::sendRequestToRandomServer()
         EV_ERROR << "Unable to get a random server from controller" << endl;
         return;
     }
+    appendRemoteInterface(szModuleName);
 
     EV_DEBUG << "Sending request to random server " << szWWW << " (" << szModuleName << ") on port " << connectPort << endl;
     submitToSocket(szModuleName, connectPort, generateRandomPageRequest(szWWW));
@@ -156,6 +202,7 @@ void HttpBrowser::sendRequestsToServer(std::string www, HttpRequestQueue queue)
         }
         return;
     }
+    appendRemoteInterface(szModuleName);
 
     EV_DEBUG << "Sending requests to server " << www << " (" << szModuleName << ") on port " << connectPort
              << ". Total messages queued are " << queue.size() << endl;
@@ -236,13 +283,7 @@ void HttpBrowser::socketDataArrived(int connId, void *yourPtr, cPacket *msg, boo
         else {
             sctpSocket->close();
         }
-
-        if (tcpSockCollection.size() + sctpSockCollection.size() == 1) {
-            ASSERT(sessionStartTime.dbl() >= 0.0);
-            const simtime_t completionTime = simTime();
-            recordScalar("Website Download Duration", completionTime - sessionStartTime);
-            sessionStartTime = -1.0;
-        }
+        checkEndOfDownloadDurationMeasurement();
     }
     // Message deleted in handler - do not delete here!
 }
@@ -320,6 +361,7 @@ void HttpBrowser::socketClosed(int connId, void *yourPtr)
         sctpSockCollection.removeSocket(sctpSocket);
         delete sctpSocket;
     }
+    checkEndOfDownloadDurationMeasurement();
 }
 
 void HttpBrowser::socketFailure(int connId, void *yourPtr, int code)
@@ -350,6 +392,7 @@ void HttpBrowser::socketFailure(int connId, void *yourPtr, int code)
         sctpSockCollection.removeSocket(sctpSocket);
         delete sctpSocket;
     }
+    checkEndOfDownloadDurationMeasurement();
 }
 
 void HttpBrowser::socketDeleted(int connId, void *yourPtr)
@@ -395,9 +438,7 @@ void HttpBrowser::submitToSocket(const char *moduleName, int connectPort, HttpRe
 
     EV_DEBUG << "Submitting to socket. Module: " << moduleName << ", port: " << connectPort << ". Total messages: " << queue.size() << endl;
 
-    if(sessionStartTime <= 0.0) {   // Start website download duration measurement
-       sessionStartTime = simTime();
-    }
+    checkStartDownloadDurationMeasurement();
 
     if (!useSCTP) {
         // Create and initialize the socket

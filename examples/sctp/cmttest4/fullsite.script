@@ -1,5 +1,4 @@
-
 #
-# Browsing script file for the pair test scenario
+# Just download the whole website once.
 #
-60;www.test.example
+2;www.test.example

@@ -162,9 +162,15 @@ class INET_API HttpBrowser : public HttpBrowserBase,
      */
     void submitToSocket(const char *moduleName, int connectPort, HttpRequestQueue& queue);
 
+    void checkStartDownloadDurationMeasurement();
+    void checkEndOfDownloadDurationMeasurement();
+
   public:
     HttpBrowser();
     virtual ~HttpBrowser();
+    
+  private:
+    void appendRemoteInterface(char* szModuleName);
 };
 
 } // namespace httptools

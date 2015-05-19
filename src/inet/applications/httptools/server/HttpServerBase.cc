@@ -207,7 +207,7 @@ void HttpServerBase::handleMessage(cMessage *msg)
     updateDisplay();
 }
 
-SCTPSimpleMessage *HttpServerBase::handleReceivedMessage(cMessage *msg)
+HttpReplyMessage *HttpServerBase::handleReceivedMessage(cMessage *msg)
 {
     HttpRequestMessage *request = check_and_cast<HttpRequestMessage *>(msg);
     if (request == nullptr)
@@ -250,9 +250,13 @@ SCTPSimpleMessage *HttpServerBase::handleReceivedMessage(cMessage *msg)
 
     if (replymsg != nullptr) {
         if(useSCTP) {
+            char replyStr[res[1].size() + 16];
+            snprintf((char*)&replyStr, sizeof(replyStr), "[%s]...", res[1].c_str());
+            const int replyLength = strlen(replyStr);
+
             replymsg->setDataArraySize(replymsg->getByteLength());
             for (int i = 0; i < replymsg->getByteLength(); i++) {
-                  replymsg->setData(i, 'R');   // dummy data
+                replymsg->setData(i, replyStr[i % replyLength]);
             }
             replymsg->setDataLen(replymsg->getByteLength());
         }
@@ -386,6 +390,8 @@ HttpReplyMessage *HttpServerBase::generateErrorReply(HttpRequestMessage *request
 {
     char szErrStr[32];
     sprintf(szErrStr, "HTTP/1.1 %.3d %s", code, htmlErrFromCode(code).c_str());
+    const int szErrLength = strlen(szErrStr);
+
     HttpReplyMessage *replymsg = new HttpReplyMessage;
     replymsg->setName(szErrStr);
     replymsg->setHeading(szErrStr);
@@ -400,7 +406,7 @@ HttpReplyMessage *HttpServerBase::generateErrorReply(HttpRequestMessage *request
     if(useSCTP) {
         replymsg->setDataArraySize(replymsg->getByteLength());
         for (int i = 0; i < replymsg->getByteLength(); i++) {
-            replymsg->setData(i, 'E');   // dummy data
+            replymsg->setData(i, (i < szErrLength) ? szErrStr[i] : 0x00);
         }
         replymsg->setDataLen(replymsg->getByteLength());
     }
