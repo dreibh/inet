@@ -22,7 +22,7 @@ namespace inet {
 inline bool _isNetworkNode(cModule *mod)
 {
     cProperties *props = mod->getProperties();
-    return props && props->getAsBool("node");
+    return props && props->getAsBool("networkNode");
 }
 
 bool isNetworkNode(cModule *mod)
@@ -30,6 +30,7 @@ bool isNetworkNode(cModule *mod)
     return (mod != nullptr) ? _isNetworkNode(mod) : false;
 }
 
+/*
 static cModule *findSubmodRecursive(cModule *curmod, const char *name)
 {
     for (cModule::SubmoduleIterator i(curmod); !i.end(); i++) {
@@ -42,6 +43,7 @@ static cModule *findSubmodRecursive(cModule *curmod, const char *name)
     }
     return nullptr;
 }
+*/
 
 cModule *findModuleSomewhereUp(const char *name, cModule *from)
 {
@@ -64,7 +66,7 @@ cModule *getContainingNode(cModule *from)
 {
     cModule *curmod = findContainingNode(from);
     if (!curmod)
-        throw cRuntimeError("getContainingNode(): node module not found (it should have a property named node) for module '%s'", from ? from->getFullPath().c_str() : "<nullptr>");
+        throw cRuntimeError("getContainingNode(): node module not found (it should have a property named networkNode) for module '%s'", from ? from->getFullPath().c_str() : "<nullptr>");
     return curmod;
 }
 

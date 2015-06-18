@@ -58,7 +58,7 @@ void STPTester::handleMessage(cMessage *msg)
         scheduleAt(simTime() + checkTime, msg);
     }
     else {
-        opp_error("This module only handle selfmessages");
+        throw cRuntimeError("This module only handle selfmessages");
     }
 }
 
@@ -66,7 +66,7 @@ void STPTester::depthFirstSearch()
 {
     loop = false;
     numOfVisitedNodes = 0;
-    graph.extractByProperty("node");
+    graph.extractByProperty("networkNode");
     numOfNodes = graph.getNumNodes();
 
     for (int i = 0; i < graph.getNumNodes(); i++) {

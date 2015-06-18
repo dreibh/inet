@@ -47,7 +47,6 @@ using namespace ieee80211;
 
 namespace inetmanet {
 
-const int UDP_HEADER_BYTES = 8;
 typedef std::vector<IPv4Address> IPAddressVector;
 
 Define_Module(AODVUU);
@@ -492,7 +491,7 @@ void NS_CLASS handleMessage (cMessage *msg)
     struct in_addr dest_addr;
 
     if (is_init==false)
-        opp_error ("Aodv has not been initialized ");
+        throw cRuntimeError("Aodv has not been initialized ");
     if (msg==sendMessageEvent)
     {
         // timer event
@@ -553,7 +552,7 @@ void NS_CLASS handleMessage (cMessage *msg)
             else
             {
                 ipDgram = (IPv4Datagram*) control->decapsulate();
-                cPolymorphic * ctrl = ipDgram->removeControlInfo();
+                cObject * ctrl = ipDgram->removeControlInfo();
                 unsigned int ifindex = NS_IFINDEX;  /* Always use ns interface */
                 if (ctrl)
                 {
@@ -780,7 +779,7 @@ IPv4Datagram *NS_CLASS pkt_decapsulate(IPv4Datagram *p)
 void NS_CLASS scheduleNextEvent()
 {
     simtime_t timer;
-    simtime_t timeout = timer_age_queue();
+    simtime_t timeout = timer_age_queue(); (void)timeout; // UNUSED
 
     if (!aodvTimerMap.empty())
     {
@@ -1176,18 +1175,18 @@ int NS_CLASS ifindex2devindex(unsigned int ifindex)
 }
 
 
-void NS_CLASS processLinkBreak(const cPolymorphic *details)
+void NS_CLASS processLinkBreak(const cObject *details)
 {
     if (llfeedback)
     {
-        if (dynamic_cast<IPv4Datagram *>(const_cast<cPolymorphic*> (details)))
+        if (dynamic_cast<IPv4Datagram *>(const_cast<cObject*> (details)))
         {
-            IPv4Datagram  *dgram = static_cast<IPv4Datagram *>(const_cast<cPolymorphic*>(details));
+            IPv4Datagram  *dgram = static_cast<IPv4Datagram *>(const_cast<cObject*>(details));
             packetFailed(dgram);
         }
-        else if (dynamic_cast<Ieee80211DataFrame *>(const_cast<cPolymorphic*> (details)))
+        else if (dynamic_cast<Ieee80211DataFrame *>(const_cast<cObject*> (details)))
         {
-            Ieee80211DataFrame *frame = static_cast<Ieee80211DataFrame *>(const_cast<cPolymorphic*>(details));
+            Ieee80211DataFrame *frame = static_cast<Ieee80211DataFrame *>(const_cast<cObject*>(details));
             packetFailedMac(frame);
         }
     }

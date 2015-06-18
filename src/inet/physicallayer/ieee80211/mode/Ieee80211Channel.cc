@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2015 OpenSim Ltd.
+// Copyright (C) 2014 OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -15,19 +15,28 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-package inet.node.inet;
+#include "inet/physicallayer/ieee80211/mode/Ieee80211Channel.h"
 
-//
-// Contains the common interface for all node types in a network.
-//
-moduleinterface INode
+namespace inet {
+
+namespace physicallayer {
+
+Ieee80211Channel::Ieee80211Channel(const IIeee80211Band *band, int channelNumber) :
+    band(band),
+    channelNumber(channelNumber)
 {
-    parameters:
-        @display("bgb=,448");
-        @node;
-        @labels(node,ethernet-node,wireless-node);
-    gates:
-        input radioIn[numRadios] @directIn;
-        inout pppg[] @labels(PPPFrame-conn);
-        inout ethg[] @labels(EtherFrame-conn);
 }
+
+std::ostream& Ieee80211Channel::printToStream(std::ostream& stream, int level) const
+{
+    stream << "Ieee80211Channel";
+    if (level >= PRINT_LEVEL_TRACE)
+        stream << ", band = " << printObjectToString(band, level - 1)
+               << ", channelNumber = " << channelNumber;
+    return stream;
+}
+
+} // namespace physicallayer
+
+} // namespace inet
+

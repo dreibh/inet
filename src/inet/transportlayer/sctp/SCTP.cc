@@ -30,14 +30,13 @@
 
 #include "inet/transportlayer/contract/udp/UDPControlInfo_m.h"
 #include "inet/transportlayer/contract/udp/UDPSocket.h"
+#include "inet/transportlayer/contract/sctp/SCTPSocket.h"
 
 namespace inet {
 
 namespace sctp {
 
 Define_Module(SCTP);
-
-int32 SCTP::nextAssocId = 0;
 
 void SCTP::printInfoAssocMap()
 {
@@ -218,7 +217,7 @@ void SCTP::handleMessage(cMessage *msg)
                 delete sctpmsg;
             }
             else {
-                EV_INFO << "assoc " << assoc->assocId << "found\n";
+                EV_INFO << "assoc " << assoc->assocId << " found\n";
                 bool ret = assoc->processSCTPMessage(sctpmsg, srcAddr, destAddr);
                 if (!ret) {
                     EV_DEBUG << "SCTPMain:: removeAssociation \n";
@@ -295,7 +294,7 @@ void SCTP::sendAbortFromMain(SCTPMessage *sctpmsg, L3Address fromAddr, L3Address
 {
     SCTPMessage *msg = new SCTPMessage();
 
-    EV_DEBUG << "\n\nSCTPMain:sendABORT \n";
+    EV_DEBUG << "\n\nSCTP::sendAbortFromMain()\n";
 
     msg->setSrcPort(sctpmsg->getDestPort());
     msg->setDestPort(sctpmsg->getSrcPort());
@@ -730,7 +729,7 @@ void SCTP::addForkedAssociation(SCTPAssociation *assoc, SCTPAssociation *newAsso
     key.appGateIndex = assoc->appGateIndex;
     key.assocId = assoc->assocId;
     sctpAppAssocMap.erase(key);
-    key.assocId = assoc->assocId = getNewAssocId();
+    key.assocId = assoc->assocId = SCTPSocket::getNewAssocId();
     sctpAppAssocMap[key] = assoc;
 
     // ...and newAssoc will live on with the old assocId

@@ -147,7 +147,7 @@ void NetworkConfiguratorBase::extractTopology(Topology& topology, const unsigned
                          (linkNetworkID == 0) ||
                          (networkID == 0) ) {
                         topology.networkSet.insert(linkNetworkID);
-                    
+
                         interfacesSeen.insert(interfaceEntry);
                         if (isBridgeNode(node))
                             createInterfaceInfo(topology, node, nullptr, interfaceEntry);
