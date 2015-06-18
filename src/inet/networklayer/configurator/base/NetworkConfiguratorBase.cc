@@ -72,7 +72,7 @@ static bool nodeFilter(cModule* module, void* userData)
 {
     // ====== Check whether node qualifies for specified networkID ===========
     const NodeFilterParameters* parameters   = (const NodeFilterParameters*)userData;
-    cProperty*                  nodeProperty = module->getProperties()->get("node");
+    cProperty*                  nodeProperty = module->getProperties()->get("networkNode");
     if (nodeProperty) {
         // ====== Are nodes in arbitrary networks requested? ==================
         if (parameters->NetworkID == 0) {
