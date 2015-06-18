@@ -72,7 +72,7 @@ static bool nodeFilter(cModule* module, void* userData)
 {
     // ====== Check whether node qualifies for specified networkID ===========
     const NodeFilterParameters* parameters   = (const NodeFilterParameters*)userData;
-    cProperty*                  nodeProperty = module->getProperties()->get("node");
+    cProperty*                  nodeProperty = module->getProperties()->get("networkNode");
     if (nodeProperty) {
         // ====== Are nodes in arbitrary networks requested? ==================
         if (parameters->NetworkID == 0) {
@@ -147,7 +147,7 @@ void NetworkConfiguratorBase::extractTopology(Topology& topology, const unsigned
                          (linkNetworkID == 0) ||
                          (networkID == 0) ) {
                         topology.networkSet.insert(linkNetworkID);
-                    
+
                         interfacesSeen.insert(interfaceEntry);
                         if (isBridgeNode(node))
                             createInterfaceInfo(topology, node, nullptr, interfaceEntry);
