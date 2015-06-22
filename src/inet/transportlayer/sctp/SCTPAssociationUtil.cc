@@ -349,7 +349,7 @@ void SCTPAssociation::sendToIP(SCTPMessage *sctpmsg,
         //controlInfo->setSourceAddress();
         controlInfo->setDestinationAddress(dest);
         sctpmsg->setControlInfo(check_and_cast<cObject *>(controlInfo));
-        sctpMain->send(sctpmsg, "to_ip");
+        sctpMain->send_to_ip(sctpmsg);
 
         if (chunkType == HEARTBEAT) {
             SCTPPathVariables *path = getPath(dest);
@@ -381,7 +381,9 @@ void SCTPAssociation::sendIndicationToApp(const int32 code, const int32 value)
     SCTPCommand *indication = new SCTPCommand(indicationName(code));
     indication->setAssocId(assocId);
     indication->setLocalAddr(localAddr);
+    indication->setLocalPort(localPort);
     indication->setRemoteAddr(remoteAddr);
+    indication->setRemotePort(remotePort);
     msg->setControlInfo(indication);
     sctpMain->send(msg, "to_appl", appGateIndex);
 }
@@ -811,7 +813,7 @@ void SCTPAssociation::sendInitAck(SCTPInitChunk *initChunk)
         }
         initAckChunk->setHmacTypesArraySize(1);
         initAckChunk->setHmacTypes(0, 1);
-        length += initAckChunk->getChunkTypesArraySize() + 50;
+        length += initAckChunk->getChunkTypesArraySize() + 48;
     }
     uint32 unknownLen = initChunk->getUnrecognizedParametersArraySize();
     if (unknownLen > 0) {
