@@ -1,10 +1,29 @@
 Recent changes in the INET Framework
 ====================================
 
-INET-2.99.1 (May, 2015)
---------------------------
+INET-3.0.0 (Jun, 2015) - Stable
+-------------------------------
 
-This release is the next development snapshot of the upcoming INET-3.0 version.
+This release requires OMNeT++ 4.6 or later. There are numerous breaking changes
+since the latest stable version (2.6). Please read this file carefully and 
+see the ChangeLog files in the source for more details.
+
+Nodes:
+ - Modules that represent a "node" at network level should be tagged with
+   @networkNode property instead of @node. (The @node property name was
+   too generic.) The INode module interface was renamed to INetworkNode, too.
+
+Applications:
+ - The functionality of PingTestApp was merged into PingApp and PingTestApp 
+   was removed.
+
+Network Layer:
+ - Refactored IPv4/IPv6 options to use TLVOptions structure.
+
+INET-2.99.1 (May, 2015) - Development
+-------------------------------------
+
+This release is the last development snapshot of the upcoming INET-3.0 version.
 
 The highlights of this release are:
 
@@ -208,6 +227,7 @@ Physical layer:
  - Renamed radio control info classes to TransmissionRequest and ReceptionIndication.
  - Added Ieee80211TransmissionRequest with an optional IIeee80211Mode parameter
    to allow the mac module to determine the exact physical layer operational mode.
+ - Added CosineAntenna and ParabolicAntenna.
  - Added basic antenna array support to be used with 802.11 HT modes.
  - Added arrival parameter to computeReceptionPower. Added snir parameter to
    computeIsReceptionSuccessful. Added snir parameter to computeReceptionDecision.
@@ -226,8 +246,8 @@ Examples:
    packet-level, bit-level, and symbol-level simulations for model verification.
  - Added a work in progress Wireless tutorial in the tutorials/wireless folder.
 
-INET-2.99.0 (November 2014)
----------------------------
+INET-2.99.0 (November 2014) - Development
+-----------------------------------------
 
 This release is a snapshot of the development that has begun in early 2013, and
 will culminate in the release of INET-3.0. The code is work in progress, which
@@ -470,8 +490,8 @@ Directory reorganization:
  - applications/httptools/ has been split up to several subdirectories: browser/,
    server/, configurator/, common/.
 
-INET 2.6 (March 05, 2015)
--------------------------
+INET 2.6 (March 05, 2015) - Stable
+----------------------------------
 
 This release requires OMNeT++ 4.4 or later. It contains the following changes:
 
