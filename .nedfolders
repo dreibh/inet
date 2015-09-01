@@ -1,5 +1,6 @@
 examples
 src
+tutorials
 -inet.examples.emulation
 -inet.transportlayer.tcp_lwip
 -inet.applications.voipstream

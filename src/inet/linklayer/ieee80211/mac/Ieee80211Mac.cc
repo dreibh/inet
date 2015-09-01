@@ -36,7 +36,7 @@ namespace ieee80211 {
 Define_Module(Ieee80211Mac);
 
 // don't forget to keep synchronized the C++ enum and the runtime enum definition
-Register_Enum(inet::Ieee80211Mac,
+Register_Enum(inet::ieee80211::Ieee80211Mac::State,
         (Ieee80211Mac::IDLE,
          Ieee80211Mac::DEFER,
          Ieee80211Mac::WAITAIFS,
@@ -297,7 +297,7 @@ void Ieee80211Mac::initialize(int stage)
         timeStampLastMessageReceived = SIMTIME_ZERO;
 
         stateVector.setName("State");
-        stateVector.setEnum("inet::Ieee80211Mac");
+        stateVector.setEnum(opp_typename(typeid(Ieee80211Mac::State)));
         for (int i = 0; i < numCategories(); i++) {
             EdcaOutVector outVectors;
             std::stringstream os;
@@ -629,8 +629,8 @@ void Ieee80211Mac::handleUpperCommand(cMessage *msg)
         EV_DEBUG << "Passing on command " << msg->getName() << " to physical layer\n";
         if (pendingRadioConfigMsg != nullptr) {
             // merge contents of the old command into the new one, then delete it
-            ConfigureRadioCommand *oldConfigureCommand = check_and_cast<ConfigureRadioCommand *>(pendingRadioConfigMsg->getControlInfo());
-            ConfigureRadioCommand *newConfigureCommand = check_and_cast<ConfigureRadioCommand *>(msg->getControlInfo());
+            Ieee80211ConfigureRadioCommand *oldConfigureCommand = check_and_cast<Ieee80211ConfigureRadioCommand *>(pendingRadioConfigMsg->getControlInfo());
+            Ieee80211ConfigureRadioCommand *newConfigureCommand = check_and_cast<Ieee80211ConfigureRadioCommand *>(msg->getControlInfo());
             if (newConfigureCommand->getChannelNumber() == -1 && oldConfigureCommand->getChannelNumber() != -1)
                 newConfigureCommand->setChannelNumber(oldConfigureCommand->getChannelNumber());
             if (isNaN(newConfigureCommand->getBitrate().get()) && !isNaN(oldConfigureCommand->getBitrate().get()))
@@ -2482,8 +2482,7 @@ const IIeee80211Mode *Ieee80211Mac::getControlAnswerMode(const IIeee80211Mode *r
      * TODO: Note that we're ignoring the last sentence for now, because
      * there is not yet any manipulation here of PHY options.
      */
-    bool found = false;
-    const IIeee80211Mode *bestMode;
+    const IIeee80211Mode *bestMode = nullptr;
     const IIeee80211Mode *mode = modeSet->getSlowestMode();
     while (mode != nullptr) {
         /* If the rate:
@@ -2496,7 +2495,7 @@ const IIeee80211Mode *Ieee80211Mac::getControlAnswerMode(const IIeee80211Mode *r
          * ...then it's our best choice so far.
          */
         if (modeSet->getIsMandatory(mode) &&
-            (!found || mode->getDataMode()->getGrossBitrate() > bestMode->getDataMode()->getGrossBitrate()) &&
+            (!bestMode || mode->getDataMode()->getGrossBitrate() > bestMode->getDataMode()->getGrossBitrate()) &&
             mode->getDataMode()->getGrossBitrate() <= reqMode->getDataMode()->getGrossBitrate() &&
             // TODO: same modulation class
             typeid(*mode) == typeid(*bestMode))
@@ -2506,7 +2505,6 @@ const IIeee80211Mode *Ieee80211Mac::getControlAnswerMode(const IIeee80211Mode *r
             // rate, but we need to continue and consider all the
             // mandatory rates before we can be sure we've got the right
             // one.
-            found = true;
         }
     }
 
@@ -2520,7 +2518,7 @@ const IIeee80211Mode *Ieee80211Mac::getControlAnswerMode(const IIeee80211Mode *r
      * Either way, it is serious - we can either disobey the standard or
      * fail, and I have chosen to do the latter...
      */
-    if (!found) {
+    if (!bestMode) {
         throw cRuntimeError("Can't find response rate for reqMode. Check standard and selected rates match.");
     }
 

@@ -1,5 +1,9 @@
 ====== inet-3.x ======
 
+2015-06-22  ------ inet-3.0.0 released ------
+
+2015-05-13  ------ inet-2.99.1 released ------
+
 2015-03-16  Zoltan Bojthe
 
     EtherMAC accepts raw packets from network.
@@ -7,8 +11,6 @@
 2015-03-13  Zoltan Bojthe
 
     EtherMACFullDuplex accepts raw packets from network.
-
-2015-04-22  ------ inet-2.99.1 released ------
 
 2015-02-05  Zoltan Bojthe
 

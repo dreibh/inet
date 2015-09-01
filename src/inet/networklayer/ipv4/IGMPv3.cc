@@ -16,10 +16,8 @@
 
 /**
  * @file IGMPv3.cc
- * @author Adam Malik(mailto:towdie13@gmail.com), Vladimir Vesely (mailto:ivesely@fit.vutbr.cz)
+ * @author Adam Malik(towdie13@gmail.com), Vladimir Vesely (ivesely@fit.vutbr.cz), Tamas Borbely (tomi@omnetpp.org)
  * @date 12.5.2013
- * @brief
- * @detail
  */
 
 #include "inet/networklayer/ipv4/IGMPv3.h"
@@ -1217,10 +1215,12 @@ void IGMPv3::processReport(IGMPv3Report *msg)
                     }
 
                     // Delete (X-A) Delete (Y-A)
-                    for (auto it = groupData->sources.begin(); it != groupData->sources.end(); ++it) {
+                    for (auto it = groupData->sources.begin(); it != groupData->sources.end(); ) {
+                        auto rec = it->first;
+                        ++it; // let's advance the iterator now because the deleteSourcerecord call will invalidate it and we wont be able to increment it after that
                         if (find(receivedSources.begin(), receivedSources.end(), it->first) == receivedSources.end()) {
-                            EV_DETAIL << "Deleting source record of '" << it->first << "'.\n";
-                            groupData->deleteSourceRecord(it->first);
+                            EV_DETAIL << "Deleting source record of '" << rec << "'.\n";
+                            groupData->deleteSourceRecord(rec);
                         }
                     }
 

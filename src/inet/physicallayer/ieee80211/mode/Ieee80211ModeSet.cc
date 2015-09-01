@@ -39,16 +39,6 @@ const DelayedInitializer<std::vector<Ieee80211ModeSet>> Ieee80211ModeSet::modeSe
         { false, &Ieee80211OFDMCompliantModes::ofdmMode48Mbps },
         { false, &Ieee80211OFDMCompliantModes::ofdmMode54Mbps },
     }),
-    Ieee80211ModeSet('a', {
-        { true, &Ieee80211OFDMCompliantModes::ofdmMode6MbpsCS20MHz },
-        { false, &Ieee80211OFDMCompliantModes::ofdmMode9MbpsCS20MHz },
-        { true, &Ieee80211OFDMCompliantModes::ofdmMode12MbpsCS20MHz },
-        { false, &Ieee80211OFDMCompliantModes::ofdmMode18MbpsCS20MHz },
-        { true, &Ieee80211OFDMCompliantModes::ofdmMode24MbpsCS20MHz },
-        { false, &Ieee80211OFDMCompliantModes::ofdmMode36Mbps },
-        { false, &Ieee80211OFDMCompliantModes::ofdmMode48Mbps },
-        { false, &Ieee80211OFDMCompliantModes::ofdmMode54Mbps },
-    }),
     Ieee80211ModeSet('b', {
         { true, &Ieee80211DsssCompliantModes::dsssMode1Mbps },
         { true, &Ieee80211DsssCompliantModes::dsssMode2Mbps },
@@ -151,7 +141,7 @@ Ieee80211ModeSet::Ieee80211ModeSet(char name, const std::vector<Entry> entries) 
     entries(entries)
 {
     std::vector<Entry> *nonConstEntries = const_cast<std::vector<Entry> *>(&this->entries);
-    std::sort(nonConstEntries->begin(), nonConstEntries->end(), EntryNetBitrateComparator());
+    std::stable_sort(nonConstEntries->begin(), nonConstEntries->end(), EntryNetBitrateComparator());
 }
 
 int Ieee80211ModeSet::findModeIndex(const IIeee80211Mode *mode) const
