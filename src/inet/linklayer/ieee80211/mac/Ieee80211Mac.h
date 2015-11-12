@@ -28,7 +28,6 @@
 #include "inet/common/INETDefs.h"
 #include "inet/common/FSMA.h"
 #include "inet/common/INETMath.h"
-#include "inet/common/queue/IPassiveQueue.h"
 #include "inet/common/lifecycle/ILifecycle.h"
 #include "inet/physicallayer/contract/packetlevel/IRadio.h"
 #include "inet/physicallayer/ieee80211/mode/IIeee80211Mode.h"
@@ -362,9 +361,6 @@ class INET_API Ieee80211Mac : public MACProtocolBase
     simtime_t lastTimeDelete;
     Ieee80211ASFTupleList asfTuplesList;
 
-    /** Passive queue module to request messages from */
-    IPassiveQueue *queueModule = nullptr;
-
     /**
      * The last change channel message received and not yet sent to the physical layer, or nullptr.
      * The message will be sent down when the state goes to IDLE or DEFER next time.
@@ -445,7 +441,6 @@ class INET_API Ieee80211Mac : public MACProtocolBase
     virtual int numInitStages() const override { return NUM_INIT_STAGES; }
     virtual void initialize(int) override;
     virtual InterfaceEntry *createInterfaceEntry() override;
-    virtual void initializeQueueModule();
     virtual void finish() override;
     virtual void configureAutoBitRate();
     virtual void initWatches();
@@ -571,8 +566,8 @@ class INET_API Ieee80211Mac : public MACProtocolBase
     virtual void finishCurrentTransmission();
     virtual void giveUpCurrentTransmission();
     virtual void retryCurrentTransmission();
-    virtual bool transmissionQueueEmpty();
-    virtual unsigned int transmissionQueueSize();
+    virtual bool transmissionQueuesEmpty();
+    virtual unsigned int getTotalQueueLength();
     virtual void flushQueue();
     virtual void clearQueue();
 
@@ -684,7 +679,7 @@ class INET_API Ieee80211Mac : public MACProtocolBase
 
   public:
     virtual State getState() { return static_cast<State>(fsm.getState()); }
-    virtual unsigned int getQueueSize() { return transmissionQueueSize(); }
+    virtual unsigned int getQueueSize() { return getTotalQueueLength(); }
 };
 
 } // namespace ieee80211

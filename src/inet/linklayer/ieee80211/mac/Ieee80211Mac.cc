@@ -187,10 +187,6 @@ void Ieee80211Mac::initialize(int stage)
             }
         }
 
-        ST = par("slotTime");    //added by sorin
-        if (ST == -1)
-            ST = 20e-6; //20us
-
         duplicateDetect = par("duplicateDetectionFilter");
         purgeOldTuples = par("purgeOldTuples");
         duplicateTimeOut = par("duplicateTimeOut");
@@ -213,6 +209,10 @@ void Ieee80211Mac::initialize(int stage)
             controlFrameMode = modeSet->getSlowestMode();
         else
             controlFrameMode = modeSet->getMode(bps(controlBitRate));
+
+        ST = par("slotTime");
+        if (ST == -1)
+            ST = dataFrameMode->getSlotTime();
 
         EV_DEBUG << " slotTime=" << getSlotTime() * 1e6 << "us DIFS=" << getDIFS() * 1e6 << "us";
 
@@ -246,9 +246,6 @@ void Ieee80211Mac::initialize(int stage)
         endTimeout = new cMessage("Timeout");
         endReserve = new cMessage("Reserve");
         mediumStateChange = new cMessage("MediumStateChange");
-
-        // obtain pointer to external queue
-        initializeQueueModule();    //FIXME STAGE: this should be in L2 initialization!!!!
 
         // state variables
         fsm.setName("Ieee80211Mac State Machine");
@@ -466,20 +463,6 @@ InterfaceEntry *Ieee80211Mac::createInterfaceEntry()
     return e;
 }
 
-void Ieee80211Mac::initializeQueueModule()
-{
-    // use of external queue module is optional -- find it if there's one specified
-    if (par("queueModule").stringValue()[0]) {
-        cModule *module = getModuleFromPar<cModule>(par("queueModule"), this);
-        queueModule = check_and_cast<IPassiveQueue *>(module);
-
-        EV_DEBUG << "Requesting first two frames from queue module\n";
-        queueModule->requestPacket();
-        // needed for backoff: mandatory if next message is already present
-        queueModule->requestPacket();
-    }
-}
-
 /****************************************************************
  * Message handling functions.
  */
@@ -538,12 +521,6 @@ void Ieee80211Mac::handleSelfMessage(cMessage *msg)
 
 void Ieee80211Mac::handleUpperPacket(cPacket *msg)
 {
-    if (queueModule && numCategories() > 1 && (int)transmissionQueueSize() < maxQueueSize) {
-        // the module are continuously asking for packets, except if the queue is full
-        EV_DEBUG << "requesting another frame from queue module\n";
-        queueModule->requestPacket();
-    }
-
     // check if it's a command from the mgmt layer
     if (msg->getBitLength() == 0 && msg->getKind() != 0) {
         handleUpperCommand(msg);
@@ -580,7 +557,7 @@ int Ieee80211Mac::mappingAccessCategory(Ieee80211DataOrMgmtFrame *frame)
     currentAC = classifier ? classifier->classifyPacket(frame) : 0;
 
     // check for queue overflow
-    if (isDataFrame && maxQueueSize && (int)transmissionQueueSize() >= maxQueueSize) {
+    if (isDataFrame && maxQueueSize > 0 && (int)transmissionQueue()->size() >= maxQueueSize) {
         EV_WARN << "message " << frame << " received from higher layer but AC queue is full, dropping message\n";
         numDropped()++;
         delete frame;
@@ -838,7 +815,7 @@ void Ieee80211Mac::handleWithFSM(cMessage *msg)
                     invalidateBackoffPeriod();
                     );
             FSMA_No_Event_Transition(Immediate - Data - Ready,
-                    !transmissionQueueEmpty(),
+                    !transmissionQueuesEmpty(),
                     DEFER,
                     );
             FSMA_Event_Transition(Receive,
@@ -909,7 +886,7 @@ void Ieee80211Mac::handleWithFSM(cMessage *msg)
                     );
             // end the difs and no other packet has been received
             FSMA_Event_Transition(DIFS - Over,
-                    msg == endDIFS && transmissionQueueEmpty(),
+                    msg == endDIFS && transmissionQueuesEmpty(),
                     BACKOFF,
                     currentAC = numCategories() - 1;
                     if (isInvalidBackoffPeriod())
@@ -1024,7 +1001,7 @@ void Ieee80211Mac::handleWithFSM(cMessage *msg)
                     cancelBackoffPeriod();
                     );
             FSMA_Event_Transition(Backoff - Idle,
-                    isBackoffMsg(msg) && transmissionQueueEmpty(),
+                    isBackoffMsg(msg) && transmissionQueuesEmpty(),
                     IDLE,
                     resetStateVariables();
                     );
@@ -1968,19 +1945,6 @@ void Ieee80211Mac::popTransmissionQueue()
     Ieee80211Frame *temp = dynamic_cast<Ieee80211Frame *>(transmissionQueue()->front());
     ASSERT(!transmissionQueue()->empty());
     transmissionQueue()->pop_front();
-    if (queueModule) {
-        if (numCategories() == 1) {
-            // the module are continuously asking for packets
-            EV_DEBUG << "requesting another frame from queue module\n";
-            queueModule->requestPacket();
-        }
-        else if (numCategories() > 1 && (int)transmissionQueueSize() == maxQueueSize - 1) {
-            // Now exist a empty frame space
-            // the module are continuously asking for packets
-            EV_DEBUG << "requesting another frame from queue module\n";
-            queueModule->requestPacket();
-        }
-    }
     delete temp;
 }
 
@@ -2060,7 +2024,7 @@ const char *Ieee80211Mac::modeName(int mode)
 #undef CASE
 }
 
-bool Ieee80211Mac::transmissionQueueEmpty()
+bool Ieee80211Mac::transmissionQueuesEmpty()
 {
     for (int i = 0; i < numCategories(); i++)
         if (!transmissionQueue(i)->empty())
@@ -2069,7 +2033,7 @@ bool Ieee80211Mac::transmissionQueueEmpty()
     return true;
 }
 
-unsigned int Ieee80211Mac::transmissionQueueSize()
+unsigned int Ieee80211Mac::getTotalQueueLength()
 {
     unsigned int totalSize = 0;
     for (int i = 0; i < numCategories(); i++)
@@ -2079,15 +2043,6 @@ unsigned int Ieee80211Mac::transmissionQueueSize()
 
 void Ieee80211Mac::flushQueue()
 {
-    if (queueModule) {
-        while (!queueModule->isEmpty()) {
-            cMessage *msg = queueModule->pop();
-            //TODO emit(dropPkIfaceDownSignal, msg); -- 'pkDropped' signals are missing in this module!
-            delete msg;
-        }
-        queueModule->clear();    // clear request count
-    }
-
     for (int i = 0; i < numCategories(); i++) {
         while (!transmissionQueue(i)->empty()) {
             cMessage *msg = transmissionQueue(i)->front();
@@ -2100,10 +2055,6 @@ void Ieee80211Mac::flushQueue()
 
 void Ieee80211Mac::clearQueue()
 {
-    if (queueModule) {
-        queueModule->clear();    // clear request count
-    }
-
     for (int i = 0; i < numCategories(); i++) {
         while (!transmissionQueue(i)->empty()) {
             cMessage *msg = transmissionQueue(i)->front();
@@ -2634,10 +2585,9 @@ double Ieee80211Mac::controlFrameTxTime(int bits)
 bool Ieee80211Mac::handleNodeStart(IDoneCallback *doneCallback)
 {
     if (!doneCallback)
-        return true; // do nothing when called from initialize() //FIXME It's a hack, should remove the initializeQueueModule() and setRadioMode() calls from initialize()
+        return true; // do nothing when called from initialize()
 
     bool ret = MACProtocolBase::handleNodeStart(doneCallback);
-    initializeQueueModule();
     radio->setRadioMode(IRadio::RADIO_MODE_RECEIVER);
     return ret;
 }
