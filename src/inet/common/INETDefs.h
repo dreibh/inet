@@ -18,6 +18,9 @@
 #ifndef __INET_INETDEFS_H
 #define __INET_INETDEFS_H
 
+// feature defines generated based on the actual feature enablement
+#include "inet/features.h"
+
 //
 // General definitions.
 //
@@ -41,8 +44,8 @@ using namespace omnetpp;
 #  endif
 #endif
 
-#define INET_VERSION  0x0301
-#define INET_PATCH_LEVEL 0x01
+#define INET_VERSION  0x0302
+#define INET_PATCH_LEVEL 0x03
 
 #if defined(INET_EXPORT)
 #  define INET_API    OPP_DLLEXPORT

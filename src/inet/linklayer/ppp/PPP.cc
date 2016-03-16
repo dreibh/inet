@@ -142,9 +142,9 @@ InterfaceEntry *PPP::createInterfaceEntry()
     return e;
 }
 
-void PPP::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void PPP::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
-    MACBase::receiveSignal(source, signalID, obj);
+    MACBase::receiveSignal(source, signalID, obj DETAILS_ARG_NAME);
 
     if (signalID != POST_MODEL_CHANGE)
         return;
@@ -373,11 +373,7 @@ void PPP::displayIdle()
 
 void PPP::updateDisplayString()
 {
-    if (getEnvir()->isDisabled()) {
-        // speed up things
-        getDisplayString().setTagArg("t", 0, "");
-    }
-    else if (datarateChannel != nullptr) {
+    if (datarateChannel != nullptr) {
         char datarateText[40];
 
         double datarate = datarateChannel->getNominalDatarate();
@@ -459,4 +455,3 @@ void PPP::clearQueue()
 }
 
 } // namespace inet
-

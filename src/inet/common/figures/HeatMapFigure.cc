@@ -19,12 +19,16 @@
 
 namespace inet {
 
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
+#if OMNETPP_VERSION >= 0x500
 HeatMapFigure::HeatMapFigure(int size, const char *name) :
     cPixmapFigure(name)
 {
     setPixmap(cFigure::Pixmap(size, size));
+#if OMNETPP_BUILDNUM >= 1006
+    fillPixmap(fromColor, 0);
+#else
     fill(fromColor, 0);
+#endif
 }
 
 double HeatMapFigure::getHeat(int x, int y)

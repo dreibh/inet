@@ -1,5 +1,13 @@
 ====== inet-3.x ======
 
+2016-03-16  ------ inet-3.2.3 released ------
+
+2016-03-11  ------ inet-3.2.2 released ------
+
+2016-01-21  ------ inet-3.2.1 released ------
+
+2015-12-16  ------ inet-3.2.0 released ------
+
 2015-10-26  ------ inet-3.1.1 released ------
 
 2015-10-15  ------ inet-3.1.0 released ------
@@ -88,8 +96,6 @@
 	RelayUnit.
 
 	MACAddressTableAccess: MACAddressTable access name changed to macTable.
-
------------ lines above this marker have been added from git log -----------
 
 2013-11-07  Benjamin Seregi
 

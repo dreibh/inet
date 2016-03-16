@@ -13,6 +13,7 @@ src/Makefile.vc
 /examples/*/results/
 /examples/*/*/results/
 /examples/*/*/*/results/
+/examples/*/cache/*
 /tests/*/work/
 /tests/*/*/work/
 /tests/*/results*/
@@ -24,6 +25,10 @@ src/Makefile.vc
 *.vec
 *.vci
 .buildlog*
+# local files not to be committed
+.oppfeaturestate
+.nedexclusions
+src/inet/features.h
 # ignore binary files
 out/
 *.so
@@ -37,6 +42,7 @@ out/
 *.pdb
 *.idb
 *.manifest
+.qtenv.ini
 .tkenvrc
 .tkenvlog
 .cmdenv-log

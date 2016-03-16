@@ -17,7 +17,7 @@
 
 #include "inet/physicallayer/ieee80211/bitlevel/Ieee80211LayeredOFDMReceiver.h"
 #include "inet/physicallayer/contract/bitlevel/ISymbol.h"
-#include "inet/physicallayer/common/bitlevel/LayeredReceptionDecision.h"
+#include "inet/physicallayer/common/bitlevel/LayeredReceptionResult.h"
 #include "inet/physicallayer/common/bitlevel/LayeredReception.h"
 #include "inet/physicallayer/common/bitlevel/SignalSymbolModel.h"
 #include "inet/physicallayer/common/bitlevel/SignalSampleModel.h"
@@ -362,10 +362,10 @@ const Ieee80211OFDMMode *Ieee80211LayeredOFDMReceiver::computeMode(Hz bandwidth)
     const Ieee80211OFDMDemodulatorModule *ofdmDataDemodulatorModule = check_and_cast<const Ieee80211OFDMDemodulatorModule *>(dataDemodulator);
     const Ieee80211OFDMSignalMode *signalMode = new Ieee80211OFDMSignalMode(ofdmSignalDecoderModule->getCode(), ofdmSignalDemodulatorModule->getModulation(), channelSpacing, bandwidth, 0);
     const Ieee80211OFDMDataMode *dataMode = new Ieee80211OFDMDataMode(ofdmDataDecoderModule->getCode(), ofdmDataDemodulatorModule->getModulation(), channelSpacing, bandwidth);
-    return new Ieee80211OFDMMode(new Ieee80211OFDMPreambleMode(channelSpacing), signalMode, dataMode, channelSpacing, bandwidth);
+    return new Ieee80211OFDMMode("", new Ieee80211OFDMPreambleMode(channelSpacing), signalMode, dataMode, channelSpacing, bandwidth);
 }
 
-const IReceptionDecision *Ieee80211LayeredOFDMReceiver::computeReceptionDecision(const IListening *listening, const IReception *reception, const IInterference *interference, const ISNIR *snir) const
+const IReceptionResult *Ieee80211LayeredOFDMReceiver::computeReceptionResult(const IListening *listening, const IReception *reception, const IInterference *interference, const ISNIR *snir) const
 {
     const LayeredTransmission *transmission = dynamic_cast<const LayeredTransmission *>(reception->getTransmission());
     const IReceptionAnalogModel *analogModel = createAnalogModel(transmission, snir);
@@ -407,7 +407,8 @@ const IReceptionDecision *Ieee80211LayeredOFDMReceiver::computeReceptionDecision
     ReceptionIndication *receptionIndication = new ReceptionIndication();
     receptionIndication->setMinSNIR(snir->getMin());
     receptionIndication->setPacketErrorRate(packetModel->getPER());
-    return new LayeredReceptionDecision(reception, receptionIndication, packetModel, bitModel, symbolModel, sampleModel, analogModel, true, true, packetModel->isPacketErrorless());
+// TODO: true, true, packetModel->isPacketErrorless()
+    return new LayeredReceptionResult(reception, new std::vector<const IReceptionDecision *>(), receptionIndication, packetModel, bitModel, symbolModel, sampleModel, analogModel);
 }
 
 const IListening *Ieee80211LayeredOFDMReceiver::createListening(const IRadio *radio, const simtime_t startTime, const simtime_t endTime, const Coord startPosition, const Coord endPosition) const
@@ -433,7 +434,7 @@ const IListeningDecision *Ieee80211LayeredOFDMReceiver::computeListeningDecision
 
 // TODO: this is not purely functional, see interface comment
 // TODO: copy
-bool Ieee80211LayeredOFDMReceiver::computeIsReceptionPossible(const IListening *listening, const IReception *reception) const
+bool Ieee80211LayeredOFDMReceiver::computeIsReceptionPossible(const IListening *listening, const IReception *reception, IRadioSignal::SignalPart part) const
 {
     const BandListening *bandListening = check_and_cast<const BandListening *>(listening);
     const LayeredReception *scalarReception = check_and_cast<const LayeredReception *>(reception);
@@ -455,10 +456,6 @@ bool Ieee80211LayeredOFDMReceiver::computeIsReceptionPossible(const IListening *
 Ieee80211LayeredOFDMReceiver::~Ieee80211LayeredOFDMReceiver()
 {
     if (!isCompliant) {
-        delete mode->getDataMode()->getModulation();
-        delete mode->getDataMode()->getCode();
-        delete mode->getSignalMode()->getModulation();
-        delete mode->getSignalMode()->getCode();
         delete mode->getPreambleMode();
         delete mode->getSignalMode();
         delete mode->getDataMode();

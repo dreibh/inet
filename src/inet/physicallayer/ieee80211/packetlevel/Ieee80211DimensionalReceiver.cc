@@ -18,11 +18,8 @@
 #include "inet/physicallayer/base/packetlevel/NarrowbandTransmissionBase.h"
 #include "inet/physicallayer/ieee80211/packetlevel/Ieee80211DimensionalReceiver.h"
 #include "inet/physicallayer/ieee80211/packetlevel/Ieee80211DimensionalTransmission.h"
-#include "inet/linklayer/ieee80211/mac/Ieee80211Consts.h"
 
 namespace inet {
-
-using namespace ieee80211;
 
 namespace physicallayer {
 
@@ -39,10 +36,10 @@ std::ostream& Ieee80211DimensionalReceiver::printToStream(std::ostream& stream, 
     return Ieee80211ReceiverBase::printToStream(stream, level);
 }
 
-bool Ieee80211DimensionalReceiver::computeIsReceptionPossible(const ITransmission *transmission) const
+bool Ieee80211DimensionalReceiver::computeIsReceptionPossible(const IListening *listening, const ITransmission *transmission) const
 {
     const Ieee80211DimensionalTransmission *ieee80211Transmission = check_and_cast<const Ieee80211DimensionalTransmission *>(transmission);
-    return NarrowbandReceiverBase::computeIsReceptionPossible(transmission) && modeSet->containsMode(ieee80211Transmission->getMode());
+    return NarrowbandReceiverBase::computeIsReceptionPossible(listening, transmission) && modeSet->containsMode(ieee80211Transmission->getMode());
 }
 
 } // namespace physicallayer

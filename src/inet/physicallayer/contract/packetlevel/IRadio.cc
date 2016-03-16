@@ -27,30 +27,31 @@ simsignal_t IRadio::radioModeChangedSignal = cComponent::registerSignal("radioMo
 simsignal_t IRadio::listeningChangedSignal = cComponent::registerSignal("listeningChanged");
 simsignal_t IRadio::receptionStateChangedSignal = cComponent::registerSignal("receptionStateChanged");
 simsignal_t IRadio::transmissionStateChangedSignal = cComponent::registerSignal("transmissionStateChanged");
+simsignal_t IRadio::receivedSignalPartChangedSignal = cComponent::registerSignal("receivedSignalPartChanged");
+simsignal_t IRadio::transmittedSignalPartChangedSignal = cComponent::registerSignal("transmittedSignalPartChanged");
 
 cEnum *IRadio::radioModeEnum = nullptr;
 cEnum *IRadio::receptionStateEnum = nullptr;
 cEnum *IRadio::transmissionStateEnum = nullptr;
 
 Register_Enum(inet::physicallayer::IRadio::RadioMode,
-        (IRadio::RADIO_MODE_OFF,
-         IRadio::RADIO_MODE_SLEEP,
-         IRadio::RADIO_MODE_RECEIVER,
-         IRadio::RADIO_MODE_TRANSMITTER,
-         IRadio::RADIO_MODE_TRANSCEIVER,
-         IRadio::RADIO_MODE_SWITCHING));
+    (IRadio::RADIO_MODE_OFF,
+     IRadio::RADIO_MODE_SLEEP,
+     IRadio::RADIO_MODE_RECEIVER,
+     IRadio::RADIO_MODE_TRANSMITTER,
+     IRadio::RADIO_MODE_TRANSCEIVER,
+     IRadio::RADIO_MODE_SWITCHING));
 
 Register_Enum(inet::physicallayer::IRadio::ReceptionState,
-        (IRadio::RECEPTION_STATE_UNDEFINED,
-         IRadio::RECEPTION_STATE_IDLE,
-         IRadio::RECEPTION_STATE_BUSY,
-         IRadio::RECEPTION_STATE_SYNCHRONIZING,
-         IRadio::RECEPTION_STATE_RECEIVING));
+    (IRadio::RECEPTION_STATE_UNDEFINED,
+     IRadio::RECEPTION_STATE_IDLE,
+     IRadio::RECEPTION_STATE_BUSY,
+     IRadio::RECEPTION_STATE_RECEIVING));
 
 Register_Enum(inet::physicallayer::IRadio::TransmissionState,
-        (IRadio::TRANSMISSION_STATE_UNDEFINED,
-         IRadio::TRANSMISSION_STATE_IDLE,
-         IRadio::TRANSMISSION_STATE_TRANSMITTING));
+    (IRadio::TRANSMISSION_STATE_UNDEFINED,
+     IRadio::TRANSMISSION_STATE_IDLE,
+     IRadio::TRANSMISSION_STATE_TRANSMITTING));
 
 const char *IRadio::getRadioModeName(RadioMode radioMode)
 {

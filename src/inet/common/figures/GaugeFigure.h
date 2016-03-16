@@ -43,8 +43,8 @@ class INET_API GaugeFigure : public cOvalFigure, protected cListener, protected 
     GaugeFigure(const char *name = nullptr);
     virtual ~GaugeFigure() {};
 
-    virtual void parse(cProperty *property);
-    virtual bool isAllowedPropertyKey(const char *key) const;
+    virtual void parse(cProperty *property) override;
+    virtual bool isAllowedPropertyKey(const char *key) const override;
 
     void addChildren();
     void addColorCurve(const cFigure::Color &curveColor, double startAngle, double endAngle);
@@ -53,12 +53,12 @@ class INET_API GaugeFigure : public cOvalFigure, protected cListener, protected 
     void setLabel(const char *newValue);
     virtual const char *getClassNameForRenderer() const;
 
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, long l);
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, unsigned long l);
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, double d);
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj);
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, long l DETAILS_ARG) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, unsigned long l DETAILS_ARG) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, double d DETAILS_ARG) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
 
-    virtual void lifecycleEvent(SimulationLifecycleEventType eventType, cObject *details);
+    virtual void lifecycleEvent(SimulationLifecycleEventType eventType, cObject *details) override;
 };
 
 #else

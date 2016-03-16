@@ -121,8 +121,8 @@ double TracingObstacleLoss::computeObjectLoss(const IPhysicalObject *object, Hz 
                 intersectionLine->setLineColor(cFigure::RED);
                 intersectionLine->setLineWidth(1);
                 intersectionTrail->addFigure(intersectionLine);
-    #if OMNETPP_CANVAS_VERSION >= 0x20140908
-                intersectionLine->setScaleLineWidth(false);
+    #if OMNETPP_VERSION >= 0x500
+                intersectionLine->setZoomLineWidth(false);
     #endif
             }
             if (leaveFaceNormalVectorTrail) {
@@ -142,9 +142,9 @@ double TracingObstacleLoss::computeObjectLoss(const IPhysicalObject *object, Hz 
                 normal2Line->setTags("obstacle_intersection face_normal_vector recent_history");
                 normal2Line->setLineWidth(1);
                 intersectionTrail->addFigure(normal2Line);
-    #if OMNETPP_CANVAS_VERSION >= 0x20140908
-                normal1Line->setScaleLineWidth(false);
-                normal2Line->setScaleLineWidth(false);
+    #if OMNETPP_VERSION >= 0x500
+                normal1Line->setZoomLineWidth(false);
+                normal2Line->setZoomLineWidth(false);
     #endif
             }
         }

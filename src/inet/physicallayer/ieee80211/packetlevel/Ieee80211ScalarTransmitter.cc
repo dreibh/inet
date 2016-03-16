@@ -20,11 +20,8 @@
 #include "inet/physicallayer/contract/packetlevel/RadioControlInfo_m.h"
 #include "inet/physicallayer/ieee80211/packetlevel/Ieee80211ScalarTransmitter.h"
 #include "inet/physicallayer/ieee80211/packetlevel/Ieee80211ScalarTransmission.h"
-#include "inet/linklayer/ieee80211/mac/Ieee80211Consts.h"
 
 namespace inet {
-
-using namespace ieee80211;
 
 namespace physicallayer {
 
@@ -59,7 +56,10 @@ const ITransmission *Ieee80211ScalarTransmitter::createTransmission(const IRadio
     const EulerAngles endOrientation = mobility->getCurrentAngularPosition();
     int headerBitLength = transmissionMode->getHeaderMode()->getBitLength();
     int64_t payloadBitLength = macFrame->getBitLength();
-    return new Ieee80211ScalarTransmission(transmitter, macFrame, startTime, endTime, startPosition, endPosition, startOrientation, endOrientation, modulation, headerBitLength, payloadBitLength, carrierFrequency, bandwidth, transmissionBitrate, transmissionPower, transmissionMode, transmissionChannel);
+    const simtime_t preambleDuration = transmissionMode->getPreambleMode()->getDuration();
+    const simtime_t headerDuration = transmissionMode->getHeaderMode()->getDuration();
+    const simtime_t dataDuration = duration - headerDuration - preambleDuration;
+    return new Ieee80211ScalarTransmission(transmitter, macFrame, startTime, endTime, preambleDuration, headerDuration, dataDuration, startPosition, endPosition, startOrientation, endOrientation, modulation, headerBitLength, payloadBitLength, carrierFrequency, bandwidth, transmissionBitrate, transmissionPower, transmissionMode, transmissionChannel);
 }
 
 } // namespace physicallayer

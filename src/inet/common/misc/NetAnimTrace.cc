@@ -72,7 +72,7 @@ void NetAnimTrace::dump()
 
 }
 
-void NetAnimTrace::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void NetAnimTrace::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     if (signalID == messageSentSignal && !source->isModule()) {
         // record a "packet sent" line
@@ -204,8 +204,8 @@ void NetAnimTrace::resolveNodeCoordinates(cModule *submod, double& x, double& y)
         int rx = toDouble(ds.getTagArg("p", 3), (sx + sy) * submod->size() / 4);
         int ry = toDouble(ds.getTagArg("p", 4), rx);
 
-        x += (int)floor(rx - rx * sin(submod->getIndex() * 2 * PI / submod->size()));
-        y += (int)floor(ry - ry * cos(submod->getIndex() * 2 * PI / submod->size()));
+        x += (int)floor(rx - rx * sin(submod->getIndex() * 2 * M_PI / submod->size()));
+        y += (int)floor(ry - ry * cos(submod->getIndex() * 2 * M_PI / submod->size()));
     }
     else {
         throw cRuntimeError("Invalid layout `%s' in `p' tag of display string", layout);
