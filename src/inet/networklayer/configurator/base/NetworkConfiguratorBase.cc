@@ -141,6 +141,7 @@ void NetworkConfiguratorBase::extractTopology(Topology& topology, const unsigned
             for (int j = 0; j < interfaceTable->getNumInterfaces(); j++) {
                 InterfaceEntry *interfaceEntry = interfaceTable->getInterface(j);
                 if (!interfaceEntry->isLoopback() && interfacesSeen.count(interfaceEntry) == 0) {
+
                     // handle independent networks
                     const unsigned int linkNetworkID = getNetworkID(node->module, interfaceEntry);
                     if ( (linkNetworkID == networkID) ||
@@ -148,15 +149,15 @@ void NetworkConfiguratorBase::extractTopology(Topology& topology, const unsigned
                          (networkID == 0) ) {
                         topology.networkSet.insert(linkNetworkID);
 
-                        interfacesSeen.insert(interfaceEntry);
                         if (isBridgeNode(node))
                             createInterfaceInfo(topology, node, nullptr, interfaceEntry);
                         else {
+                            interfacesSeen.insert(interfaceEntry);
                             // create a new network link
                             LinkInfo *linkInfo = new LinkInfo();
                             topology.linkInfos.push_back(linkInfo);
                             // store interface as belonging to the new network link
-                            InterfaceInfo *interfaceInfo = createInterfaceInfo(topology, node, linkInfo, interfaceEntry);
+                            InterfaceInfo *interfaceInfo = createInterfaceInfo(topology, node, isBridgeNode(node) ? nullptr : linkInfo,     interfaceEntry);
                             linkInfo->interfaceInfos.push_back(interfaceInfo);
                             // visit neighbors (and potentially the whole LAN, recursively)
                             if (isWirelessInterface(interfaceEntry)) {
@@ -164,11 +165,26 @@ void NetworkConfiguratorBase::extractTopology(Topology& topology, const unsigned
                                 const char *wirelessId = getWirelessId(interfaceEntry);
                                 extractWirelessNeighbors(topology, wirelessId, linkInfo, interfacesSeen, empty);
                             }
+
                             else {
-                                Topology::LinkOut *linkOut = findLinkOut(node, interfaceEntry->getNodeOutputGateId());
-                                if (linkOut) {
+                                // create a new network link
+                                LinkInfo *linkInfo = new LinkInfo();
+                                topology.linkInfos.push_back(linkInfo);
+                                // store interface as belonging to the new network link
+                                InterfaceInfo *interfaceInfo = createInterfaceInfo(topology, node, linkInfo, interfaceEntry);
+                                linkInfo->interfaceInfos.push_back(interfaceInfo);
+                                // visit neighbors (and potentially the whole LAN, recursively)
+                                if (isWirelessInterface(interfaceEntry)) {
                                     std::vector<Node *> empty;
-                                    extractWiredNeighbors(topology, linkOut, linkInfo, interfacesSeen, empty);
+                                    const char *wirelessId = getWirelessId(interfaceEntry);
+                                    extractWirelessNeighbors(topology, wirelessId, linkInfo, interfacesSeen, empty);
+                                }
+                                else {
+                                    Topology::LinkOut *linkOut = findLinkOut(node, interfaceEntry->getNodeOutputGateId());
+                                    if (linkOut) {
+                                        std::vector<Node *> empty;
+                                        extractWiredNeighbors(topology, linkOut, linkInfo, interfacesSeen, empty);
+                                    }
                                 }
                             }
                         }

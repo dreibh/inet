@@ -11,7 +11,7 @@ cleanall: checkmakefiles
 	@cd src && $(MAKE) MODE=debug clean
 	@rm -f src/Makefile src/inet/features.h
 
-MAKEMAKE_OPTIONS := -f --deep -o INET -O out -pINET --no-deep-includes -I.
+MAKEMAKE_OPTIONS := -f --deep -o INET -O out --no-deep-includes -I.
 
 makefiles: src/inet/features.h makefiles-so
 
@@ -36,6 +36,7 @@ checkmakefiles:
 
 # generate an include file that contains all the WITH_FEATURE macros according to the current enablement of features
 src/inet/features.h: $(wildcard .oppfeaturestate) .oppfeatures
+	@chmod +x ./inet_featuretool
 	@./inet_featuretool defines >src/inet/features.h
 
 doxy:
