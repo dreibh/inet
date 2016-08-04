@@ -1,15 +1,24 @@
-# ignore generated files
-.settings/
+# local and generated files not to be committed
+src/Makefile
+src/Makefile.vc
 *_m.h
 *_m.cc
 *_sm.h
 *_sm.cc
-src/Makefile
-src/Makefile.vc
+.oppfeaturestate
+.nedexclusions
+src/inet/features.h
+src/inet/opp_defines.h
+precompiled.h.*
+/3rdparty
+
+# output and result files
+.settings/
 /doc/doxy/
 /doc/neddoc/
 /doc/src/manual/figures/*.pdf
 /doc/src/manual/inet-manual.pdf
+/doc/inet-manual-draft.pdf
 /examples/*/results/
 /examples/*/*/results/
 /examples/*/*/*/results/
@@ -17,6 +26,7 @@ src/Makefile.vc
 /examples/*/*/cache/
 /tutorials/*/cache/
 /tutorials/*/data/
+/tutorials/wireless/html/
 /tests/*/work/
 /tests/*/*/work/
 /tests/*/results*/
@@ -28,10 +38,7 @@ src/Makefile.vc
 *.vec
 *.vci
 .buildlog*
-# local files not to be committed
-.oppfeaturestate
-.nedexclusions
-src/inet/features.h
+
 # ignore binary files
 out/
 *.so
@@ -45,21 +52,19 @@ out/
 *.pdb
 *.idb
 *.manifest
-.qtenv.ini
 .qtenvrc
 .tkenvrc
 .tkenvlog
 .cmdenv-log
 netanim-trace.txt
 *.out
-gcc-debug
 
 # ignore backup and temp files
 *.UPDATED
 *.FAILED
+*.ERROR
 *.bak
 backups
 *~
 xxx
-/3rdparty
 /tmp/
