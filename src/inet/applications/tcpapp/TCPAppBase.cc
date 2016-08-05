@@ -18,6 +18,7 @@
 #include "inet/applications/tcpapp/TCPAppBase.h"
 
 #include "inet/networklayer/common/L3AddressResolver.h"
+#include "inet/transportlayer/contract/tcp/TCPSocket.h"
 
 namespace inet {
 
@@ -47,9 +48,7 @@ void TCPAppBase::initialize(int stage)
         socket.bind(*localAddress ? L3AddressResolver().resolve(localAddress) : L3Address(), localPort);
 
         socket.setCallbackObject(this);
-        socket.setOutputGate(gate("tcpOut"));
-
-        setStatusString("waiting");
+        socket.setOutputGate(gate("socketOut"));
     }
 }
 
@@ -77,7 +76,6 @@ void TCPAppBase::connect()
     }
     else {
         EV_INFO << "Connecting to " << connectAddress << "(" << destination << ") port=" << connectPort << endl;
-        setStatusString("connecting");
 
         socket.connect(destination, connectPort);
 
@@ -88,7 +86,6 @@ void TCPAppBase::connect()
 
 void TCPAppBase::close()
 {
-    setStatusString("closing");
     EV_INFO << "issuing CLOSE command\n";
     socket.close();
     emit(connectSignal, -1L);
@@ -104,17 +101,15 @@ void TCPAppBase::sendPacket(cPacket *msg)
     bytesSent += numBytes;
 }
 
-void TCPAppBase::setStatusString(const char *s)
+void TCPAppBase::refreshDisplay() const
 {
-    if (hasGUI())
-        getDisplayString().setTagArg("t", 0, s);
+    getDisplayString().setTagArg("t", 0, TCPSocket::stateName(socket.getState()));
 }
 
 void TCPAppBase::socketEstablished(int, void *)
 {
     // *redefine* to perform or schedule first sending
     EV_INFO << "connected\n";
-    setStatusString("connected");
 }
 
 void TCPAppBase::socketDataArrived(int, void *, cPacket *msg, bool)
@@ -139,15 +134,12 @@ void TCPAppBase::socketClosed(int, void *)
 {
     // *redefine* to start another session etc.
     EV_INFO << "connection closed\n";
-    setStatusString("closed");
 }
 
 void TCPAppBase::socketFailure(int, void *, int code)
 {
     // subclasses may override this function, and add code try to reconnect after a delay.
     EV_WARN << "connection broken\n";
-    setStatusString("broken");
-
     numBroken++;
 }
 

@@ -24,8 +24,8 @@ cplusplus {{
 namespace inet::physicallayer;
 
 cplusplus {{
-typedef Ieee80211ModeSet * Ieee80211ModeSetPtr;
-typedef IIeee80211Mode * IIeee80211ModePtr;
+typedef const Ieee80211ModeSet * Ieee80211ModeSetPtr;
+typedef const IIeee80211Mode * IIeee80211ModePtr;
 typedef IIeee80211Band * IIeee80211BandPtr;
 typedef Ieee80211Channel * Ieee80211ChannelPtr;
 }}
@@ -42,7 +42,7 @@ class noncobject ReceptionIndication;
 //
 class Ieee80211ConfigureRadioCommand extends ConfigureRadioCommand
 {
-    char opMode = 0;                       // new default operation mode or '\0' if not set.
+    string opMode;                         // new default operation mode or "" if not set.
     Ieee80211ModeSetPtr modeSet = nullptr; // new default mode set or nullptr if not set.
     IIeee80211ModePtr mode = nullptr;      // new default transmission mode or nullptr if not set.
     IIeee80211BandPtr band = nullptr;      // new default band or nullptr if not set.

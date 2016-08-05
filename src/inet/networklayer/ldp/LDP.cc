@@ -351,8 +351,11 @@ void LDP::rebuildFecList()
 
     for (int i = 0; i < ift->getNumInterfaces(); ++i) {
         InterfaceEntry *ie = ift->getInterface(i);
-        if (ie->getNetworkLayerGateIndex() < 0)
-            continue;
+
+//TODO should replace to ie->isUp() or drop this code:
+//        if (ie->getNetworkLayerGateIndex() < 0)
+//            continue;
+
         if (!ie->ipv4Data())
             continue;
 
@@ -1216,7 +1219,7 @@ bool LDP::lookupLabel(IPv4Datagram *ipdatagram, LabelOpVector& outLabel, std::st
     return false;
 }
 
-void LDP::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void LDP::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     Enter_Method_Silent();
     printNotificationBanner(signalID, obj);

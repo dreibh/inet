@@ -20,7 +20,6 @@
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/common/ModuleAccess.h"
 #include "inet/common/lifecycle/NodeStatus.h"
-#include "inet/transportlayer/contract/tcp/TCPSocket.h"
 #include "inet/transportlayer/contract/tcp/TCPCommand_m.h"
 #include "GenericAppMsg_m.h"
 
@@ -50,8 +49,7 @@ void TCPGenericSrvApp::initialize(int stage)
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
         const char *localAddress = par("localAddress");
         int localPort = par("localPort");
-        TCPSocket socket;
-        socket.setOutputGate(gate("tcpOut"));
+        socket.setOutputGate(gate("socketOut"));
         socket.setDataTransferMode(TCP_TRANSFER_OBJECT);
         socket.bind(localAddress[0] ? L3AddressResolver().resolve(localAddress) : L3Address(), localPort);
         socket.listen();
@@ -87,7 +85,7 @@ void TCPGenericSrvApp::sendBack(cMessage *msg)
         EV_INFO << "sending \"" << msg->getName() << "\" to TCP\n";
     }
 
-    send(msg, "tcpOut");
+    send(msg, "socketOut");
 }
 
 void TCPGenericSrvApp::handleMessage(cMessage *msg)
@@ -122,7 +120,7 @@ void TCPGenericSrvApp::handleMessage(cMessage *msg)
             maxMsgDelay = msgDelay;
 
         bool doClose = appmsg->getServerClose();
-        int connId = check_and_cast<TCPCommand *>(appmsg->getControlInfo())->getConnId();
+        int connId = check_and_cast<TCPCommand *>(appmsg->getControlInfo())->getSocketId();
 
         if (requestedBytes == 0) {
             delete msg;
@@ -130,7 +128,7 @@ void TCPGenericSrvApp::handleMessage(cMessage *msg)
         else {
             delete appmsg->removeControlInfo();
             TCPSendCommand *cmd = new TCPSendCommand();
-            cmd->setConnId(connId);
+            cmd->setSocketId(connId);
             appmsg->setControlInfo(cmd);
 
             // set length and send it back
@@ -143,22 +141,25 @@ void TCPGenericSrvApp::handleMessage(cMessage *msg)
             cMessage *msg = new cMessage("close");
             msg->setKind(TCP_C_CLOSE);
             TCPCommand *cmd = new TCPCommand();
-            cmd->setConnId(connId);
+            cmd->setSocketId(connId);
             msg->setControlInfo(cmd);
             sendOrSchedule(msg, delay + maxMsgDelay);
         }
     }
+    else if (msg->getKind() == TCP_I_AVAILABLE)
+        socket.processMessage(msg);
     else {
         // some indication -- ignore
         EV_WARN << "drop msg: " << msg->getName() << ", kind:" << msg->getKind() << "(" << cEnum::get("inet::TcpStatusInd")->getStringFor(msg->getKind()) << ")\n";
         delete msg;
     }
+}
 
-    if (hasGUI()) {
-        char buf[64];
-        sprintf(buf, "rcvd: %ld pks %ld bytes\nsent: %ld pks %ld bytes", msgsRcvd, bytesRcvd, msgsSent, bytesSent);
-        getDisplayString().setTagArg("t", 0, buf);
-    }
+void TCPGenericSrvApp::refreshDisplay() const
+{
+    char buf[64];
+    sprintf(buf, "rcvd: %ld pks %ld bytes\nsent: %ld pks %ld bytes", msgsRcvd, bytesRcvd, msgsSent, bytesSent);
+    getDisplayString().setTagArg("t", 0, buf);
 }
 
 void TCPGenericSrvApp::finish()

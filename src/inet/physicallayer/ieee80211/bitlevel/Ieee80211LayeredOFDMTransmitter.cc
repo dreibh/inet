@@ -59,7 +59,7 @@ void Ieee80211LayeredOFDMTransmitter::initialize(int stage)
         carrierFrequency = Hz(par("carrierFrequency"));
         bandwidth = Hz(par("bandwidth"));
         if (isCompliant && (dataEncoder || signalEncoder || dataModulator || signalModulator
-                            || pulseShaper || digitalAnalogConverter || !isNaN(channelSpacing.get()))) // TODO: check modulations
+                            || pulseShaper || digitalAnalogConverter || !std::isnan(channelSpacing.get()))) // TODO: check modulations
         {
             throw cRuntimeError("In compliant mode it is forbidden to set the following parameters: dataEncoder, signalEncoder, modulator, signalModulator, pulseShaper, digitalAnalogConverter, bandwidth, channelSpacing");
         }
@@ -223,13 +223,13 @@ const ITransmissionSymbolModel *Ieee80211LayeredOFDMTransmitter::createSymbolMod
         const std::vector<const ISymbol *> *signalSymbols = signalFieldSymbolModel->getSymbols();
         std::vector<const ISymbol *> *mergedSymbols = new std::vector<const ISymbol *>();
         const Ieee80211OFDMSymbol *ofdmSymbol = nullptr;
-        for (unsigned int i = 0; i < signalSymbols->size(); i++) {
-            ofdmSymbol = check_and_cast<const Ieee80211OFDMSymbol *>(signalSymbols->at(i));
+        for (auto & signalSymbol : *signalSymbols) {
+            ofdmSymbol = check_and_cast<const Ieee80211OFDMSymbol *>(signalSymbol);
             mergedSymbols->push_back(new Ieee80211OFDMSymbol(*ofdmSymbol));
         }
         const std::vector<const ISymbol *> *dataSymbols = dataFieldSymbolModel->getSymbols();
-        for (unsigned int i = 0; i < dataSymbols->size(); i++) {
-            ofdmSymbol = dynamic_cast<const Ieee80211OFDMSymbol *>(dataSymbols->at(i));
+        for (auto & dataSymbol : *dataSymbols) {
+            ofdmSymbol = dynamic_cast<const Ieee80211OFDMSymbol *>(dataSymbol);
             mergedSymbols->push_back(new Ieee80211OFDMSymbol(*ofdmSymbol));
         }
         const Ieee80211OFDMTransmissionSymbolModel *transmissionSymbolModel = new Ieee80211OFDMTransmissionSymbolModel(1, 1.0 / mode->getSignalMode()->getDuration(), mergedSymbols->size() - 1, 1.0 / mode->getSymbolInterval(), mergedSymbols, signalFieldSymbolModel->getHeaderModulation(), dataFieldSymbolModel->getPayloadModulation());
@@ -317,7 +317,7 @@ const Ieee80211OFDMMode *Ieee80211LayeredOFDMTransmitter::computeMode(Hz bandwid
     const Ieee80211OFDMModulatorModule *ofdmDataModulatorModule = check_and_cast<const Ieee80211OFDMModulatorModule *>(dataModulator);
     const Ieee80211OFDMSignalMode *signalMode = new Ieee80211OFDMSignalMode(ofdmSignalEncoderModule->getCode(), ofdmSignalModulatorModule->getModulation(), channelSpacing, bandwidth, 0);
     const Ieee80211OFDMDataMode *dataMode = new Ieee80211OFDMDataMode(ofdmDataEncoderModule->getCode(), ofdmDataModulatorModule->getModulation(), channelSpacing, bandwidth);
-    return new Ieee80211OFDMMode(new Ieee80211OFDMPreambleMode(channelSpacing), signalMode, dataMode, channelSpacing, bandwidth);
+    return new Ieee80211OFDMMode("", new Ieee80211OFDMPreambleMode(channelSpacing), signalMode, dataMode, channelSpacing, bandwidth);
 }
 
 const ITransmission *Ieee80211LayeredOFDMTransmitter::createTransmission(const IRadio *transmitter, const cPacket *macFrame, const simtime_t startTime) const
@@ -350,7 +350,7 @@ const ITransmission *Ieee80211LayeredOFDMTransmitter::createTransmission(const I
     const Coord endPosition = mobility->getCurrentPosition();
     const EulerAngles startOrientation = mobility->getCurrentAngularPosition();
     const EulerAngles endOrientation = mobility->getCurrentAngularPosition();
-    return new LayeredTransmission(packetModel, bitModel, symbolModel, sampleModel, analogModel, transmitter, macFrame, startTime, endTime, startPosition, endPosition, startOrientation, endOrientation);
+    return new LayeredTransmission(packetModel, bitModel, symbolModel, sampleModel, analogModel, transmitter, macFrame, startTime, endTime, -1, -1, -1, startPosition, endPosition, startOrientation, endOrientation);
 }
 
 Ieee80211LayeredOFDMTransmitter::~Ieee80211LayeredOFDMTransmitter()

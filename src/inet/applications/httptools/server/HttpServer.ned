@@ -17,7 +17,7 @@
 
 package inet.applications.httptools.server;
 
-import inet.applications.contract.ITCPApp;
+import inet.applications.contract.IApp;
 
 
 //
@@ -102,7 +102,7 @@ import inet.applications.contract.ITCPApp;
 //
 // @author  Kristjan V. Jonsson
 //
-simple HttpServer like ITCPApp
+simple HttpServer like IApp
 {
     parameters:
         string hostName = default("");                  // The domain name of the server
@@ -112,8 +112,9 @@ simple HttpServer like ITCPApp
         string siteDefinition = default("");            // The site script file. Blank to disable.
         double activationTime @unit("s") = default(0s); // The initial activation delay. Zero to disable.
         xml config;                                     // The XML configuration file for random sites
+        string httpControllerModule = default("httpController"); // ModulePath for HttpController module
     gates:
-        input tcpIn;
-        output tcpOut;
+        input socketIn;
+        output socketOut;
 }
 

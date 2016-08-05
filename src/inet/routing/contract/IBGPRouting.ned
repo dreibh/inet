@@ -17,16 +17,17 @@
 
 package inet.routing.contract;
 
-import inet.applications.contract.ITCPApp;
+import inet.applications.contract.IApp;
 
 //
 // Interface for BGP routing module.
 //
-moduleinterface IBGPRouting extends ITCPApp
+moduleinterface IBGPRouting extends IApp
 {
     parameters:
         string interfaceTableModule;   // The path to the InterfaceTable module
         string routingTableModule;
         string ospfRoutingModule;
         string dataTransferMode @enum("bytecount","object","bytestream");
+        @display("i=block/app");
 }

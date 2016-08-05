@@ -37,7 +37,7 @@ void Ieee80211MgmtAdhoc::handleTimer(cMessage *msg)
 void Ieee80211MgmtAdhoc::handleUpperMessage(cPacket *msg)
 {
     Ieee80211DataFrame *frame = encapsulate(msg);
-    sendOrEnqueue(frame);
+    sendDown(frame);
 }
 
 void Ieee80211MgmtAdhoc::handleCommand(int msgkind, cObject *ctrl)
@@ -53,6 +53,13 @@ Ieee80211DataFrame *Ieee80211MgmtAdhoc::encapsulate(cPacket *msg)
     Ieee802Ctrl *ctrl = check_and_cast<Ieee802Ctrl *>(msg->removeControlInfo());
     frame->setReceiverAddress(ctrl->getDest());
     frame->setEtherType(ctrl->getEtherType());
+    int up = ctrl->getUserPriority();
+    if (up >= 0) {
+        // make it a QoS frame, and set TID
+        frame->setType(ST_DATA_WITH_QOS);
+        frame->addBitLength(QOSCONTROL_BITS);
+        frame->setTid(up);
+    }
     delete ctrl;
 
     frame->encapsulate(msg);
@@ -66,6 +73,10 @@ cPacket *Ieee80211MgmtAdhoc::decapsulate(Ieee80211DataFrame *frame)
     Ieee802Ctrl *ctrl = new Ieee802Ctrl();
     ctrl->setSrc(frame->getTransmitterAddress());
     ctrl->setDest(frame->getReceiverAddress());
+    int tid = frame->getTid();
+    if (tid < 8)
+        ctrl->setUserPriority(tid); // TID values 0..7 are UP
+    ctrl->setInterfaceId(myIface->getInterfaceId());
     Ieee80211DataFrameWithSNAP *frameWithSNAP = dynamic_cast<Ieee80211DataFrameWithSNAP *>(frame);
     if (frameWithSNAP)
         ctrl->setEtherType(frameWithSNAP->getEtherType());
@@ -73,11 +84,6 @@ cPacket *Ieee80211MgmtAdhoc::decapsulate(Ieee80211DataFrame *frame)
 
     delete frame;
     return payload;
-}
-
-void Ieee80211MgmtAdhoc::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
-{
-    Enter_Method_Silent();
 }
 
 void Ieee80211MgmtAdhoc::handleDataFrame(Ieee80211DataFrame *frame)

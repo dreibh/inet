@@ -68,9 +68,9 @@ void InterpolatingAntenna::parseMap(std::map<double, double>& gainMap, const cha
             throw cRuntimeError("Insufficient number of values");
         double angle = atof(angleString) * M_PI / 180;
         double gain = math::dB2fraction(atof(gainString));
-        if (isNaN(minGain) || gain < minGain)
+        if (std::isnan(minGain) || gain < minGain)
             minGain = gain;
-        if (isNaN(maxGain) || gain > maxGain)
+        if (std::isnan(maxGain) || gain > maxGain)
             maxGain = gain;
         gainMap.insert(std::pair<double, double>(angle, gain));
     }
@@ -78,7 +78,8 @@ void InterpolatingAntenna::parseMap(std::map<double, double>& gainMap, const cha
 
 double InterpolatingAntenna::computeGain(const std::map<double, double>& gainMap, double angle) const
 {
-    ASSERT(0 <= angle && angle <= 2 * M_PI);
+    angle = fmod(angle, 2 * M_PI);
+    if (angle < 0.0) angle += 2 * M_PI;
     // NOTE: 0 and 2 * M_PI are always in the map
     std::map<double, double>::const_iterator lowerBound = gainMap.lower_bound(angle);
     std::map<double, double>::const_iterator upperBound = gainMap.upper_bound(angle);

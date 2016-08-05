@@ -141,16 +141,22 @@ void NetworkConfiguratorBase::extractTopology(Topology& topology, const unsigned
             for (int j = 0; j < interfaceTable->getNumInterfaces(); j++) {
                 InterfaceEntry *interfaceEntry = interfaceTable->getInterface(j);
                 if (!interfaceEntry->isLoopback() && interfacesSeen.count(interfaceEntry) == 0) {
-                    // handle independent networks
-                    const unsigned int linkNetworkID = getNetworkID(node->module, interfaceEntry);
-                    if ( (linkNetworkID == networkID) ||
-                         (linkNetworkID == 0) ||
-                         (networkID == 0) ) {
-                        topology.networkSet.insert(linkNetworkID);
-
+                    if (isBridgeNode(node))
+                        createInterfaceInfo(topology, node, nullptr, interfaceEntry);
+                    else {
                         interfacesSeen.insert(interfaceEntry);
-                        if (isBridgeNode(node))
-                            createInterfaceInfo(topology, node, nullptr, interfaceEntry);
+                        // create a new network link
+                        LinkInfo *linkInfo = new LinkInfo();
+                        topology.linkInfos.push_back(linkInfo);
+                        // store interface as belonging to the new network link
+                        InterfaceInfo *interfaceInfo = createInterfaceInfo(topology, node, isBridgeNode(node) ? nullptr : linkInfo, interfaceEntry);
+                        linkInfo->interfaceInfos.push_back(interfaceInfo);
+                        // visit neighbors (and potentially the whole LAN, recursively)
+                        if (isWirelessInterface(interfaceEntry)) {
+                            std::vector<Node *> empty;
+                            const char *wirelessId = getWirelessId(interfaceEntry);
+                            extractWirelessNeighbors(topology, wirelessId, linkInfo, interfacesSeen, empty);
+                        }
                         else {
                             // create a new network link
                             LinkInfo *linkInfo = new LinkInfo();
@@ -448,10 +454,9 @@ double NetworkConfiguratorBase::computeWirelessLinkWeight(Link *link, const char
             cModule *receiverInterfaceModule = receiverInterfaceInfo->interfaceEntry->getInterfaceModule();
             const IRadio *transmitterRadio = check_and_cast<IRadio *>(transmitterInterfaceModule->getSubmodule("radio"));
             const IRadio *receiverRadio = check_and_cast<IRadio *>(receiverInterfaceModule->getSubmodule("radio"));
+            const IRadioMedium *medium = receiverRadio->getMedium();
             cPacket *macFrame = new cPacket();
             macFrame->setByteLength(transmitterInterfaceInfo->interfaceEntry->getMTU());
-            const IReceiver *receiver = receiverRadio->getReceiver();
-            const IRadioMedium *medium = receiverRadio->getMedium();
             const ITransmission *transmission = transmitterRadio->getTransmitter()->createTransmission(transmitterRadio, macFrame, simTime());
             const IArrival *arrival = medium->getPropagation()->computeArrival(transmission, receiverRadio->getAntenna()->getMobility());
             const IListening *listening = receiverRadio->getReceiver()->createListening(receiverRadio, arrival->getStartTime(), arrival->getEndTime(), arrival->getStartPosition(), arrival->getEndPosition());
@@ -459,11 +464,11 @@ double NetworkConfiguratorBase::computeWirelessLinkWeight(Link *link, const char
             const IReception *reception = medium->getAnalogModel()->computeReception(receiverRadio, transmission, arrival);
             const IInterference *interference = new Interference(noise, new std::vector<const IReception *>());
             const ISNIR *snir = medium->getAnalogModel()->computeSNIR(reception, noise);
-            const IReceptionDecision *receptionDecision = receiver->computeReceptionDecision(listening, reception, interference, snir);
-            const ReceptionIndication *receptionIndication = receptionDecision->getIndication();
-            double packetErrorRate = receptionDecision->isReceptionPossible() ? receptionIndication->getPacketErrorRate() : 1;
+            const IReceiver *receiver = receiverRadio->getReceiver();
+            const ReceptionIndication *receptionIndication = receiver->computeReceptionIndication(snir);
+            bool isReceptionPossible = receiver->computeIsReceptionPossible(listening, reception, IRadioSignal::SIGNAL_PART_WHOLE);
+            double packetErrorRate = isReceptionPossible ? receptionIndication->getPacketErrorRate() : 1;
             delete receptionIndication;
-            delete receptionDecision;
             delete snir;
             delete interference;
             delete reception;

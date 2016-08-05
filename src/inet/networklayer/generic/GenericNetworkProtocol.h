@@ -22,6 +22,7 @@
 #include <list>
 #include <map>
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/networklayer/contract/IARP.h"
 #include "inet/networklayer/contract/INetworkProtocol.h"
 #include "inet/common/queue/QueueBase.h"
@@ -42,7 +43,7 @@ namespace inet {
  */
 // TODO: rename this and its friends to something that is more specific
 // TODO: that expresses to some extent how this network protocol works
-class INET_API GenericNetworkProtocol : public QueueBase, public INetfilter, public INetworkProtocol
+class INET_API GenericNetworkProtocol : public QueueBase, public NetfilterBase, public INetworkProtocol, public IProtocolRegistrationListener
 {
   protected:
     /**
@@ -64,20 +65,27 @@ class INET_API GenericNetworkProtocol : public QueueBase, public INetfilter, pub
         const INetfilter::IHook::Type hookType;
     };
 
+    struct SocketDescriptor
+    {
+        int socketId = -1;
+        int protocolId = -1;
+
+        SocketDescriptor(int socketId, int protocolId) : socketId(socketId), protocolId(protocolId) { }
+    };
+
     IInterfaceTable *interfaceTable;
     GenericRoutingTable *routingTable;
     IARP *arp;
-    int queueOutBaseGateId;
 
     // config
     int defaultHopLimit;
 
     // working vars
     ProtocolMapping mapping;    // where to send packets after decapsulation
+    std::map<int, SocketDescriptor *> socketIdToSocketDescriptor;
+    std::multimap<int, SocketDescriptor *> protocolIdToSocketDescriptors;
 
     // hooks
-    typedef std::multimap<int, IHook *> HookList;
-    HookList hooks;
     typedef std::list<QueuedDatagramForHook> DatagramQueueForHooks;
     DatagramQueueForHooks queuedDatagramsForHooks;
 
@@ -92,7 +100,7 @@ class INET_API GenericNetworkProtocol : public QueueBase, public INetfilter, pub
     virtual const InterfaceEntry *getSourceInterfaceFrom(cPacket *packet);
 
     // utility: show current statistics above the icon
-    virtual void updateDisplayString();
+    virtual void refreshDisplay() const override;
 
     /**
      * Handle GenericDatagram messages arriving from lower layer.
@@ -154,8 +162,10 @@ class INET_API GenericNetworkProtocol : public QueueBase, public INetfilter, pub
     GenericNetworkProtocol();
     ~GenericNetworkProtocol();
 
+    virtual void handleRegisterProtocol(const Protocol& protocol, cGate *gate) override;
+
     virtual void registerHook(int priority, IHook *hook) override;
-    virtual void unregisterHook(int priority, IHook *hook) override;
+    virtual void unregisterHook(IHook *hook) override;
     virtual void dropQueuedDatagram(const INetworkDatagram *datagram) override;
     virtual void reinjectQueuedDatagram(const INetworkDatagram *datagram) override;
 
@@ -163,12 +173,10 @@ class INET_API GenericNetworkProtocol : public QueueBase, public INetfilter, pub
     /**
      * Initialization
      */
-    virtual void initialize() override;
+    virtual void initialize(int stage) override;
+    virtual int numInitStages() const override { return NUM_INIT_STAGES; }
 
-    /**
-     * Handle message.
-     */
-    virtual void handleMessage(cMessage *message) override;
+    virtual void handleMessage(cMessage *msg) override;
 
     /**
      * Processing of generic datagrams. Called when a datagram reaches the front

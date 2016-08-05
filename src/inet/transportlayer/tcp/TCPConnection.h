@@ -85,6 +85,7 @@ enum TCPEventCode {
     // (Note: no RECEIVE command, data are automatically passed up)
     TCP_E_OPEN_ACTIVE,
     TCP_E_OPEN_PASSIVE,
+    TCP_E_ACCEPT,
     TCP_E_SEND,
     TCP_E_CLOSE,
     TCP_E_ABORT,
@@ -215,6 +216,7 @@ class INET_API TCPStateVariables : public cObject
     // WINDOW_SCALE related variables
     bool ws_support;    // set if the host supports Window Scale (header option) (RFC 1322)
     bool ws_enabled;    // set if the connection uses Window Scale (header option)
+    int  ws_manual_scale; // the value of scale parameter if it was set manually (-1 otherwise)
     bool snd_ws;    // set if initial WINDOW_SCALE has been sent
     bool rcv_ws;    // set if initial WINDOW_SCALE has been received
     uint rcv_wnd_scale;    // RFC 1323, page 31: "Receive window scale power"
@@ -315,9 +317,9 @@ class INET_API TCPStateVariables : public cObject
 class INET_API TCPConnection
 {
   public:
-    // connection identification by apps: appgateIndex+connId
-    int appGateIndex = -1;    // application gate index
-    int connId = -1;    // identifies connection within the app
+    // connection identification by apps: socketId
+    int socketId = -1;    // identifies connection within the app
+    int listeningSocketId = -1;    // identifies listening connection within the app
 
     // socket pair
     L3Address localAddr;
@@ -388,6 +390,7 @@ class INET_API TCPConnection
     //@{
     virtual void process_OPEN_ACTIVE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_OPEN_PASSIVE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
+    virtual void process_ACCEPT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_SEND(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_CLOSE(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
     virtual void process_ABORT(TCPEventCode& event, TCPCommand *tcpCommand, cMessage *msg);
@@ -468,6 +471,9 @@ class INET_API TCPConnection
     /** Utility: get TSecr from segments TS header option */
     virtual uint32 getTSecr(TCPSegment *tcpseg) const;
 
+    /** Utility: returns true if the connection is not yet accepted by the application */
+    virtual bool isToBeAccepted() const { return listeningSocketId != -1; }
+
   public:
     /** Utility: send ACK */
     virtual void sendAck();
@@ -536,11 +542,17 @@ class INET_API TCPConnection
     /** Utility: sends status indication (TCP_I_xxx) to application */
     virtual void sendIndicationToApp(int code, const int id = 0);
 
+    /** Utility: sends TCP_I_AVAILABLE indication with TCPAvailableInfo to application */
+    virtual void sendAvailableIndicationToApp();
+
     /** Utility: sends TCP_I_ESTABLISHED indication with TCPConnectInfo to application */
     virtual void sendEstabIndicationToApp();
 
+    /** Utility: sends data or data notification to application */
+    virtual void sendAvailableDataToApp();
+
   public:
-    /** Utility: prints local/remote addr/port and app gate index/connId */
+    /** Utility: prints local/remote addr/port and app gate index/socketId */
     virtual void printConnBrief() const;
     /** Utility: prints important header fields */
     static void printSegmentBrief(TCPSegment *tcpseg);
@@ -570,7 +582,7 @@ class INET_API TCPConnection
     /**
      * The "normal" constructor.
      */
-    TCPConnection(TCP *mod, int appGateIndex, int connId);
+    TCPConnection(TCP *mod, int socketId);
 
     /**
      * Note: this default ctor is NOT used to create live connections, only

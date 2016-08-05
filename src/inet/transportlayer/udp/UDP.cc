@@ -18,33 +18,36 @@
 
 #include <algorithm>
 #include <string>
+
 #include "inet/transportlayer/udp/UDP.h"
-#include "inet/transportlayer/udp/UDPPacket.h"
-#include "inet/networklayer/contract/IInterfaceTable.h"
+
+#include "inet/common/IProtocolRegistrationListener.h"
+#include "inet/common/ModuleAccess.h"
+#include "inet/common/lifecycle/NodeOperations.h"
+#include "inet/common/lifecycle/NodeStatus.h"
 #include "inet/networklayer/common/InterfaceEntry.h"
-#include "inet/networklayer/common/IPSocket.h"
+#include "inet/networklayer/contract/IInterfaceTable.h"
+#include "inet/networklayer/contract/IL3AddressType.h"
 #include "inet/networklayer/contract/ipv4/IPv4ControlInfo.h"
 #include "inet/networklayer/contract/ipv6/IPv6ControlInfo.h"
 #include "inet/networklayer/contract/generic/GenericNetworkProtocolControlInfo.h"
-#include "inet/networklayer/contract/IL3AddressType.h"
-#include "inet/common/ModuleAccess.h"
+#include "inet/transportlayer/udp/UDPPacket.h"
 
 #ifdef WITH_IPv4
+#include "inet/networklayer/ipv4/ICMP.h"
 #include "inet/networklayer/ipv4/ICMPMessage.h"
 #include "inet/networklayer/ipv4/IPv4Datagram.h"
 #include "inet/networklayer/ipv4/IPv4InterfaceData.h"
-#include "inet/networklayer/ipv4/ICMP.h"
 #endif // ifdef WITH_IPv4
 
 #ifdef WITH_IPv6
+#include "inet/networklayer/icmpv6/ICMPv6.h"
 #include "inet/networklayer/icmpv6/ICMPv6Message_m.h"
 #include "inet/networklayer/ipv6/IPv6Datagram.h"
+#include "inet/networklayer/ipv6/IPv6ExtensionHeaders.h"
 #include "inet/networklayer/ipv6/IPv6InterfaceData.h"
-#include "inet/networklayer/icmpv6/ICMPv6.h"
 #endif // ifdef WITH_IPv6
 
-#include "inet/common/lifecycle/NodeOperations.h"
-#include "inet/common/lifecycle/NodeStatus.h"
 
 namespace inet {
 
@@ -66,7 +69,6 @@ bool UDP::MulticastMembership::isSourceAllowed(L3Address sourceAddr)
 static std::ostream& operator<<(std::ostream& os, const UDP::SockDesc& sd)
 {
     os << "sockId=" << sd.sockId;
-    os << " appGateIndex=" << sd.appGateIndex;
     os << " localPort=" << sd.localPort;
     if (sd.remotePort != -1)
         os << " remotePort=" << sd.remotePort;
@@ -84,25 +86,22 @@ static std::ostream& operator<<(std::ostream& os, const UDP::SockDesc& sd)
 
 static std::ostream& operator<<(std::ostream& os, const UDP::SockDescList& list)
 {
-    for (UDP::SockDescList::const_iterator i = list.begin(); i != list.end(); ++i)
-        os << "sockId=" << (*i)->sockId << " ";
+    for (const auto & elem : list)
+        os << "sockId=" << (elem)->sockId << " ";
     return os;
 }
 
 //--------
 
-UDP::SockDesc::SockDesc(int sockId_, int appGateIndex_)
+UDP::SockDesc::SockDesc(int sockId_)
 {
     sockId = sockId_;
-    appGateIndex = appGateIndex_;
 }
 
 UDP::SockDesc::~SockDesc()
 {
-    for(auto it = multicastMembershipTable.begin();
-            it != multicastMembershipTable.end();
-            ++it)
-        delete (*it);
+    for(auto & elem : multicastMembershipTable)
+        delete (elem);
 }
 
 //--------
@@ -140,11 +139,10 @@ void UDP::initialize(int stage)
         isOperational = false;
     }
     else if (stage == INITSTAGE_TRANSPORT_LAYER) {
-        IPSocket ipSocket(gate("ipOut"));
-        ipSocket.registerProtocol(IP_PROT_UDP);
-
         NodeStatus *nodeStatus = dynamic_cast<NodeStatus *>(findContainingNode(this)->getSubmodule("status"));
         isOperational = (!nodeStatus) || nodeStatus->getState() == NodeStatus::UP;
+        registerProtocol(Protocol::udp, gate("ipOut"));
+        registerProtocol(Protocol::udp, gate("appOut"));
     }
 }
 
@@ -166,12 +164,9 @@ void UDP::handleMessage(cMessage *msg)
         else
             processCommandFromApp(msg);
     }
-
-    if (hasGUI())
-        updateDisplayString();
 }
 
-void UDP::updateDisplayString()
+void UDP::refreshDisplay() const
 {
     char buf[80];
     sprintf(buf, "passed up: %d pks\nsent: %d pks", numPassedUp, numSent);
@@ -187,25 +182,25 @@ void UDP::processCommandFromApp(cMessage *msg)
     switch (msg->getKind()) {
         case UDP_C_BIND: {
             UDPBindCommand *ctrl = check_and_cast<UDPBindCommand *>(msg->getControlInfo());
-            bind(ctrl->getSockId(), msg->getArrivalGate()->getIndex(), ctrl->getLocalAddr(), ctrl->getLocalPort());
+            bind(ctrl->getSocketId(), msg->getArrivalGate()->getIndex(), ctrl->getLocalAddr(), ctrl->getLocalPort());
             break;
         }
 
         case UDP_C_CONNECT: {
             UDPConnectCommand *ctrl = check_and_cast<UDPConnectCommand *>(msg->getControlInfo());
-            connect(ctrl->getSockId(), msg->getArrivalGate()->getIndex(), ctrl->getRemoteAddr(), ctrl->getRemotePort());
+            connect(ctrl->getSocketId(), msg->getArrivalGate()->getIndex(), ctrl->getRemoteAddr(), ctrl->getRemotePort());
             break;
         }
 
         case UDP_C_CLOSE: {
             UDPCloseCommand *ctrl = check_and_cast<UDPCloseCommand *>(msg->getControlInfo());
-            close(ctrl->getSockId());
+            close(ctrl->getSocketId());
             break;
         }
 
         case UDP_C_SETOPTION: {
             UDPSetOptionCommand *ctrl = check_and_cast<UDPSetOptionCommand *>(msg->getControlInfo());
-            SockDesc *sd = getOrCreateSocket(ctrl->getSockId(), msg->getArrivalGate()->getIndex());
+            SockDesc *sd = getOrCreateSocket(ctrl->getSocketId());
 
             if (dynamic_cast<UDPSetTimeToLiveCommand *>(ctrl))
                 setTimeToLive(sd, ((UDPSetTimeToLiveCommand *)ctrl)->getTtl());
@@ -293,7 +288,7 @@ void UDP::processPacketFromApp(cPacket *appData)
 {
     UDPSendCommand *ctrl = check_and_cast<UDPSendCommand *>(appData->removeControlInfo());
 
-    SockDesc *sd = getOrCreateSocket(ctrl->getSockId(), appData->getArrivalGate()->getIndex());
+    SockDesc *sd = getOrCreateSocket(ctrl->getSocketId());
     const L3Address& destAddr = ctrl->getDestAddr().isUnspecified() ? sd->remoteAddr : ctrl->getDestAddr();
     int destPort = ctrl->getDestPort() == -1 ? sd->remotePort : ctrl->getDestPort();
     if (destAddr.isUnspecified() || destPort == -1)
@@ -413,39 +408,52 @@ void UDP::processUDPPacket(UDPPacket *udpPacket)
 void UDP::processICMPError(cPacket *pk)
 {
     // extract details from the error message, then try to notify socket that sent bogus packet
+
+    // icmp error packet with fragmented udp maybe contains raw packet
+    // icmp error packet with fragmented udp packet maybe not contains UDPPacket
+    // icmp error packet with fragmented udp packet maybe contains entire UDPPacket, but the real packet not contains udp header
+
     int type, code;
     L3Address localAddr, remoteAddr;
     ushort localPort, remotePort;
+    bool udpHeaderAvailable = false;
 
 #ifdef WITH_IPv4
-    if (dynamic_cast<ICMPMessage *>(pk)) {
-        ICMPMessage *icmpMsg = (ICMPMessage *)pk;
+    if (ICMPMessage *icmpMsg = dynamic_cast<ICMPMessage *>(pk)) {
         type = icmpMsg->getType();
         code = icmpMsg->getCode();
         // Note: we must NOT use decapsulate() because payload in ICMP is conceptually truncated
         IPv4Datagram *datagram = check_and_cast<IPv4Datagram *>(icmpMsg->getEncapsulatedPacket());
-        UDPPacket *packet = check_and_cast<UDPPacket *>(datagram->getEncapsulatedPacket());
-        localAddr = datagram->getSrcAddress();
-        remoteAddr = datagram->getDestAddress();
-        localPort = packet->getSourcePort();
-        remotePort = packet->getDestinationPort();
-        delete icmpMsg;
+        if (datagram->getDontFragment() || datagram->getFragmentOffset() == 0) {
+            UDPPacket *packet = dynamic_cast<UDPPacket *>(datagram->getEncapsulatedPacket());
+            if (packet) {
+                localAddr = datagram->getSrcAddress();
+                remoteAddr = datagram->getDestAddress();
+                localPort = packet->getSourcePort();
+                remotePort = packet->getDestinationPort();
+                udpHeaderAvailable = true;
+            }
+        }
     }
     else
 #endif // ifdef WITH_IPv4
 #ifdef WITH_IPv6
-    if (dynamic_cast<ICMPv6Message *>(pk)) {
-        ICMPv6Message *icmpMsg = (ICMPv6Message *)pk;
+    if (ICMPv6Message *icmpMsg = dynamic_cast<ICMPv6Message *>(pk)) {
         type = icmpMsg->getType();
         code = -1;    // FIXME this is dependent on getType()...
         // Note: we must NOT use decapsulate() because payload in ICMP is conceptually truncated
         IPv6Datagram *datagram = check_and_cast<IPv6Datagram *>(icmpMsg->getEncapsulatedPacket());
-        UDPPacket *packet = check_and_cast<UDPPacket *>(datagram->getEncapsulatedPacket());
-        localAddr = datagram->getSrcAddress();
-        remoteAddr = datagram->getDestAddress();
-        localPort = packet->getSourcePort();
-        remotePort = packet->getDestinationPort();
-        delete icmpMsg;
+        IPv6FragmentHeader *fh = dynamic_cast<IPv6FragmentHeader *>(datagram->findExtensionHeaderByType(IP_PROT_IPv6EXT_FRAGMENT));
+        if (!fh || fh->getFragmentOffset() == 0) {
+            UDPPacket *packet = dynamic_cast<UDPPacket *>(datagram->getEncapsulatedPacket());
+            if (packet) {
+                localAddr = datagram->getSrcAddress();
+                remoteAddr = datagram->getDestAddress();
+                localPort = packet->getSourcePort();
+                remotePort = packet->getDestinationPort();
+                udpHeaderAvailable = true;
+            }
+        }
     }
     else
 #endif // ifdef WITH_IPv6
@@ -458,15 +466,21 @@ void UDP::processICMPError(cPacket *pk)
             << remoteAddr << ":" << remotePort << "\n";
 
     // identify socket and report error to it
-    SockDesc *sd = findSocketForUnicastPacket(localAddr, localPort, remoteAddr, remotePort);
-    if (!sd) {
-        EV_WARN << "No socket on that local port, ignoring ICMP error\n";
-        return;
+    if (udpHeaderAvailable) {
+        SockDesc *sd = findSocketForUnicastPacket(localAddr, localPort, remoteAddr, remotePort);
+        if (sd) {
+            // send UDP_I_ERROR to socket
+            EV_DETAIL << "Source socket is sockId=" << sd->sockId << ", notifying.\n";
+            sendUpErrorIndication(sd, localAddr, localPort, remoteAddr, remotePort);
+        }
+        else {
+            EV_WARN << "No socket on that local port, ignoring ICMP error\n";
+        }
     }
+    else
+        EV_WARN << "UDP header not available, ignoring ICMP error\n";
 
-    // send UDP_I_ERROR to socket
-    EV_DETAIL << "Source socket is sockId=" << sd->sockId << ", notifying.\n";
-    sendUpErrorIndication(sd, localAddr, localPort, remoteAddr, remotePort);
+    delete pk;
 }
 
 void UDP::processUndeliverablePacket(UDPPacket *udpPacket, cObject *ctrl)
@@ -475,6 +489,9 @@ void UDP::processUndeliverablePacket(UDPPacket *udpPacket, cObject *ctrl)
     numDroppedWrongPort++;
 
     // send back ICMP PORT_UNREACHABLE
+    char buff[80];
+    snprintf(buff, sizeof(buff), "Port %d unreachable", udpPacket->getDestinationPort());
+    udpPacket->setName(buff);
     if (dynamic_cast<IPv4ControlInfo *>(ctrl) != nullptr) {
 #ifdef WITH_IPv4
         IPv4ControlInfo *ctrl4 = (IPv4ControlInfo *)ctrl;
@@ -541,7 +558,7 @@ void UDP::bind(int sockId, int gateIndex, const L3Address& localAddr, int localP
         }
     }
     else {
-        sd = createSocket(sockId, gateIndex, localAddr, localPort);
+        sd = createSocket(sockId, localAddr, localPort);
         sd->isBound = true;
     }
 }
@@ -553,7 +570,7 @@ void UDP::connect(int sockId, int gateIndex, const L3Address& remoteAddr, int re
     if (remotePort <= 0 || remotePort > 65535)
         throw cRuntimeError("connect: invalid remote port number %d", remotePort);
 
-    SockDesc *sd = getOrCreateSocket(sockId, gateIndex);
+    SockDesc *sd = getOrCreateSocket(sockId);
     sd->remoteAddr = remoteAddr;
     sd->remotePort = remotePort;
     sd->onlyLocalPortIsSet = false;
@@ -561,10 +578,10 @@ void UDP::connect(int sockId, int gateIndex, const L3Address& remoteAddr, int re
     EV_INFO << "Socket connected: " << *sd << "\n";
 }
 
-UDP::SockDesc *UDP::createSocket(int sockId, int gateIndex, const L3Address& localAddr, int localPort)
+UDP::SockDesc *UDP::createSocket(int sockId, const L3Address& localAddr, int localPort)
 {
     // create and fill in SockDesc
-    SockDesc *sd = new SockDesc(sockId, gateIndex);
+    SockDesc *sd = new SockDesc(sockId);
     sd->isBound = false;
     sd->localAddr = localAddr;
     sd->localPort = localPort == -1 ? getEphemeralPort() : localPort;
@@ -608,12 +625,12 @@ void UDP::clearAllSockets()
 {
     EV_INFO << "Clear all sockets\n";
 
-    for (auto it = socketsByPortMap.begin(); it != socketsByPortMap.end(); ++it) {
-        it->second.clear();
+    for (auto & elem : socketsByPortMap) {
+        elem.second.clear();
     }
     socketsByPortMap.clear();
-    for (auto it = socketsByIdMap.begin(); it != socketsByIdMap.end(); ++it)
-        delete it->second;
+    for (auto & elem : socketsByIdMap)
+        delete elem.second;
     socketsByIdMap.clear();
 }
 
@@ -643,8 +660,7 @@ UDP::SockDesc *UDP::findFirstSocketByLocalAddress(const L3Address& localAddr, us
         return nullptr;
 
     SockDescList& list = it->second;
-    for (auto it = list.begin(); it != list.end(); ++it) {
-        SockDesc *sd = *it;
+    for (auto sd : list) {
         if (sd->localAddr.isUnspecified() || sd->localAddr == localAddr)
             return sd;
     }
@@ -685,8 +701,7 @@ std::vector<UDP::SockDesc *> UDP::findSocketsForMcastBcastPacket(const L3Address
         return result;
 
     SockDescList& list = it->second;
-    for (auto it = list.begin(); it != list.end(); ++it) {
-        SockDesc *sd = *it;
+    for (auto sd : list) {
         if (isBroadcast) {
             if (sd->isBroadcast) {
                 if ((sd->remotePort == -1 || sd->remotePort == remotePort) &&
@@ -713,7 +728,7 @@ void UDP::sendUp(cPacket *payload, SockDesc *sd, const L3Address& srcAddr, ushor
 
     // send payload with UDPControlInfo up to the application
     UDPDataIndication *udpCtrl = new UDPDataIndication();
-    udpCtrl->setSockId(sd->sockId);
+    udpCtrl->setSocketId(sd->sockId);
     udpCtrl->setSrcAddr(srcAddr);
     udpCtrl->setDestAddr(destAddr);
     udpCtrl->setSrcPort(srcPort);
@@ -725,7 +740,7 @@ void UDP::sendUp(cPacket *payload, SockDesc *sd, const L3Address& srcAddr, ushor
     payload->setKind(UDP_I_DATA);
 
     emit(passedUpPkSignal, payload);
-    send(payload, "appOut", sd->appGateIndex);
+    send(payload, "appOut");
     numPassedUp++;
 }
 
@@ -733,14 +748,14 @@ void UDP::sendUpErrorIndication(SockDesc *sd, const L3Address& localAddr, ushort
 {
     cMessage *notifyMsg = new cMessage("ERROR", UDP_I_ERROR);
     UDPErrorIndication *udpCtrl = new UDPErrorIndication();
-    udpCtrl->setSockId(sd->sockId);
+    udpCtrl->setSocketId(sd->sockId);
     udpCtrl->setSrcAddr(localAddr);
     udpCtrl->setDestAddr(remoteAddr);
     udpCtrl->setSrcPort(sd->localPort);
     udpCtrl->setDestPort(remotePort);
     notifyMsg->setControlInfo(udpCtrl);
 
-    send(notifyMsg, "appOut", sd->appGateIndex);
+    send(notifyMsg, "appOut");
 }
 
 void UDP::sendDown(cPacket *appData, const L3Address& srcAddr, ushort srcPort, const L3Address& destAddr, ushort destPort,
@@ -824,7 +839,7 @@ UDP::SockDesc *UDP::getSocketById(int sockId)
     return it->second;
 }
 
-UDP::SockDesc *UDP::getOrCreateSocket(int sockId, int gateIndex)
+UDP::SockDesc *UDP::getOrCreateSocket(int sockId)
 {
     // validate sockId
     if (sockId == -1)
@@ -834,7 +849,7 @@ UDP::SockDesc *UDP::getOrCreateSocket(int sockId, int gateIndex)
     if (it != socketsByIdMap.end())
         return it->second;
 
-    return createSocket(sockId, gateIndex, L3Address(), -1);
+    return createSocket(sockId, L3Address(), -1);
 }
 
 void UDP::setTimeToLive(SockDesc *sd, int ttl)
@@ -929,11 +944,11 @@ void UDP::leaveMulticastGroups(SockDesc *sd, const std::vector<L3Address>& multi
 {
     std::vector<L3Address> empty;
 
-    for (unsigned int i = 0; i < multicastAddresses.size(); i++) {
-        auto it = sd->findFirstMulticastMembership(multicastAddresses[i]);
+    for (auto & multicastAddresse : multicastAddresses) {
+        auto it = sd->findFirstMulticastMembership(multicastAddresse);
         while (it != sd->multicastMembershipTable.end()) {
             MulticastMembership *membership = *it;
-            if (membership->multicastAddress != multicastAddresses[i])
+            if (membership->multicastAddress != multicastAddresse)
                 break;
             it = sd->multicastMembershipTable.erase(it);
 
@@ -975,8 +990,8 @@ void UDP::blockMulticastSources(SockDesc *sd, InterfaceEntry *ie, L3Address mult
     std::vector<L3Address> oldSources(membership->sourceList);
     std::vector<L3Address>& excludedSources = membership->sourceList;
     bool changed = false;
-    for (unsigned int i = 0; i < sourceList.size(); ++i) {
-        const L3Address& sourceAddress = sourceList[i];
+    for (auto & elem : sourceList) {
+        const L3Address& sourceAddress = elem;
         auto it = std::find(excludedSources.begin(), excludedSources.end(), sourceAddress);
         if (it != excludedSources.end()) {
             excludedSources.push_back(sourceAddress);
@@ -1006,8 +1021,8 @@ void UDP::unblockMulticastSources(SockDesc *sd, InterfaceEntry *ie, L3Address mu
     std::vector<L3Address> oldSources(membership->sourceList);
     std::vector<L3Address>& excludedSources = membership->sourceList;
     bool changed = false;
-    for (unsigned int i = 0; i < sourceList.size(); ++i) {
-        const L3Address& sourceAddress = sourceList[i];
+    for (auto & elem : sourceList) {
+        const L3Address& sourceAddress = elem;
         auto it = std::find(excludedSources.begin(), excludedSources.end(), sourceAddress);
         if (it != excludedSources.end()) {
             excludedSources.erase(it);
@@ -1041,8 +1056,8 @@ void UDP::joinMulticastSources(SockDesc *sd, InterfaceEntry *ie, L3Address multi
     std::vector<L3Address> oldSources(membership->sourceList);
     std::vector<L3Address>& includedSources = membership->sourceList;
     bool changed = false;
-    for (unsigned int i = 0; i < sourceList.size(); ++i) {
-        const L3Address& sourceAddress = sourceList[i];
+    for (auto & elem : sourceList) {
+        const L3Address& sourceAddress = elem;
         auto it = std::find(includedSources.begin(), includedSources.end(), sourceAddress);
         if (it != includedSources.end()) {
             includedSources.push_back(sourceAddress);
@@ -1072,8 +1087,8 @@ void UDP::leaveMulticastSources(SockDesc *sd, InterfaceEntry *ie, L3Address mult
     std::vector<L3Address> oldSources(membership->sourceList);
     std::vector<L3Address>& includedSources = membership->sourceList;
     bool changed = false;
-    for (unsigned int i = 0; i < sourceList.size(); ++i) {
-        const L3Address& sourceAddress = sourceList[i];
+    for (auto & elem : sourceList) {
+        const L3Address& sourceAddress = elem;
         auto it = std::find(includedSources.begin(), includedSources.end(), sourceAddress);
         if (it != includedSources.end()) {
             includedSources.erase(it);

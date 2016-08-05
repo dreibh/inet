@@ -192,7 +192,7 @@ InterfaceEntry *CSMA::createInterfaceEntry()
 
     // capabilities
     e->setMtu(par("mtu").longValue());
-    e->setMulticast(false);
+    e->setMulticast(true);
     e->setBroadcast(true);
 
     return e;
@@ -209,6 +209,7 @@ void CSMA::handleUpperPacket(cPacket *msg)
     macPkt->setBitLength(headerLength);
     IMACProtocolControlInfo *const cInfo = check_and_cast<IMACProtocolControlInfo *>(msg->removeControlInfo());
     EV_DETAIL << "CSMA received a message from upper layer, name is " << msg->getName() << ", CInfo removed, mac addr=" << cInfo->getDestinationAddress() << endl;
+    macPkt->setNetworkProtocol(cInfo->getNetworkProtocol());
     MACAddress dest = cInfo->getDestinationAddress();
     macPkt->setDestAddr(dest);
     delete cInfo;
@@ -486,7 +487,7 @@ void CSMA::updateStatusTransmitFrame(t_mac_event event, cMessage *msg)
         radio->setRadioMode(IRadio::RADIO_MODE_RECEIVER);
 
         bool expectAck = useMACAcks;
-        if (!packet->getDestAddr().isBroadcast()) {
+        if (!packet->getDestAddr().isBroadcast() && !packet->getDestAddr().isMulticast()) {
             //unicast
             EV_DETAIL << "(4) FSM State TRANSMITFRAME_4, "
                       << "EV_FRAME_TRANSMITTED [Unicast]: ";
@@ -909,7 +910,7 @@ void CSMA::handleLowerPacket(cPacket *msg)
             }
         }
     }
-    else if (dest.isBroadcast()) {
+    else if (dest.isBroadcast() || dest.isMulticast()) {
         executeMac(EV_BROADCAST_RECEIVED, macPkt);
     }
     else {
@@ -918,7 +919,7 @@ void CSMA::handleLowerPacket(cPacket *msg)
     }
 }
 
-void CSMA::receiveSignal(cComponent *source, simsignal_t signalID, long value)
+void CSMA::receiveSignal(cComponent *source, simsignal_t signalID, long value DETAILS_ARG)
 {
     Enter_Method_Silent();
     if (signalID == IRadio::transmissionStateChangedSignal) {
@@ -933,21 +934,13 @@ void CSMA::receiveSignal(cComponent *source, simsignal_t signalID, long value)
 
 cPacket *CSMA::decapsMsg(CSMAFrame *macPkt)
 {
-    cPacket *msg = macPkt->decapsulate();
-    setUpControlInfo(msg, macPkt->getSrcAddr());
-
-    return msg;
-}
-
-/**
- * Attaches a "control info" (MacToNetw) structure (object) to the message pMsg.
- */
-cObject *CSMA::setUpControlInfo(cMessage *const pMsg, const MACAddress& pSrcAddr)
-{
-    SimpleLinkLayerControlInfo *const cCtrlInfo = new SimpleLinkLayerControlInfo();
-    cCtrlInfo->setSrc(pSrcAddr);
-    pMsg->setControlInfo(cCtrlInfo);
-    return cCtrlInfo;
+    cPacket *packet = macPkt->decapsulate();
+    SimpleLinkLayerControlInfo *const controlInfo = new SimpleLinkLayerControlInfo();
+    controlInfo->setSrc(macPkt->getSrcAddr());
+    controlInfo->setInterfaceId(interfaceEntry->getInterfaceId());
+    controlInfo->setNetworkProtocol(macPkt->getNetworkProtocol());
+    packet->setControlInfo(controlInfo);
+    return packet;
 }
 
 } // namespace inet

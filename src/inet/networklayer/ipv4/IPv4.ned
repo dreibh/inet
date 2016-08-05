@@ -32,12 +32,10 @@ package inet.networklayer.ipv4;
 // an ~IPv4ControlInfo to the packet, with the source and destination IPv4 address,
 // etc. of the IPv4 datagram in which the packet arrived.
 //
-// ~IPv4 can serve several higher-layer protocols. The higher layer protocols should
-// send one or more RegisterProtocol message (a simple cMessage with
-// ~IPRegisterProtocolCommand controlinfo and kind=IP_C_REGISTER_PROTOCOL)
-// to IPv4 module, for fill up the protocol-to-gateindex map.
-// When delivering packets to them, the output gate is determined from the Protocol
-// field in the IPv4 header.
+// ~IPv4 can serve several higher-layer protocols. The higher layer protocols
+// should call registerProtocol with their gate towards the IPv4 module,
+// for fill up the protocol-to-gateindex map. When delivering packets to them,
+// the output gate is determined from the Protocol in the IPv4 header.
 //
 // <b>Routing and interfacing with lower layers</b>
 //
@@ -102,10 +100,8 @@ simple IPv4
         @signal[NF_IPv4_DATA_ON_RPF](type=IPv4Datagram);
         @signal[NF_IPv4_MDATA_REGISTER](type=IPv4Datagram);
     gates:
-        input transportIn[] @labels(IPv4ControlInfo/down,TCPSegment,UDPPacket);
-        output transportOut[] @labels(IPv4ControlInfo/up,TCPSegment,UDPPacket);
-        input arpIn @labels(ARPPacket+Ieee802Ctrl);
-        output arpOut @labels(ARPPacket+Ieee802Ctrl,IPv4Datagram+Ieee802Ctrl);
-        input queueIn[] @labels(IPv4Datagram,ARPPacket,Ieee802Ctrl);
-        output queueOut[] @labels(IPv4Datagram,ARPPacket,Ieee802Ctrl);
+        input transportIn @labels(IPv4ControlInfo/down,TCPSegment,UDPPacket);
+        output transportOut @labels(IPv4ControlInfo/up,TCPSegment,UDPPacket);
+        input queueIn @labels(IPv4Datagram,ARPPacket,Ieee802Ctrl);
+        output queueOut @labels(IPv4Datagram,ARPPacket,Ieee802Ctrl);
 }

@@ -1,12 +1,34 @@
 ====== inet-3.x ======
 
+2016-04-06  ------ inet-3.2.4 released ------
+
+2016-03-16  ------ inet-3.2.3 released ------
+
+2016-03-11  ------ inet-3.2.2 released ------
+
+2016-01-21  ------ inet-3.2.1 released ------
+
+2015-12-16  ------ inet-3.2.0 released ------
+
+2015-12-03  Zoltan Bojthe
+
+	Shows libav... library versions at initialize()
+
+2015-12-03  Zoltan Bojthe
+
+	Fix: didn't work with ffmpeg version shipped with Ubuntu 15.10
+
+2015-10-26  ------ inet-3.1.1 released ------
+
+2015-10-15  ------ inet-3.1.0 released ------
+
 2015-06-22  ------ inet-3.0.0 released ------
 
 2015-05-13  ------ inet-2.99.1 released ------
 
 2015-03-10  Zoltan Bojthe
 
-    VoIPStreamPacket has a ByteArray member, instead of extending ByteArrayMessage.
+	VoIPStreamPacket has a ByteArray member, instead of extending ByteArrayMessage.
 
 2015-01-21  Zoltan Bojthe
 

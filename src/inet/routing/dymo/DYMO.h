@@ -53,7 +53,7 @@ namespace dymo {
  *  - 13.6. Message Aggregation
  *    RFC5148 add jitter to broadcasts
  */
-class INET_API DYMO : public cSimpleModule, public ILifecycle, public cListener, public INetfilter::IHook
+class INET_API DYMO : public cSimpleModule, public ILifecycle, public cListener, public NetfilterBase::HookBase
 {
   private:
     // DYMO parameters from RFC
@@ -221,7 +221,7 @@ class INET_API DYMO : public cSimpleModule, public ILifecycle, public cListener,
     virtual bool handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback) override;
 
     // notification
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
 };
 
 } // namespace dymo

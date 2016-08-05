@@ -75,16 +75,10 @@ void InterfaceTable::initialize(int stage)
         host = getContainingNode(this);
         WATCH_PTRVECTOR(idToInterface);
     }
-    else if (stage == INITSTAGE_NETWORK_LAYER) {
-        updateDisplayString();
-    }
 }
 
-void InterfaceTable::updateDisplayString()
+void InterfaceTable::refreshDisplay() const
 {
-    if (!hasGUI())
-        return;
-
     char buf[80];
     sprintf(buf, "%d interfaces", getNumInterfaces());
     getDisplayString().setTagArg("t", 0, buf);
@@ -95,7 +89,7 @@ void InterfaceTable::handleMessage(cMessage *msg)
     throw cRuntimeError("This module doesn't process messages");
 }
 
-void InterfaceTable::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void InterfaceTable::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     // nothing needed here at the moment
     Enter_Method_Silent();
@@ -104,10 +98,9 @@ void InterfaceTable::receiveSignal(cComponent *source, simsignal_t signalID, cOb
 
 //---
 
-cModule *InterfaceTable::getHostModule()
+cModule *InterfaceTable::getHostModule() const
 {
-    if (!host)
-        host = getContainingNode(this);
+    ASSERT(host != nullptr);
     return host;
 }
 
@@ -215,7 +208,7 @@ bool InterfaceTable::isNeighborAddress(const L3Address& address) const
     return false;
 }
 
-int InterfaceTable::getNumInterfaces()
+int InterfaceTable::getNumInterfaces() const
 {
     if (tmpNumInterfaces == -1) {
         // count non-nullptr elements
@@ -231,7 +224,7 @@ int InterfaceTable::getNumInterfaces()
     return tmpNumInterfaces;
 }
 
-InterfaceEntry *InterfaceTable::getInterface(int pos)
+InterfaceEntry *InterfaceTable::getInterface(int pos) const
 {
     int n = getNumInterfaces();    // also fills tmpInterfaceList
     if (pos < 0 || pos >= n)
@@ -251,13 +244,13 @@ InterfaceEntry *InterfaceTable::getInterface(int pos)
     return tmpInterfaceList[pos];
 }
 
-InterfaceEntry *InterfaceTable::getInterfaceById(int id)
+InterfaceEntry *InterfaceTable::getInterfaceById(int id) const
 {
     id -= INTERFACEIDS_START;
     return (id < 0 || id >= (int)idToInterface.size()) ? nullptr : idToInterface[id];
 }
 
-int InterfaceTable::getBiggestInterfaceId()
+int InterfaceTable::getBiggestInterfaceId() const
 {
     return INTERFACEIDS_START + idToInterface.size() - 1;
 }
@@ -308,7 +301,7 @@ void InterfaceTable::discoverConnectingGates(InterfaceEntry *entry)
     // find gates connected to host / network layer
     cGate *nwlayerInGate = nullptr, *nwlayerOutGate = nullptr;    // ifIn[] and ifOut[] gates in the network layer
     for (GateIterator i(ifmod); !i.end(); i++) {
-        cGate *g = i();
+        cGate *g = *i;
         if (!g)
             continue;
 
@@ -318,6 +311,7 @@ void InterfaceTable::discoverConnectingGates(InterfaceEntry *entry)
         if (g->getType() == cGate::INPUT && g->getPreviousGate() && g->getPreviousGate()->getOwnerModule() == host)
             entry->setNodeInputGateId(g->getPreviousGate()->getId());
 
+        //TODO revise next code:
         // find the gate index of networkLayer/networkLayer6/mpls that connects to this interface
         if (g->getType() == cGate::OUTPUT && g->getNextGate() && g->getNextGate()->isName("ifIn")) // connected to ifIn in networkLayer?
             nwlayerInGate = g->getNextGate();
@@ -330,6 +324,7 @@ void InterfaceTable::discoverConnectingGates(InterfaceEntry *entry)
     // note: we don't check nodeOutputGateId/nodeInputGateId, because wireless interfaces
     // are not connected to the host
 
+    //TODO revise next code:
     if (nwlayerInGate || nwlayerOutGate) {    // connected to a network layer (i.e. to another module's ifIn/ifOut gates)
         if (!nwlayerInGate || !nwlayerOutGate)
             throw cRuntimeError("addInterface(): interface module '%s' is connected only to an 'ifOut' or an 'ifIn' gate, must connect to either both or neither", ifmod->getFullPath().c_str());
@@ -337,7 +332,7 @@ void InterfaceTable::discoverConnectingGates(InterfaceEntry *entry)
             throw cRuntimeError("addInterface(): interface module '%s' is connected to 'ifOut' and 'ifIn' gates in different modules", ifmod->getFullPath().c_str());
         if (nwlayerInGate->getIndex() != nwlayerOutGate->getIndex()) // if both are scalar, that's OK too (index==0)
             throw cRuntimeError("addInterface(): gate index mismatch: interface module '%s' is connected to different indices in 'ifOut[']/'ifIn[]' gates of the network layer module", ifmod->getFullPath().c_str());
-        entry->setNetworkLayerGateIndex(nwlayerInGate->getIndex());
+        //entry->setNetworkLayerGateIndex(nwlayerInGate->getIndex());
     }
 }
 
@@ -380,25 +375,24 @@ void InterfaceTable::updateLinkDisplayString(InterfaceEntry *entry)
         if (!outputGate->getChannel())
             return;
         cDisplayString& displayString = outputGate->getDisplayString();
-        char buf[128];
+        std::ostringstream buf;
+        buf << entry->getFullName();
 #ifdef WITH_IPv4
         if (entry->ipv4Data()) {
-            sprintf(buf, "%s\n%s/%d", entry->getFullName(), entry->ipv4Data()->getIPAddress().str().c_str(), entry->ipv4Data()->getNetmask().getNetmaskLength());
-            displayString.setTagArg("t", 0, buf);
-            displayString.setTagArg("t", 1, "l");
+            buf << "\n" << entry->ipv4Data()->getIPAddress().str() << "/" << entry->ipv4Data()->getNetmask().getNetmaskLength();
         }
 #endif // ifdef WITH_IPv4
 #ifdef WITH_IPv6
         if (entry->ipv6Data() && entry->ipv6Data()->getNumAddresses() > 0) {
-            sprintf(buf, "%s\n%s", entry->getFullName(), entry->ipv6Data()->getPreferredAddress().str().c_str());
-            displayString.setTagArg("t", 0, buf);
-            displayString.setTagArg("t", 1, "l");
+            buf << "\n" << entry->ipv6Data()->getPreferredAddress().str();
         }
 #endif // ifdef WITH_IPv6
+        displayString.setTagArg("t", 0, buf.str().c_str());
+        displayString.setTagArg("t", 1, "l");
     }
 }
 
-InterfaceEntry *InterfaceTable::getInterfaceByNodeOutputGateId(int id)
+InterfaceEntry *InterfaceTable::getInterfaceByNodeOutputGateId(int id) const
 {
     // linear search is OK because normally we have don't have many interfaces and this func is rarely called
     Enter_Method_Silent();
@@ -410,7 +404,7 @@ InterfaceEntry *InterfaceTable::getInterfaceByNodeOutputGateId(int id)
     return nullptr;
 }
 
-InterfaceEntry *InterfaceTable::getInterfaceByNodeInputGateId(int id)
+InterfaceEntry *InterfaceTable::getInterfaceByNodeInputGateId(int id) const
 {
     // linear search is OK because normally we have don't have many interfaces and this func is rarely called
     Enter_Method_Silent();
@@ -422,19 +416,7 @@ InterfaceEntry *InterfaceTable::getInterfaceByNodeInputGateId(int id)
     return nullptr;
 }
 
-InterfaceEntry *InterfaceTable::getInterfaceByNetworkLayerGateIndex(int index)
-{
-    // linear search is OK because normally we have don't have many interfaces and this func is rarely called
-    Enter_Method_Silent();
-    int n = idToInterface.size();
-    for (int i = 0; i < n; i++)
-        if (idToInterface[i] && idToInterface[i]->getNetworkLayerGateIndex() == index)
-            return idToInterface[i];
-
-    return nullptr;
-}
-
-InterfaceEntry *InterfaceTable::getInterfaceByInterfaceModule(cModule *ifmod)
+InterfaceEntry *InterfaceTable::getInterfaceByInterfaceModule(cModule *ifmod) const
 {
     // ifmod is something like "host.eth[1].mac"; climb up to find "host.eth[1]" from it
     ASSERT(host != nullptr);
@@ -446,7 +428,7 @@ InterfaceEntry *InterfaceTable::getInterfaceByInterfaceModule(cModule *ifmod)
 
     int nodeInputGateId = -1, nodeOutputGateId = -1;
     for (GateIterator i(ifmod); !i.end(); i++) {
-        cGate *g = i();
+        cGate *g = *i;
         if (!g)
             continue;
 
@@ -467,7 +449,7 @@ InterfaceEntry *InterfaceTable::getInterfaceByInterfaceModule(cModule *ifmod)
     return ie;
 }
 
-InterfaceEntry *InterfaceTable::getInterfaceByName(const char *name)
+InterfaceEntry *InterfaceTable::getInterfaceByName(const char *name) const
 {
     Enter_Method_Silent();
     if (!name)
@@ -480,7 +462,7 @@ InterfaceEntry *InterfaceTable::getInterfaceByName(const char *name)
     return nullptr;
 }
 
-InterfaceEntry *InterfaceTable::getFirstLoopbackInterface()
+InterfaceEntry *InterfaceTable::getFirstLoopbackInterface() const
 {
     Enter_Method_Silent();
     int n = idToInterface.size();
@@ -491,7 +473,7 @@ InterfaceEntry *InterfaceTable::getFirstLoopbackInterface()
     return nullptr;
 }
 
-InterfaceEntry *InterfaceTable::getFirstMulticastInterface()
+InterfaceEntry *InterfaceTable::getFirstMulticastInterface() const
 {
     Enter_Method_Silent();
     int n = idToInterface.size();
@@ -527,7 +509,7 @@ void InterfaceTable::resetInterfaces()
 
 }
 
-MulticastGroupList InterfaceTable::collectMulticastGroups()
+MulticastGroupList InterfaceTable::collectMulticastGroups() const
 {
     MulticastGroupList mglist;
     for (int i = 0; i < getNumInterfaces(); ++i) {

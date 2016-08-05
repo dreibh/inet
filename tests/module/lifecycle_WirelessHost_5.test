@@ -15,12 +15,12 @@ sim-time-limit = 100s
 
 **.hasStatus = true
 **.scenarioManager.script = xmldoc("scenario.xml")
-*.host*.numRadios=1
+*.host*.numWlanInterfaces=1
 
-*.host*.networkLayer.configurator.networkConfiguratorModule = ""
+*.host*.ipv4.configurator.networkConfiguratorModule = ""
 
-*.hostsender.numUdpApps = 1
-*.hostsender.udpApp[0].typename = "DHCPClient"
+*.hostsender.numApps = 1
+*.hostsender.app[0].typename = "DHCPClient"
 
 *.host*.mobilityType = "StationaryMobility"
 **.mobility.constraintAreaMinX = 0m

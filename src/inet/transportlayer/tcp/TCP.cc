@@ -17,11 +17,11 @@
 
 #include "inet/transportlayer/tcp/TCP.h"
 
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
 #include "inet/networklayer/common/IPProtocolId_m.h"
 #include "inet/common/lifecycle/LifecycleOperation.h"
 #include "inet/common/ModuleAccess.h"
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/common/lifecycle/NodeOperations.h"
 #include "inet/common/lifecycle/NodeStatus.h"
 #include "inet/transportlayer/tcp/TCPConnection.h"
@@ -61,13 +61,13 @@ static std::ostream& operator<<(std::ostream& os, const TCP::SockPair& sp)
 
 static std::ostream& operator<<(std::ostream& os, const TCP::AppConnKey& app)
 {
-    os << "connId=" << app.connId << " appGateIndex=" << app.appGateIndex;
+    os << "socketId=" << app.socketId;
     return os;
 }
 
 static std::ostream& operator<<(std::ostream& os, const TCPConnection& conn)
 {
-    os << "connId=" << conn.connId << " " << TCPConnection::stateName(conn.getFsmState())
+    os << "socketId=" << conn.socketId << " " << TCPConnection::stateName(conn.getFsmState())
        << " state={" << const_cast<TCPConnection&>(conn).getState()->info() << "}";
     return os;
 }
@@ -96,10 +96,11 @@ void TCP::initialize(int stage)
         useDataNotification = par("useDataNotification");
     }
     else if (stage == INITSTAGE_TRANSPORT_LAYER) {
-        NodeStatus *nodeStatus = dynamic_cast<NodeStatus *>(findContainingNode(this)->getSubmodule("status"));
+        cModule *host = findContainingNode(this);
+        NodeStatus *nodeStatus = check_and_cast_nullable<NodeStatus *>(host ? host->getSubmodule("status") : nullptr);
         isOperational = (!nodeStatus) || nodeStatus->getState() == NodeStatus::UP;
-        IPSocket ipSocket(gate("ipOut"));
-        ipSocket.registerProtocol(IP_PROT_TCP);
+        registerProtocol(Protocol::tcp, gate("ipOut"));
+        registerProtocol(Protocol::tcp, gate("appOut"));
     }
 }
 
@@ -170,19 +171,17 @@ void TCP::handleMessage(cMessage *msg)
     }
     else {    // must be from app
         TCPCommand *controlInfo = check_and_cast<TCPCommand *>(msg->getControlInfo());
-        int appGateIndex = msg->getArrivalGate()->getIndex();
-        int connId = controlInfo->getConnId();
+        int socketId = controlInfo->getSocketId();
 
-        TCPConnection *conn = findConnForApp(appGateIndex, connId);
+        TCPConnection *conn = findConnForApp(socketId);
 
         if (!conn) {
-            conn = createConnection(appGateIndex, connId);
+            conn = createConnection(socketId);
 
             // add into appConnMap here; it'll be added to connMap during processing
             // the OPEN command in TCPConnection's processAppCommand().
             AppConnKey key;
-            key.appGateIndex = appGateIndex;
-            key.connId = connId;
+            key.socketId = socketId;
             tcpAppConnMap[key] = conn;
 
             EV_INFO << "TCP connection created for " << msg << "\n";
@@ -191,14 +190,11 @@ void TCP::handleMessage(cMessage *msg)
         if (!ret)
             removeConnection(conn);
     }
-
-    if (hasGUI())
-        updateDisplayString();
 }
 
-TCPConnection *TCP::createConnection(int appGateIndex, int connId)
+TCPConnection *TCP::createConnection(int socketId)
 {
-    return new TCPConnection(this, appGateIndex, connId);
+    return new TCPConnection(this, socketId);
 }
 
 void TCP::segmentArrivalWhileClosed(TCPSegment *tcpseg, L3Address srcAddr, L3Address destAddr)
@@ -209,9 +205,9 @@ void TCP::segmentArrivalWhileClosed(TCPSegment *tcpseg, L3Address srcAddr, L3Add
     delete tcpseg;
 }
 
-void TCP::updateDisplayString()
+void TCP::refreshDisplay() const
 {
-    if (getEnvir()->isDisabled()) {
+    if (getEnvir()->isExpressMode()) {
         // in express mode, we don't bother to update the display
         // (std::map's iteration is not very fast if map is large)
         getDisplayString().setTagArg("t", 0, "");
@@ -230,8 +226,8 @@ void TCP::updateDisplayString()
         numESTABLISHED = 0, numCLOSE_WAIT = 0, numLAST_ACK = 0, numFIN_WAIT_1 = 0,
         numFIN_WAIT_2 = 0, numCLOSING = 0, numTIME_WAIT = 0;
 
-    for (auto i = tcpAppConnMap.begin(); i != tcpAppConnMap.end(); ++i) {
-        int state = (*i).second->getFsmState();
+    for (auto & elem : tcpAppConnMap) {
+        int state = (elem).second->getFsmState();
 
         switch (state) {
             case TCP_S_INIT:
@@ -356,11 +352,10 @@ TCPConnection *TCP::findConnForSegment(TCPSegment *tcpseg, L3Address srcAddr, L3
     return nullptr;
 }
 
-TCPConnection *TCP::findConnForApp(int appGateIndex, int connId)
+TCPConnection *TCP::findConnForApp(int socketId)
 {
     AppConnKey key;
-    key.appGateIndex = appGateIndex;
-    key.connId = connId;
+    key.socketId = socketId;
 
     auto i = tcpAppConnMap.find(key);
     return i == tcpAppConnMap.end() ? nullptr : i->second;
@@ -447,17 +442,16 @@ void TCP::addForkedConnection(TCPConnection *conn, TCPConnection *newConn, L3Add
     updateSockPair(conn, localAddr, remoteAddr, localPort, remotePort);
     addSockPair(newConn, newConn->localAddr, newConn->remoteAddr, newConn->localPort, newConn->remotePort);
 
-    // conn will get a new connId...
+    // conn will get a new socketId...
     AppConnKey key;
-    key.appGateIndex = conn->appGateIndex;
-    key.connId = conn->connId;
+    key.socketId = conn->socketId;
     tcpAppConnMap.erase(key);
-    key.connId = conn->connId = getEnvir()->getUniqueNumber();
+    conn->listeningSocketId = conn->socketId;
+    key.socketId = conn->socketId = getEnvir()->getUniqueNumber();
     tcpAppConnMap[key] = conn;
 
-    // ...and newConn will live on with the old connId
-    key.appGateIndex = newConn->appGateIndex;
-    key.connId = newConn->connId;
+    // ...and newConn will live on with the old socketId
+    key.socketId = newConn->socketId;
     tcpAppConnMap[key] = newConn;
 }
 
@@ -466,8 +460,7 @@ void TCP::removeConnection(TCPConnection *conn)
     EV_INFO << "Deleting TCP connection\n";
 
     AppConnKey key;
-    key.appGateIndex = conn->appGateIndex;
-    key.connId = conn->connId;
+    key.socketId = conn->socketId;
     tcpAppConnMap.erase(key);
 
     SockPair key2;
@@ -534,7 +527,6 @@ bool TCP::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCa
         if ((NodeStartOperation::Stage)stage == NodeStartOperation::STAGE_TRANSPORT_LAYER) {
             //FIXME implementation
             isOperational = true;
-            updateDisplayString();
         }
     }
     else if (dynamic_cast<NodeShutdownOperation *>(operation)) {
@@ -542,7 +534,6 @@ bool TCP::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCa
             //FIXME close connections???
             reset();
             isOperational = false;
-            updateDisplayString();
         }
     }
     else if (dynamic_cast<NodeCrashOperation *>(operation)) {
@@ -550,7 +541,6 @@ bool TCP::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCa
             //FIXME implementation
             reset();
             isOperational = false;
-            updateDisplayString();
         }
     }
     else {
@@ -562,8 +552,8 @@ bool TCP::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCa
 
 void TCP::reset()
 {
-    for (auto it = tcpAppConnMap.begin(); it != tcpAppConnMap.end(); ++it)
-        delete it->second;
+    for (auto & elem : tcpAppConnMap)
+        delete elem.second;
     tcpAppConnMap.clear();
     tcpConnMap.clear();
     usedEphemeralPorts.clear();
@@ -573,4 +563,3 @@ void TCP::reset()
 } // namespace tcp
 
 } // namespace inet
-

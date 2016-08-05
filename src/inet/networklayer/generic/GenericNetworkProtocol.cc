@@ -18,14 +18,14 @@
 
 #include "inet/networklayer/generic/GenericNetworkProtocol.h"
 
-#include "inet/networklayer/generic/GenericDatagram.h"
+#include "inet/common/ModuleAccess.h"
+#include "inet/linklayer/common/Ieee802Ctrl.h"
+#include "inet/networklayer/contract/L3SocketCommand_m.h"
 #include "inet/networklayer/contract/generic/GenericNetworkProtocolControlInfo.h"
+#include "inet/networklayer/generic/GenericDatagram.h"
 #include "inet/networklayer/generic/GenericNetworkProtocolInterfaceData.h"
 #include "inet/networklayer/generic/GenericRoute.h"
 #include "inet/networklayer/generic/GenericRoutingTable.h"
-#include "inet/common/ModuleAccess.h"
-#include "inet/linklayer/common/Ieee802Ctrl.h"
-#include "inet/networklayer/common/IPSocket.h"
 
 namespace inet {
 
@@ -35,7 +35,6 @@ GenericNetworkProtocol::GenericNetworkProtocol() :
         interfaceTable(nullptr),
         routingTable(nullptr),
         arp(nullptr),
-        queueOutBaseGateId(-1),
         defaultHopLimit(-1),
         numLocalDeliver(0),
         numDropped(0),
@@ -52,25 +51,36 @@ GenericNetworkProtocol::~GenericNetworkProtocol()
     queuedDatagramsForHooks.clear();
 }
 
-void GenericNetworkProtocol::initialize()
+void GenericNetworkProtocol::initialize(int stage)
 {
-    QueueBase::initialize();
+    if (stage == INITSTAGE_LOCAL) {
+        QueueBase::initialize();
 
-    interfaceTable = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
-    routingTable = getModuleFromPar<GenericRoutingTable>(par("routingTableModule"), this);
-    arp = getModuleFromPar<IARP>(par("arpModule"), this);
+        interfaceTable = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
+        routingTable = getModuleFromPar<GenericRoutingTable>(par("routingTableModule"), this);
+        arp = getModuleFromPar<IARP>(par("arpModule"), this);
 
-    queueOutBaseGateId = gateSize("queueOut") == 0 ? -1 : gate("queueOut", 0)->getId();
-    defaultHopLimit = par("hopLimit");
-    numLocalDeliver = numDropped = numUnroutable = numForwarded = 0;
+        defaultHopLimit = par("hopLimit");
+        numLocalDeliver = numDropped = numUnroutable = numForwarded = 0;
 
-    WATCH(numLocalDeliver);
-    WATCH(numDropped);
-    WATCH(numUnroutable);
-    WATCH(numForwarded);
+        WATCH(numLocalDeliver);
+        WATCH(numDropped);
+        WATCH(numUnroutable);
+        WATCH(numForwarded);
+    }
+    else if (stage == INITSTAGE_NETWORK_LAYER) {
+        registerProtocol(Protocol::gnp, gate("transportOut"));
+        registerProtocol(Protocol::gnp, gate("queueOut"));
+    }
 }
 
-void GenericNetworkProtocol::updateDisplayString()
+void GenericNetworkProtocol::handleRegisterProtocol(const Protocol& protocol, cGate *gate)
+{
+    Enter_Method("handleRegisterProtocol");
+    mapping.addProtocolMapping(ProtocolGroup::ipprotocol.getProtocolNumber(&protocol), gate->getIndex());
+}
+
+void GenericNetworkProtocol::refreshDisplay() const
 {
     char buf[80] = "";
     if (numForwarded > 0)
@@ -86,9 +96,29 @@ void GenericNetworkProtocol::updateDisplayString()
 
 void GenericNetworkProtocol::handleMessage(cMessage *msg)
 {
-    if (dynamic_cast<RegisterTransportProtocolCommand *>(msg)) {
-        RegisterTransportProtocolCommand *command = check_and_cast<RegisterTransportProtocolCommand *>(msg);
-        mapping.addProtocolMapping(command->getProtocol(), msg->getArrivalGate()->getIndex());
+    if (L3SocketBindCommand *command = dynamic_cast<L3SocketBindCommand *>(msg->getControlInfo())) {
+        ASSERT(command->getControlInfoProtocolId() == Protocol::gnp.getId());
+        SocketDescriptor *descriptor = new SocketDescriptor(command->getSocketId(), command->getProtocolId());
+        socketIdToSocketDescriptor[command->getSocketId()] = descriptor;
+        protocolIdToSocketDescriptors.insert(std::pair<int, SocketDescriptor *>(command->getProtocolId(), descriptor));
+        delete msg;
+    }
+    else if (L3SocketCloseCommand *command = dynamic_cast<L3SocketCloseCommand *>(msg->getControlInfo())) {
+        ASSERT(command->getControlInfoProtocolId() == Protocol::gnp.getId());
+        auto it = socketIdToSocketDescriptor.find(command->getSocketId());
+        if (it != socketIdToSocketDescriptor.end()) {
+            int protocol = it->second->protocolId;
+            auto lowerBound = protocolIdToSocketDescriptors.lower_bound(protocol);
+            auto upperBound = protocolIdToSocketDescriptors.upper_bound(protocol);
+            for (auto jt = lowerBound; jt != upperBound; jt++) {
+                if (it->second == jt->second) {
+                    protocolIdToSocketDescriptors.erase(jt);
+                    break;
+                }
+            }
+            delete it->second;
+            socketIdToSocketDescriptor.erase(it);
+        }
         delete msg;
     }
     else
@@ -103,15 +133,12 @@ void GenericNetworkProtocol::endService(cPacket *pk)
         GenericDatagram *dgram = check_and_cast<GenericDatagram *>(pk);
         handlePacketFromNetwork(dgram);
     }
-
-    if (hasGUI())
-        updateDisplayString();
 }
 
-const InterfaceEntry *GenericNetworkProtocol::getSourceInterfaceFrom(cPacket *msg)
+const InterfaceEntry *GenericNetworkProtocol::getSourceInterfaceFrom(cPacket *packet)
 {
-    cGate *g = msg->getArrivalGate();
-    return g ? interfaceTable->getInterfaceByNetworkLayerGateIndex(g->getIndex()) : nullptr;
+    IMACProtocolControlInfo *controlInfo = dynamic_cast<IMACProtocolControlInfo *>(packet->getControlInfo());
+    return controlInfo != nullptr ? interfaceTable->getInterfaceById(controlInfo->getInterfaceId()) : nullptr;
 }
 
 void GenericNetworkProtocol::handlePacketFromNetwork(GenericDatagram *datagram)
@@ -120,13 +147,12 @@ void GenericNetworkProtocol::handlePacketFromNetwork(GenericDatagram *datagram)
         //TODO discard
     }
 
-    delete datagram->removeControlInfo();
-
     // hop counter decrement; FIXME but not if it will be locally delivered
     datagram->setHopLimit(datagram->getHopLimit() - 1);
 
     L3Address nextHop;
     const InterfaceEntry *inIE = getSourceInterfaceFrom(datagram);
+
     const InterfaceEntry *destIE = nullptr;
     if (datagramPreRoutingHook(datagram, inIE, destIE, nextHop) != IHook::ACCEPT)
         return;
@@ -418,25 +444,38 @@ GenericDatagram *GenericNetworkProtocol::encapsulate(cPacket *transportPacket, c
 void GenericNetworkProtocol::sendDatagramToHL(GenericDatagram *datagram)
 {
     int protocol = datagram->getTransportProtocol();
-    int gateIndex = mapping.findOutputGateForProtocol(protocol);
-    // check if the transportOut port are connected, otherwise discard the packet
-    if (gateIndex >= 0) {
-        cGate *outGate = gate("transportOut", gateIndex);
-        if (outGate->isPathOK()) {
-            // decapsulate and send on appropriate output gate
-            cPacket *packet = decapsulate(datagram);
-            delete datagram;
-            send(packet, "transportOut", gateIndex);
-            return;
-        }
+    cPacket *packet = decapsulate(datagram);
+    // deliver to sockets
+    auto lowerBound = protocolIdToSocketDescriptors.lower_bound(protocol);
+    auto upperBound = protocolIdToSocketDescriptors.upper_bound(protocol);
+    bool hasSocket = lowerBound != upperBound;
+    GenericNetworkProtocolControlInfo *controlInfo = check_and_cast<GenericNetworkProtocolControlInfo *>(packet->getControlInfo());
+    for (auto it = lowerBound; it != upperBound; it++) {
+        GenericNetworkProtocolControlInfo *controlInfoCopy = controlInfo->dup();
+        controlInfoCopy->setSocketId(it->second->socketId);
+        cPacket *packetCopy = packet->dup();
+        packetCopy->setControlInfo(controlInfoCopy);
+        send(packetCopy, "transportOut");
     }
-
-    //TODO send an ICMP error: protocol unreachable
+    if (mapping.findOutputGateForProtocol(protocol) >= 0) {
+        send(packet, "transportOut");
+        numLocalDeliver++;
+    }
+    else if (!hasSocket) {
+        EV_ERROR << "Transport protocol ID=" << protocol << " not connected, discarding packet\n";
+        //TODO send an ICMP error: protocol unreachable
+        // IMACProtocolControlInfo *controlInfo = dynamic_cast<IMACProtocolControlInfo *>(packet->getControlInfo());
+        // int inputInterfaceId = controlInfo != nullptr ? controlInfo->getInterfaceId() : -1;
+        // sendToIcmp(datagram, inputInterfaceId, ICMP_DESTINATION_UNREACHABLE, ICMP_DU_PROTOCOL_UNREACHABLE);
+        delete packet;
+    }
     delete datagram;
 }
 
 void GenericNetworkProtocol::sendDatagramToOutput(GenericDatagram *datagram, const InterfaceEntry *ie, L3Address nextHop)
 {
+    delete datagram->removeControlInfo();
+
     if (datagram->getByteLength() > ie->getMTU())
         throw cRuntimeError("datagram too large"); //TODO refine
 
@@ -449,7 +488,11 @@ void GenericNetworkProtocol::sendDatagramToOutput(GenericDatagram *datagram, con
 
     if (!ie->isBroadcast()) {
         EV_DETAIL << "output interface " << ie->getName() << " is not broadcast, skipping ARP\n";
-        send(datagram, queueOutBaseGateId + ie->getNetworkLayerGateIndex());
+        Ieee802Ctrl *controlInfo = new Ieee802Ctrl();
+        controlInfo->setEtherType(ETHERTYPE_INET_GENERIC);
+        controlInfo->setInterfaceId(ie->getInterfaceId());
+        datagram->setControlInfo(controlInfo);
+        send(datagram, "queueOut");
         return;
     }
 
@@ -469,10 +512,11 @@ void GenericNetworkProtocol::sendDatagramToOutput(GenericDatagram *datagram, con
         Ieee802Ctrl *controlInfo = new Ieee802Ctrl();
         controlInfo->setDest(nextHopMAC);
         controlInfo->setEtherType(ETHERTYPE_INET_GENERIC);
+        controlInfo->setInterfaceId(ie->getInterfaceId());
         datagram->setControlInfo(controlInfo);
 
         // send out
-        send(datagram, queueOutBaseGateId + ie->getNetworkLayerGateIndex());
+        send(datagram, "queueOut");
     }
 }
 
@@ -502,18 +546,13 @@ void GenericNetworkProtocol::datagramLocalOut(GenericDatagram *datagram, const I
 void GenericNetworkProtocol::registerHook(int priority, IHook *hook)
 {
     Enter_Method("registerHook()");
-    hooks.insert(std::pair<int, IHook *>(priority, hook));
+    NetfilterBase::registerHook(priority, hook);
 }
 
-void GenericNetworkProtocol::unregisterHook(int priority, IHook *hook)
+void GenericNetworkProtocol::unregisterHook(IHook *hook)
 {
     Enter_Method("unregisterHook()");
-    for (auto iter = hooks.begin(); iter != hooks.end(); iter++) {
-        if ((iter->first == priority) && (iter->second == hook)) {
-            hooks.erase(iter);
-            return;
-        }
-    }
+    NetfilterBase::unregisterHook(hook);
 }
 
 void GenericNetworkProtocol::dropQueuedDatagram(const INetworkDatagram *datagram)

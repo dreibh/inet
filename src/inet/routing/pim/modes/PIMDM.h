@@ -187,7 +187,7 @@ class INET_API PIMDM : public PIMBase, protected cListener
 
   private:
     // process signals
-    void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) override;
+    void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
     void unroutableMulticastPacketArrived(IPv4Address srcAddress, IPv4Address destAddress, unsigned short ttl);
     void multicastPacketArrivedOnNonRpfInterface(IPv4Address group, IPv4Address source, int interfaceId);
     void multicastPacketArrivedOnRpfInterface(int interfaceId, IPv4Address group, IPv4Address source, unsigned short ttl);
@@ -232,7 +232,7 @@ class INET_API PIMDM : public PIMBase, protected cListener
     // helpers
     void restartTimer(cMessage *timer, double interval);
     void cancelAndDeleteTimer(cMessage *& timer);
-    PIMInterface *getIncomingInterface(IPv4Datagram *datagram);
+    PIMInterface *getIncomingInterface(InterfaceEntry *fromIE);
     IPv4MulticastRoute *findIPv4MulticastRoute(IPv4Address group, IPv4Address source);
     Route *findRoute(IPv4Address source, IPv4Address group);
     void deleteRoute(IPv4Address source, IPv4Address group);

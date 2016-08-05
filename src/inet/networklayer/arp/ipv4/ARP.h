@@ -80,8 +80,6 @@ class INET_API ARP : public cSimpleModule, public IARP, public ILifecycle
 
     ARPCache arpCache;
 
-    cGate *netwOutGate = nullptr;
-
     IInterfaceTable *ift = nullptr;
     IIPv4RoutingTable *rt = nullptr;    // for answering ProxyARP requests
 
@@ -121,7 +119,7 @@ class INET_API ARP : public cSimpleModule, public IARP, public ILifecycle
     virtual void updateARPCache(ARPCacheEntry *entry, const MACAddress& macAddress);
 
     virtual void dumpARPPacket(ARPPacket *arp);
-    virtual void updateDisplayString();
+    virtual void refreshDisplay() const override;
 };
 
 } // namespace inet

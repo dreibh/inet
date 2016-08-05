@@ -54,7 +54,7 @@ void SCTPNatServer::initialize()
     lastStream = 0;
 
     socket = new SCTPSocket();
-    socket->setOutputGate(gate("sctpOut"));
+    socket->setOutputGate(gate("socketOut"));
     socket->setInboundStreams(inboundStreams);
     socket->setOutboundStreams(outboundStreams);
 
@@ -95,19 +95,19 @@ void SCTPNatServer::sendInfo(NatInfo *info)
     smsg->setDataLen(16);
     cmsg->encapsulate(PK(smsg));
     SCTPSendInfo *cmd = new SCTPSendInfo();
-    cmd->setAssocId(info->peer1Assoc);
+    cmd->setSocketId(info->peer1Assoc);
     cmd->setGate(info->peer1Gate);
     cmd->setSendUnordered(COMPLETE_MESG_UNORDERED);
     cmd->setSid(0);
     cmd->setLast(true);
     cmsg->setKind(SCTP_C_SEND);
     cmsg->setControlInfo(cmd);
-    send(cmsg, "sctpOut");
+    send(cmsg, "socketOut");
     EV << "info sent to peer1\n";
 
     cMessage *abortMsg = new cMessage("abortPeer1", SCTP_C_SHUTDOWN);
     abortMsg->setControlInfo(cmd->dup());
-    send(abortMsg, "sctpOut");
+    send(abortMsg, "socketOut");
     EV << "abortMsg sent to peer1\n";
 
     msg = new NatMessage("Rendezvous");
@@ -135,7 +135,7 @@ void SCTPNatServer::sendInfo(NatInfo *info)
     smsg->setDataLen(16);
     cmsg->encapsulate(PK(smsg));
     cmd = new SCTPSendInfo();
-    cmd->setAssocId(info->peer2Assoc);
+    cmd->setSocketId(info->peer2Assoc);
     cmd->setGate(info->peer2Gate);
     cmd->setSendUnordered(COMPLETE_MESG_UNORDERED);
     cmd->setSid(0);
@@ -143,10 +143,10 @@ void SCTPNatServer::sendInfo(NatInfo *info)
     cmsg->setKind(SCTP_C_SEND);
     cmsg->setControlInfo(cmd);
     EV << "info sent to peer2\n";
-    send(cmsg, "sctpOut");
+    send(cmsg, "socketOut");
     abortMsg = new cPacket("abortPeer2", SCTP_C_SHUTDOWN);
     abortMsg->setControlInfo(cmd->dup());
-    send(abortMsg, "sctpOut");
+    send(abortMsg, "socketOut");
     EV << "abortMsg sent to peer2\n";
 }
 
@@ -164,7 +164,7 @@ void SCTPNatServer::generateAndSend()
     msg->setBitLength(numBytes * 8);
     cmsg->encapsulate(msg);
     SCTPSendInfo *cmd = new SCTPSendInfo("Send1");
-    cmd->setAssocId(assocId);
+    cmd->setSocketId(assocId);
     cmd->setSendUnordered(ordered ? COMPLETE_MESG_ORDERED : COMPLETE_MESG_UNORDERED);
     lastStream = (lastStream + 1) % outboundStreams;
     cmd->setSid(lastStream);
@@ -173,7 +173,7 @@ void SCTPNatServer::generateAndSend()
     cmsg->setControlInfo(cmd);
     packetsSent++;
     bytesSent += msg->getBitLength() / 8;
-    send(cmsg, "sctpOut");
+    send(cmsg, "socketOut");
 }
 
 void SCTPNatServer::handleMessage(cMessage *msg)
@@ -191,22 +191,22 @@ void SCTPNatServer::handleMessage(cMessage *msg)
                 SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->getControlInfo()->dup());
                 cMessage *cmsg = new cMessage("SCTP_C_ABORT");
                 SCTPSendInfo *cmd = new SCTPSendInfo();
-                id = ind->getAssocId();
-                cmd->setAssocId(id);
+                id = ind->getSocketId();
+                cmd->setSocketId(id);
                 cmd->setSid(ind->getSid());
                 cmd->setNumMsgs(ind->getNumMsgs());
                 cmsg->setControlInfo(cmd);
                 delete ind;
                 delete msg;
                 cmsg->setKind(SCTP_C_ABORT);
-                send(cmsg, "sctpOut");
+                send(cmsg, "socketOut");
                 break;
             }
 
             case SCTP_I_ESTABLISHED: {
                 SCTPConnectInfo *connectInfo = check_and_cast<SCTPConnectInfo *>(msg->removeControlInfo());
                 numSessions++;
-                assocId = connectInfo->getAssocId();
+                assocId = connectInfo->getSocketId();
                 id = assocId;
                 inboundStreams = connectInfo->getInboundStreams();
                 outboundStreams = connectInfo->getOutboundStreams();
@@ -222,15 +222,15 @@ void SCTPNatServer::handleMessage(cMessage *msg)
                 SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->removeControlInfo());
                 cMessage *cmsg = new cMessage("SCTP_C_RECEIVE");
                 SCTPSendInfo *cmd = new SCTPSendInfo();
-                id = ind->getAssocId();
-                cmd->setAssocId(id);
+                id = ind->getSocketId();
+                cmd->setSocketId(id);
                 cmd->setSid(ind->getSid());
                 cmd->setNumMsgs(ind->getNumMsgs());
                 cmsg->setKind(SCTP_C_RECEIVE);
                 cmsg->setControlInfo(cmd);
                 delete ind;
                 delete msg;
-                send(cmsg, "sctpOut");
+                send(cmsg, "socketOut");
                 break;
             }
 
@@ -238,7 +238,7 @@ void SCTPNatServer::handleMessage(cMessage *msg)
                 EV << "\nData arrived at server: assoc=" << assocId << "\n";
                 printNatVector();
                 SCTPCommand *ind = check_and_cast<SCTPCommand *>(msg->removeControlInfo());
-                id = ind->getAssocId();
+                id = ind->getSocketId();
                 SCTPSimpleMessage *smsg = check_and_cast<SCTPSimpleMessage *>(msg);
                 NatMessage *nat = check_and_cast<NatMessage *>(smsg->decapsulate());
                 bool found = false;
@@ -335,14 +335,14 @@ void SCTPNatServer::handleMessage(cMessage *msg)
 
             case SCTP_I_SHUTDOWN_RECEIVED: {
                 SCTPCommand *command = check_and_cast<SCTPCommand *>(msg->removeControlInfo());
-                id = command->getAssocId();
+                id = command->getSocketId();
                 EV << "server: SCTP_I_SHUTDOWN_RECEIVED for assoc " << id << "\n";
                 cMessage *cmsg = new cMessage("SCTP_C_NO_OUTSTANDING");
                 SCTPInfo *qinfo = new SCTPInfo("Info");
                 cmsg->setKind(SCTP_C_NO_OUTSTANDING);
-                qinfo->setAssocId(id);
+                qinfo->setSocketId(id);
                 cmsg->setControlInfo(qinfo);
-                send(cmsg, "sctpOut");
+                send(cmsg, "socketOut");
 
                 delete command;
                 shutdownReceived = true;
@@ -457,14 +457,14 @@ void SCTPNatServer::handleTimer(cMessage *msg)
             cmsg = new cMessage("SCTP_C_CLOSE", SCTP_C_CLOSE);
             SCTPCommand *cmd = new SCTPCommand();
             id = atoi(msg->getName());
-            cmd->setAssocId(id);
+            cmd->setSocketId(id);
             cmsg->setControlInfo(cmd);
-            send(cmsg, "sctpOut");
+            send(cmsg, "socketOut");
             break;
         }
 
         case SCTP_C_RECEIVE:
-            send(msg, "sctpOut");
+            send(msg, "socketOut");
             break;
 
         default:

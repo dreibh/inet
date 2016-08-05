@@ -45,7 +45,7 @@ class InterfaceEntry;
  *
  * See NED file for more details.
  */
-class ExtInterface : public MACBase
+class INET_API ExtInterface : public MACBase
 {
   protected:
     bool connected;
@@ -63,7 +63,7 @@ class ExtInterface : public MACBase
   protected:
     void displayBusy();
     void displayIdle();
-    void updateDisplayString();
+    virtual void refreshDisplay() const override;
 
     // MACBase functions
     InterfaceEntry *createInterfaceEntry() override;

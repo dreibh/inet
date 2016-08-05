@@ -64,7 +64,6 @@ struct nsc_iphdr
 TCP_NSC_Connection::TCP_NSC_Connection()
     :
     connIdM(-1),
-    appGateIndexM(-1),
     pNscSocketM(nullptr),
     sentEstablishedM(false),
     onCloseM(false),
@@ -184,9 +183,9 @@ void TCP_NSC_Connection::do_SEND()
             cMessage *msg = new cMessage("CLOSED");
             msg->setKind(TCP_I_CLOSED);
             TCPCommand *ind = new TCPCommand();
-            ind->setConnId(connIdM);
+            ind->setSocketId(connIdM);
             msg->setControlInfo(ind);
-            tcpNscM->send(msg, "appOut", appGateIndexM);
+            tcpNscM->send(msg, "appOut");
             //FIXME this connection never will be deleted, stayed in tcpNscM. Should delete later!
         }
     }

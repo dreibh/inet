@@ -1,5 +1,23 @@
 ====== inet-3.x ======
 
+2016-04-19  Zoltan Bojthe
+
+	Removed MANET routing feature (available now in INETMANET)
+
+2016-04-06  ------ inet-3.2.4 released ------
+
+2016-03-16  ------ inet-3.2.3 released ------
+
+2016-03-11  ------ inet-3.2.2 released ------
+
+2016-01-21  ------ inet-3.2.1 released ------
+
+2015-12-16  ------ inet-3.2.0 released ------
+
+2015-10-26  ------ inet-3.1.1 released ------
+
+2015-10-15  ------ inet-3.1.0 released ------
+
 2015-06-22  ------ inet-3.0.0 released ------
 
 2015-06-08  Rudolf Hornig
@@ -15,7 +33,7 @@
 	Added INode module interface so simulation may use this interface to create
 	networks with node types configurable from ini files.
 
-2015-03-16  Levente Mészáros
+2015-03-16  Levente Meszaros
 
 	Fixed PIM issues when all features are turned off. Added IPIMRouting and
 	merged MulticastRouter parameters into Router.

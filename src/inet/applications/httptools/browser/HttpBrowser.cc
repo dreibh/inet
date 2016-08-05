@@ -65,7 +65,7 @@ void HttpBrowser::handleMessage(cMessage *msg)
             EV_DEBUG << "No control info for the message" << endl;
         }
         else {
-            int connId = ind->getConnId();
+            int connId = ind->getSocketId();
             EV_DEBUG << "Connection ID: " << connId << endl;
         }
 
@@ -298,7 +298,7 @@ void HttpBrowser::submitToSocket(const char *moduleName, int connectPort, HttpRe
     // Create and initialize the socket
     TCPSocket *socket = new TCPSocket();
     socket->setDataTransferMode(TCP_TRANSFER_OBJECT);
-    socket->setOutputGate(gate("tcpOut"));
+    socket->setOutputGate(gate("socketOut"));
     sockCollection.addSocket(socket);
 
     // Initialize the associated data structure

@@ -45,7 +45,7 @@ namespace inet {
 // KLUDGE: implement position registry protocol instead of using a global variable
 // KLUDGE: the GPSR packet is now used to wrap the content of network datagrams
 // KLUDGE: we should rather add these fields as header extensions
-class INET_API GPSR : public cSimpleModule, public ILifecycle, public cListener, public INetfilter::IHook
+class INET_API GPSR : public cSimpleModule, public ILifecycle, public cListener, public NetfilterBase::HookBase
 {
   private:
     // GPSR parameters
@@ -61,6 +61,7 @@ class INET_API GPSR : public cSimpleModule, public ILifecycle, public cListener,
     IMobility *mobility = nullptr;
     IL3AddressType *addressType = nullptr;
     IInterfaceTable *interfaceTable = nullptr;
+    const char *outputInterface = nullptr;
     IRoutingTable *routingTable = nullptr;    // TODO: delete when necessary functions are moved to interface table
     INetfilter *networkProtocol = nullptr;
     static PositionTable globalPositionTable;    // KLUDGE: implement position registry protocol
@@ -113,7 +114,7 @@ class INET_API GPSR : public cSimpleModule, public ILifecycle, public cListener,
 
     // returns nullptr if not found
     GPSROption *findGpsrOptionInNetworkDatagram(INetworkDatagram *datagram);
-    const GPSROption *findGpsrOptionFromNetworkDatagram(INetworkDatagram *datagram) const { return const_cast<GPSR *>(this)->findGpsrOptionFromNetworkDatagram(datagram); }
+    const GPSROption *findGpsrOptionInNetworkDatagram(INetworkDatagram *datagram) const { return const_cast<GPSR *>(this)->findGpsrOptionInNetworkDatagram(datagram); }
 
     // throws an error when not found
     GPSROption *getGpsrOptionFromNetworkDatagram(INetworkDatagram *datagram);
@@ -163,7 +164,7 @@ class INET_API GPSR : public cSimpleModule, public ILifecycle, public cListener,
     virtual bool handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback) override;
 
     // notification
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
 };
 
 } // namespace inet

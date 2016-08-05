@@ -9,7 +9,7 @@
 #include <cassert>
 
 #include "inet/linklayer/common/SimpleLinkLayerControlInfo.h"
-#include "inet/networklayer/common/SimpleNetworkProtocolControlInfo.h"
+#include "inet/networklayer/contract/generic/GenericNetworkProtocolControlInfo.h"
 #include "inet/networklayer/contract/IL3AddressType.h"
 #include "inet/linklayer/common/MACAddress.h"
 
@@ -98,9 +98,8 @@ void ProbabilisticBroadcast::handleLowerPacket(cPacket *msg)
         // to the application layer who will be able to compute statistics.
         // TODO: implement an application subscription mechanism.
         if (true) {
-            int protocol = m->getTransportProtocol();
             ProbabilisticBroadcastDatagram *mCopy = check_and_cast<ProbabilisticBroadcastDatagram *>(m->dup());
-            sendUp(decapsMsg(mCopy), protocol);
+            sendUp(decapsMsg(mCopy));
         }
     }
 }
@@ -334,7 +333,7 @@ void ProbabilisticBroadcast::insertNewMessage(ProbabilisticBroadcastDatagram *pk
 cPacket *ProbabilisticBroadcast::decapsMsg(ProbabilisticBroadcastDatagram *msg)
 {
     cPacket *m = msg->decapsulate();
-    SimpleNetworkProtocolControlInfo *const controlInfo = new SimpleNetworkProtocolControlInfo();
+    GenericNetworkProtocolControlInfo *const controlInfo = new GenericNetworkProtocolControlInfo();
     controlInfo->setSourceAddress(msg->getSrcAddr());
     controlInfo->setProtocol(msg->getTransportProtocol());
     m->setControlInfo(controlInfo);
@@ -347,8 +346,9 @@ cPacket *ProbabilisticBroadcast::decapsMsg(ProbabilisticBroadcastDatagram *msg)
  */
 cObject *ProbabilisticBroadcast::setDownControlInfo(cMessage *const pMsg, const MACAddress& pDestAddr)
 {
-    SimpleLinkLayerControlInfo *const cCtrlInfo = new SimpleLinkLayerControlInfo();
+    Ieee802Ctrl *const cCtrlInfo = new Ieee802Ctrl();
     cCtrlInfo->setDest(pDestAddr);
+    cCtrlInfo->setEtherType(ETHERTYPE_INET_GENERIC);
     pMsg->setControlInfo(cCtrlInfo);
     return cCtrlInfo;
 }

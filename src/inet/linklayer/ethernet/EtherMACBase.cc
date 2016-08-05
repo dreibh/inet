@@ -20,6 +20,9 @@
 
 #include "inet/linklayer/ethernet/EtherMACBase.h"
 
+#include "inet/common/RawPacket.h"
+#include "inet/common/serializer/SerializerBase.h"
+#include "inet/common/serializer/headerserializers/ethernet/EthernetSerializer.h"
 #include "inet/linklayer/ethernet/EtherFrame.h"
 #include "inet/linklayer/ethernet/Ethernet.h"
 #include "inet/common/ModuleAccess.h"
@@ -31,14 +34,6 @@
 namespace inet {
 
 const double EtherMACBase::SPEED_OF_LIGHT_IN_CABLE = 200000000.0;
-
-/*
-   double      txrate;
-   int         maxFramesInBurst;
-   int64       maxBytesInBurst;
-   int64       frameMinBytes;
-   int64       otherFrameMinBytes;     // minimal frame length in burst mode, after first frame
- */
 
 const EtherMACBase::EtherDescr EtherMACBase::nullEtherDescr = {
     0.0,
@@ -136,6 +131,9 @@ simsignal_t EtherMACBase::packetReceivedFromLowerSignal = registerSignal("packet
 simsignal_t EtherMACBase::packetSentToUpperSignal = registerSignal("packetSentToUpper");
 simsignal_t EtherMACBase::packetReceivedFromUpperSignal = registerSignal("packetReceivedFromUpper");
 
+simsignal_t EtherMACBase::transmitStateSignal = registerSignal("transmitState");
+simsignal_t EtherMACBase::receiveStateSignal = registerSignal("receiveState");
+
 EtherMACBase::EtherMACBase()
 {
     lastTxFinishTime = -1.0;    // never equals to current simtime
@@ -189,7 +187,7 @@ void EtherMACBase::initialize(int stage)
         subscribe(POST_MODEL_CHANGE, this);
     }
     else if (stage == INITSTAGE_LINK_LAYER) {
-        registerInterface();    // needs MAC address
+        registerInterface();    // needs MAC address    //FIXME why not called in MACBase::initialize()?
         initializeQueueModule();
         readChannelParameters(true);
     }
@@ -328,11 +326,11 @@ bool EtherMACBase::handleOperationStage(LifecycleOperation *operation, int stage
     return MACBase::handleOperationStage(operation, stage, doneCallback);
 }
 
-void EtherMACBase::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void EtherMACBase::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     Enter_Method_Silent();
 
-    MACBase::receiveSignal(source, signalID, obj);
+    MACBase::receiveSignal(source, signalID, obj DETAILS_ARG_NAME);
 
     if (signalID != POST_MODEL_CHANGE)
         return;
@@ -386,8 +384,38 @@ void EtherMACBase::processConnectDisconnect()
         }
 
         transmitState = TX_IDLE_STATE;
+        emit(transmitStateSignal, TX_IDLE_STATE);
         receiveState = RX_IDLE_STATE;
+        emit(receiveStateSignal, RX_IDLE_STATE);
     }
+}
+
+EtherPhyFrame *EtherMACBase::encapsulate(EtherFrame* frame)
+{
+    EtherPhyFrame *phyFrame = new EtherPhyFrame(frame->getName());
+    phyFrame->encapsulate(frame);
+    phyFrame->setSrcMacFullDuplex(duplexMode);
+    return phyFrame;
+}
+
+EtherFrame *EtherMACBase::decapsulate(EtherPhyFrame* phyFrame)
+{
+    if (phyFrame->getSrcMacFullDuplex() != duplexMode)
+        throw cRuntimeError("Ethernet misconfiguration: MACs on the same link must be all in full duplex mode, or all in half-duplex mode");
+
+    cPacket *frame = phyFrame->decapsulate();
+    delete phyFrame;
+
+    if (RawPacket *rawPacket = dynamic_cast<RawPacket *>(frame)) {
+        using namespace serializer;
+        Buffer b(rawPacket->getByteArray().getDataPtr(), rawPacket->getByteArray().getDataArraySize());
+        Context c;
+        frame = SerializerBase::lookupAndDeserialize(b, c, LINKTYPE, LINKTYPE_ETHERNET);
+        if (!frame)
+            throw cRuntimeError("Could not deserialize RawPacket '%s' as Ethernet frame", rawPacket->getName());
+        delete rawPacket;
+    }
+    return check_and_cast<EtherFrame *>(frame);
 }
 
 void EtherMACBase::flushQueue()
@@ -551,6 +579,7 @@ void EtherMACBase::printParameters()
 
 void EtherMACBase::getNextFrameFromQueue()
 {
+    ASSERT(nullptr == curTxFrame);
     if (txQueue.extQueue) {
         if (txQueue.extQueue->getNumPendingRequests() == 0)
             txQueue.extQueue->requestPacket();
@@ -563,6 +592,7 @@ void EtherMACBase::getNextFrameFromQueue()
 
 void EtherMACBase::requestNextFrameFromExtQueue()
 {
+    ASSERT(nullptr == curTxFrame);
     if (txQueue.extQueue) {
         if (txQueue.extQueue->getNumPendingRequests() == 0)
             txQueue.extQueue->requestPacket();
@@ -585,7 +615,7 @@ void EtherMACBase::finish()
     }
 }
 
-void EtherMACBase::updateDisplayString()
+void EtherMACBase::refreshDisplay() const
 {
     // icon coloring
     const char *color;
@@ -676,7 +706,7 @@ void EtherMACBase::updateDisplayString()
 #endif // if 0
 }
 
-void EtherMACBase::updateConnectionColor(int txState)
+void EtherMACBase::updateConnectionColor(int txState) const
 {
     const char *color;
 

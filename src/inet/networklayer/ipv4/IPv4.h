@@ -21,6 +21,7 @@
 
 #include "inet/common/INETDefs.h"
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/networklayer/contract/IARP.h"
 #include "inet/networklayer/ipv4/ICMP.h"
 #include "inet/common/lifecycle/ILifecycle.h"
@@ -41,7 +42,7 @@ class IIPv4RoutingTable;
 /**
  * Implements the IPv4 protocol.
  */
-class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, public INetworkProtocol, public cListener
+class INET_API IPv4 : public QueueBase, public NetfilterBase, public ILifecycle, public INetworkProtocol, public IProtocolRegistrationListener, public cListener
 {
   public:
     /**
@@ -62,15 +63,20 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
     };
     typedef std::map<IPv4Address, cPacketQueue> PendingPackets;
 
+    struct SocketDescriptor
+    {
+        int socketId = -1;
+        int protocolId = -1;
+
+        SocketDescriptor(int socketId, int protocolId) : socketId(socketId), protocolId(protocolId) { }
+    };
+
   protected:
     IIPv4RoutingTable *rt = nullptr;
     IInterfaceTable *ift = nullptr;
     IARP *arp = nullptr;
     ICMP *icmp = nullptr;
-    cGate *arpInGate = nullptr;
-    cGate *arpOutGate = nullptr;
     int transportInGateBaseId = -1;
-    int queueOutGateBaseId = -1;
 
     // config
     int defaultTimeToLive = -1;
@@ -85,6 +91,8 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
     IPv4FragBuf fragbuf;    // fragmentation reassembly buffer
     simtime_t lastCheckTime;    // when fragbuf was last checked for state fragments
     ProtocolMapping mapping;    // where to send packets after decapsulation
+    std::map<int, SocketDescriptor *> socketIdToSocketDescriptor;
+    std::multimap<int, SocketDescriptor *> protocolIdToSocketDescriptors;
 
     // ARP related
     PendingPackets pendingPackets;    // map indexed with IPv4Address for outbound packets waiting for ARP resolution
@@ -97,8 +105,6 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
     int numForwarded = 0;
 
     // hooks
-    typedef std::multimap<int, IHook *> HookList;
-    HookList hooks;
     typedef std::list<QueuedDatagramForHook> DatagramQueueForHooks;
     DatagramQueueForHooks queuedDatagramsForHooks;
 
@@ -110,7 +116,7 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
     virtual const InterfaceEntry *getShortestPathInterfaceToSource(IPv4Datagram *datagram);
 
     // utility: show current statistics above the icon
-    virtual void updateDisplayString();
+    virtual void refreshDisplay() const override;
 
     // utility: processing requested ARP resolution completed
     void arpResolutionCompleted(IARP::Notification *entry);
@@ -146,25 +152,10 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
     virtual void handlePacketFromHL(cPacket *packet);
 
     /**
-     * TODO
-     */
-    virtual void handlePacketFromARP(cPacket *packet);
-
-    /**
      * Routes and sends datagram received from higher layers.
      * Invokes datagramLocalOutHook(), then routePacket().
      */
     virtual void datagramLocalOut(IPv4Datagram *datagram, const InterfaceEntry *destIE, IPv4Address nextHopAddr);
-
-    /**
-     * Handle incoming ARP packets by sending them over to ARP.
-     */
-    virtual void handleIncomingARPPacket(ARPPacket *packet, const InterfaceEntry *fromIE);
-
-    /**
-     * Handle incoming ICMP messages.
-     */
-    virtual void handleIncomingICMP(ICMPMessage *packet);
 
     /**
      * Performs unicast routing. Based on the routing decision, it sends the
@@ -195,15 +186,15 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
      * Perform reassembly of fragmented datagrams, then send them up to the
      * higher layers using sendToHL().
      */
-    virtual void reassembleAndDeliver(IPv4Datagram *datagram);
+    virtual void reassembleAndDeliver(IPv4Datagram *datagram, const InterfaceEntry *fromIE);
 
     // called after LOCAL_IN Hook (used for reinject, too)
-    virtual void reassembleAndDeliverFinish(IPv4Datagram *datagram);
+    virtual void reassembleAndDeliverFinish(IPv4Datagram *datagram, const InterfaceEntry *fromIE);
 
     /**
      * Decapsulate and return encapsulated packet after attaching IPv4ControlInfo.
      */
-    virtual cPacket *decapsulate(IPv4Datagram *datagram);
+    virtual cPacket *decapsulate(IPv4Datagram *datagram, const InterfaceEntry *fromIE);
 
     /**
      * Call PostRouting Hook and continue with fragmentAndSend() if accepted
@@ -227,9 +218,14 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
 
     virtual void sendPacketToNIC(cPacket *packet, const InterfaceEntry *ie);
 
+    virtual void sendIcmpError(IPv4Datagram *origDatagram, int inputInterfaceId, ICMPType type, ICMPCode code);
+    virtual void sendIcmpError(cPacket *transportPacket, IPv4ControlInfo *ctrl, ICMPType type, ICMPCode code);
+
   public:
     IPv4();
     virtual ~IPv4();
+
+    virtual void handleRegisterProtocol(const Protocol& protocol, cGate *gate) override;
 
   protected:
     virtual int numInitStages() const override { return NUM_INIT_STAGES; }
@@ -279,7 +275,7 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
     /**
      * unregisters a Hook to be executed during datagram processing
      */
-    virtual void unregisterHook(int priority, IHook *hook) override;
+    virtual void unregisterHook(IHook *hook) override;
 
     /**
      * drop a previously queued datagram
@@ -292,17 +288,12 @@ class INET_API IPv4 : public QueueBase, public INetfilter, public ILifecycle, pu
     void reinjectQueuedDatagram(const INetworkDatagram *datagram) override;
 
     /**
-     * send packet on transportOut gate specified by protocolId
-     */
-    void sendOnTransportOutGateByProtocolId(cPacket *packet, int protocolId);
-
-    /**
      * ILifecycle method
      */
     virtual bool handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback) override;
 
     /// cListener method
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
 
   protected:
     virtual bool isNodeUp();

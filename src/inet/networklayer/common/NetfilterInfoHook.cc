@@ -24,7 +24,7 @@
 
 namespace inet {
 
-class INET_API NetfilterInfoHook : public cSimpleModule, public INetfilter::IHook
+class INET_API NetfilterInfoHook : public cSimpleModule, public NetfilterBase::HookBase
 {
   protected:
     INetfilter *netfilter;
@@ -69,7 +69,7 @@ void NetfilterInfoHook::initialize(int stage)
     cSimpleModule::initialize(stage);
 
     if (stage == INITSTAGE_NETWORK_LAYER) {
-        netfilter = check_and_cast<INetfilter *>(getContainingNode(this)->getModuleByPath(".networkLayer.ip"));
+        netfilter = getModuleFromPar<INetfilter>(par("networkProtocolModule"), this);
         netfilter->registerHook(0, this);
     }
 }
@@ -125,7 +125,8 @@ INetfilter::IHook::Result NetfilterInfoHook::datagramLocalOutHook(INetworkDatagr
 
 void NetfilterInfoHook::finish()
 {
-    netfilter->unregisterHook(0, this);
+    if (isRegisteredHook())
+        netfilter->unregisterHook(this);
 }
 
 } // namespace inet

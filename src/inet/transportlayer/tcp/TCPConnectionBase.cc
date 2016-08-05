@@ -178,14 +178,13 @@ TCPConnection::TCPConnection()
 // FSM framework, TCP FSM
 //
 
-TCPConnection::TCPConnection(TCP *_mod, int _appGateIndex, int _connId)
+TCPConnection::TCPConnection(TCP *_mod, int _socketId)
 {
     tcpMain = _mod;
-    appGateIndex = _appGateIndex;
-    connId = _connId;
+    socketId = _socketId;
 
     char fsmname[24];
-    sprintf(fsmname, "fsm-%d", connId);
+    sprintf(fsmname, "fsm-%d", socketId);
     fsm.setName(fsmname);
     fsm.setState(TCP_S_INIT);
 
@@ -334,6 +333,10 @@ bool TCPConnection::processAppCommand(cMessage *msg)
             process_OPEN_PASSIVE(event, tcpCommand, msg);
             break;
 
+        case TCP_E_ACCEPT:
+            process_ACCEPT(event, tcpCommand, msg);
+            break;
+
         case TCP_E_SEND:
             process_SEND(event, tcpCommand, msg);
             break;
@@ -374,6 +377,9 @@ TCPEventCode TCPConnection::preanalyseAppCommandEvent(int commandCode)
 
         case TCP_C_OPEN_PASSIVE:
             return TCP_E_OPEN_PASSIVE;
+
+        case TCP_C_ACCEPT:
+            return TCP_E_ACCEPT;
 
         case TCP_C_SEND:
             return TCP_E_SEND;

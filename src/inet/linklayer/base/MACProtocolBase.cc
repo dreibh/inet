@@ -16,6 +16,7 @@
 
 #include "inet/linklayer/base/MACProtocolBase.h"
 #include "inet/common/ModuleAccess.h"
+#include "inet/common/IInterfaceRegistrationListener.h"
 
 namespace inet {
 
@@ -46,6 +47,10 @@ void MACProtocolBase::registerInterface()
     if (interfaceTable) {
         interfaceEntry = createInterfaceEntry();
         interfaceTable->addInterface(interfaceEntry);
+        auto module = findContainingNicModule(this);
+        if (!module)
+            module = this;
+        inet::registerInterface(*interfaceEntry, module->gate("upperLayerOut"));
     }
 }
 

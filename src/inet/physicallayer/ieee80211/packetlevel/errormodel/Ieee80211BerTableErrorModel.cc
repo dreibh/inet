@@ -19,13 +19,10 @@
 #include "inet/physicallayer/ieee80211/packetlevel/Ieee80211TransmissionBase.h"
 #include "inet/physicallayer/ieee80211/packetlevel/errormodel/Ieee80211BerTableErrorModel.h"
 #include "inet/physicallayer/ieee80211/packetlevel/errormodel/Ieee80211NistErrorModel.h"
-#include "inet/linklayer/ieee80211/mac/Ieee80211Consts.h"
 
 namespace inet {
 
 namespace physicallayer {
-
-using namespace ieee80211;
 
 Define_Module(Ieee80211BerTableErrorModel);
 
@@ -63,23 +60,26 @@ void Ieee80211BerTableErrorModel::initialize(int stage)
     }
 }
 
-double Ieee80211BerTableErrorModel::computePacketErrorRate(const ISNIR *snir) const
+double Ieee80211BerTableErrorModel::computePacketErrorRate(const ISNIR *snir, IRadioSignal::SignalPart part) const
 {
+    Enter_Method_Silent();
     const ITransmission *transmission = snir->getReception()->getTransmission();
     const FlatTransmissionBase *flatTransmission = check_and_cast<const FlatTransmissionBase *>(transmission);
     double bitrate = flatTransmission->getBitrate().get();
     double minSNIR = snir->getMin();
-    int payloadBitLength = flatTransmission->getPayloadBitLength();
+    int payloadBitLength = flatTransmission->getDataBitLength();
     return berTableFile->getPer(bitrate, minSNIR, payloadBitLength / 8);
 }
 
-double Ieee80211BerTableErrorModel::computeBitErrorRate(const ISNIR *snir) const
+double Ieee80211BerTableErrorModel::computeBitErrorRate(const ISNIR *snir, IRadioSignal::SignalPart part) const
 {
+    Enter_Method_Silent();
     return NaN;
 }
 
-double Ieee80211BerTableErrorModel::computeSymbolErrorRate(const ISNIR *snir) const
+double Ieee80211BerTableErrorModel::computeSymbolErrorRate(const ISNIR *snir, IRadioSignal::SignalPart part) const
 {
+    Enter_Method_Silent();
     return NaN;
 }
 

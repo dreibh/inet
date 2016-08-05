@@ -240,7 +240,7 @@ class INET_API PIMSM : public PIMBase, protected cListener
     virtual void handleNodeCrash() override;
     virtual void stopPIMRouting();
     virtual void handleMessageWhenUp(cMessage *msg) override;
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
 
   private:
     // process PIM messages
@@ -304,7 +304,7 @@ class INET_API PIMSM : public PIMBase, protected cListener
     // helpers
     bool IamRP(IPv4Address rpAddr) { return rt->isLocalAddress(rpAddr); }
     bool IamDR(InterfaceEntry *ie);
-    PIMInterface *getIncomingInterface(IPv4Datagram *datagram);
+    PIMInterface *getIncomingInterface(InterfaceEntry *fromIE);
     bool deleteMulticastRoute(Route *route);
     void clearRoutes();
     void cancelAndDeleteTimer(cMessage *& timer);

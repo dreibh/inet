@@ -132,7 +132,7 @@ InterfaceEntry *IdealMac::createInterfaceEntry()
     return e;
 }
 
-void IdealMac::receiveSignal(cComponent *source, simsignal_t signalID, long value)
+void IdealMac::receiveSignal(cComponent *source, simsignal_t signalID, long value DETAILS_ARG)
 {
     Enter_Method_Silent();
     if (signalID == IRadio::transmissionStateChangedSignal) {
@@ -254,6 +254,7 @@ IdealMacFrame *IdealMac::encapsulate(cPacket *msg)
     frame->setDest(ctrl->getDest());
     frame->encapsulate(msg);
     frame->setSrcModuleId(getId());
+    frame->setNetworkProtocol(ctrl->getNetworkProtocol());
     delete ctrl;
     return frame;
 }
@@ -289,6 +290,8 @@ cPacket *IdealMac::decapsulate(IdealMacFrame *frame)
     Ieee802Ctrl *etherctrl = new Ieee802Ctrl();
     etherctrl->setSrc(frame->getSrc());
     etherctrl->setDest(frame->getDest());
+    etherctrl->setEtherType(frame->getNetworkProtocol());
+    etherctrl->setInterfaceId(interfaceEntry->getInterfaceId());
     packet->setControlInfo(etherctrl);
 
     delete frame;

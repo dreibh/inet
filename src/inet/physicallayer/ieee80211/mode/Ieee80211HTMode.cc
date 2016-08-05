@@ -25,7 +25,8 @@ namespace physicallayer {
 
 Ieee80211HTCompliantModes Ieee80211HTCompliantModes::singleton;
 
-Ieee80211HTMode::Ieee80211HTMode(const Ieee80211HTPreambleMode* preambleMode, const Ieee80211HTDataMode* dataMode, const BandMode carrierFrequencyMode) :
+Ieee80211HTMode::Ieee80211HTMode(const char *name, const Ieee80211HTPreambleMode* preambleMode, const Ieee80211HTDataMode* dataMode, const BandMode carrierFrequencyMode) :
+        Ieee80211ModeBase(name),
         preambleMode(preambleMode),
         dataMode(dataMode),
         carrierFrequencyMode(carrierFrequencyMode)
@@ -221,14 +222,14 @@ bps Ieee80211HTDataMode::computeNetBitrate() const
 
 bps Ieee80211HTModeBase::getNetBitrate() const
 {
-    if (isNaN(netBitrate.get()))
+    if (std::isnan(netBitrate.get()))
         netBitrate = computeNetBitrate();
     return netBitrate;
 }
 
 bps Ieee80211HTModeBase::getGrossBitrate() const
 {
-    if (isNaN(grossBitrate.get()))
+    if (std::isnan(grossBitrate.get()))
         grossBitrate = computeGrossBitrate();
     return grossBitrate;
 }
@@ -333,6 +334,7 @@ Ieee80211HTCompliantModes::~Ieee80211HTCompliantModes()
 
 const Ieee80211HTMode* Ieee80211HTCompliantModes::getCompliantMode(const Ieee80211HTMCS *mcsMode, Ieee80211HTMode::BandMode carrierFrequencyMode, Ieee80211HTPreambleMode::HighTroughputPreambleFormat preambleFormat, Ieee80211HTModeBase::GuardIntervalType guardIntervalType)
 {
+    const char *name =""; //TODO
     auto htModeId = std::make_tuple(mcsMode->getBandwidth(), mcsMode->getMcsIndex(), guardIntervalType);
     auto mode = singleton.modeCache.find(htModeId);
     if (mode == std::end(singleton.modeCache))
@@ -350,7 +352,7 @@ const Ieee80211HTMode* Ieee80211HTCompliantModes::getCompliantMode(const Ieee802
             throw cRuntimeError("Unknown preamble format");
         const Ieee80211HTDataMode *dataMode = new Ieee80211HTDataMode(mcsMode, mcsMode->getBandwidth(), guardIntervalType);
         const Ieee80211HTPreambleMode *preambleMode = new Ieee80211HTPreambleMode(htSignal, legacySignal, preambleFormat, dataMode->getNumberOfSpatialStreams());
-        const Ieee80211HTMode *htMode = new Ieee80211HTMode(preambleMode, dataMode, carrierFrequencyMode);
+        const Ieee80211HTMode *htMode = new Ieee80211HTMode(name, preambleMode, dataMode, carrierFrequencyMode);
         singleton.modeCache.insert(std::pair<std::tuple<Hz, unsigned int, Ieee80211HTModeBase::GuardIntervalType>, const Ieee80211HTMode *>(htModeId, htMode));
         return htMode;
     }
@@ -540,7 +542,5 @@ const DI<Ieee80211HTMCS> Ieee80211HTMCSTable::htMcs75BW40MHz([](){ return new Ie
 
 const DI<Ieee80211HTMCS> Ieee80211HTMCSTable::htMcs76BW40MHz([](){ return new Ieee80211HTMCS(76, &Ieee80211OFDMCompliantModulations::qam64Modulation, &Ieee80211OFDMCompliantModulations::qam64Modulation, &Ieee80211OFDMCompliantModulations::qam64Modulation, &Ieee80211OFDMCompliantModulations::qam16Modulation, &Ieee80211OFDMCompliantCodes::ofdmConvolutionalCode3_4, MHz(40));});
 
-
 } /* namespace physicallayer */
 } /* namespace inet */
-

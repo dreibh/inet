@@ -63,13 +63,20 @@ INET_API cModule *findModuleUnderContainingNode(cModule *from);
  * or type mismatch.
  */
 template<typename T>
-INET_API T *findModuleFromPar(cPar& par, cModule *from)
+INET_API T *findModuleFromPar(cPar& par, cModule *from, bool required = true);
+
+template<typename T>
+T *findModuleFromPar(cPar& par, cModule *from, bool required)
 {
     const char *path = par.stringValue();
     if (path && *path) {
         cModule *mod = from->getModuleByPath(path);
-        if (!mod)
-            throw cRuntimeError("Module not found on path '%s' defined by par '%s'", path, par.getFullPath().c_str());
+        if (!mod) {
+            if (required)
+                throw cRuntimeError("Module not found on path '%s' defined by par '%s'", path, par.getFullPath().c_str());
+            else
+                return nullptr;
+        }
         T *m = dynamic_cast<T *>(mod);
         if (!m)
             throw cRuntimeError("Module can not cast to '%s' on path '%s' defined by par '%s'", opp_typename(typeid(T)), path, par.getFullPath().c_str());
@@ -85,17 +92,36 @@ INET_API T *findModuleFromPar(cPar& par, cModule *from)
  * or type mismatch.
  */
 template<typename T>
-INET_API T *getModuleFromPar(cPar& par, cModule *from)
+INET_API T *getModuleFromPar(cPar& par, cModule *from, bool required = true);
+
+template<typename T>
+T *getModuleFromPar(cPar& par, cModule *from, bool required)
 {
     const char *path = par.stringValue();
     cModule *mod = from->getModuleByPath(path);
-    if (!mod)
-        throw cRuntimeError("Module not found on path '%s' defined by par '%s'", path, par.getFullPath().c_str());
+    if (!mod) {
+        if (required)
+            throw cRuntimeError("Module not found on path '%s' defined by par '%s'", path, par.getFullPath().c_str());
+        else
+            return nullptr;
+    }
     T *m = dynamic_cast<T *>(mod);
     if (!m)
         throw cRuntimeError("Module can not cast to '%s' on path '%s' defined by par '%s'", opp_typename(typeid(T)), path, par.getFullPath().c_str());
     return m;
 }
+
+/**
+ * Find the nic module (inside the networkNode) containing the given module.
+ * Returns nullptr, if no containing nic module.
+ */
+INET_API cModule *findContainingNicModule(cModule *from);
+
+/**
+ * Find the nic module (inside the networkNode) containing the given module.
+ * throws error if no containing nic module.
+ */
+INET_API cModule *getContainingNicModule(cModule *from);
 
 } // namespace inet
 

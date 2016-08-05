@@ -19,12 +19,10 @@ package inet.linklayer.tun;
 
 import inet.linklayer.contract.ITunNic;
 
-//  Implements a Tun interface that creates a shortcut between the linklayer and
-//  the application.
-
 simple TunInterface like ITunNic
 {
     parameters:
+        @nic;
         string interfaceTableModule;    // The path to the InterfaceTable module
         @display("i=block/tunnel");
 
@@ -36,6 +34,4 @@ simple TunInterface like ITunNic
     gates:
         input upperLayerIn;    // from upper layers
         output upperLayerOut;  // to upper layers
-        input appIn;    // from application
-        output appOut;  // to application
 }

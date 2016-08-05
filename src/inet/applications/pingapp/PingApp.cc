@@ -20,9 +20,14 @@
 
 #include "inet/applications/pingapp/PingApp.h"
 
+#include "inet/networklayer/common/EchoPacket_m.h"
+#include "inet/networklayer/common/IPProtocolId_m.h"
+#include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
+
 #include "inet/applications/pingapp/PingPayload_m.h"
 
 #include "inet/common/ModuleAccess.h"
+#include "inet/common/Protocol.h"
 #include "inet/common/lifecycle/NodeOperations.h"
 #include "inet/common/lifecycle/NodeStatus.h"
 #include "inet/networklayer/common/InterfaceEntry.h"
@@ -32,10 +37,12 @@
 #include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
 
 #ifdef WITH_IPv4
+#include "inet/networklayer/ipv4/ICMPMessage.h"
 #include "inet/networklayer/ipv4/IPv4InterfaceData.h"
 #endif // ifdef WITH_IPv4
 
 #ifdef WITH_IPv6
+#include "inet/networklayer/icmpv6/ICMPv6Message_m.h"
 #include "inet/networklayer/ipv6/IPv6InterfaceData.h"
 #endif // ifdef WITH_IPv6
 
@@ -47,7 +54,7 @@ Define_Module(PingApp);
 
 simsignal_t PingApp::rttSignal = registerSignal("rtt");
 simsignal_t PingApp::numLostSignal = registerSignal("numLost");
-simsignal_t PingApp::outOfOrderArrivalsSignal = registerSignal("outOfOrderArrivals");
+simsignal_t PingApp::numOutOfOrderArrivalsSignal = registerSignal("numOutOfOrderArrivals");
 simsignal_t PingApp::pingTxSeqSignal = registerSignal("pingTxSeq");
 simsignal_t PingApp::pingRxSeqSignal = registerSignal("pingRxSeq");
 
@@ -64,6 +71,7 @@ PingApp::PingApp()
 PingApp::~PingApp()
 {
     cancelAndDelete(timer);
+    delete l3Socket;
 }
 
 void PingApp::initialize(int stage)
@@ -104,8 +112,6 @@ void PingApp::initialize(int stage)
 
         // references
         timer = new cMessage("sendPing", PING_FIRST_ADDR);
-
-
     }
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
         // startup
@@ -156,24 +162,43 @@ void PingApp::handleMessage(cMessage *msg)
         }
 
         if (msg->getKind() == PING_CHANGE_ADDR) {
-            if (destAddrIdx >= destAddresses.size())
+            if (destAddrIdx >= (int)destAddresses.size())
                 return;
             destAddr = destAddresses[destAddrIdx];
             EV_INFO << "Starting up: dest=" << destAddr << "  src=" << srcAddr << "seqNo=" << sendSeqNo << endl;
             ASSERT(!destAddr.isUnspecified());
+            int l3ProtocolId = -1;
+            int icmp;
+            switch (destAddr.getType()) {
+                case L3Address::IPv4: icmp = IP_PROT_ICMP; l3ProtocolId = Protocol::ipv4.getId(); break;
+                case L3Address::IPv6: icmp = IP_PROT_IPv6_ICMP; l3ProtocolId = Protocol::ipv6.getId(); break;
+                case L3Address::MODULEID:
+                case L3Address::MODULEPATH: icmp = IP_PROT_ICMP; l3ProtocolId = Protocol::gnp.getId(); break;    //FIXME icmp value ????
+                    //TODO
+                default: throw cRuntimeError("unknown address type: %d(%s)", (int)destAddr.getType(), L3Address::getTypeName(destAddr.getType()));
+            }
+
+            if (!l3Socket || l3Socket->getControlInfoProtocolId() != l3ProtocolId) {
+                if (l3Socket) {
+                    l3Socket->close();
+                    delete l3Socket;
+                }
+                l3Socket = new L3Socket(l3ProtocolId, gate("socketOut"));
+                l3Socket->bind(icmp);
+            }
             msg->setKind(PING_SEND);
         }
 
         ASSERT2(msg->getKind() == PING_SEND, "Unknown kind in self message.");
 
         // send a ping
-        sendPing();
+        sendPingRequest();
 
         if (count > 0 && sendSeqNo % count == 0) {
             // choose next dest address
             destAddrIdx++;
             msg->setKind(PING_CHANGE_ADDR);
-            if (destAddrIdx >= destAddresses.size()) {
+            if (destAddrIdx >= (int)destAddresses.size()) {
                 if (continuous) {
                     destAddrIdx = destAddrIdx % destAddresses.size();
                 }
@@ -184,15 +209,60 @@ void PingApp::handleMessage(cMessage *msg)
         scheduleNextPingRequest(simTime(), msg->getKind() == PING_CHANGE_ADDR);
     }
     else {
-        // process ping response
-        processPingResponse(check_and_cast<PingPayload *>(msg));
+#ifdef WITH_IPv4
+        if (ICMPMessage *icmpMessage = dynamic_cast<ICMPMessage *>(msg)) {
+            if (icmpMessage->getType() == ICMP_ECHO_REPLY) {
+                PingPayload *pingPayload = check_and_cast<PingPayload *>(icmpMessage->decapsulate());
+                pingPayload->setControlInfo(icmpMessage->removeControlInfo());
+                processPingResponse(pingPayload);
+            }
+            else {
+                // process other icmp messages, process icmp errors
+            }
+            delete icmpMessage;
+        }
+        else
+#endif
+#ifdef WITH_IPv6
+        if (ICMPv6Message *icmpMessage = dynamic_cast<ICMPv6Message *>(msg)) {
+            if (icmpMessage->getType() == ICMPv6_ECHO_REPLY) {
+                check_and_cast<ICMPv6EchoReplyMsg *>(msg);
+                PingPayload *pingPayload = check_and_cast<PingPayload *>(icmpMessage->decapsulate());
+                pingPayload->setControlInfo(icmpMessage->removeControlInfo());
+                processPingResponse(pingPayload);
+            }
+            else {
+                // process other icmpv6 messages, process icmpv6 errors
+            }
+            delete icmpMessage;
+        }
+        else
+#endif
+#ifdef WITH_GENERIC
+        if (EchoPacket *icmpMessage = dynamic_cast<EchoPacket *>(msg)) {
+            if (icmpMessage->getType() == ECHO_PROTOCOL_REPLY) {
+                PingPayload *pingPayload = check_and_cast<PingPayload *>(icmpMessage->decapsulate());
+                pingPayload->setControlInfo(icmpMessage->removeControlInfo());
+                processPingResponse(pingPayload);
+            }
+            else {
+                // process other EchoPacket
+            }
+            delete icmpMessage;
+        }
+        else
+#endif
+        {
+            throw cRuntimeError("Unaccepted msg: %s(%s)", msg->getName(), msg->getClassName());
+        }
     }
+}
 
-    if (hasGUI()) {
-        char buf[40];
-        sprintf(buf, "sent: %ld pks\nrcvd: %ld pks", sentCount, numPongs);
-        getDisplayString().setTagArg("t", 0, buf);
-    }
+void PingApp::refreshDisplay() const
+{
+    char buf[40];
+    sprintf(buf, "sent: %ld pks\nrcvd: %ld pks", sentCount, numPongs);
+    getDisplayString().setTagArg("t", 0, buf);
 }
 
 bool PingApp::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback)
@@ -266,6 +336,83 @@ bool PingApp::isEnabled()
     return par("destAddr").stringValue()[0] && (count == -1 || sentCount < count);
 }
 
+void PingApp::sendPingRequest()
+{
+    char name[32];
+    sprintf(name, "ping%ld", sendSeqNo);
+
+    PingPayload *msg = new PingPayload(name);
+    ASSERT(pid != -1);
+    msg->setOriginatorId(pid);
+    msg->setSeqNo(sendSeqNo);
+    msg->setByteLength(packetSize + 4);
+
+    // store the sending time in a circular buffer so we can compute RTT when the packet returns
+    sendTimeHistory[sendSeqNo % PING_HISTORY_SIZE] = simTime();
+
+    emit(pingTxSeqSignal, sendSeqNo);
+    sendSeqNo++;
+    sentCount++;
+    IL3AddressType *addressType = destAddr.getAddressType();
+    INetworkProtocolControlInfo *controlInfo = addressType->createNetworkProtocolControlInfo();
+    controlInfo->setSourceAddress(srcAddr);
+    controlInfo->setDestinationAddress(destAddr);
+    controlInfo->setHopLimit(hopLimit);
+    controlInfo->setSocketId(l3Socket->getSocketId());
+
+    cPacket *outPacket = nullptr;
+    switch (destAddr.getType()) {
+        case L3Address::IPv4: {
+#ifdef WITH_IPv4
+            controlInfo->setTransportProtocol(IP_PROT_ICMP);
+            auto *request = new ICMPMessage(msg->getName());
+            outPacket = request;
+            request->setByteLength(4);
+            request->setType(ICMP_ECHO_REQUEST);
+            request->encapsulate(msg);
+            request->setControlInfo(dynamic_cast<cObject *>(controlInfo));
+            break;
+#else
+            throw cRuntimeError("INET compiled without IPv4");
+#endif
+        }
+        case L3Address::IPv6: {
+#ifdef WITH_IPv6
+            controlInfo->setTransportProtocol(IP_PROT_IPv6_ICMP);
+            auto *request = new ICMPv6EchoRequestMsg(msg->getName());
+            outPacket = request;
+            request->setByteLength(4);
+            request->setType(ICMPv6_ECHO_REQUEST);
+            request->encapsulate(msg);
+            request->setControlInfo(dynamic_cast<cObject *>(controlInfo));
+            break;
+#else
+            throw cRuntimeError("INET compiled without IPv6");
+#endif
+        }
+        case L3Address::MODULEID:
+        case L3Address::MODULEPATH: {
+#ifdef WITH_GENERIC
+            controlInfo->setTransportProtocol(IP_PROT_ICMP);       //FIXME ???
+            auto *request = new EchoPacket(msg->getName());
+            outPacket = request;
+            request->setByteLength(4);
+            request->setType(ECHO_PROTOCOL_REQUEST);
+            request->encapsulate(msg);
+            request->setControlInfo(dynamic_cast<cObject *>(controlInfo));
+            break;
+#else
+            throw cRuntimeError("INET compiled without Generic Network");
+#endif
+        }
+        default:
+            throw cRuntimeError("Unaccepted destination address type: %d (address: %s)", (int)destAddr.getType(), destAddr.str().c_str());
+    }
+
+    EV_INFO << "Sending ping request #" << msg->getSeqNo() << " to lower layer.\n";
+    l3Socket->send(outPacket);
+}
+
 void PingApp::processPingResponse(PingPayload *msg)
 {
     if (msg->getOriginatorId() != pid) {
@@ -334,7 +481,7 @@ void PingApp::countPingResponse(int bytes, long seqNo, simtime_t rtt)
         EV_DETAIL << "Arrived out of order (too late)\n";
         outOfOrderArrivalCount++;
         lossCount--;
-        emit(outOfOrderArrivalsSignal, outOfOrderArrivalCount);
+        emit(numOutOfOrderArrivalsSignal, outOfOrderArrivalCount);
         emit(numLostSignal, lossCount);
     }
 }
@@ -343,11 +490,7 @@ std::vector<L3Address> PingApp::getAllAddresses()
 {
     std::vector<L3Address> result;
 
-#if OMNETPP_VERSION < 0x500
-    int lastId = getSimulation()->getLastModuleId();
-#else // if OMNETPP_VERSION < 0x500
     int lastId = getSimulation()->getLastComponentId();
-#endif // if OMNETPP_VERSION < 0x500
 
     for (int i = 0; i <= lastId; i++)
     {
@@ -405,35 +548,6 @@ void PingApp::finish()
         cout << "stddev (ms): " << (rttStat.getStddev() * 1000.0) << "   variance:" << rttStat.getVariance() << endl;
         cout << "--------------------------------------------------------" << endl;
     }
-}
-
-void PingApp::sendPing()
-{
-    char name[32];
-    sprintf(name, "ping%ld", sendSeqNo);
-
-    PingPayload *msg = new PingPayload(name);
-    ASSERT(pid != -1);
-    msg->setOriginatorId(pid);
-    msg->setSeqNo(sendSeqNo);
-    msg->setByteLength(packetSize + 4);
-
-    // store the sending time in a circular buffer so we can compute RTT when the packet returns
-    sendTimeHistory[sendSeqNo % PING_HISTORY_SIZE] = simTime();
-
-    emit(pingTxSeqSignal, sendSeqNo);
-    sendSeqNo++;
-    sentCount++;
-    IL3AddressType *addressType = destAddr.getAddressType();
-    INetworkProtocolControlInfo *controlInfo = addressType->createNetworkProtocolControlInfo();
-    controlInfo->setSourceAddress(srcAddr);
-    controlInfo->setDestinationAddress(destAddr);
-    controlInfo->setHopLimit(hopLimit);
-    // TODO: remove
-    controlInfo->setTransportProtocol(1);    // IP_PROT_ICMP);
-    msg->setControlInfo(dynamic_cast<cObject *>(controlInfo));
-    EV_INFO << "Sending ping request #" << msg->getSeqNo() << " to lower layer.\n";
-    send(msg, "pingOut");
 }
 
 } // namespace inet

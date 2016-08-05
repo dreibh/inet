@@ -103,6 +103,7 @@ const char *TCPConnection::indicationName(int code)
     switch (code) {
         CASE(TCP_I_DATA);
         CASE(TCP_I_URGENT_DATA);
+        CASE(TCP_I_AVAILABLE);
         CASE(TCP_I_ESTABLISHED);
         CASE(TCP_I_PEER_CLOSED);
         CASE(TCP_I_CLOSED);
@@ -149,7 +150,7 @@ void TCPConnection::printConnBrief() const
 {
     EV_DETAIL << "Connection "
               << localAddr << ":" << localPort << " to " << remoteAddr << ":" << remotePort
-              << "  on app[" << appGateIndex << "], connId=" << connId
+              << "  on socketId=" << socketId
               << "  in " << stateName(fsm.getState())
               << "\n";
 }
@@ -198,7 +199,7 @@ void TCPConnection::printSegmentBrief(TCPSegment *tcpseg)
 
 TCPConnection *TCPConnection::cloneListeningConnection()
 {
-    TCPConnection *conn = new TCPConnection(tcpMain, appGateIndex, connId);
+    TCPConnection *conn = new TCPConnection(tcpMain, socketId);
 
     conn->transferMode = transferMode;
     // following code to be kept consistent with initConnection()
@@ -294,8 +295,26 @@ void TCPConnection::sendIndicationToApp(int code, const int id)
     cMessage *msg = new cMessage(indicationName(code));
     msg->setKind(code);
     TCPCommand *ind = new TCPCommand();
-    ind->setConnId(connId);
+    ind->setSocketId(socketId);
     ind->setUserId(id);
+    msg->setControlInfo(ind);
+    sendToApp(msg);
+}
+
+void TCPConnection::sendAvailableIndicationToApp()
+{
+    EV_INFO << "Notifying app: " << indicationName(TCP_I_AVAILABLE) << "\n";
+    cMessage *msg = new cMessage(indicationName(TCP_I_AVAILABLE));
+    msg->setKind(TCP_I_AVAILABLE);
+
+    TCPAvailableInfo *ind = new TCPAvailableInfo();
+    ind->setSocketId(listeningSocketId);
+    ind->setNewSocketId(socketId);
+    ind->setLocalAddr(localAddr);
+    ind->setRemoteAddr(remoteAddr);
+    ind->setLocalPort(localPort);
+    ind->setRemotePort(remotePort);
+
     msg->setControlInfo(ind);
     sendToApp(msg);
 }
@@ -307,7 +326,7 @@ void TCPConnection::sendEstabIndicationToApp()
     msg->setKind(TCP_I_ESTABLISHED);
 
     TCPConnectInfo *ind = new TCPConnectInfo();
-    ind->setConnId(connId);
+    ind->setSocketId(socketId);
     ind->setLocalAddr(localAddr);
     ind->setRemoteAddr(remoteAddr);
     ind->setLocalPort(localPort);
@@ -319,7 +338,31 @@ void TCPConnection::sendEstabIndicationToApp()
 
 void TCPConnection::sendToApp(cMessage *msg)
 {
-    tcpMain->send(msg, "appOut", appGateIndex);
+    tcpMain->send(msg, "appOut");
+}
+
+void TCPConnection::sendAvailableDataToApp()
+{
+    if (receiveQueue->getAmountOfBufferedBytes()) {
+        cMessage *msg = nullptr;
+
+        if (tcpMain->useDataNotification) {
+            msg = new cMessage("Data Notification");
+            msg->setKind(TCP_I_DATA_NOTIFICATION);  // TBD currently we never send TCP_I_URGENT_DATA
+            TCPCommand *cmd = new TCPCommand();
+            cmd->setSocketId(socketId);
+            msg->setControlInfo(cmd);
+            sendToApp(msg);
+        } else {
+            while ((msg = receiveQueue->extractBytesUpTo(state->rcv_nxt)) != nullptr) {
+                msg->setKind(TCP_I_DATA);    // TBD currently we never send TCP_I_URGENT_DATA
+                TCPCommand *cmd = new TCPCommand();
+                cmd->setSocketId(socketId);
+                msg->setControlInfo(cmd);
+                sendToApp(msg);
+            }
+        }
+    }
 }
 
 void TCPConnection::initConnection(TCPOpenCommand *openCmd)
@@ -356,7 +399,7 @@ void TCPConnection::configureStateVariables()
 {
     long advertisedWindowPar = tcpMain->par("advertisedWindow").longValue();
     state->ws_support = tcpMain->par("windowScalingSupport");    // if set, this means that current host supports WS (RFC 1323)
-
+    state->ws_manual_scale = tcpMain->par("windowScalingFactor"); // scaling factor (set manually) to help for TCP validation
     if (!state->ws_support && (advertisedWindowPar > TCP_MAX_WIN || advertisedWindowPar <= 0))
         throw cRuntimeError("Invalid advertisedWindow parameter: %ld", advertisedWindowPar);
 
@@ -1083,13 +1126,16 @@ TCPSegment TCPConnection::writeHeaderOptions(TCPSegment *tcpseg)
             tcpseg->addHeaderOption(new TCPOptionNop());    // NOP
 
             // Update WS variables
-            //ulong scaled_rcv_wnd = receiveQueue->getAmountOfFreeBytes(state->maxRcvBuffer);
-            ulong scaled_rcv_wnd = receiveQueue->getFirstSeqNo() + state->maxRcvBuffer - state->rcv_nxt;
-            state->rcv_wnd_scale = 0;
+            if (state->ws_manual_scale > -1) {
+                state->rcv_wnd_scale = state->ws_manual_scale;
+            } else {
+                ulong scaled_rcv_wnd = receiveQueue->getFirstSeqNo() + state->maxRcvBuffer - state->rcv_nxt;
+                state->rcv_wnd_scale = 0;
 
-            while (scaled_rcv_wnd > TCP_MAX_WIN && state->rcv_wnd_scale < 14) {    // RFC 1323, page 11: "the shift count must be limited to 14"
-                scaled_rcv_wnd = scaled_rcv_wnd >> 1;
-                state->rcv_wnd_scale++;
+                while (scaled_rcv_wnd > TCP_MAX_WIN && state->rcv_wnd_scale < 14) {    // RFC 1323, page 11: "the shift count must be limited to 14"
+                    scaled_rcv_wnd = scaled_rcv_wnd >> 1;
+                    state->rcv_wnd_scale++;
+                }
             }
 
             TCPOptionWindowScale *option = new TCPOptionWindowScale();

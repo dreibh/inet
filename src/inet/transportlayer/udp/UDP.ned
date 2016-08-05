@@ -53,8 +53,8 @@ simple UDP like IUDP
 {
     parameters:
         string interfaceTableModule;   // The path to the InterfaceTable module
-        string icmpModule = default("^.networkLayer.icmp");
-        string icmpv6Module = default("^.networkLayer.icmpv6");
+        string icmpModule = default("^.ipv4.icmp");
+        string icmpv6Module = default("^.ipv6.icmpv6");
         @display("i=block/transport");
         @signal[sentPk](type=cPacket);
         @signal[rcvdPk](type=cPacket);
@@ -68,8 +68,8 @@ simple UDP like IUDP
         @statistic[droppedPkBadChecksum](title="packets dropped (checksum error)"; record=count,"vector(count)"; interpolationmode=none);
 
     gates:
-        input appIn[] @labels(UDPControlInfo/down);
+        input appIn @labels(UDPControlInfo/down);
         input ipIn @labels(UDPPacket,IPv4ControlInfo/up,IPv6ControlInfo/up);
-        output appOut[] @labels(UDPControlInfo/up);
+        output appOut @labels(UDPControlInfo/up);
         output ipOut @labels(UDPPacket,IPv4ControlInfo/down,IPv6ControlInfo/down);
 }

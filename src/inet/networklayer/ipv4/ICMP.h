@@ -24,34 +24,29 @@
 #include "inet/common/INETDefs.h"
 #include "inet/networklayer/ipv4/IIPv4RoutingTable.h"
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/networklayer/ipv4/ICMPMessage.h"
 
 namespace inet {
 
 class IPv4Datagram;
 class IPv4ControlInfo;
-class PingPayload;
 
 /**
  * ICMP module.
  */
-// TODO: the word ping should not occur in ICMP code
-// TODO: move identifier, sequence number from PingPayload into ICMPControlInfo
-class INET_API ICMP : public cSimpleModule
+class INET_API ICMP : public cSimpleModule, public IProtocolRegistrationListener
 {
   protected:
-    typedef std::map<long, int> PingMap;
-    PingMap pingMap;
-
+    std::set<int> transportProtocols;    // where to send up packets
   protected:
     virtual void processICMPMessage(ICMPMessage *);
     virtual void errorOut(ICMPMessage *);
     virtual void processEchoRequest(ICMPMessage *);
-    virtual void processEchoReply(ICMPMessage *);
-    virtual void sendEchoRequest(PingPayload *);
     virtual void sendToIP(ICMPMessage *, const IPv4Address& dest);
     virtual void sendToIP(ICMPMessage *msg);
     virtual bool possiblyLocalBroadcast(const IPv4Address& addr, int interfaceId);
+    virtual void handleRegisterProtocol(const Protocol& protocol, cGate *gate) override;
 
   public:
     /**

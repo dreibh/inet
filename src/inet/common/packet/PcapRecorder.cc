@@ -78,7 +78,7 @@ void PcapRecorder::initialize()
             mname.replace(mname.length() - 3, 3, "");
 
         for (cModule::SubmoduleIterator i(getParentModule()); !i.end(); i++) {
-            cModule *submod = i();
+            cModule *submod = *i;
             if (0 == strcmp(isAllIndex ? submod->getName() : submod->getFullName(), mname.c_str())) {
                 found = true;
 
@@ -109,7 +109,7 @@ void PcapRecorder::handleMessage(cMessage *msg)
     throw cRuntimeError("This module does not handle messages");
 }
 
-void PcapRecorder::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void PcapRecorder::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     Enter_Method_Silent();
     cPacket *packet = dynamic_cast<cPacket *>(obj);
@@ -123,10 +123,8 @@ void PcapRecorder::receiveSignal(cComponent *source, simsignal_t signalID, cObje
 
 void PcapRecorder::recordPacket(cPacket *msg, bool l2r)
 {
-    if (!getEnvir()->isDisabled()) {
-        EV << "PcapRecorder::recordPacket(" << msg->getFullPath() << ", " << l2r << ")\n";
-        packetDumper.dumpPacket(l2r, msg);
-    }
+    EV << "PcapRecorder::recordPacket(" << msg->getFullPath() << ", " << l2r << ")\n";
+    packetDumper.dumpPacket(l2r, msg);
 
 #if defined(WITH_IPv4) || defined(WITH_IPv6)
     if (!pcapDumper.isOpen())

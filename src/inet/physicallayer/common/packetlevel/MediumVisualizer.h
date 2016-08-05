@@ -18,12 +18,12 @@
 #ifndef __INET_MEDIUMVISUALIZER_H
 #define __INET_MEDIUMVISUALIZER_H
 
-#include "inet/common/figures/TrailFigure.h"
 #include "inet/common/figures/HeatMapFigure.h"
-#include "inet/physicallayer/contract/packetlevel/ITransmission.h"
-#include "inet/physicallayer/contract/packetlevel/IRadioFrame.h"
-#include "inet/physicallayer/contract/packetlevel/IReceptionDecision.h"
+#include "inet/common/figures/TrailFigure.h"
 #include "inet/physicallayer/base/packetlevel/PhysicalLayerDefs.h"
+#include "inet/physicallayer/contract/packetlevel/IRadioFrame.h"
+#include "inet/physicallayer/contract/packetlevel/IReceptionResult.h"
+#include "inet/physicallayer/contract/packetlevel/ITransmission.h"
 
 namespace inet {
 
@@ -57,12 +57,10 @@ class INET_API MediumVisualizer : public cSimpleModule
      */
     bool leaveCommunicationTrail;
 
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
     /**
      * Specifies whether successful communication between radios leave a heat map or not.
      */
     bool leaveCommunicationHeat;
-#endif
 
     /**
      * Specifies the size of the communication heat map.
@@ -101,12 +99,10 @@ class INET_API MediumVisualizer : public cSimpleModule
      */
     TrailFigure *communicationTrail;
 
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
     /**
      * The heat map figure that shows the recent successful communications.
      */
     HeatMapFigure *communicationHeat;
-#endif
     //@}
 
   protected:
@@ -124,7 +120,7 @@ class INET_API MediumVisualizer : public cSimpleModule
     virtual void addTransmission(const ITransmission *transmission);
     virtual void removeTransmission(const ITransmission *transmission);
 
-    virtual void receivePacket(const IReceptionDecision *decision);
+    virtual void receivePacket(const IReceptionResult *result);
 
     virtual void mediumChanged() const;
 };

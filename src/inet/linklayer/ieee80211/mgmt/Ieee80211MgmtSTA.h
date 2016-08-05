@@ -22,7 +22,6 @@
 
 #include "inet/linklayer/ieee80211/mgmt/Ieee80211MgmtBase.h"
 #include "inet/linklayer/ieee80211/mgmt/Ieee80211Primitives_m.h"
-#include "inet/networklayer/contract/IInterfaceTable.h"
 
 namespace inet {
 
@@ -94,8 +93,6 @@ class INET_API Ieee80211MgmtSTA : public Ieee80211MgmtBase, protected cListener
 
   protected:
     cModule *host;
-    IInterfaceTable *interfaceTable;
-    InterfaceEntry *myIface;
 
     // number of channels in RadioMedium -- used if we're told to scan "all" channels
     int numChannels;
@@ -115,7 +112,7 @@ class INET_API Ieee80211MgmtSTA : public Ieee80211MgmtBase, protected cListener
     AssociatedAPInfo assocAP;
 
   public:
-    Ieee80211MgmtSTA() : host(nullptr), interfaceTable(nullptr), myIface(nullptr), numChannels(-1), isScanning(false), isAssociated(false), assocTimeoutMsg(nullptr) {}
+    Ieee80211MgmtSTA() : host(nullptr), numChannels(-1), isScanning(false), isAssociated(false), assocTimeoutMsg(nullptr) {}
 
   protected:
     virtual int numInitStages() const override { return NUM_INIT_STAGES; }
@@ -182,8 +179,8 @@ class INET_API Ieee80211MgmtSTA : public Ieee80211MgmtBase, protected cListener
     virtual void sendManagementFrame(Ieee80211ManagementFrame *frame, const MACAddress& address);
 
     /** Called by the signal handler whenever a change occurs we're interested in */
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, long value) override;
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, long value DETAILS_ARG) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
 
     /** Utility function: converts Ieee80211StatusCode (->frame) to Ieee80211PrimResultCode (->primitive) */
     virtual int statusCodeToPrimResultCode(int statusCode);

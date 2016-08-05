@@ -23,6 +23,7 @@
 
 #include "inet/common/lifecycle/NodeStatus.h"
 #include "inet/common/NotifierConsts.h"
+#include "inet/common/IInterfaceRegistrationListener.h"
 #include "inet/networklayer/common/InterfaceEntry.h"
 #include "inet/networklayer/contract/IInterfaceTable.h"
 #include "inet/common/lifecycle/NodeOperations.h"
@@ -76,7 +77,7 @@ bool MACBase::handleOperationStage(LifecycleOperation *operation, int stage, IDo
     return true;
 }
 
-void MACBase::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void MACBase::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     if (signalID == NF_INTERFACE_DELETED) {
         if (interfaceEntry == check_and_cast<const InterfaceEntry *>(obj))
@@ -102,6 +103,10 @@ void MACBase::registerInterface()    //XXX registerInterfaceIfInterfaceTableExis
     if (ift) {
         interfaceEntry = createInterfaceEntry();
         ift->addInterface(interfaceEntry);
+        auto module = findContainingNicModule(this);
+        if (!module)
+            module = this;
+        inet::registerInterface(*interfaceEntry, module->gate("upperLayerOut"));
     }
 }
 

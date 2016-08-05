@@ -27,13 +27,14 @@ namespace physicallayer {
 class INET_API Ieee80211ErpOfdmMode : public Ieee80211OFDMMode
 {
     public:
-        Ieee80211ErpOfdmMode(const Ieee80211OFDMPreambleMode *preambleMode, const Ieee80211OFDMSignalMode *signalMode, const Ieee80211OFDMDataMode *dataMode);
+        Ieee80211ErpOfdmMode(const char *name, const Ieee80211OFDMPreambleMode *preambleMode, const Ieee80211OFDMSignalMode *signalMode, const Ieee80211OFDMDataMode *dataMode);
 
         virtual std::ostream& printToStream(std::ostream& stream, int level) const override { return stream << "Ieee80211ErpOfdmMode"; }
 
         // The slot time is 20 μs in accordance with 17.3.3, except that an optional 9 μs
         // slot time may be used when the BSS consists of only ERP STAs. TODO: isOnlyERPSTAs
         virtual inline const simtime_t getSlotTime() const override { return 20E-6; }
+        const simtime_t getRifsTime() const override;
         // SIFS time is 10 μs in accordance with 17.3.3. See 19.3.2.4 for more detail.
         virtual inline const simtime_t getSifsTime() const override { return 10E-6; }
         // For ERP-OFDM modes, an ERP packet is followed by a period of no transmission

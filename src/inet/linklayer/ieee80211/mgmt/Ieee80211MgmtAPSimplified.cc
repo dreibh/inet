@@ -43,17 +43,12 @@ void Ieee80211MgmtAPSimplified::handleTimer(cMessage *msg)
 void Ieee80211MgmtAPSimplified::handleUpperMessage(cPacket *msg)
 {
     Ieee80211DataFrame *frame = encapsulate(msg);
-    sendOrEnqueue(frame);
+    sendDown(frame);
 }
 
 void Ieee80211MgmtAPSimplified::handleCommand(int msgkind, cObject *ctrl)
 {
     throw cRuntimeError("handleCommand(): no commands supported");
-}
-
-void Ieee80211MgmtAPSimplified::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
-{
-    Enter_Method_Silent();
 }
 
 void Ieee80211MgmtAPSimplified::handleDataFrame(Ieee80211DataFrame *frame)

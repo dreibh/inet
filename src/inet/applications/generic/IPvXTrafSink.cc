@@ -19,9 +19,10 @@
 #include "inet/applications/generic/IPvXTrafGen.h"
 
 #include "inet/networklayer/common/L3AddressResolver.h"
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/common/ModuleAccess.h"
+#include "inet/common/ProtocolGroup.h"
 #include "inet/common/lifecycle/NodeOperations.h"
 
 namespace inet {
@@ -39,12 +40,10 @@ void IPvXTrafSink::initialize(int stage)
         WATCH(numReceived);
     }
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
-        int protocol = par("protocol");
-        IPSocket ipSocket(gate("ipOut"));
-        ipSocket.registerProtocol(protocol);
-
         NodeStatus *nodeStatus = dynamic_cast<NodeStatus *>(findContainingNode(this)->getSubmodule("status"));
         isOperational = (!nodeStatus) || nodeStatus->getState() == NodeStatus::UP;
+        int protocol = par("protocol");
+        registerProtocol(*ProtocolGroup::ipprotocol.getProtocol(protocol), gate("ipOut"));
     }
 }
 
@@ -56,12 +55,13 @@ void IPvXTrafSink::handleMessage(cMessage *msg)
         return;
     }
     processPacket(check_and_cast<cPacket *>(msg));
+}
 
-    if (hasGUI()) {
-        char buf[32];
-        sprintf(buf, "rcvd: %d pks", numReceived);
-        getDisplayString().setTagArg("t", 0, buf);
-    }
+void IPvXTrafSink::refreshDisplay() const
+{
+    char buf[32];
+    sprintf(buf, "rcvd: %d pks", numReceived);
+    getDisplayString().setTagArg("t", 0, buf);
 }
 
 bool IPvXTrafSink::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback)

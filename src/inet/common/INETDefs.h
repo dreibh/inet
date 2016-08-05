@@ -18,6 +18,9 @@
 #ifndef __INET_INETDEFS_H
 #define __INET_INETDEFS_H
 
+// feature defines generated based on the actual feature enablement
+#include "inet/features.h"
+
 //
 // General definitions.
 //
@@ -27,22 +30,18 @@
 
 using namespace omnetpp;
 
-#if OMNETPP_VERSION < 0x0406
-#  error At least OMNeT++/OMNEST version 4.6 required
-#endif // if OMNETPP_VERSION < 0x0406
+#if OMNETPP_VERSION < 0x0500
+#  error At least OMNeT++/OMNEST version 5.0 required
+#endif // if OMNETPP_VERSION < 0x0500
 
 // OMNETPP_BUILDNUM was introduced around OMNeT++ 5.0beta2, with the initial value of 1001.
 // The following lines fake a build number for earlier versions.
 #ifndef OMNETPP_BUILDNUM
-#  if OMNETPP_VERSION < 0x0500
-#    define OMNETPP_BUILDNUM 0
-#  else
-#    define OMNETPP_BUILDNUM 1000
-#  endif
+#  define OMNETPP_BUILDNUM 1000
 #endif
 
-#define INET_VERSION  0x0300
-#define INET_PATCH_LEVEL 0x00
+#define INET_VERSION  0x0302
+#define INET_PATCH_LEVEL 0x04
 
 #if defined(INET_EXPORT)
 #  define INET_API    OPP_DLLEXPORT

@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2000 Institut fuer Telematik, Universitaet Karlsruhe
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -17,12 +17,11 @@
 
 package inet.node.inet;
 
-import inet.applications.contract.IUDPApp;
+import inet.applications.contract.IApp;
+import inet.node.base.ApplicationLayerNodeBase;
 import inet.routing.contract.IBGPRouting;
 import inet.routing.contract.IIPRouting;
 import inet.routing.contract.IPIMRouting;
-import inet.transportlayer.contract.ITCP;
-import inet.transportlayer.contract.IUDP;
 
 //
 // IPv4 router that supports wireless, Ethernet, PPP and external interfaces.
@@ -34,7 +33,7 @@ import inet.transportlayer.contract.IUDP;
 //   only (twisted pair). Set **.eth.typename="EthernetInterface" for
 //   a full/half-duplex CSMA/CD implementation (coaxial cable)
 // - By default contains no wireless cards, however it can be configured
-//   by the numRadios parameter. Wirless card type is configured by the
+//   by the numWlanInterfaces parameter. Wirless card type is configured by the
 //   **.wlan.typename parameter. see:  inet.linklayer.ieee80211 or other
 //   modules implementing ~IWirelessNic
 // - Also external interfaces can be configured for HW in the loop simulation
@@ -47,67 +46,49 @@ import inet.transportlayer.contract.IUDP;
 // By default, dynamic routing is not supported. Specific routing protocols can
 // be added by setting the hasOSPF/hasRIP/hasBGP parameters.
 //
-module Router extends NodeBase
+module Router extends ApplicationLayerNodeBase
 {
     parameters:
         @display("i=abstract/router");
+        @figure[submodules];
         forwarding = true;
         bool hasOSPF = default(false);
         bool hasRIP = default(false);
         bool hasBGP = default(false);
         bool hasPIM = default(false);
-        string tcpType = default(firstAvailableOrEmpty("TCP", "TCP_lwIP", "TCP_NSC"));  // tcp implementation (e.g. ~TCP, ~TCP_lwIP, ~TCP_NSC) or ~TCPSpoof
-        string udpType = default("UDP");
+        hasUdp = default(hasRIP);
+        hasTcp = default(hasBGP);
+        *.routingTableModule = default("^.ipv4.routingTable");
 
     submodules:
         ospf: <"OSPFRouting"> like IIPRouting if hasOSPF {
             parameters:
-                @display("p=465,287,row");
+                @display("p=800,300,row");
         }
         bgp: <"BGPRouting"> like IBGPRouting if hasBGP {
             parameters:
                 ospfRoutingModule = default(hasOSPF ? "^.ospf" : "");
-                @display("p=214,80;i=block/network");
+                @display("p=600,100");
         }
-        tcp: <tcpType> like ITCP if hasBGP && tcpType != "" {
+        rip: <"RIPRouting"> like IApp if hasRIP {
             parameters:
-                @display("p=214,180;i=block/transport");
-        }
-        rip: <"RIPRouting"> like IUDPApp if hasRIP {
-            parameters:
-                @display("p=404,80");
-        }
-        udp: <udpType> like IUDP if hasRIP {
-            @display("p=404,180");
+                @display("p=700,100");
         }
         pim: <"PIMRouting"> like IPIMRouting if hasPIM {
-            @display("p=175,287");
+            parameters:
+	            @display("p=700,300");
         }
 
     connections allowunconnected:
-        if hasOSPF {
-            ospf.ipOut --> networkLayer.transportIn++;
-            ospf.ipIn <-- networkLayer.transportOut++;
-        }
+        ospf.ipOut --> tn.upperLayerIn++ if hasOSPF;
+        ospf.ipIn <-- tn.upperLayerOut++ if hasOSPF;
 
-        if hasBGP {
-            bgp.tcpOut --> tcp.appIn++;
-            bgp.tcpIn <-- tcp.appOut++;
+        bgp.socketOut --> at.upperLayerIn++ if hasBGP;
+        bgp.socketIn <-- at.upperLayerOut++ if hasBGP;
 
-            tcp.ipOut --> networkLayer.transportIn++;
-            tcp.ipIn <-- networkLayer.transportOut++;
-        }
+        rip.socketOut --> at.upperLayerIn++ if hasRIP;
+        rip.socketIn <-- at.upperLayerOut++ if hasRIP;
 
-        if hasRIP {
-            rip.udpOut --> udp.appIn++;
-            rip.udpIn <-- udp.appOut++;
-
-            udp.ipOut --> networkLayer.transportIn++;
-            udp.ipIn <-- networkLayer.transportOut++;
-        }
-
-        if hasPIM {
-            pim.networkLayerOut --> networkLayer.transportIn++;
-            pim.networkLayerIn <-- networkLayer.transportOut++;
-        }
+        pim.networkLayerOut --> tn.upperLayerIn++ if hasPIM;
+        pim.networkLayerIn <-- tn.upperLayerOut++ if hasPIM;
 }

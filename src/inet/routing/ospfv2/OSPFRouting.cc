@@ -21,13 +21,13 @@
 #include <stdlib.h>
 #include <memory.h>
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/routing/ospfv2/OSPFRouting.h"
 
 #include "inet/routing/ospfv2/messagehandler/MessageHandler.h"
 #include "inet/routing/ospfv2/OSPFConfigReader.h"
 #include "inet/common/lifecycle/NodeOperations.h"
 #include "inet/common/lifecycle/NodeStatus.h"
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/common/ModuleAccess.h"
 
 namespace inet {
@@ -52,12 +52,10 @@ void OSPFRouting::initialize(int stage)
     if (stage == INITSTAGE_ROUTING_PROTOCOLS) {
         ift = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
         rt = getModuleFromPar<IIPv4RoutingTable>(par("routingTableModule"), this);
-        IPSocket ipSocket(gate("ipOut"));
-        ipSocket.registerProtocol(IP_PROT_OSPF);
-
         isUp = isNodeUp();
         if (isUp)
             createOspfRouter();
+        registerProtocol(Protocol::ospf, gate("ipOut"));
     }
 }
 

@@ -50,6 +50,7 @@ void UDPBasicApp::initialize(int stage)
         destPort = par("destPort");
         startTime = par("startTime").doubleValue();
         stopTime = par("stopTime").doubleValue();
+        packetName = par("packetName");
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
         selfMsg = new cMessage("sendTimer");
@@ -110,9 +111,9 @@ L3Address UDPBasicApp::chooseDestAddr()
 
 void UDPBasicApp::sendPacket()
 {
-    char msgName[32];
-    sprintf(msgName, "UDPBasicAppData-%d", numSent);
-    cPacket *payload = new cPacket(msgName);
+    std::ostringstream str;
+    str << packetName << "-" << numSent;
+    cPacket *payload = new cPacket(str.str().c_str());
     payload->setByteLength(par("messageLength").longValue());
 
     L3Address destAddr = chooseDestAddr();
@@ -124,7 +125,7 @@ void UDPBasicApp::sendPacket()
 
 void UDPBasicApp::processStart()
 {
-    socket.setOutputGate(gate("udpOut"));
+    socket.setOutputGate(gate("socketOut"));
     const char *localAddress = par("localAddress");
     socket.bind(*localAddress ? L3AddressResolver().resolve(localAddress) : L3Address(), localPort);
     setSocketOptions();
@@ -205,12 +206,13 @@ void UDPBasicApp::handleMessageWhenUp(cMessage *msg)
     else {
         throw cRuntimeError("Unrecognized message (%s)%s", msg->getClassName(), msg->getName());
     }
+}
 
-    if (hasGUI()) {
-        char buf[40];
-        sprintf(buf, "rcvd: %d pks\nsent: %d pks", numReceived, numSent);
-        getDisplayString().setTagArg("t", 0, buf);
-    }
+void UDPBasicApp::refreshDisplay() const
+{
+    char buf[100];
+    sprintf(buf, "rcvd: %d pks\nsent: %d pks", numReceived, numSent);
+    getDisplayString().setTagArg("t", 0, buf);
 }
 
 void UDPBasicApp::processPacket(cPacket *pk)

@@ -16,7 +16,9 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 //
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/routing/aodv/AODVRouting.h"
+#include "inet/networklayer/ipv4/ICMPMessage.h"
 #include "inet/networklayer/ipv4/IPv4Route.h"
 
 #ifdef WITH_IDEALWIRELESS
@@ -39,7 +41,6 @@
 #include "inet/linklayer/bmac/BMacFrame_m.h"
 #endif // ifdef WITH_BMAC
 
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/transportlayer/contract/udp/UDPControlInfo.h"
 #include "inet/common/ModuleAccess.h"
 #include "inet/common/lifecycle/NodeOperations.h"
@@ -89,10 +90,8 @@ void AODVRouting::initialize(int stage)
     else if (stage == INITSTAGE_ROUTING_PROTOCOLS) {
         NodeStatus *nodeStatus = dynamic_cast<NodeStatus *>(host->getSubmodule("status"));
         isOperational = !nodeStatus || nodeStatus->getState() == NodeStatus::UP;
-
         addressType = getSelfIPAddress().getAddressType();
-        IPSocket socket(gate("ipOut"));
-        socket.registerProtocol(IP_PROT_MANET);
+        registerProtocol(Protocol::manet, gate("ipOut"));
         networkProtocol->registerHook(0, this);
         host->subscribe(NF_LINK_BREAK, this);
 
@@ -145,6 +144,10 @@ void AODVRouting::handleMessage(cMessage *msg)
             handleBlackListTimer();
         else
             throw cRuntimeError("Unknown self message");
+    }
+    else if (ICMPMessage *icmpPacket = dynamic_cast<ICMPMessage *>(msg)) {
+        // ICMP packet arrived, dropped
+        delete icmpPacket;
     }
     else {
         UDPPacket *udpPacket = check_and_cast<UDPPacket *>(msg);
@@ -994,7 +997,7 @@ IRoute *AODVRouting::createRoute(const L3Address& destAddr, const L3Address& nex
     return newRoute;
 }
 
-void AODVRouting::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void AODVRouting::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     Enter_Method("receiveChangeNotification");
     if (signalID == NF_LINK_BREAK) {
@@ -1641,16 +1644,18 @@ void AODVRouting::handleRREPACK(AODVRREPACK *rrepACK, const L3Address& neighborA
     // which RREP it is acknowledging.  The time at which the RREP-ACK is
     // received will likely come just after the time when the RREP was sent
     // with the 'A' bit.
-    ASSERT(rrepAckTimer->isScheduled());
-    EV_INFO << "RREP-ACK arrived from " << neighborAddr << endl;
+    if (rrepAckTimer->isScheduled()) {
+        EV_INFO << "RREP-ACK arrived from " << neighborAddr << endl;
 
-    IRoute *route = routingTable->findBestMatchingRoute(neighborAddr);
-    if (route && route->getSource() == this) {
-        EV_DETAIL << "Marking route " << route << " as active" << endl;
-        AODVRouteData *routeData = check_and_cast<AODVRouteData *>(route->getProtocolData());
-        routeData->setIsActive(true);
-        cancelEvent(rrepAckTimer);
+        IRoute *route = routingTable->findBestMatchingRoute(neighborAddr);
+        if (route && route->getSource() == this) {
+            EV_DETAIL << "Marking route " << route << " as active" << endl;
+            AODVRouteData *routeData = check_and_cast<AODVRouteData *>(route->getProtocolData());
+            routeData->setIsActive(true);
+            cancelEvent(rrepAckTimer);
+        }
     }
+    delete rrepACK;
 }
 
 void AODVRouting::handleRREPACKTimer()

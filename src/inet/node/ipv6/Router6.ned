@@ -17,7 +17,7 @@
 
 package inet.node.ipv6;
 
-import inet.node.inet.NodeBase;
+import inet.node.inet.Router;
 
 
 //
@@ -25,14 +25,13 @@ import inet.node.inet.NodeBase;
 //
 // see ~Router for configuration options
 //
-module Router6 extends NodeBase
+module Router6 extends Router
 {
     parameters:
-        @display("i=abstract/router");
-        forwarding = true;
+        hasIpv4 = default(false);
+        hasIpv6 = default(true);
         xml routes = default(xml("<routingTable/>"));
-        networkLayerType = "IPv6NetworkLayer";
-        routingTableType = "IPv6RoutingTable";
-        routingTable.routes = routes;
+        ipv6.routingTable.routes = routes;
+        *.routingTableModule = "^.ipv6.routingTable";
 }
 

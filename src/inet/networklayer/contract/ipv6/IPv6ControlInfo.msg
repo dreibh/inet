@@ -67,7 +67,6 @@ inline std::ostream& operator<<(std::ostream& os, IPv6ExtensionHeaderPtr eh) {re
 class IPv6ControlInfo
 {
     @customize(true);
-    @fieldNameSuffix("_var"); //TODO remove when OMNeT++ 4.x compatibility is no longer required
     short protocol @enum(IPProtocolId);  // transport layer protocol
     IPv6Address destAddr; // destination IPv6 address
     IPv6Address srcAddr;  // source IPv6 address
@@ -77,6 +76,7 @@ class IPv6ControlInfo
     short hopLimit;       // hop limit
     int interfaceId = -1; // interface on which the datagram was received, or
                           // should be sent (see ~InterfaceTable)
+    int socketId = -1;
     bool multicastLoop;   // if true, sent multicast datagrams will be looped back
     abstract IPv6ExtensionHeaderPtr extensionHeader[]; // array of extension headers, subclassed from ~IPv6ExtensionHeader
 }

@@ -184,7 +184,7 @@ const char *DHCPClient::getAndCheckMessageTypeName(DHCPMessageType type)
     }
 }
 
-void DHCPClient::updateDisplayString()
+void DHCPClient::refreshDisplay() const
 {
     getDisplayString().setTagArg("t", 0, getStateName(clientState));
 }
@@ -199,7 +199,7 @@ void DHCPClient::handleMessage(cMessage *msg)
     if (msg->isSelfMessage()) {
         handleTimer(msg);
     }
-    else if (msg->arrivedOn("udpIn")) {
+    else if (msg->arrivedOn("socketIn")) {
         DHCPMessage *dhcpPacket = dynamic_cast<DHCPMessage *>(msg);
         if (!dhcpPacket)
             throw cRuntimeError(dhcpPacket, "Unexpected packet received (not a DHCPMessage)");
@@ -207,9 +207,8 @@ void DHCPClient::handleMessage(cMessage *msg)
         handleDHCPMessage(dhcpPacket);
         delete msg;
     }
-
-    if (hasGUI())
-        updateDisplayString();
+    else
+        throw cRuntimeError("Unknown incoming gate: '%s'", msg->getArrivalGate()->getFullName());
 }
 
 void DHCPClient::handleTimer(cMessage *msg)
@@ -495,7 +494,7 @@ void DHCPClient::handleDHCPMessage(DHCPMessage *msg)
     }
 }
 
-void DHCPClient::receiveSignal(cComponent *source, int signalID, cObject *obj)
+void DHCPClient::receiveSignal(cComponent *source, int signalID, cObject *obj DETAILS_ARG)
 {
     Enter_Method_Silent();
     printNotificationBanner(signalID, obj);
@@ -665,7 +664,7 @@ void DHCPClient::sendToUDP(cPacket *msg, int srcPort, const L3Address& destAddr,
 
 void DHCPClient::openSocket()
 {
-    socket.setOutputGate(gate("udpOut"));
+    socket.setOutputGate(gate("socketOut"));
     socket.bind(clientPort);
     socket.setBroadcast(true);
     EV_INFO << "DHCP server bound to port " << serverPort << "." << endl;

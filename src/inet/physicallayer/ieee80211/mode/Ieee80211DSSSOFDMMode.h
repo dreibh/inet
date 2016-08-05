@@ -30,7 +30,7 @@ namespace physicallayer {
  * Multiplexing PHY mode as described in IEEE 802.11-2012 specification subclause
  * 19.3.2.6.
  */
-class INET_API Ieee80211DsssOfdmMode : public IIeee80211Mode
+class INET_API Ieee80211DsssOfdmMode : public Ieee80211ModeBase
 {
   protected:
     const Ieee80211DsssPreambleMode *dsssPreambleMode;
@@ -39,8 +39,12 @@ class INET_API Ieee80211DsssOfdmMode : public IIeee80211Mode
     const Ieee80211OFDMSignalMode *ofdmSignalMode;
     const Ieee80211OFDMDataMode *ofdmDataMode;
 
+  protected:
+    virtual inline int getLegacyCwMin() const override { return -1; }
+    virtual inline int getLegacyCwMax() const override { return -1; }
+
   public:
-    Ieee80211DsssOfdmMode(const Ieee80211DsssPreambleMode *dsssPreambleMode, const Ieee80211DsssHeaderMode *dsssHeaderMode, const Ieee80211OFDMPreambleMode *ofdmPreambleMode, const Ieee80211OFDMSignalMode *ofdmSignalMode, const Ieee80211OFDMDataMode *ofdmDataMode);
+    Ieee80211DsssOfdmMode(const char *name, const Ieee80211DsssPreambleMode *dsssPreambleMode, const Ieee80211DsssHeaderMode *dsssHeaderMode, const Ieee80211OFDMPreambleMode *ofdmPreambleMode, const Ieee80211OFDMSignalMode *ofdmSignalMode, const Ieee80211OFDMDataMode *ofdmDataMode);
 
     virtual std::ostream& printToStream(std::ostream& stream, int level) const override { return stream << "Ieee80211DsssOfdmMode"; }
 
@@ -54,13 +58,12 @@ class INET_API Ieee80211DsssOfdmMode : public IIeee80211Mode
     // TODO: fill in
     virtual inline const simtime_t getSlotTime() const override { return 0; }
     virtual inline const simtime_t getSifsTime() const override { return 0; }
+    virtual const simtime_t getRifsTime() const override;
     virtual inline const simtime_t getCcaTime() const override { return 0; }
     virtual inline const simtime_t getPhyRxStartDelay() const override { return 0; }
     virtual inline const simtime_t getRxTxTurnaroundTime() const override { return 0; }
     virtual inline const simtime_t getPreambleLength() const override { return 0; }
     virtual inline const simtime_t getPlcpHeaderLength() const override { return 0; }
-    virtual inline int getCwMin() const override { return -1; }
-    virtual inline int getCwMax() const override { return -1; }
     virtual inline int getMpduMaxLength() const override { return -1; }
 };
 

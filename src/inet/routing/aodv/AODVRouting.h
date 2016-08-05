@@ -39,7 +39,7 @@ namespace inet {
  * in the IP-layer required by this protocol.
  */
 
-class INET_API AODVRouting : public cSimpleModule, public ILifecycle, public INetfilter::IHook, public cListener
+class INET_API AODVRouting : public cSimpleModule, public ILifecycle, public NetfilterBase::HookBase, public cListener
 {
   protected:
     /*
@@ -184,7 +184,7 @@ class INET_API AODVRouting : public cSimpleModule, public ILifecycle, public INe
     /* General functions to handle route errors */
     void sendRERRWhenNoRouteToForward(const L3Address& unreachableAddr);
     void handleLinkBreakSendRERR(const L3Address& unreachableAddr);
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
 
     /* Netfilter hooks */
     Result ensureRouteForDatagram(INetworkDatagram *datagram);

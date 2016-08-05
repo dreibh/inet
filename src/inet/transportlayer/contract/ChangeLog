@@ -1,5 +1,23 @@
 ====== inet-3.x ======
 
+2016-03-30  Irene Ruengeler
+
+	Added packetdrill SCTP support and socket options
+
+2016-04-06  ------ inet-3.2.4 released ------
+
+2016-03-16  ------ inet-3.2.3 released ------
+
+2016-03-11  ------ inet-3.2.2 released ------
+
+2016-01-21  ------ inet-3.2.1 released ------
+
+2015-12-16  ------ inet-3.2.0 released ------
+
+2015-10-26  ------ inet-3.1.1 released ------
+
+2015-10-15  ------ inet-3.1.0 released ------
+
 2015-06-22  ------ inet-3.0.0 released ------
 
 2015-05-13  ------ inet-2.99.1 released ------
@@ -12,7 +30,7 @@
 
 	Fix signatures to correct types.
 
-2014-12-11  Levente Mészáros
+2014-12-11  Levente Meszaros
 
 	TransportLayer: Moved ITCP, IUDP, ISCTP under contract.
 
@@ -23,8 +41,6 @@
 2014-11-14  Zoltan Bojthe
 
 	Added socketDeleted() to TCPSocket::CallbackInterface.
-
------------ lines above this marker have been added from git log -----------
 
 2014-11-07  ------ inet-2.99.0 released ------
 

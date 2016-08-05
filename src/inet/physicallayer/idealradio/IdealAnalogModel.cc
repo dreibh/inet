@@ -18,6 +18,8 @@
 #include "inet/physicallayer/idealradio/IdealAnalogModel.h"
 #include "inet/physicallayer/idealradio/IdealTransmission.h"
 #include "inet/physicallayer/idealradio/IdealReception.h"
+#include "inet/physicallayer/idealradio/IdealNoise.h"
+#include "inet/physicallayer/idealradio/IdealSNIR.h"
 #include "inet/physicallayer/contract/packetlevel/IArrival.h"
 #include "inet/physicallayer/contract/packetlevel/IRadioMedium.h"
 
@@ -34,6 +36,7 @@ std::ostream& IdealAnalogModel::printToStream(std::ostream& stream, int level) c
 
 const IReception *IdealAnalogModel::computeReception(const IRadio *receiverRadio, const ITransmission *transmission, const IArrival *arrival) const
 {
+    const IRadioMedium *radioMedium = receiverRadio->getMedium();
     const IdealTransmission *idealTransmission = check_and_cast<const IdealTransmission *>(transmission);
     const simtime_t receptionStartTime = arrival->getStartTime();
     const simtime_t receptionEndTime = arrival->getEndTime();
@@ -42,8 +45,12 @@ const IReception *IdealAnalogModel::computeReception(const IRadio *receiverRadio
     const EulerAngles receptionStartOrientation = arrival->getStartOrientation();
     const EulerAngles receptionEndOrientation = arrival->getEndOrientation();
     m distance = m(transmission->getStartPosition().distance(receptionStartPosition));
+    double obstacleLoss = radioMedium->getObstacleLoss() ? radioMedium->getObstacleLoss()->computeObstacleLoss(Hz(NaN), transmission->getStartPosition(), receptionStartPosition) : 1;
+    ASSERT(obstacleLoss == 0 || obstacleLoss == 1);
     IdealReception::Power power;
-    if (distance <= idealTransmission->getMaxCommunicationRange())
+    if (obstacleLoss == 0)
+        power = IdealReception::POWER_UNDETECTABLE;
+    else if (distance <= idealTransmission->getMaxCommunicationRange())
         power = IdealReception::POWER_RECEIVABLE;
     else if (distance <= idealTransmission->getMaxInterferenceRange())
         power = IdealReception::POWER_INTERFERING;
@@ -56,12 +63,16 @@ const IReception *IdealAnalogModel::computeReception(const IRadio *receiverRadio
 
 const INoise *IdealAnalogModel::computeNoise(const IListening *listening, const IInterference *interference) const
 {
-    return nullptr;
+    bool isInterfering = false;
+    for (auto interferingReception : *interference->getInterferingReceptions())
+        if (check_and_cast<const IdealReception *>(interferingReception)->getPower() >= IdealReception::POWER_INTERFERING)
+            isInterfering = true;
+    return new IdealNoise(listening->getStartTime(), listening->getEndTime(), isInterfering);
 }
 
 const ISNIR *IdealAnalogModel::computeSNIR(const IReception *reception, const INoise *noise) const
 {
-    return nullptr;
+    return new IdealSNIR(reception, noise);
 }
 
 } // namespace physicallayer

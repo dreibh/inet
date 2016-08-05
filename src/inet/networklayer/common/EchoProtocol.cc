@@ -15,9 +15,10 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include <string.h>
 #include "inet/networklayer/common/EchoProtocol.h"
-#include "inet/networklayer/common/IPSocket.h"
+#include "inet/networklayer/common/IPProtocolId_m.h"
 #include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
 #include "inet/applications/pingapp/PingPayload_m.h"
 
@@ -28,20 +29,15 @@ Define_Module(EchoProtocol);
 void EchoProtocol::initialize(int stage)
 {
     cSimpleModule::initialize(stage);
-
-    if (stage == INITSTAGE_NETWORK_LAYER_2) {
-        IPSocket socket(gate("sendOut"));
-        socket.registerProtocol(IP_PROT_ICMP);
-    }
+    if (stage == INITSTAGE_NETWORK_LAYER)
+        registerProtocol(Protocol::icmpv4, gate("ipOut"));
 }
 
 void EchoProtocol::handleMessage(cMessage *msg)
 {
     cGate *arrivalGate = msg->getArrivalGate();
-    if (!strcmp(arrivalGate->getName(), "localIn"))
+    if (!strcmp(arrivalGate->getName(), "ipIn"))
         processPacket(check_and_cast<EchoPacket *>(msg));
-    else if (!strcmp(arrivalGate->getName(), "pingIn"))
-        sendEchoRequest(check_and_cast<PingPayload *>(msg));
 }
 
 void EchoProtocol::processPacket(EchoPacket *msg)
@@ -74,39 +70,12 @@ void EchoProtocol::processEchoRequest(EchoPacket *request)
     ctrl->setInterfaceId(-1);
     ctrl->setSourceAddress(dest);
     ctrl->setDestinationAddress(src);
-    send(reply, "sendOut");
+    send(reply, "ipOut");
 }
 
 void EchoProtocol::processEchoReply(EchoPacket *reply)
 {
-    cObject *controlInfo = reply->removeControlInfo();
-    PingPayload *payload = check_and_cast<PingPayload *>(reply->decapsulate());
-    payload->setControlInfo(controlInfo);
     delete reply;
-    long originatorId = payload->getOriginatorId();
-    auto i = pingMap.find(originatorId);
-    if (i != pingMap.end())
-        send(payload, "pingOut", i->second);
-    else {
-        EV_INFO << "Received ECHO REPLY has an unknown originator ID: " << originatorId << ", packet dropped." << endl;
-        delete payload;
-    }
-}
-
-void EchoProtocol::sendEchoRequest(PingPayload *msg)
-{
-    cGate *arrivalGate = msg->getArrivalGate();
-    int i = arrivalGate->getIndex();
-    pingMap[msg->getOriginatorId()] = i;
-    cObject *controlInfo = msg->removeControlInfo();
-    INetworkProtocolControlInfo *networkControlInfo = check_and_cast<INetworkProtocolControlInfo *>(controlInfo);
-    // TODO: remove
-    networkControlInfo->setTransportProtocol(IP_PROT_ICMP);
-    EchoPacket *request = new EchoPacket(msg->getName());
-    request->setType(ECHO_PROTOCOL_REQUEST);
-    request->encapsulate(msg);
-    request->setControlInfo(controlInfo);
-    send(request, "sendOut");
 }
 
 } // namespace inet

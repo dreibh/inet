@@ -18,8 +18,13 @@
 #ifndef __INET_IPV4CONTROLINFO_H
 #define __INET_IPV4CONTROLINFO_H
 
+#include "inet/common/Protocol.h"
+#include "inet/common/ProtocolGroup.h"
+#include "inet/common/IProtocolControlInfo.h"
+#include "inet/common/ISocketControlInfo.h"
 #include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
 #include "inet/networklayer/contract/ipv4/IPv4ControlInfo_m.h"
+#include "inet/linklayer/common/Ieee802Ctrl.h"
 
 namespace inet {
 
@@ -30,7 +35,7 @@ class IPv4Datagram;
  *
  * See the IPv4ControlInfo.msg file for more info.
  */
-class INET_API IPv4ControlInfo : public IPv4ControlInfo_Base, public INetworkProtocolControlInfo
+class INET_API IPv4ControlInfo : public IPv4ControlInfo_Base, public INetworkProtocolControlInfo, public IPacketControlInfo, public IProtocolControlInfo, public ISocketControlInfo
 {
   protected:
     IPv4Datagram *dgram;
@@ -45,6 +50,12 @@ class INET_API IPv4ControlInfo : public IPv4ControlInfo_Base, public INetworkPro
     IPv4ControlInfo(const IPv4ControlInfo& other) : IPv4ControlInfo_Base(other) { dgram = nullptr; copy(other); }
     IPv4ControlInfo& operator=(const IPv4ControlInfo& other);
     virtual IPv4ControlInfo *dup() const override { return new IPv4ControlInfo(*this); }
+
+    virtual int getControlInfoProtocolId() const override { return Protocol::ipv4.getId(); }
+    virtual int getPacketProtocolId() const override { return ProtocolGroup::ipprotocol.getProtocol(getTransportProtocol())->getId(); }
+
+    virtual int getSocketId() const override { return IPv4ControlInfo_Base::getSocketId(); }
+    virtual void setSocketId(int id) override { return IPv4ControlInfo_Base::setSocketId(id); }
 
     /**
      * Returns bits 0-5 of the Type of Service field, a value in the 0..63 range
@@ -72,10 +83,10 @@ class INET_API IPv4ControlInfo : public IPv4ControlInfo_Base, public INetworkPro
 
     virtual short getTransportProtocol() const override { return IPv4ControlInfo_Base::getProtocol(); }
     virtual void setTransportProtocol(short protocol) override { IPv4ControlInfo_Base::setProtocol(protocol); }
-    virtual L3Address getSourceAddress() const override { return L3Address(srcAddr_var); }
-    virtual void setSourceAddress(const L3Address& address) override { srcAddr_var = address.toIPv4(); }
-    virtual L3Address getDestinationAddress() const override { return L3Address(destAddr_var); }
-    virtual void setDestinationAddress(const L3Address& address) override { destAddr_var = address.toIPv4(); }
+    virtual L3Address getSourceAddress() const override { return L3Address(srcAddr); }
+    virtual void setSourceAddress(const L3Address& address) override { srcAddr = address.toIPv4(); }
+    virtual L3Address getDestinationAddress() const override { return L3Address(destAddr); }
+    virtual void setDestinationAddress(const L3Address& address) override { destAddr = address.toIPv4(); }
     virtual int getInterfaceId() const override { return IPv4ControlInfo_Base::getInterfaceId(); }
     virtual void setInterfaceId(int interfaceId) override { IPv4ControlInfo_Base::setInterfaceId(interfaceId); }
     virtual short getHopLimit() const override { return getTimeToLive(); }

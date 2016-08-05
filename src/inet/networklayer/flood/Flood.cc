@@ -24,7 +24,7 @@
 #include "inet/networklayer/contract/IL3AddressType.h"
 #include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
 #include "inet/linklayer/common/SimpleLinkLayerControlInfo.h"
-#include "inet/networklayer/common/SimpleNetworkProtocolControlInfo.h"
+#include "inet/networklayer/contract/generic/GenericNetworkProtocolControlInfo.h"
 
 namespace inet {
 
@@ -144,7 +144,6 @@ void Flood::handleUpperPacket(cPacket *m)
 void Flood::handleLowerPacket(cPacket *m)
 {
     FloodDatagram *msg = check_and_cast<FloodDatagram *>(m);
-    int protocol = msg->getTransportProtocol();
 
     //msg not broadcasted yet
     if (notBroadcasted(msg)) {
@@ -152,7 +151,7 @@ void Flood::handleLowerPacket(cPacket *m)
         if (interfaceTable->isLocalAddress(msg->getDestinationAddress())) {
             EV << " data msg for me! send to Upper" << endl;
             nbHops = nbHops + (defaultTtl + 1 - msg->getTtl());
-            sendUp(decapsMsg(msg), protocol);
+            sendUp(decapsMsg(msg));
             nbDataPacketsReceived++;
         }
         //broadcast message
@@ -173,7 +172,7 @@ void Flood::handleLowerPacket(cPacket *m)
 
             // message has to be forwarded to upper layer
             nbHops = nbHops + (defaultTtl + 1 - msg->getTtl());
-            sendUp(decapsMsg(msg), protocol);
+            sendUp(decapsMsg(msg));
             nbDataPacketsReceived++;
         }
         //not for me -> rebroadcast
@@ -248,7 +247,7 @@ bool Flood::notBroadcasted(FloodDatagram *msg)
  **/
 cMessage *Flood::decapsMsg(FloodDatagram *floodDatagram)
 {
-    SimpleNetworkProtocolControlInfo *controlInfo = new SimpleNetworkProtocolControlInfo();
+    GenericNetworkProtocolControlInfo *controlInfo = new GenericNetworkProtocolControlInfo();
     controlInfo->setSourceAddress(floodDatagram->getSourceAddress());
     controlInfo->setProtocol(floodDatagram->getTransportProtocol());
     cPacket *transportPacket = floodDatagram->decapsulate();
@@ -303,8 +302,9 @@ FloodDatagram *Flood::encapsMsg(cPacket *appPkt)
  */
 cObject *Flood::setDownControlInfo(cMessage *const pMsg, const MACAddress& pDestAddr)
 {
-    SimpleLinkLayerControlInfo *const cCtrlInfo = new SimpleLinkLayerControlInfo();
+    Ieee802Ctrl *const cCtrlInfo = new Ieee802Ctrl();
     cCtrlInfo->setDest(pDestAddr);
+    cCtrlInfo->setEtherType(ETHERTYPE_INET_GENERIC);
     pMsg->setControlInfo(cCtrlInfo);
     return cCtrlInfo;
 }

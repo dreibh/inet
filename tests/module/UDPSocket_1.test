@@ -25,7 +25,7 @@ Define_Module(TestApp);
 void TestApp::activity()
 {
   UDPSocket s;
-  s.setOutputGate(gate("udpOut"));
+  s.setOutputGate(gate("socketOut"));
   s.setMulticastLoop(false);
   s.connect(L3Address("10.0.0.1"), 1000);
   s.bind(100);
@@ -35,13 +35,13 @@ void TestApp::activity()
 }
 
 %file: TestApp.ned
-import inet.applications.contract.IUDPApp;
+import inet.applications.contract.IApp;
 
-simple TestApp like IUDPApp
+simple TestApp like IApp
 {
     gates:
-        input udpIn;
-        output udpOut;
+        input socketIn;
+        output socketOut;
 }
 
 %inifile: omnetpp.ini
@@ -49,25 +49,25 @@ simple TestApp like IUDPApp
 ned-path = .;../../../../src;../../lib
 network = SimpleTestNetwork
 cmdenv-express-mode = false
-cmdenv-message-trace = true
-**.client.numUdpApps = 1
-**.client.udpApp[0].typename = "TestApp"
+cmdenv-log-prefix = "C:%C: "
+
+**.client.numApps = 1
+**.client.app[0].typename = "TestApp"
+
+**.client.app[0].cmdenv-log-level=TRACE
+
+%contains: stdout
+C:(TestApp)SimpleTestNetwork.client.app[0]: UDPSocket: Send (omnetpp::cMessage)SetMulticastLoop  control info: (inet::UDPSetMulticastLoopCommand)
+C:(TestApp)SimpleTestNetwork.client.app[0]: UDPSocket: Send (omnetpp::cMessage)CONNECT  control info: (inet::UDPConnectCommand)
+C:(TestApp)SimpleTestNetwork.client.app[0]: UDPSocket: Send (omnetpp::cMessage)BIND  control info: (inet::UDPBindCommand)
+C:(TestApp)SimpleTestNetwork.client.app[0]: UDPSocket: Send (omnetpp::cMessage)CONNECT  control info: (inet::UDPConnectCommand)
 
 %contains-regex: stdout
-SENT:   src=SimpleTestNetwork\.client\.udpApp\[0\] \(id=\d+\)  dest=SimpleTestNetwork\.client\.udp \(id=\d+\)   control info: \(inet::UDPSetMulticastLoopCommand\)
+C:\(UDP\)SimpleTestNetwork\.client\.udp: Socket created: sockId=2 localPort=1025
 .*
-SENT:   src=SimpleTestNetwork\.client\.udpApp\[0\] \(id=\d+\)  dest=SimpleTestNetwork\.client\.udp \(id=\d+\)   control info: \(inet::UDPConnectCommand\)
+C:\(UDP\)SimpleTestNetwork\.client\.udp: Socket connected: sockId=2 localPort=1025 remotePort=1000 remoteAddr=10\.0\.0\.1 multicastLoop=0
 .*
-SENT:   src=SimpleTestNetwork\.client\.udpApp\[0\] \(id=\d+\)  dest=SimpleTestNetwork\.client\.udp \(id=\d+\)   control info: \(inet::UDPBindCommand\)
-.*
-SENT:   src=SimpleTestNetwork\.client\.udpApp\[0\] \(id=\d+\)  dest=SimpleTestNetwork\.client\.udp \(id=\d+\)   control info: \(inet::UDPConnectCommand\)
-
-%contains-regex: stdout
-Socket created: sockId=2 appGateIndex=0 localPort=1025
-.*
-Socket connected: sockId=2 appGateIndex=0 localPort=1025 remotePort=1000 remoteAddr=10\.0\.0\.1 multicastLoop=0
-.*
-Socket connected: sockId=2 appGateIndex=0 localPort=100 remotePort=2000 remoteAddr=10\.0\.0\.2 multicastLoop=0
+C:\(UDP\)SimpleTestNetwork\.client\.udp: Socket connected: sockId=2 localPort=100 remotePort=2000 remoteAddr=10\.0\.0\.2 multicastLoop=0
 %#--------------------------------------------------------------------------------------------------------------
 %not-contains: stdout
 undisposed object:

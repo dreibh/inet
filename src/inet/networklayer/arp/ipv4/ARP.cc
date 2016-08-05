@@ -17,6 +17,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/networklayer/arp/ipv4/ARP.h"
 
 #include "inet/networklayer/arp/ipv4/ARPPacket_m.h"
@@ -65,8 +66,6 @@ void ARP::initialize(int stage)
         cacheTimeout = par("cacheTimeout");
         respondToProxyARP = par("respondToProxyARP");
 
-        netwOutGate = gate("netwOut");
-
         // init statistics
         numRequestsSent = numRepliesSent = 0;
         numResolutions = numFailedResolutions = 0;
@@ -77,11 +76,14 @@ void ARP::initialize(int stage)
 
         WATCH_PTRMAP(arpCache);
     }
+    else if (stage == INITSTAGE_NETWORK_LAYER) {
+        // TODO: registerProtocol(Protocol::arp, gate("netwOut"));
+    }
     else if (stage == INITSTAGE_NETWORK_LAYER_3) {    // IP addresses should be available
         ift = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
         rt = getModuleFromPar<IIPv4RoutingTable>(par("routingTableModule"), this);
-
         isUp = isNodeUp();
+        registerProtocol(Protocol::arp, gate("ifOut"));
     }
 }
 
@@ -109,9 +111,6 @@ void ARP::handleMessage(cMessage *msg)
         ARPPacket *arp = check_and_cast<ARPPacket *>(msg);
         processARPPacket(arp);
     }
-
-    if (hasGUI())
-        updateDisplayString();
 }
 
 void ARP::handleMessageWhenDown(cMessage *msg)
@@ -174,12 +173,12 @@ bool ARP::isNodeUp()
     return !nodeStatus || nodeStatus->getState() == NodeStatus::UP;
 }
 
-void ARP::updateDisplayString()
+void ARP::refreshDisplay() const
 {
     std::stringstream os;
 
-    os << arpCache.size() << " cache entries\nsent req:" << numRequestsSent
-       << " repl:" << numRepliesSent << " fail:" << numFailedResolutions;
+    os << "size:" << arpCache.size() << " sent:" << numRequestsSent << "\n"
+       << "repl:" << numRepliesSent << " fail:" << numFailedResolutions;
 
     getDisplayString().setTagArg("t", 0, os.str().c_str());
 }
@@ -214,7 +213,7 @@ void ARP::sendPacketToNIC(cMessage *msg, const InterfaceEntry *ie, const MACAddr
 
     // send out
     EV_INFO << "Sending " << msg << " to network protocol.\n";
-    send(msg, netwOutGate);
+    send(msg, "ifOut");
 }
 
 void ARP::sendARPRequest(const InterfaceEntry *ie, IPv4Address ipAddress)

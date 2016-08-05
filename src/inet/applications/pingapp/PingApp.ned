@@ -19,8 +19,7 @@
 
 package inet.applications.pingapp;
 
-import inet.applications.contract.IPingApp;
-
+import inet.applications.contract.IApp;
 
 //
 // Generates ping requests to several hosts (or rather, network interfaces),
@@ -59,7 +58,7 @@ import inet.applications.contract.IPingApp;
 //
 // @see ~PingPayload, ~ICMP, ~ICMPv6
 //
-simple PingApp like IPingApp
+simple PingApp like IApp
 {
     parameters:
         string destAddr = default(""); // destination address(es), separated by spaces, "*" means all IPv4/IPv6 interfaces in entire simulation
@@ -76,7 +75,7 @@ simple PingApp like IPingApp
         @display("i=block/app");
         @signal[rtt](type=simtime_t);
         @signal[numLost](type=long);
-        @signal[outOfOrderArrivals](type=long);
+        @signal[numOutOfOrderArrivals](type=long);
         @signal[pingTxSeq](type=long);
         @signal[pingRxSeq](type=long);
         @statistic[rtt](title="ping round-trip time"; unit=s; record=histogram,vector; interpolationmode=none);
@@ -85,7 +84,8 @@ simple PingApp like IPingApp
         @statistic[pingTxSeq](title="ping tx seq"; record=count,vector; interpolationmode=none);
         @statistic[pingRxSeq](title="ping rx seq"; record=count,vector; interpolationmode=none);
     gates:
-        input pingIn @labels(PingPayload/up);
-        output pingOut @labels(PingPayload/down);
+        input pingIn;
+        input socketIn @labels(ITransportPacket/up);
+        output socketOut @labels(ITransportPacket/down);
 }
 

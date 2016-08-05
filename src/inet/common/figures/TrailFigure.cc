@@ -32,7 +32,6 @@ void TrailFigure::addFigure(cFigure *figure)
     cGroupFigure::addFigure(figure);
     if (getNumFigures() > maxCount)
         delete removeFigure(0);
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
     if (fadeOut) {
         if (fadeCounter > 0)
             fadeCounter--;
@@ -47,7 +46,6 @@ void TrailFigure::addFigure(cFigure *figure)
             }
         }
     }
-#endif
 }
 
 } // namespace inet

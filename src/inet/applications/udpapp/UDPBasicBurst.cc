@@ -19,7 +19,6 @@
 //
 
 #include "inet/applications/udpapp/UDPBasicBurst.h"
-
 #include "inet/transportlayer/contract/udp/UDPControlInfo_m.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/common/ModuleAccess.h"
@@ -117,7 +116,7 @@ cPacket *UDPBasicBurst::createPacket()
 
 void UDPBasicBurst::processStart()
 {
-    socket.setOutputGate(gate("udpOut"));
+    socket.setOutputGate(gate("socketOut"));
     socket.bind(localPort);
 
     const char *destAddrs = par("destAddresses");
@@ -200,12 +199,13 @@ void UDPBasicBurst::handleMessageWhenUp(cMessage *msg)
     else {
         throw cRuntimeError("Unrecognized message (%s)%s", msg->getClassName(), msg->getName());
     }
+}
 
-    if (hasGUI()) {
-        char buf[40];
-        sprintf(buf, "rcvd: %d pks\nsent: %d pks", numReceived, numSent);
-        getDisplayString().setTagArg("t", 0, buf);
-    }
+void UDPBasicBurst::refreshDisplay() const
+{
+    char buf[100];
+    sprintf(buf, "rcvd: %d pks\nsent: %d pks", numReceived, numSent);
+    getDisplayString().setTagArg("t", 0, buf);
 }
 
 void UDPBasicBurst::processPacket(cPacket *pk)

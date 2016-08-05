@@ -18,8 +18,8 @@
 //
 
 #include "inet/common/INETMath.h"
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/routing/dymo/DYMO.h"
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/networklayer/common/IPProtocolId_m.h"
 
 #ifdef WITH_IDEALWIRELESS
@@ -140,9 +140,7 @@ void DYMO::initialize(int stage)
         }
     }
     else if (stage == INITSTAGE_ROUTING_PROTOCOLS) {
-        IPSocket socket(gate("ipOut"));
-        socket.registerProtocol(IP_PROT_MANET);
-
+        registerProtocol(Protocol::manet, gate("ipOut"));
         host->subscribe(NF_LINK_BREAK, this);
         addressType = getSelfAddress().getAddressType();
         networkProtocol->registerHook(0, this);
@@ -400,8 +398,7 @@ void DYMO::sendUDPPacket(UDPPacket *packet, double delay)
 void DYMO::processUDPPacket(UDPPacket *packet)
 {
     cPacket *encapsulatedPacket = packet->decapsulate();
-    if (dynamic_cast<DYMOPacket *>(encapsulatedPacket)) {
-        DYMOPacket *dymoPacket = (DYMOPacket *)encapsulatedPacket;
+    if (DYMOPacket *dymoPacket = dynamic_cast<DYMOPacket *>(encapsulatedPacket)) {
         dymoPacket->setControlInfo(packet->removeControlInfo());
         processDYMOPacket(dymoPacket);
     }
@@ -1444,7 +1441,7 @@ bool DYMO::handleOperationStage(LifecycleOperation *operation, int stage, IDoneC
 // notification
 //
 
-void DYMO::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void DYMO::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     Enter_Method("receiveChangeNotification");
     if (signalID == NF_LINK_BREAK) {

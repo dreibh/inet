@@ -52,10 +52,6 @@ void Loopback::initialize(int stage)
         // register our interface entry in IInterfaceTable
         registerInterface();
     }
-    // update display string when addresses have been autoconfigured etc.
-    else if (stage == INITSTAGE_LAST) {
-        updateDisplayString();
-    }
 }
 
 InterfaceEntry *Loopback::createInterfaceEntry()
@@ -88,10 +84,7 @@ void Loopback::handleMessage(cMessage *msg)
     numRcvdOK++;
     emit(packetSentToUpperSignal, msg);
     numSent++;
-    send(msg, "netwOut");
-
-    if (hasGUI())
-        updateDisplayString();
+    send(msg, "upperLayerOut");
 }
 
 void Loopback::flushQueue()
@@ -109,23 +102,16 @@ bool Loopback::isUpperMsg(cMessage *msg)
     return true;
 }
 
-void Loopback::updateDisplayString()
+void Loopback::refreshDisplay() const
 {
-    if (getEnvir()->isDisabled()) {
-        // speed up things
-        getDisplayString().setTagArg("t", 0, "");
-    }
-    else {
-        /* TBD find solution for displaying IPv4 address without dependence on IPv4 or IPv6
-                IPv4Address addr = interfaceEntry->ipv4Data()->getIPAddress();
-                sprintf(buf, "%s / %s\nrcv:%ld snt:%ld", addr.isUnspecified()?"-":addr.str().c_str(), datarateText, numRcvdOK, numSent);
-         */
-        char buf[80];
-        sprintf(buf, "rcv:%ld snt:%ld", numRcvdOK, numSent);
+    /* TBD find solution for displaying IPv4 address without dependence on IPv4 or IPv6
+            IPv4Address addr = interfaceEntry->ipv4Data()->getIPAddress();
+            sprintf(buf, "%s / %s\nrcv:%ld snt:%ld", addr.isUnspecified()?"-":addr.str().c_str(), datarateText, numRcvdOK, numSent);
+     */
+    char buf[80];
+    sprintf(buf, "rcv:%ld snt:%ld", numRcvdOK, numSent);
 
-        getDisplayString().setTagArg("t", 0, buf);
-    }
+    getDisplayString().setTagArg("t", 0, buf);
 }
 
 } // namespace inet
-

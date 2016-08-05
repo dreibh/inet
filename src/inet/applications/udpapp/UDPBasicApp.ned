@@ -19,7 +19,7 @@
 
 package inet.applications.udpapp;
 
-import inet.applications.contract.IUDPApp;
+import inet.applications.contract.IApp;
 
 
 //
@@ -39,13 +39,14 @@ import inet.applications.contract.IUDPApp;
 // like ~UDPSink), or a ~UDPEchoApp. When used with ~UDPEchoApp, the rcvdPkLifetime
 // statistic will contain the round-trip times.
 //
-simple UDPBasicApp like IUDPApp
+simple UDPBasicApp like IApp
 {
     parameters:
         string interfaceTableModule;   // The path to the InterfaceTable module
         int localPort = default(-1);  // local port (-1: use ephemeral port)
         string destAddresses = default(""); // list of IP addresses, separated by spaces ("": don't send)
         string localAddress = default("");
+        string packetName = default("UDPBasicAppData");
         int destPort;
         volatile int messageLength @unit(B); // length of messages to generate, in bytes
         double startTime @unit(s) = default(this.sendInterval); // application start time (start of the first packet)
@@ -63,6 +64,6 @@ simple UDPBasicApp like IUDPApp
         @statistic[sentPk](title="packets sent"; source=sentPk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[rcvdPkLifetime](title="received packet lifetime"; source="messageAge(rcvdPk)"; unit=s; record=stats,vector; interpolationmode=none);
     gates:
-        input udpIn @labels(UDPControlInfo/up);
-        output udpOut @labels(UDPControlInfo/down);
+        input socketIn @labels(UDPControlInfo/up);
+        output socketOut @labels(UDPControlInfo/down);
 }

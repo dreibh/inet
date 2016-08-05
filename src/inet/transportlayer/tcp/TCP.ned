@@ -72,10 +72,9 @@ import inet.transportlayer.contract.ITCP;
 // (TCP_I_ESTABLISHED, etc.) and ~TCPCommand as control info.
 //
 // One TCP module can serve several application modules, and several
-// connections per application. The <i>k</i>th application connects to TCP's
-// appIn[k] and appOut[k] ports. When talking to applications, a
-// connection is identified by the (application port index, connId) pair,
-// where connId is assigned by the application in the OPEN call.
+// connections per application. When talking to applications, a
+// connection is identified by the socketId that is assigned by the application in
+// the OPEN call.
 //
 // <b>Sockets</b>
 //
@@ -207,6 +206,7 @@ simple TCP like ITCP
         bool increasedIWEnabled = default(false); // Increased Initial Window (RFC 3390) enabled/disabled
         bool sackSupport = default(false); // Selective Acknowledgment (RFC 2018, 2883, 3517) support (header option) (SACK will be enabled for a connection if both endpoints support it)
         bool windowScalingSupport = default(false); // Window Scale (RFC 1323) support (header option) (WS will be enabled for a connection if both endpoints support it)
+        int windowScalingFactor = default(-1); // Window Scaling Factor to the power of 2. -1 indicates that manual window scaling is turned off.
         bool timestampSupport = default(false); // Timestamps (RFC 1323) support (header option) (TS will be enabled for a connection if both endpoints support it)
         int mss = default(536); // Maximum Segment Size (RFC 793) (header option)
         string tcpAlgorithmClass = default("TCPReno"); // TCPReno/TCPTahoe/TCPNewReno/TCPNoCongestionControl/DumbTCP
@@ -216,8 +216,8 @@ simple TCP like ITCP
         bool useDataNotification = default(false); // turn the notifications for arrived data on or off
         @display("i=block/wheelbarrow");
     gates:
-        input appIn[] @labels(TCPCommand/down);
+        input appIn @labels(TCPCommand/down);
         input ipIn @labels(TCPSegment,IPv4ControlInfo/up,IPv6ControlInfo/up);
-        output appOut[] @labels(TCPCommand/up);
+        output appOut @labels(TCPCommand/up);
         output ipOut @labels(TCPSegment,IPv4ControlInfo/down,IPv6ControlInfo/down);
 }

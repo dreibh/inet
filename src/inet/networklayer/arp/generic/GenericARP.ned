@@ -26,9 +26,11 @@ import inet.networklayer.contract.IARP;
 simple GenericARP like IARP
 {
     parameters:
-        @display("i=block/layer_s");
+        @display("i=block/layer");
         string interfaceTableModule;   // The path to the InterfaceTable module
     gates:
         input netwIn @labels(IGenericDatagram); // incoming ARP requests and replies
         output netwOut @labels(IGenericDatagram);  // outgoing ARP requests/replies, and datagrams with resolved next hop
+        input ifIn @labels(ARPPacket,Ieee802Ctrl);
+        output ifOut @labels(ARPPacket,Ieee802Ctrl);
 }

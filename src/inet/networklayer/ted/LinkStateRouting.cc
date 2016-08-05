@@ -16,8 +16,8 @@
 
 #include "inet/common/INETDefs.h"
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/networklayer/ted/LinkStateRouting.h"
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/networklayer/contract/ipv4/IPv4ControlInfo.h"
 #include "inet/networklayer/ipv4/IPv4InterfaceData.h"
 #include "inet/common/NotifierConsts.h"
@@ -66,9 +66,7 @@ void LinkStateRouting::initialize(int stage)
         // schedule start of flooding link state info
         announceMsg = new cMessage("announce");
         scheduleAt(simTime() + exponential(0.01), announceMsg);
-
-        IPSocket socket(gate("ipOut"));
-        socket.registerProtocol(IP_PROT_OSPF);
+        registerProtocol(Protocol::ospf, gate("ipOut"));
     }
 }
 
@@ -89,7 +87,7 @@ void LinkStateRouting::handleMessage(cMessage *msg)
         ASSERT(false);
 }
 
-void LinkStateRouting::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void LinkStateRouting::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     Enter_Method_Silent();
     printNotificationBanner(signalID, obj);

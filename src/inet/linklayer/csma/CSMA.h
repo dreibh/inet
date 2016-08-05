@@ -112,7 +112,7 @@ class INET_API CSMA : public MACProtocolBase, public IMACProtocol
     virtual void handleSelfMessage(cMessage *) override;
 
     /** @brief Handle control messages from lower layer */
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, long value) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, long value DETAILS_ARG) override;
 
   protected:
     typedef std::list<CSMAFrame *> MacQueue;
@@ -321,8 +321,6 @@ class INET_API CSMA : public MACProtocolBase, public IMACProtocol
     virtual simtime_t scheduleBackoff();
 
     virtual cPacket *decapsMsg(CSMAFrame *macPkt);
-    cObject *setUpControlInfo(cMessage *const pMsg, const MACAddress& pSrcAddr);
-//  cObject* setDownControlInfo(cMessage * const pMsg, Signal * const pSignal);
 
     CSMAFrame *ackMessage;
 

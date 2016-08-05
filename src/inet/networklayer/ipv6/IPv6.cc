@@ -20,8 +20,9 @@
 
 #include "inet/networklayer/ipv6/IPv6.h"
 
-#include "inet/networklayer/common/IPSocket.h"
+#include "inet/common/IProtocolRegistrationListener.h"
 
+#include "inet/networklayer/contract/L3SocketCommand_m.h"
 #include "inet/networklayer/contract/ipv6/IPv6ControlInfo.h"
 #include "inet/networklayer/icmpv6/IPv6NDMessage_m.h"
 #include "inet/linklayer/common/Ieee802Ctrl.h"
@@ -101,10 +102,49 @@ void IPv6::initialize(int stage)
         isOperational = (!nodeStatus) || nodeStatus->getState() == NodeStatus::UP;
         if (!isOperational)
             throw cRuntimeError("This module doesn't support starting in node DOWN state");
+        registerProtocol(Protocol::ipv6, gate("transportOut"));
+        registerProtocol(Protocol::ipv6, gate("queueOut"));
     }
 }
 
-void IPv6::updateDisplayString()
+void IPv6::handleRegisterProtocol(const Protocol& protocol, cGate *gate)
+{
+    Enter_Method("handleRegisterProtocol");
+    mapping.addProtocolMapping(ProtocolGroup::ipprotocol.getProtocolNumber(&protocol), gate->getIndex());
+}
+
+void IPv6::handleMessage(cMessage *msg)
+{
+    if (L3SocketBindCommand *command = dynamic_cast<L3SocketBindCommand *>(msg->getControlInfo())) {
+        ASSERT(command->getControlInfoProtocolId() == Protocol::ipv6.getId());
+        SocketDescriptor *descriptor = new SocketDescriptor(command->getSocketId(), command->getProtocolId());
+        socketIdToSocketDescriptor[command->getSocketId()] = descriptor;
+        protocolIdToSocketDescriptors.insert(std::pair<int, SocketDescriptor *>(command->getProtocolId(), descriptor));
+        delete msg;
+    }
+    else if (L3SocketCloseCommand *command = dynamic_cast<L3SocketCloseCommand *>(msg->getControlInfo())) {
+        ASSERT(command->getControlInfoProtocolId() == Protocol::ipv6.getId());
+        auto it = socketIdToSocketDescriptor.find(command->getSocketId());
+        if (it != socketIdToSocketDescriptor.end()) {
+            int protocol = it->second->protocolId;
+            auto lowerBound = protocolIdToSocketDescriptors.lower_bound(protocol);
+            auto upperBound = protocolIdToSocketDescriptors.upper_bound(protocol);
+            for (auto jt = lowerBound; jt != upperBound; jt++) {
+                if (it->second == jt->second) {
+                    protocolIdToSocketDescriptors.erase(jt);
+                    break;
+                }
+            }
+            delete it->second;
+            socketIdToSocketDescriptor.erase(it);
+        }
+        delete msg;
+    }
+    else
+        QueueBase::handleMessage(msg);
+}
+
+void IPv6::refreshDisplay() const
 {
     char buf[80] = "";
     if (numForwarded > 0)
@@ -118,21 +158,6 @@ void IPv6::updateDisplayString()
     if (numUnroutable > 0)
         sprintf(buf + strlen(buf), "UNROUTABLE:%d ", numUnroutable);
     getDisplayString().setTagArg("t", 0, buf);
-}
-
-void IPv6::handleMessage(cMessage *msg)
-{
-    if (dynamic_cast<RegisterTransportProtocolCommand *>(msg)) {
-        RegisterTransportProtocolCommand *command = static_cast<RegisterTransportProtocolCommand *>(msg);
-        if (msg->getArrivalGate()->isName("transportIn")) {
-            mapping.addProtocolMapping(command->getProtocol(), msg->getArrivalGate()->getIndex());
-        }
-        else
-            throw cRuntimeError("RegisterTransportProtocolCommand %d arrived invalid gate '%s'", command->getProtocol(), msg->getArrivalGate()->getFullName());
-        delete msg;
-    }
-    else
-        QueueBase::handleMessage(msg);
 }
 
 void IPv6::endService(cPacket *msg)
@@ -212,15 +237,12 @@ void IPv6::endService(cPacket *msg)
                 preroutingFinish(datagram, fromIE, destIE, nextHop.toIPv6());
         }
     }
-
-    if (hasGUI())
-        updateDisplayString();
 }
 
-InterfaceEntry *IPv6::getSourceInterfaceFrom(cPacket *msg)
+InterfaceEntry *IPv6::getSourceInterfaceFrom(cPacket *packet)
 {
-    cGate *g = msg->getArrivalGate();
-    return g ? ift->getInterfaceByNetworkLayerGateIndex(g->getIndex()) : nullptr;
+    IMACProtocolControlInfo *controlInfo = dynamic_cast<IMACProtocolControlInfo *>(packet->getControlInfo());
+    return controlInfo != nullptr ? ift->getInterfaceById(controlInfo->getInterfaceId()) : nullptr;
 }
 
 void IPv6::preroutingFinish(IPv6Datagram *datagram, const InterfaceEntry *fromIE, const InterfaceEntry *destIE, IPv6Address nextHopAddr)
@@ -231,7 +253,7 @@ void IPv6::preroutingFinish(IPv6Datagram *datagram, const InterfaceEntry *fromIE
 
     // routepacket
     if (!destAddr.isMulticast())
-        routePacket(datagram, destIE, nextHopAddr, false);
+        routePacket(datagram, destIE, fromIE, nextHopAddr, false);
     else
         routeMulticastPacket(datagram, destIE, fromIE, false);
 }
@@ -287,12 +309,12 @@ void IPv6::datagramLocalOut(IPv6Datagram *datagram, const InterfaceEntry *destIE
     if (destIE != nullptr)
         fragmentAndSend(datagram, destIE, MACAddress::BROADCAST_ADDRESS, true); // FIXME what MAC address to use?
     else if (!datagram->getDestAddress().isMulticast())
-        routePacket(datagram, destIE, requestedNextHopAddress, true);
+        routePacket(datagram, destIE, nullptr, requestedNextHopAddress, true);
     else
         routeMulticastPacket(datagram, destIE, nullptr, true);
 }
 
-void IPv6::routePacket(IPv6Datagram *datagram, const InterfaceEntry *destIE, IPv6Address requestedNextHopAddress, bool fromHL)
+void IPv6::routePacket(IPv6Datagram *datagram, const InterfaceEntry *destIE, const InterfaceEntry *fromIE, IPv6Address requestedNextHopAddress, bool fromHL)
 {
     // TBD add option handling code here
     IPv6Address destAddress = datagram->getDestAddress();
@@ -306,7 +328,7 @@ void IPv6::routePacket(IPv6Datagram *datagram, const InterfaceEntry *destIE, IPv
         EV_INFO << "local delivery\n";
 
         numLocalDeliver++;
-        localDeliver(datagram);
+        localDeliver(datagram, fromIE);
         return;
     }
 
@@ -445,7 +467,7 @@ void IPv6::routeMulticastPacket(IPv6Datagram *datagram, const InterfaceEntry *de
         if (rt->isLocalAddress(destAddr)) {
             EV_INFO << "local delivery of multicast packet\n";
             numLocalDeliver++;
-            localDeliver(datagram->dup());
+            localDeliver(datagram->dup(), fromIE);
         }
 
         // if datagram arrived from input gate and IP forwarding is off, delete datagram
@@ -508,7 +530,7 @@ void IPv6::routeMulticastPacket(IPv6Datagram *datagram, const InterfaceEntry *de
         // FIXME code from the MPLS model: set packet dest address to routerId (???)
         datagramCopy->setDestAddress(rt->getRouterId());
 
-        localDeliver(datagramCopy);
+        localDeliver(datagramCopy, fromIE);
     }
 
     // forward datagram only if IP forward is enabled, or sent locally
@@ -552,7 +574,7 @@ void IPv6::routeMulticastPacket(IPv6Datagram *datagram, const InterfaceEntry *de
  */
 }
 
-void IPv6::localDeliver(IPv6Datagram *datagram)
+void IPv6::localDeliver(IPv6Datagram *datagram, const InterfaceEntry *fromIE)
 {
     // Defragmentation. skip defragmentation if datagram is not fragmented
     IPv6FragmentHeader *fh = dynamic_cast<IPv6FragmentHeader *>(datagram->findExtensionHeaderByType(IP_PROT_IPv6EXT_FRAGMENT));
@@ -586,15 +608,23 @@ void IPv6::localDeliver(IPv6Datagram *datagram)
     // #### end CB
 #endif /* WITH_xMIPv6 */
 
-    // decapsulate and send on appropriate output gate
     int protocol = datagram->getTransportProtocol();
-    cPacket *packet = decapsulate(datagram);
-
+    cPacket *packet = decapsulate(datagram, fromIE);
+    auto lowerBound = protocolIdToSocketDescriptors.lower_bound(protocol);
+    auto upperBound = protocolIdToSocketDescriptors.upper_bound(protocol);
+    bool hasSocket = lowerBound != upperBound;
+    IPv6ControlInfo *controlInfo = check_and_cast<IPv6ControlInfo *>(packet->getControlInfo());
+    for (auto it = lowerBound; it != upperBound; it++) {
+        IPv6ControlInfo *controlInfoCopy = controlInfo->dup();
+        controlInfoCopy->setSocketId(it->second->socketId);
+        cPacket *packetCopy = packet->dup();
+        packetCopy->setControlInfo(controlInfoCopy);
+        send(packetCopy, "transportOut");
+    }
 
     if (protocol == IP_PROT_IPv6_ICMP && dynamic_cast<IPv6NDMessage *>(packet)) {
         EV_INFO << "Neigbour Discovery packet: passing it to ND module\n";
         send(packet, "ndOut");
-        packet = nullptr;
     }
 #ifdef WITH_xMIPv6
     else if (protocol == IP_PROT_IPv6EXT_MOB && dynamic_cast<MobilityHeader *>(packet)) {
@@ -603,7 +633,6 @@ void IPv6::localDeliver(IPv6Datagram *datagram)
         if (rt->hasMIPv6Support()) {
             EV_INFO << "MIPv6 packet: passing it to xMIPv6 module\n";
             send(check_and_cast<MobilityHeader *>(packet), "xMIPv6Out");
-            packet = nullptr;
         }
         else {
             // update 12.9.07 - CB
@@ -612,69 +641,38 @@ void IPv6::localDeliver(IPv6Datagram *datagram)
                ICMP Parameter Problem, Code 1, message to the sender of the packet*/
             EV_INFO << "No MIPv6 support on this node!\n";
             IPv6ControlInfo *ctrlInfo = check_and_cast<IPv6ControlInfo *>(packet->removeControlInfo());
-            icmp->sendErrorMessage(packet, ctrlInfo, ICMPv6_PARAMETER_PROBLEM, UNRECOGNIZED_NEXT_HDR_TYPE);
-            packet = nullptr;
+            sendIcmpError(packet, ctrlInfo, ICMPv6_PARAMETER_PROBLEM, UNRECOGNIZED_NEXT_HDR_TYPE);
         }
     }
 #endif /* WITH_xMIPv6 */
     else if (protocol == IP_PROT_IPv6_ICMP) {
         handleReceivedICMP(check_and_cast<ICMPv6Message *>(packet));
-        packet = nullptr;
     }    //Added by WEI to forward ICMPv6 msgs to ICMPv6 module.
     else if (protocol == IP_PROT_IP || protocol == IP_PROT_IPv6) {
         EV_INFO << "Tunnelled IP datagram\n";
         send(packet, "upperTunnelingOut");
-        packet = nullptr;
     }
-    else {
-        int gateindex = mapping.findOutputGateForProtocol(protocol);
-        // check if the transportOut port are connected, otherwise discard the packet
-        if (gateindex >= 0) {
-            cGate *outGate = gate("transportOut", gateindex);
-            if (outGate->isPathOK()) {
-                EV_INFO << "Protocol " << protocol << ", passing up on gate " << gateindex << "\n";
-                //TODO: Indication of forward progress
-                send(packet, outGate);
-                packet = nullptr;
-                return;
-            }
-        }
-
+    else if (mapping.findOutputGateForProtocol(protocol) >= 0) {
+        EV_INFO << "Protocol " << protocol << ", passing up\n";
+        send(packet, "transportOut");
+    }
+    else if (!hasSocket) {
         // TODO send ICMP Destination Unreacheable error
         EV_INFO << "Transport layer gate not connected - dropping packet!\n";
         IPv6ControlInfo *ctrlInfo = check_and_cast<IPv6ControlInfo *>(packet->removeControlInfo());
-        icmp->sendErrorMessage(packet, ctrlInfo, ICMPv6_PARAMETER_PROBLEM, UNRECOGNIZED_NEXT_HDR_TYPE);
-        packet = nullptr;
+        sendIcmpError(packet, ctrlInfo, ICMPv6_PARAMETER_PROBLEM, UNRECOGNIZED_NEXT_HDR_TYPE);
     }
-    ASSERT(packet == nullptr);
 }
 
 void IPv6::handleReceivedICMP(ICMPv6Message *msg)
 {
-    int type = msg->getType();
-    if (type < 128) {
-        // ICMP errors are delivered to the appropriate higher layer protocols
-        EV_INFO << "ICMPv6 packet: passing it to higher layer\n";
-        IPv6Datagram *bogusPacket = check_and_cast<IPv6Datagram *>(msg->getEncapsulatedPacket());
-        int protocol = bogusPacket->getTransportProtocol();
-        int gateindex = mapping.getOutputGateForProtocol(protocol);
-        send(msg, "transportOut", gateindex);
-    }
-    else {
-        // all others are delivered to ICMP:
-        // ICMPv6_ECHO_REQUEST, ICMPv6_ECHO_REPLY, ICMPv6_MLD_QUERY, ICMPv6_MLD_REPORT,
-        // ICMPv6_MLD_DONE, ICMPv6_ROUTER_SOL, ICMPv6_ROUTER_AD, ICMPv6_NEIGHBOUR_SOL,
-        // ICMPv6_NEIGHBOUR_AD, ICMPv6_MLDv2_REPORT
-        EV_INFO << "ICMPv6 packet: passing it to ICMPv6 module\n";
-        int gateindex = mapping.getOutputGateForProtocol(IP_PROT_IPv6_ICMP);
-        send(msg, "transportOut", gateindex);
-    }
+    EV_INFO << "ICMPv6 packet: passing it to ICMPv6 module\n";
+    send(msg, "transportOut");
 }
 
-cPacket *IPv6::decapsulate(IPv6Datagram *datagram)
+cPacket *IPv6::decapsulate(IPv6Datagram *datagram, const InterfaceEntry *fromIE)
 {
     // decapsulate transport packet
-    InterfaceEntry *fromIE = getSourceInterfaceFrom(datagram);
     cPacket *packet = datagram->decapsulate();
 
     // create and fill in control info
@@ -711,7 +709,6 @@ IPv6Datagram *IPv6::encapsulate(cPacket *transportPacket, IPv6ControlInfo *contr
         // if interface parameter does not match existing interface, do not send datagram
         if (rt->getInterfaceByAddress(src) == nullptr) {
             delete datagram;
-            delete controlInfo;
 #ifndef WITH_xMIPv6
             throw cRuntimeError("Wrong source address %s in (%s)%s: no interface with such address",
                     src.str().c_str(), transportPacket->getClassName(), transportPacket->getFullName());
@@ -748,7 +745,7 @@ void IPv6::fragmentAndSend(IPv6Datagram *datagram, const InterfaceEntry *ie, con
     if (datagram->getHopLimit() <= 0) {
         // drop datagram, destruction responsibility in ICMP
         EV_INFO << "datagram hopLimit reached zero, sending ICMPv6_TIME_EXCEEDED\n";
-        icmp->sendErrorMessage(datagram, ICMPv6_TIME_EXCEEDED, 0);    // FIXME check icmp 'code'
+        sendIcmpError(datagram, ICMPv6_TIME_EXCEEDED, 0);    // FIXME check icmp 'code'
         return;
     }
 
@@ -783,7 +780,7 @@ void IPv6::fragmentAndSend(IPv6Datagram *datagram, const InterfaceEntry *ie, con
     // routed datagrams are not fragmented
     if (!fromHL) {
         // FIXME check for multicast datagrams, how many ICMP error should be sent
-        icmp->sendErrorMessage(datagram, ICMPv6_PACKET_TOO_BIG, 0);    // TODO set MTU
+        sendIcmpError(datagram, ICMPv6_PACKET_TOO_BIG, 0);    // TODO set MTU
         return;
     }
 
@@ -824,16 +821,12 @@ void IPv6::fragmentAndSend(IPv6Datagram *datagram, const InterfaceEntry *ie, con
 
 void IPv6::sendDatagramToOutput(IPv6Datagram *datagram, const InterfaceEntry *destIE, const MACAddress& macAddr)
 {
-    // if link layer uses MAC addresses (basically, not PPP), add control info
-    if (!macAddr.isUnspecified()) {
-        Ieee802Ctrl *controlInfo = new Ieee802Ctrl();
-        controlInfo->setDest(macAddr);
-        controlInfo->setEtherType(ETHERTYPE_IPv6);
-        datagram->setControlInfo(controlInfo);
-    }
-
-    // send datagram to link layer
-    send(datagram, "queueOut", destIE->getNetworkLayerGateIndex());
+    Ieee802Ctrl *controlInfo = new Ieee802Ctrl();
+    controlInfo->setDest(macAddr);
+    controlInfo->setEtherType(ETHERTYPE_IPv6);
+    controlInfo->setInterfaceId(destIE->getInterfaceId());
+    datagram->setControlInfo(controlInfo);
+    send(datagram, "queueOut");
 }
 
 bool IPv6::determineOutputInterface(const IPv6Address& destAddress, IPv6Address& nextHop,
@@ -851,7 +844,7 @@ bool IPv6::determineOutputInterface(const IPv6Address& destAddress, IPv6Address&
             if (rt->isRouter()) {
                 EV_INFO << "unroutable, sending ICMPv6_DESTINATION_UNREACHABLE\n";
                 numUnroutable++;
-                icmp->sendErrorMessage(datagram, ICMPv6_DESTINATION_UNREACHABLE, 0);    // FIXME check ICMP 'code'
+                sendIcmpError(datagram, ICMPv6_DESTINATION_UNREACHABLE, 0);    // FIXME check ICMP 'code'
             }
             else {    // host
                 EV_INFO << "no match in routing table, passing datagram to Neighbour Discovery module for default router selection\n";
@@ -941,18 +934,13 @@ bool IPv6::handleOperationStage(LifecycleOperation *operation, int stage, IDoneC
 void IPv6::registerHook(int priority, INetfilter::IHook *hook)
 {
     Enter_Method("registerHook()");
-    hooks.insert(std::pair<int, INetfilter::IHook *>(priority, hook));
+    NetfilterBase::registerHook(priority, hook);
 }
 
-void IPv6::unregisterHook(int priority, INetfilter::IHook *hook)
+void IPv6::unregisterHook(INetfilter::IHook *hook)
 {
     Enter_Method("unregisterHook()");
-    for (auto iter = hooks.begin(); iter != hooks.end(); iter++) {
-        if ((iter->first == priority) && (iter->second == hook)) {
-            hooks.erase(iter);
-            return;
-        }
-    }
+    NetfilterBase::unregisterHook(hook);
 }
 
 void IPv6::dropQueuedDatagram(const INetworkDatagram *datagram)
@@ -1134,6 +1122,16 @@ INetfilter::IHook::Result IPv6::datagramLocalOutHook(INetworkDatagram *datagram,
         }
     }
     return INetfilter::IHook::ACCEPT;
+}
+
+void IPv6::sendIcmpError(IPv6Datagram *origDatagram, ICMPv6Type type, int code)
+{
+    icmp->sendErrorMessage(origDatagram, type, code);
+}
+
+void IPv6::sendIcmpError(cPacket *transportPacket, IPv6ControlInfo *ctrl, ICMPv6Type type, int code)
+{
+    icmp->sendErrorMessage(transportPacket, ctrl, type, code);
 }
 
 } // namespace inet

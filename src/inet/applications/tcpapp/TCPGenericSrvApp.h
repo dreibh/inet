@@ -18,9 +18,9 @@
 #ifndef __INET_TCPGENERICSRVAPP_H
 #define __INET_TCPGENERICSRVAPP_H
 
-#include "inet/common/INETDefs.h"
 #include "inet/common/lifecycle/ILifecycle.h"
 #include "inet/common/lifecycle/LifecycleOperation.h"
+#include "inet/transportlayer/contract/tcp/TCPSocket.h"
 
 namespace inet {
 
@@ -33,6 +33,7 @@ namespace inet {
 class INET_API TCPGenericSrvApp : public cSimpleModule, public ILifecycle
 {
   protected:
+    TCPSocket socket;
     simtime_t delay;
     simtime_t maxMsgDelay;
 
@@ -53,6 +54,8 @@ class INET_API TCPGenericSrvApp : public cSimpleModule, public ILifecycle
     virtual int numInitStages() const override { return NUM_INIT_STAGES; }
     virtual void handleMessage(cMessage *msg) override;
     virtual void finish() override;
+    virtual void refreshDisplay() const override;
+
     virtual bool handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback) override
     { Enter_Method_Silent(); throw cRuntimeError("Unsupported lifecycle operation '%s'", operation->getClassName()); return true; }
 };

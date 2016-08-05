@@ -70,13 +70,14 @@ class INET_API TcpLwipConnection
     TcpLwipConnection(const TcpLwipConnection&);
 
   public:
-    TcpLwipConnection(TCP_lwIP& tcpLwipP, int connIdP, int gateIndexP,
-            TCPDataTransferMode dataTransferModeP);
+    TcpLwipConnection(TCP_lwIP& tcpLwipP, int connIdP, TCPDataTransferMode dataTransferModeP);
 
-    TcpLwipConnection(TcpLwipConnection& tcpLwipConnectionP, int connIdP,
-            LwipTcpLayer::tcp_pcb *pcbP);
+    TcpLwipConnection(TcpLwipConnection& tcpLwipConnectionP, int connIdP, LwipTcpLayer::tcp_pcb *pcbP);
 
     ~TcpLwipConnection();
+
+    /** Utility: sends TCP_I_AVAILABLE indication with TCPAvailableInfo to application */
+    void sendAvailableIndicationToApp(int listenConnId);
 
     void sendEstablishedMsg();
 
@@ -93,6 +94,8 @@ class INET_API TcpLwipConnection
 
     void abort();
 
+    void accept();
+
     void send(cPacket *msgP);
 
     void fillStatusInfo(TCPStatusInfo& statusInfo);
@@ -107,9 +110,12 @@ class INET_API TcpLwipConnection
 
     void initStats();
 
+    bool isSendUpEnabled() { return sendUpEnabled; }
+
+    void sendUpData();
+
   public:
     int connIdM;
-    int appGateIndexM;
     LwipTcpLayer::tcp_pcb *pcbM;
     TcpLwipSendQueue *sendQueueM;
     TcpLwipReceiveQueue *receiveQueueM;
@@ -119,6 +125,7 @@ class INET_API TcpLwipConnection
     long int totalSentM;
     bool isListenerM;
     bool onCloseM;
+    bool sendUpEnabled = false;
 
     Stats *statsM;
 };

@@ -55,6 +55,7 @@ ned-path = .;../../../../src
 *.host*.wlan[*].mac.fullDuplex = false
 *.host*.wlan[*].radioType = "APSKDimensionalRadio"
 *.host*.wlan[*].radio.transmitter.bitrate = 2Mbps
+*.host*.wlan[*].radio.transmitter.preambleDuration = 0s
 *.host*.wlan[*].radio.transmitter.headerBitLength = 100b
 *.host*.wlan[*].radio.carrierFrequency = 2.4GHz
 *.host*.wlan[*].radio.bandwidth = 2MHz
@@ -66,11 +67,12 @@ ned-path = .;../../../../src
 *.hostReceiver.wlan[*].radio.transmitter.power = 0W
 
 # ping app
-*.hostSender*.numPingApps = 1
-*.hostSender*.pingApp[0].count = 1
-*.hostSender*.pingApp[0].printPing = true
-*.hostSender*.pingApp[0].destAddr = "hostReceiver"
-*.hostSender*.pingApp[0].startTime = 0s
+*.hostSender*.numApps = 1
+*.hostSender*.app[0].typename = "PingApp"
+*.hostSender*.app[0].count = 1
+*.hostSender*.app[0].printPing = true
+*.hostSender*.app[0].destAddr = "hostReceiver"
+*.hostSender*.app[0].startTime = 0s
 
 %not-contains: results/General-0.elog
 Changing radio reception state from IDLE to RECEIVING.

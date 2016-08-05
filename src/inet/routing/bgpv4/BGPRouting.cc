@@ -67,7 +67,7 @@ void BGPRouting::handleMessage(cMessage *msg)
     if (msg->isSelfMessage()) {    //BGP level
         handleTimer(msg);
     }
-    else if (!strcmp(msg->getArrivalGate()->getName(), "tcpIn")) {    //TCP level
+    else if (!strcmp(msg->getArrivalGate()->getName(), "socketIn")) {    //TCP level
         processMessageFromTCP(msg);
     }
     else {
@@ -136,10 +136,11 @@ void BGPRouting::listenConnectionFromPeer(SessionID sessionID)
         _BGPSessions[sessionID]->getSocketListen()->renewSocket();
     }
     if (_BGPSessions[sessionID]->getSocketListen()->getState() != TCPSocket::LISTENING) {
-        _BGPSessions[sessionID]->getSocketListen()->setOutputGate(gate("tcpOut"));
+        _BGPSessions[sessionID]->getSocketListen()->setOutputGate(gate("socketOut"));
         _BGPSessions[sessionID]->getSocketListen()->readDataTransferModePar(*this);
         _BGPSessions[sessionID]->getSocketListen()->bind(TCP_PORT);
         _BGPSessions[sessionID]->getSocketListen()->listen();
+        _socketMap.addSocket(_BGPSessions[sessionID]->getSocketListen());
     }
 }
 
@@ -153,7 +154,7 @@ void BGPRouting::openTCPConnectionToPeer(SessionID sessionID)
         socket->renewSocket();
     }
     socket->setCallbackObject(this, (void *)sessionID);
-    socket->setOutputGate(gate("tcpOut"));
+    socket->setOutputGate(gate("socketOut"));
     socket->readDataTransferModePar(*this);
     socket->bind(intfEntry->ipv4Data()->getIPAddress(), 0);
     _socketMap.addSocket(socket);
@@ -167,7 +168,7 @@ void BGPRouting::processMessageFromTCP(cMessage *msg)
     if (!socket) {
         socket = new TCPSocket(msg);
         socket->readDataTransferModePar(*this);
-        socket->setOutputGate(gate("tcpOut"));
+        socket->setOutputGate(gate("socketOut"));
         IPv4Address peerAddr = socket->getRemoteAddress().toIPv4();
         SessionID i = findIdFromPeerAddr(_BGPSessions, peerAddr);
         if (i == (SessionID)-1) {
@@ -351,7 +352,7 @@ unsigned char BGPRouting::decisionProcess(const BGPUpdateMessage& msg, RoutingTa
             ospf::IPv4AddressRange OSPFnetAddr;
             OSPFnetAddr.address = entry->getDestination();
             OSPFnetAddr.mask = entry->getNetmask();
-            ospf::OSPFRouting *ospf = findModuleFromPar<ospf::OSPFRouting>(par("ospfRoutingModule"), this);
+            ospf::OSPFRouting *ospf = getModuleFromPar<ospf::OSPFRouting>(par("ospfRoutingModule"), this);
             InterfaceEntry *ie = entry->getInterface();
             if (!ie)
                 throw cRuntimeError("Model error: interface entry is nullptr");
@@ -447,7 +448,7 @@ bool BGPRouting::checkExternalRoute(const IPv4Route *route)
 {
     IPv4Address OSPFRoute;
     OSPFRoute = route->getDestination();
-    ospf::OSPFRouting *ospf = findModuleFromPar<ospf::OSPFRouting>(par("ospfRoutingModule"), this);
+    ospf::OSPFRouting *ospf = getModuleFromPar<ospf::OSPFRouting>(par("ospfRoutingModule"), this);
     bool returnValue = ospf->checkExternalRoute(OSPFRoute);
     return returnValue;
 }

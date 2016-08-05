@@ -1,24 +1,45 @@
 ====== inet-3.x ======
 
+2016-04-06  ------ inet-3.2.4 released ------
+
+2016-03-16  ------ inet-3.2.3 released ------
+
+2016-03-11  ------ inet-3.2.2 released ------
+
+2016-01-21  ------ inet-3.2.1 released ------
+
+2015-12-16  ------ inet-3.2.0 released ------
+
+2015-11-26  Andras Varga
+
+	TCP: Vegas, Westwood: fix RTT initialization.
+
+	Original value caused "out of range" with the overflow check introduced
+	in OMNeT++ 5.0b3.
+
+2015-10-26  ------ inet-3.1.1 released ------
+
+2015-10-15  ------ inet-3.1.0 released ------
+
 2015-06-22  ------ inet-3.0.0 released ------
 
 2015-05-13  ------ inet-2.99.1 released ------
 
 2015-04-16  Zoltan Bojthe
 
-    Refactored and cleaned up TCP header options.
+	Refactored and cleaned up TCP header options.
 
 2015-04-13  Irene Ruengeler
 
-    Added data receive handling via indications.
+	Added data receive handling via indications.
 
 2015-02-19  Zoltan Bojthe
 
-    Removed obsolete SACK_AS_C_ARRAY from TCPConnection.h
+	Removed obsolete SACK_AS_C_ARRAY from TCPConnection.h
 
 2015-02-12  Zoltan Bojthe
 
-    Fixed packet length.
+	Fixed packet length.
 
 2015-02-10  Martin Becke
 
@@ -36,7 +57,7 @@
 
 	Fixed cloneListeningConnection / TCPSACKRexmitQueue.
 
-2014-11-26  Levente Mészáros
+2014-11-26  Levente Meszaros
 
 	Fixed memory management problems found by valgrind memcheck.
 

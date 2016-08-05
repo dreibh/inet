@@ -132,13 +132,15 @@ simple EtherMAC like IEtherMAC
         @signal[dropPkNotForUs](type=EtherFrame);
         @signal[dropPkBitError](type=EtherFrame);
         @signal[dropPkFromHLIfaceDown](type=EtherFrame);
-        @signal[dropPkIfaceDown](type=EtherTraffic);        // emitted at begin of receiving
-        @signal[packetSentToLower](type=EtherTraffic);
-        @signal[packetReceivedFromLower](type=EtherTraffic);
+        @signal[dropPkIfaceDown](type=EtherFrame);        // emitted at begin of receiving
+        @signal[packetSentToLower](type=EtherFrame);
+        @signal[packetReceivedFromLower](type=EtherFrame);
         @signal[packetSentToUpper](type=EtherFrame);
         @signal[packetReceivedFromUpper](type=EtherFrame);
         @signal[collision](type=long);
         @signal[backoff](type=long);
+        @signal[transmitState](type=long); // enum=MACTransmitState
+        @signal[receiveState](type=long); // enum=MACReceiveState
 
         @statistic[txPk](title="packets transmitted"; source=txPk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[rxPkOk](title="packets received OK"; source=rxPkOk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);

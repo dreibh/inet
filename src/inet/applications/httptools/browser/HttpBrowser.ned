@@ -17,7 +17,7 @@
 
 package inet.applications.httptools.browser;
 
-import inet.applications.contract.ITCPApp;
+import inet.applications.contract.IApp;
 
 
 //
@@ -107,7 +107,7 @@ import inet.applications.contract.ITCPApp;
 //
 // @author  Kristjan V. Jonsson
 //
-simple HttpBrowser like ITCPApp
+simple HttpBrowser like IApp
 {
     parameters:
         int httpProtocol = default(11);                 // The http protocol: 10 for http/1.0, 11 for http/1.1. Not used at the present time.
@@ -115,9 +115,9 @@ simple HttpBrowser like ITCPApp
         string scriptFile = default("");                // The browsing script file. Blank to disable.
         double activationTime @unit("s") = default(0s); // The initial activation delay. Zero to disable. This is the time at which the browser first comes to life in a simulation scenario. Note that this can be any random distribution which OMNeT++ supports.
         xml config;                                     // The XML config file
-        string httpBrowserControllerModule = default("controller"); // the absolute path to the http browser controller, @see HttpController
+        string httpControllerModule = default("httpController"); // the absolute path to the http browser controller, @see HttpController
     gates:
-        input tcpIn;
-        output tcpOut;
+        input socketIn;
+        output socketOut;
 }
 

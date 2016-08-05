@@ -141,12 +141,14 @@ simple EtherMACFullDuplex like IEtherMAC
         @signal[rxPkFromHL](type=EtherFrame);
         @signal[dropPkNotForUs](type=EtherFrame);
         @signal[dropPkBitError](type=EtherFrame);
-        @signal[dropPkIfaceDown](type=EtherTraffic);        // emitted at end of receiving
+        @signal[dropPkIfaceDown](type=EtherFrame);        // emitted at end of receiving
         @signal[dropPkFromHLIfaceDown](type=EtherFrame);
         @signal[packetSentToLower](type=EtherFrame);
         @signal[packetReceivedFromLower](type=EtherFrame);
         @signal[packetSentToUpper](type=EtherFrame);
         @signal[packetReceivedFromUpper](type=EtherFrame);
+        @signal[transmitState](type=long); // enum=MACTransmitState
+        @signal[receiveState](type=long); // enum=MACReceiveState
 
         @statistic[txPk](title="packets transmitted"; source=txPk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[rxPkOk](title="packets received OK"; source=rxPkOk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);

@@ -54,20 +54,21 @@ class INET_API IIeee80211DataMode : public IPrintableObject
 class INET_API IIeee80211Mode : public IPrintableObject
 {
   public:
+    virtual int getLegacyCwMin() const = 0;
+    virtual int getLegacyCwMax() const = 0;
+    virtual const char *getName() const = 0;
     virtual const IIeee80211PreambleMode *getPreambleMode() const = 0;
     virtual const IIeee80211HeaderMode *getHeaderMode() const = 0;
     virtual const IIeee80211DataMode *getDataMode() const = 0;
     virtual const simtime_t getDuration(int dataBitLength) const = 0;
-
     virtual const simtime_t getSlotTime() const = 0;
     virtual const simtime_t getSifsTime() const = 0;
+    virtual const simtime_t getRifsTime() const = 0;
     virtual const simtime_t getCcaTime() const = 0;
     virtual const simtime_t getPhyRxStartDelay() const = 0;
     virtual const simtime_t getRxTxTurnaroundTime() const = 0;
     virtual const simtime_t getPreambleLength() const = 0;
     virtual const simtime_t getPlcpHeaderLength() const = 0;
-    virtual int getCwMin() const = 0;
-    virtual int getCwMax() const = 0;
     virtual int getMpduMaxLength() const = 0;
 };
 

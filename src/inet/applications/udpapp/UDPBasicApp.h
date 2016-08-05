@@ -41,6 +41,7 @@ class INET_API UDPBasicApp : public ApplicationBase
     int localPort = -1, destPort = -1;
     simtime_t startTime;
     simtime_t stopTime;
+    const char *packetName = nullptr;
 
     // state
     UDPSocket socket;
@@ -58,6 +59,7 @@ class INET_API UDPBasicApp : public ApplicationBase
     virtual void initialize(int stage) override;
     virtual void handleMessageWhenUp(cMessage *msg) override;
     virtual void finish() override;
+    virtual void refreshDisplay() const override;
 
     // chooses random destination address
     virtual L3Address chooseDestAddr();

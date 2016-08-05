@@ -10,12 +10,13 @@ tkenv-plugin-path = ../../../etc/plugins
 ned-path = .;../../../../src;../../lib
 cmdenv-express-mode = false
 
-*.host.numPingApps = 1
-*.host.pingApp[0].destAddr = "192.168.0.42"
-*.host.pingApp[0].startTime = 0s
-*.host.pingApp[0].stopTime = 3.1s
+*.host.numApps = 1
+*.host.app[0].typename = "PingApp"
+*.host.app[0].destAddr = "192.168.0.42"
+*.host.app[0].startTime = 0s
+*.host.app[0].stopTime = 3.1s
 
-*.host.networkLayer.configurator.networkConfiguratorModule = ""
+*.host.ipv4.configurator.networkConfiguratorModule = ""
 
 **.hasStatus = true
 **.initialStatus = "down"
@@ -45,7 +46,7 @@ network Test
 
 %contains-regex: stdout
 
-.*Event #\d+  T=6 .*
+.*Event #\d+  t=6 .*
 .*
 Test.host starting up
 .*

@@ -20,7 +20,7 @@
 
 #include "inet/physicallayer/modulation/DBPSKModulation.h"
 #include "inet/physicallayer/modulation/DQPSKModulation.h"
-#include "inet/physicallayer/ieee80211/mode/IIeee80211Mode.h"
+#include "inet/physicallayer/ieee80211/mode/Ieee80211ModeBase.h"
 
 namespace inet {
 
@@ -82,15 +82,19 @@ class INET_API Ieee80211DsssDataMode : public Ieee80211DsssChunkMode, public IIe
  * Represents a Direct Sequence Spread Spectrum PHY mode as described in IEEE
  * 802.11-2012 specification clause 16.
  */
-class INET_API Ieee80211DsssMode : public IIeee80211Mode
+class INET_API Ieee80211DsssMode : public Ieee80211ModeBase
 {
   protected:
     const Ieee80211DsssPreambleMode *preambleMode;
     const Ieee80211DsssHeaderMode *headerMode;
     const Ieee80211DsssDataMode *dataMode;
 
+  protected:
+    virtual int getLegacyCwMin() const override { return 31; }
+    virtual int getLegacyCwMax() const override { return 1023; }
+
   public:
-    Ieee80211DsssMode(const Ieee80211DsssPreambleMode *preambleMode, const Ieee80211DsssHeaderMode *headerMode, const Ieee80211DsssDataMode *dataMode);
+    Ieee80211DsssMode(const char *name, const Ieee80211DsssPreambleMode *preambleMode, const Ieee80211DsssHeaderMode *headerMode, const Ieee80211DsssDataMode *dataMode);
 
     virtual std::ostream& printToStream(std::ostream& stream, int level) const override { return stream << "Ieee80211DsssMode"; }
 
@@ -107,13 +111,12 @@ class INET_API Ieee80211DsssMode : public IIeee80211Mode
     virtual inline const simtime_t getSlotTime() const override { return 20E-6; }
     virtual inline const simtime_t getShortSlotTime() const { return 9E-6; }
     virtual inline const simtime_t getSifsTime() const override { return 10E-6; }
+    virtual const simtime_t getRifsTime() const override;
     virtual inline const simtime_t getCcaTime() const override { return 15E-6; }
     virtual inline const simtime_t getPhyRxStartDelay() const override { return 192E-6; }
     virtual inline const simtime_t getRxTxTurnaroundTime() const override { return 5E-6; }
     virtual inline const simtime_t getPreambleLength() const override { return preambleMode->getDuration(); }
     virtual inline const simtime_t getPlcpHeaderLength() const override { return headerMode->getDuration(); }
-    virtual inline int getCwMin() const override { return 31; }
-    virtual inline int getCwMax() const override { return 1023; }
     virtual inline int getMpduMaxLength() const override { return 8191; }
 };
 

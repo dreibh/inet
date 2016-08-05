@@ -105,7 +105,7 @@ void Ieee80211MgmtAP::handleUpperMessage(cPacket *msg)
         }
     }
 
-    sendOrEnqueue(frame);
+    sendDown(frame);
 }
 
 void Ieee80211MgmtAP::handleCommand(int msgkind, cObject *ctrl)
@@ -113,7 +113,7 @@ void Ieee80211MgmtAP::handleCommand(int msgkind, cObject *ctrl)
     throw cRuntimeError("handleCommand(): no commands supported");
 }
 
-void Ieee80211MgmtAP::receiveSignal(cComponent *source, simsignal_t signalID, long value)
+void Ieee80211MgmtAP::receiveSignal(cComponent *source, simsignal_t signalID, long value DETAILS_ARG)
 {
     Enter_Method_Silent();
     if (signalID == Ieee80211Radio::radioChannelChangedSignal) {
@@ -133,7 +133,7 @@ void Ieee80211MgmtAP::sendManagementFrame(Ieee80211ManagementFrame *frame, const
     frame->setFromDS(true);
     frame->setReceiverAddress(destAddr);
     frame->setAddress3(myAddress);
-    sendOrEnqueue(frame);
+    sendDown(frame);
 }
 
 void Ieee80211MgmtAP::sendBeacon()
@@ -151,7 +151,7 @@ void Ieee80211MgmtAP::sendBeacon()
     frame->setReceiverAddress(MACAddress::BROADCAST_ADDRESS);
     frame->setFromDS(true);
 
-    sendOrEnqueue(frame);
+    sendDown(frame);
 }
 
 void Ieee80211MgmtAP::handleDataFrame(Ieee80211DataFrame *frame)

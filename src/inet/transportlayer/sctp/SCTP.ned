@@ -37,7 +37,7 @@ simple SCTP like ISCTP
         double rtoAlpha = default(0.125);
         double rtoBeta = default(0.250);
         int maxBurst = default(4);
-        string maxBurstVariant = default("useItOrLoseIt");
+        string maxBurstVariant = default("maxBurst");
         int initialWindow = default(0);
         int assocMaxRetrans = default(10);
         int pathMaxRetrans = default(5);
@@ -156,9 +156,9 @@ simple SCTP like ISCTP
         @display("i=block/wheelbarrow");
 
     gates:
-        input from_appl[];
-        input from_ip;
-        output to_appl[];
-        output to_ip;
+        input appIn;
+        input ipIn;
+        output appOut;
+        output ipOut;
 }
 

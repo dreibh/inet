@@ -17,6 +17,9 @@
 
 #include "inet/physicallayer/ieee80211/packetlevel/Ieee80211ReceiverBase.h"
 
+#include "inet/physicallayer/ieee80211/packetlevel/Ieee80211ControlInfo_m.h"
+#include "inet/physicallayer/ieee80211/packetlevel/Ieee80211TransmissionBase.h"
+
 namespace inet {
 
 namespace physicallayer {
@@ -38,7 +41,7 @@ void Ieee80211ReceiverBase::initialize(int stage)
     FlatReceiverBase::initialize(stage);
     if (stage == INITSTAGE_LOCAL) {
         const char *opMode = par("opMode");
-        setModeSet(*opMode != '\0' ? Ieee80211ModeSet::getModeSet(*opMode) : nullptr);
+        setModeSet(*opMode ? Ieee80211ModeSet::getModeSet(opMode) : nullptr);
         const char *bandName = par("bandName");
         setBand(*bandName != '\0' ? Ieee80211CompliantBands::getBand(bandName) : nullptr);
         int channelNumber = par("channelNumber");
@@ -51,8 +54,9 @@ std::ostream& Ieee80211ReceiverBase::printToStream(std::ostream& stream, int lev
 {
     if (level >= PRINT_LEVEL_TRACE)
         stream << ", modeSet = " << printObjectToString(modeSet, level - 1)
-               << ", band = " << printObjectToString(band, level - 1)
-               << ", channel = " << printObjectToString(channel, level - 1);
+               << ", band = " << printObjectToString(band, level - 1);
+    if (level >= PRINT_LEVEL_INFO)
+        stream << ", channel = " << printObjectToString(channel, level - 1);
     return FlatReceiverBase::printToStream(stream, level);
 }
 
@@ -84,6 +88,31 @@ void Ieee80211ReceiverBase::setChannelNumber(int channelNumber)
     if (channel == nullptr || channelNumber != channel->getChannelNumber())
         setChannel(new Ieee80211Channel(band, channelNumber));
 }
+
+ReceptionIndication *Ieee80211ReceiverBase::createReceptionIndication() const
+{
+    return new Ieee80211ReceptionIndication();
+}
+
+const ReceptionIndication *Ieee80211ReceiverBase::computeReceptionIndication(const ISNIR *snir) const
+{
+    Ieee80211ReceptionIndication *indication = check_and_cast<Ieee80211ReceptionIndication *>(const_cast<ReceptionIndication *>(FlatReceiverBase::computeReceptionIndication(snir)));
+
+    const Ieee80211TransmissionBase *transmission = check_and_cast<const Ieee80211TransmissionBase *>(snir->getReception()->getTransmission());
+    //FIXME fill indication
+    indication->setMode(transmission->getMode());
+    indication->setChannel(const_cast<Ieee80211Channel *>(transmission->getChannel()));
+    //indication->setSnr();
+    //indication->setLossRate();
+    //indication->setRecPow();
+    //indication->setAirtimeMetric();
+    //indication->setTestFrameDuration();
+    //indication->setTestFrameError());
+    //indication->setTestFrameSize();
+
+    return indication;
+}
+
 
 } // namespace physicallayer
 

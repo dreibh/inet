@@ -35,7 +35,7 @@
 #include "inet/common/FindModule.h"
 #include "inet/common/ModuleAccess.h"
 #include "inet/linklayer/common/SimpleLinkLayerControlInfo.h"
-#include "inet/networklayer/common/SimpleNetworkProtocolControlInfo.h"
+#include "inet/networklayer/contract/generic/GenericNetworkProtocolControlInfo.h"
 
 namespace inet {
 
@@ -169,8 +169,7 @@ void WiseRoute::handleLowerPacket(cPacket *msg)
             else
                 msgCopy = netwMsg;
             if (msgCopy->getKind() == DATA) {
-                int protocol = msgCopy->getTransportProtocol();
-                sendUp(decapsMsg(msgCopy), protocol);
+                sendUp(decapsMsg(msgCopy));
                 nbDataPacketsReceived++;
             }
             else {
@@ -327,7 +326,7 @@ void WiseRoute::updateRouteTable(const L3Address& origin, const L3Address& lastH
 cMessage *WiseRoute::decapsMsg(WiseRouteDatagram *msg)
 {
     cMessage *m = msg->decapsulate();
-    SimpleNetworkProtocolControlInfo *const controlInfo = new SimpleNetworkProtocolControlInfo();
+    GenericNetworkProtocolControlInfo *const controlInfo = new GenericNetworkProtocolControlInfo();
     controlInfo->setSourceAddress(msg->getInitialSrcAddr());
     controlInfo->setTransportProtocol(msg->getTransportProtocol());
     m->setControlInfo(controlInfo);
@@ -376,8 +375,9 @@ WiseRoute::tFloodTable::key_type WiseRoute::getRoute(const tFloodTable::key_type
  */
 cObject *WiseRoute::setDownControlInfo(cMessage *const pMsg, const MACAddress& pDestAddr)
 {
-    SimpleLinkLayerControlInfo *const cCtrlInfo = new SimpleLinkLayerControlInfo();
+    Ieee802Ctrl *const cCtrlInfo = new Ieee802Ctrl();
     cCtrlInfo->setDest(pDestAddr);
+    cCtrlInfo->setEtherType(ETHERTYPE_INET_GENERIC);
     pMsg->setControlInfo(cCtrlInfo);
     return cCtrlInfo;
 }

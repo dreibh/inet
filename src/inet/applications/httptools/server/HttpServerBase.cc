@@ -159,9 +159,6 @@ void HttpServerBase::initialize(int stage)
         if (!isOperational)
             throw cRuntimeError("This module doesn't support starting in node DOWN state");
     }
-    else if (stage == INITSTAGE_LAST) {
-        updateDisplay();
-    }
 }
 
 void HttpServerBase::finish()
@@ -177,29 +174,27 @@ void HttpServerBase::finish()
     recordScalar("bad.requests", badRequests);
 }
 
-void HttpServerBase::updateDisplay()
-{
-    if (hasGUI()) {
-        char buf[1024];
-        sprintf(buf, "%ld", htmlDocsServed);
-        cDisplayString& ds = host->getDisplayString();
-        ds.setTagArg("t", 0, buf);
+void HttpServerBase::refreshDisplay() const
 
-        if (activationTime <= simTime()) {
-            ds.setTagArg("i2", 0, "status/up");
-            ds.setTagArg("i2", 1, "green");
-        }
-        else {
-            ds.setTagArg("i2", 0, "status/down");
-            ds.setTagArg("i2", 1, "red");
-        }
+{
+    char buf[1024];
+    sprintf(buf, "%ld", htmlDocsServed);
+    cDisplayString& ds = host->getDisplayString();
+    ds.setTagArg("t", 0, buf);
+
+    if (activationTime <= simTime()) {
+        ds.setTagArg("i2", 0, "status/up");
+        ds.setTagArg("i2", 1, "green");
+    }
+    else {
+        ds.setTagArg("i2", 0, "status/down");
+        ds.setTagArg("i2", 1, "red");
     }
 }
 
 void HttpServerBase::handleMessage(cMessage *msg)
 {
     // Override in derived classes
-    updateDisplay();
 }
 
 cPacket *HttpServerBase::handleReceivedMessage(cMessage *msg)
@@ -409,10 +404,8 @@ std::string HttpServerBase::generateBody()
 void HttpServerBase::registerWithController()
 {
     // Find controller object and register
-    HttpController *controller = check_and_cast_nullable<HttpController *>(getSimulation()->getSystemModule()->getSubmodule("controller"));
-    if (controller == nullptr)
-        throw cRuntimeError("Controller module not found");
-    controller->registerServer(host->getFullPath().c_str(), hostName.c_str(), port, INSERT_END, activationTime);
+    HttpController *controller = getModuleFromPar<HttpController>(par("httpControllerModule"), this);
+    controller->registerServer(this, host->getFullPath().c_str(), hostName.c_str(), port, INSERT_END, activationTime);
 }
 
 void HttpServerBase::readSiteDefinition(std::string file)

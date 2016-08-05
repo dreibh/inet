@@ -29,17 +29,13 @@ MediumVisualizer::MediumVisualizer() :
     displayCommunication(false),
     drawCommunication2D(false),
     leaveCommunicationTrail(false),
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
     leaveCommunicationHeat(false),
-#endif
     communicationHeatMapSize(100),
     updateCanvasInterval(NaN),
     updateCanvasTimer(nullptr),
     communicationLayer(nullptr),
     communicationTrail(nullptr)
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
     ,communicationHeat(nullptr)
-#endif
 {
 }
 
@@ -64,19 +60,16 @@ void MediumVisualizer::initialize(int stage)
             communicationTrail = new TrailFigure(100, true, "communication trail");
             canvas->addFigureBelow(communicationTrail, canvas->getSubmodulesLayer());
         }
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
         leaveCommunicationHeat = par("leaveCommunicationHeat");
         if (leaveCommunicationHeat) {
             communicationHeat = new HeatMapFigure(communicationHeatMapSize, "communication heat");
             communicationHeat->setTags("successful_reception heat");
             canvas->addFigure(communicationHeat, 0);
         }
-#endif
         updateCanvasInterval = par("updateCanvasInterval");
         updateCanvasTimer = new cMessage("updateCanvas");
     }
     else if (stage == INITSTAGE_LAST) {
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
         if (communicationHeat != nullptr) {
             const IMediumLimitCache *mediumLimitCache = radioMedium->getMediumLimitCache();
             const IPhysicalEnvironment *physicalEnvironment = radioMedium->getPhysicalEnvironment();
@@ -96,7 +89,6 @@ void MediumVisualizer::initialize(int stage)
             communicationHeat->setWidth(max.x - min.x);
             communicationHeat->setHeight(max.y - min.y);
         }
-#endif
     }
 }
 
@@ -119,30 +111,20 @@ void MediumVisualizer::addTransmission(const ITransmission *transmission)
         ICommunicationCache *communicationCache = const_cast<ICommunicationCache *>(radioMedium->getCommunicationCache());
         cFigure::Point position = physicalEnvironment->computeCanvasPoint(transmission->getStartPosition());
         cGroupFigure *groupFigure = new cGroupFigure();
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
         cFigure::Color color = cFigure::GOOD_DARK_COLORS[transmission->getId() % (sizeof(cFigure::GOOD_DARK_COLORS) / sizeof(cFigure::Color))];
         cRingFigure *communicationFigure = new cRingFigure();
-#else
-        cFigure::Color color(64 + rand() % 64, 64 + rand() % 64, 64 + rand() % 64);
-        cOvalFigure *communicationFigure = new cOvalFigure();
-#endif
         communicationFigure->setTags("ongoing_transmission");
         communicationFigure->setBounds(cFigure::Rectangle(position.x, position.y, 0, 0));
         communicationFigure->setFillColor(color);
         communicationFigure->setLineWidth(1);
         communicationFigure->setLineColor(cFigure::BLACK);
         groupFigure->addFigure(communicationFigure);
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
         communicationFigure->setFilled(true);
         communicationFigure->setFillOpacity(0.5);
         communicationFigure->setLineOpacity(0.5);
-        communicationFigure->setScaleLineWidth(false);
+        communicationFigure->setZoomLineWidth(false);
         cLabelFigure *nameFigure = new cLabelFigure();
         nameFigure->setPosition(position);
-#else
-        cTextFigure *nameFigure = new cTextFigure();
-        nameFigure->setLocation(position);
-#endif
         nameFigure->setTags("ongoing_transmission packet_name label");
         nameFigure->setText(transmission->getMacFrame()->getName());
         nameFigure->setColor(color);
@@ -166,11 +148,14 @@ void MediumVisualizer::removeTransmission(const ITransmission *transmission)
     }
 }
 
-void MediumVisualizer::receivePacket(const IReceptionDecision *decision)
+void MediumVisualizer::receivePacket(const IReceptionResult *result)
 {
-    if (decision->isReceptionSuccessful()) {
-        const ITransmission *transmission = decision->getReception()->getTransmission();
-        const IReception *reception = decision->getReception();
+    bool isReceptionSuccessful = true;
+    for (auto decision : *result->getDecisions())
+        isReceptionSuccessful &= decision->isReceptionSuccessful();
+    if (isReceptionSuccessful) {
+        const ITransmission *transmission = result->getReception()->getTransmission();
+        const IReception *reception = result->getReception();
         if (leaveCommunicationTrail) {
             const IPhysicalEnvironment *physicalEnvironment = radioMedium->getPhysicalEnvironment();
             cLineFigure *communicationFigure = new cLineFigure();
@@ -180,14 +165,15 @@ void MediumVisualizer::receivePacket(const IReceptionDecision *decision)
             communicationFigure->setStart(start);
             communicationFigure->setEnd(end);
             communicationFigure->setLineColor(cFigure::BLUE);
+#if OMNETPP_VERSION >= 0x500 && OMNETPP_BUILDNUM >= 1006
+            communicationFigure->setEndArrowhead(cFigure::ARROW_BARBED);
+#else
             communicationFigure->setEndArrowHead(cFigure::ARROW_BARBED);
-            communicationFigure->setLineWidth(1);
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
-            communicationFigure->setScaleLineWidth(false);
 #endif
+            communicationFigure->setLineWidth(1);
+            communicationFigure->setZoomLineWidth(false);
             communicationTrail->addFigure(communicationFigure);
         }
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
         if (leaveCommunicationHeat) {
             const IMediumLimitCache *mediumLimitCache = radioMedium->getMediumLimitCache();
             Coord min = mediumLimitCache->getMinConstraintArea();
@@ -199,7 +185,6 @@ void MediumVisualizer::receivePacket(const IReceptionDecision *decision)
             int y2 = std::round((communicationHeatMapSize - 1) * ((reception->getStartPosition().y - min.y) / delta.y));
             communicationHeat->heatLine(x1, y1, x2, y2);
         }
-#endif
     }
     if (displayCommunication)
         updateCanvas();
@@ -216,18 +201,13 @@ void MediumVisualizer::updateCanvas() const
     const IPropagation *propagation = radioMedium->getPropagation();
     const IPhysicalEnvironment *physicalEnvironment = radioMedium->getPhysicalEnvironment();
     ICommunicationCache *communicationCache = const_cast<ICommunicationCache *>(radioMedium->getCommunicationCache());
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
     if (communicationHeat != nullptr)
         communicationHeat->coolDown();
-#endif
+
     for (const auto transmission : transmissions) {
         cFigure *groupFigure = communicationCache->getCachedFigure(transmission);
         if (groupFigure) {
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
             cRingFigure *communicationFigure = (cRingFigure *)groupFigure->getFigure(0);
-#else
-            cOvalFigure *communicationFigure = (cOvalFigure *)groupFigure->getFigure(0);
-#endif
             const Coord transmissionStart = transmission->getStartPosition();
             double startRadius = propagation->getPropagationSpeed().get() * (simTime() - transmission->getStartTime()).dbl();
             double endRadius = propagation->getPropagationSpeed().get() * (simTime() - transmission->getEndTime()).dbl();
@@ -237,7 +217,6 @@ void MediumVisualizer::updateCanvas() const
                 startRadius = 10000;
             if (endRadius > 10000)
                 endRadius = 10000;
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
             if (drawCommunication2D) {
                 // determine the rotated 2D canvas points by computing the 2D affine trasnformation from the 3D transformation of the environment
                 cFigure::Point o = physicalEnvironment->computeCanvasPoint(transmissionStart);
@@ -255,16 +234,11 @@ void MediumVisualizer::updateCanvas() const
                 communicationFigure->setInnerRy(endRadius);
             }
             else {
-#else
-            {
-#endif
                 // a sphere looks like a circle from any view angle
                 cFigure::Point center = physicalEnvironment->computeCanvasPoint(transmissionStart);
                 communicationFigure->setBounds(cFigure::Rectangle(center.x - startRadius, center.y - startRadius, 2 * startRadius, 2 * startRadius));
-#if OMNETPP_CANVAS_VERSION >= 0x20140908
                 communicationFigure->setInnerRx(endRadius);
                 communicationFigure->setInnerRy(endRadius);
-#endif
             }
         }
     }

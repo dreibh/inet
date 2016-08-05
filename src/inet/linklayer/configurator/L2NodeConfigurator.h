@@ -27,7 +27,7 @@ namespace inet {
 /**
  * Configures L2 data of a node. See the NED definition for details.
  */
-class L2NodeConfigurator : public cSimpleModule, public ILifecycle, public cListener
+class INET_API L2NodeConfigurator : public cSimpleModule, public ILifecycle, public cListener
 {
   protected:
     NodeStatus *nodeStatus;
@@ -49,7 +49,7 @@ class L2NodeConfigurator : public cSimpleModule, public ILifecycle, public cList
     virtual void configureNode();
 
     // cListener:
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
 };
 
 } // namespace inet

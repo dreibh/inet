@@ -19,7 +19,7 @@
 
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/common/ModuleAccess.h"
-#include "inet/common/lifecycle/NodeStatus.h"
+#include "inet/common/lifecycle/NodeOperations.h"
 #include "inet/common/INETUtils.h"
 
 namespace inet {
@@ -31,27 +31,41 @@ void TCPSrvHostApp::initialize(int stage)
     cSimpleModule::initialize(stage);
 
     if (stage == INITSTAGE_APPLICATION_LAYER) {
-        const char *localAddress = par("localAddress");
-        int localPort = par("localPort");
-
-        serverSocket.setOutputGate(gate("tcpOut"));
-        serverSocket.readDataTransferModePar(*this);
-        serverSocket.bind(localAddress[0] ? L3Address(localAddress) : L3Address(), localPort);
-        serverSocket.listen();
-
-        bool isOperational;
-        NodeStatus *nodeStatus = dynamic_cast<NodeStatus *>(findContainingNode(this)->getSubmodule("status"));
-        isOperational = (!nodeStatus) || nodeStatus->getState() == NodeStatus::UP;
-        if (!isOperational)
-            throw cRuntimeError("This module doesn't support starting in node DOWN state");
+        nodeStatus = dynamic_cast<NodeStatus *>(findContainingNode(this)->getSubmodule("status"));
+        if (isNodeUp())
+            start();
     }
 }
 
-void TCPSrvHostApp::updateDisplay()
+void TCPSrvHostApp::start()
 {
-    if (!hasGUI())
-        return;
+    const char *localAddress = par("localAddress");
+    int localPort = par("localPort");
 
+    serverSocket.setOutputGate(gate("socketOut"));
+    serverSocket.readDataTransferModePar(*this);
+    serverSocket.bind(localAddress[0] ? L3Address(localAddress) : L3Address(), localPort);
+    serverSocket.listen();
+}
+
+void TCPSrvHostApp::stop()
+{
+    //FIXME close sockets?
+
+    // remove and delete threads
+    while (!threadSet.empty())
+        removeThread(*threadSet.begin());
+}
+
+void TCPSrvHostApp::crash()
+{
+    // remove and delete threads
+    while (!threadSet.empty())
+        removeThread(*threadSet.begin());
+}
+
+void TCPSrvHostApp::refreshDisplay() const
+{
     char buf[32];
     sprintf(buf, "%d threads", socketMap.size());
     getDisplayString().setTagArg("t", 0, buf);
@@ -59,8 +73,15 @@ void TCPSrvHostApp::updateDisplay()
 
 void TCPSrvHostApp::handleMessage(cMessage *msg)
 {
-    if (msg->isSelfMessage()) {
+    if (!isNodeUp()) {
+        //TODO error?
+        EV_ERROR << "message " << msg->getFullName() << "(" << msg->getClassName() << ") arrived when module is down\n";
+        delete msg;
+    }
+    else if (msg->isSelfMessage()) {
         TCPServerThreadBase *thread = (TCPServerThreadBase *)msg->getContextPointer();
+        if (threadSet.find(thread) == threadSet.end())
+            throw cRuntimeError("Invalid thread pointer in the timer (msg->contextPointer is invalid)");
         thread->timerExpired(msg);
     }
     else {
@@ -69,18 +90,22 @@ void TCPSrvHostApp::handleMessage(cMessage *msg)
         if (!socket) {
             // new connection -- create new socket object and server process
             socket = new TCPSocket(msg);
-            socket->setOutputGate(gate("tcpOut"));
+            socket->setOutputGate(gate("socketOut"));
 
-            const char *serverThreadClass = par("serverThreadClass");
-            TCPServerThreadBase *proc =
-                check_and_cast<TCPServerThreadBase *>(inet::utils::createOne(serverThreadClass));
+            const char *serverThreadModuleType = par("serverThreadModuleType");
+            cModuleType *moduleType = cModuleType::get(serverThreadModuleType);
+            char name[80];
+            sprintf(name, "thread_%i", socket->getConnectionId());
+            TCPServerThreadBase *proc = check_and_cast<TCPServerThreadBase *>(moduleType->create(name, this));
+            proc->finalizeParameters();
+
+            proc->callInitialize();
 
             socket->setCallbackObject(proc);
             proc->init(this, socket);
 
             socketMap.addSocket(socket);
-
-            updateDisplay();
+            threadSet.insert(proc);
         }
 
         socket->processMessage(msg);
@@ -89,18 +114,46 @@ void TCPSrvHostApp::handleMessage(cMessage *msg)
 
 void TCPSrvHostApp::finish()
 {
+    stop();
 }
 
 void TCPSrvHostApp::removeThread(TCPServerThreadBase *thread)
 {
     // remove socket
     socketMap.removeSocket(thread->getSocket());
+    threadSet.erase(thread);
 
     // remove thread object
     delete thread;
-
-    updateDisplay();
 }
+
+bool TCPSrvHostApp::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback)
+{
+    Enter_Method_Silent();
+    if (dynamic_cast<NodeStartOperation *>(operation)) {
+        if ((NodeStartOperation::Stage)stage == NodeStartOperation::STAGE_APPLICATION_LAYER) {
+            start();
+        }
+    }
+    else if (dynamic_cast<NodeShutdownOperation *>(operation)) {
+        if ((NodeShutdownOperation::Stage)stage == NodeShutdownOperation::STAGE_APPLICATION_LAYER) {
+            stop();
+        }
+    }
+    else if (dynamic_cast<NodeCrashOperation *>(operation)) {
+        if ((NodeCrashOperation::Stage)stage == NodeCrashOperation::STAGE_CRASH)
+            crash();
+    }
+    else
+        throw cRuntimeError("Unsupported lifecycle operation '%s'", operation->getClassName());
+    return true;
+}
+
+void TCPServerThreadBase::refreshDisplay() const
+{
+    getDisplayString().setTagArg("t", 0, TCPSocket::stateName(sock->getState()));
+}
+
 
 } // namespace inet
 

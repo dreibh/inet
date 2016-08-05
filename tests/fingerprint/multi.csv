@@ -1,17 +1,10 @@
-# workingdir,                        args,                                          simtimelimit,    fingerprint
-/examples/manetrouting/dymo/,        -f omnetpp.ini -c IPv4 -r 0,                   10s,             52ab-d6ee
-/examples/manetrouting/dymo/,        -f omnetpp.ini -c IPv6 -r 0,                   10s,             dcd0-db2f
-/examples/manetrouting/dymo/,        -f omnetpp.ini -c Generic -r 0,                10s,             e4dc-d8a1    # unstable fingerprint?
-/examples/manetrouting/dymo/,        -f omnetpp.ini -c MultiIPv4 -r 0,              10s,             51c4-f624    # unstable fingerprint?
-/examples/manetrouting/dymo/,        -f omnetpp.ini -c MultiIPv6 -r 0,              10s,             ed07-1a5d
-/examples/manetrouting/dymo/,        -f omnetpp.ini -c MultiGeneric -r 0,           10s,             3940-f5ae    # unstable fingerprint?
-/examples/manetrouting/gpsr/,        -f omnetpp.ini -c IPv4 -r 0,                   20s,             0870-7dc8
-/examples/manetrouting/gpsr/,        -f omnetpp.ini -c IPv6 -r 0,                   20s,             dfc1-5d70
-/examples/manetrouting/gpsr/,        -f omnetpp.ini -c Generic -r 0,                20s,             ba10-24a8
-/examples/manetrouting/gpsr/,        -f omnetpp.ini -c MultiIPv4 -r 0,              20s,             b9ca-ab8b
-/examples/manetrouting/gpsr/,        -f omnetpp.ini -c MultiIPv6 -r 0,              20s,             b4b7-cc68
-/examples/manetrouting/gpsr/,        -f omnetpp.ini -c MultiGeneric -r 0,           20s,             2aa7-fcfe
-/examples/rip/simpletest/,           -f omnetpp.ini -c IPv4 -r 0,                   500s,            5cb4-2cd1
-/examples/rip/simpletest/,           -f omnetpp.ini -c MultiIPv4 -r 0,              500s,            ac55-fccb
-/examples/rip/dynamictest/,          -f omnetpp.ini -c stable -r 0,                 500s,            63c7-572d
-/examples/rip/dynamictest/,          -f omnetpp.ini -c dynamic1 -r 0,               500s,            f9d3-a124
+# Failures:
+/examples/manetrouting/dymo/,        -f omnetpp.ini -c IPv4 -r 0,                   10s,             2678-6e1c c272-63f2/tplx
+/examples/manetrouting/dymo/,        -f omnetpp.ini -c IPv6 -r 0,                   10s,             0000-0000 c47a-e8f5/tplx
+/examples/manetrouting/dymo/,        -f omnetpp.ini -c Generic -r 0,                10s,             80ba-daae 3d5d-bd6a/tplx
+/examples/manetrouting/dymo/,        -f omnetpp.ini -c MultiIPv4 -r 0,              10s,             2a63-2ffe c027-908d/tplx
+/examples/manetrouting/dymo/,        -f omnetpp.ini -c MultiIPv6 -r 0,              10s,             0000-0000 c47a-e8f5/tplx
+/examples/manetrouting/dymo/,        -f omnetpp.ini -c MultiGeneric -r 0,           10s,             4f98-d087 54e1-019e/tplx
+/examples/manetrouting/dymo/,        -f omnetpp.ini -c DynamicIPv4 -r 0,            10s,             2a63-2ffe b299-6c83/tplx
+# /examples/manetrouting/dymo/,        -f omnetpp.ini -c DynamicIPv6 -r 0,            10s,             0000-0000 5fe9-22ea/tplx         # IPv6: Shutdown not supported
+# /examples/manetrouting/dymo/,        -f omnetpp.ini -c DynamicGeneric -r 0,         10s,             4f98-d087 c74c-6c07/tplx         # Shutdown not supported

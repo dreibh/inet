@@ -69,13 +69,19 @@ cmdenv-express-mode = false
 *.hostDestionation.mobility.initialX = 80m
 
 # ping app
-*.host*.numPingApps = 1
-*.hostSource.pingApp[0].destAddr = "hostDestination"
-*.hostSource.pingApp[0].printPing = true
+*.host*.numApps = 1
+*.host*.app[0].typename = "PingApp"
+*.hostSource.app[0].destAddr = "hostDestination"
+*.hostSource.app[0].printPing = true
 
 %contains: stdout
+--------------------------------------------------------
+	Test.hostSource.app[0]
+--------------------------------------------------------
 sent: 81   received: 30   loss rate (%): 62.963
-round-trip min/avg/max (ms): 0.462262/0.500237/1.60152
+round-trip min/avg/max (ms): 0.456262/0.813337/1.66852
+stddev (ms): 0.237232   variance:5.62791e-08
+--------------------------------------------------------
 %#--------------------------------------------------------------------------------------------------------------
 %not-contains: stdout
 undisposed object:

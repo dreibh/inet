@@ -33,13 +33,15 @@ module RTPHost extends StandardHost
                 bandwidth = bandwidth;
                 fileName = fileName;
                 payloadType = payloadType;
-                @display("p=254,42");
+                @display("p=247,69");
         }
         rtp: RTP {
-            @display("p=254,111");
+            parameters:
+                @display("p=270,169");
         }
         rtcp: RTCP {
-            @display("p=391,111");
+            parameters:
+                @display("p=325,169");
         }
 
     connections allowunconnected:
@@ -47,11 +49,11 @@ module RTPHost extends StandardHost
         rtpApp.rtpOut --> rtp.appIn;
         rtpApp.rtpIn <-- rtp.appOut;
 
-        rtp.udpOut --> udp.appIn++;
-        rtp.udpIn <-- udp.appOut++;
+        rtp.udpOut --> at.upperLayerIn++;
+        rtp.udpIn <-- at.upperLayerOut++;
 
-        rtcp.udpOut --> udp.appIn++;
-        rtcp.udpIn <-- udp.appOut++;
+        rtcp.udpOut --> at.upperLayerIn++;
+        rtcp.udpIn <-- at.upperLayerOut++;
 
         rtp.rtcpOut --> IdealChannel --> rtcp.rtpIn;
         rtcp.rtpOut --> IdealChannel --> rtp.rtcpIn;

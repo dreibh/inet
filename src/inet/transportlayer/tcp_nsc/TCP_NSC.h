@@ -91,7 +91,7 @@ class INET_API TCP_NSC : public cSimpleModule, ISendCallback, IInterruptCallback
     // find a TCP_NSC_Connection by nsc sockpair
     TCP_NSC_Connection *findConnByNscSockPair(TCP_NSC_Connection::SockPair const& sockPairP);
 
-    virtual void updateDisplayString();
+    virtual void refreshDisplay() const override;
     void removeConnection(int connIdP);
     void printConnBrief(TCP_NSC_Connection& connP);
     void loadStack(const char *stacknameP, int bufferSizeP);
@@ -114,6 +114,7 @@ class INET_API TCP_NSC : public cSimpleModule, ISendCallback, IInterruptCallback
 
     void process_OPEN_ACTIVE(TCP_NSC_Connection& connP, TCPCommand *tcpCommandP, cMessage *msgP);
     void process_OPEN_PASSIVE(TCP_NSC_Connection& connP, TCPCommand *tcpCommandP, cMessage *msgP);
+    void process_ACCEPT(TCP_NSC_Connection& connP, TCPAcceptCommand *tcpCommandP, cMessage *msgP);
     void process_SEND(TCP_NSC_Connection& connP, TCPCommand *tcpCommandP, cPacket *msgP);
     void process_CLOSE(TCP_NSC_Connection& connP, TCPCommand *tcpCommandP, cMessage *msgP);
     void process_ABORT(TCP_NSC_Connection& connP, TCPCommand *tcpCommandP, cMessage *msgP);
@@ -134,6 +135,9 @@ class INET_API TCP_NSC : public cSimpleModule, ISendCallback, IInterruptCallback
 
     // send a connection established msg to application layer
     void sendEstablishedMsg(TCP_NSC_Connection& connP);
+
+    // send a connection available msg to application layer
+    void sendAvailableIndicationMsg(TCP_NSC_Connection& connP);
 
     /**
      * To be called from TCPConnection: create a new send queue.

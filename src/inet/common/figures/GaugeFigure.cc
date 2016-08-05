@@ -19,13 +19,11 @@
 #include <cstdlib>
 #include "GaugeFigure.h"
 
-// for the moment commented out as omnet cannot instatiate it from a namsepace
+// for the moment commented out as omnet cannot instatiate it from a namespace
 using namespace inet;
 // namespace inet {
 
 Register_Class(GaugeFigure);
-
-#if OMNETPP_VERSION >= 0x500
 
 #define M_PI 3.14159265358979323846
 
@@ -218,19 +216,19 @@ const char *GaugeFigure::getClassNameForRenderer() const {
     return "cOvalFigure";
 } // denotes renderer of which figure class to use; override if you want to subclass a figure while reusing renderer of the base class
 
-void GaugeFigure::receiveSignal(cComponent *source, simsignal_t signalID, long l) {
+void GaugeFigure::receiveSignal(cComponent *source, simsignal_t signalID, long l DETAILS_ARG) {
     setValue(l);
 }
 
-void GaugeFigure::receiveSignal(cComponent *source, simsignal_t signalID, unsigned long l) {
+void GaugeFigure::receiveSignal(cComponent *source, simsignal_t signalID, unsigned long l DETAILS_ARG) {
     setValue(l);
 }
 
-void GaugeFigure::receiveSignal(cComponent *source, simsignal_t signalID, double d) {
+void GaugeFigure::receiveSignal(cComponent *source, simsignal_t signalID, double d DETAILS_ARG) {
     setValue(d);
 }
 
-void GaugeFigure::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj) {
+void GaugeFigure::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) {
     value++;
     setValue(value);
 }
@@ -247,7 +245,5 @@ void GaugeFigure::lifecycleEvent(SimulationLifecycleEventType eventType, cObject
         module->subscribe(signalName, this);
     }
 }
-
-#endif // omnetpp 5
 
 // } // namespace inet

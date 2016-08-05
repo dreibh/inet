@@ -16,7 +16,6 @@
 //
 
 #include "inet/applications/udpapp/UDPEchoApp.h"
-
 #include "inet/common/ModuleAccess.h"
 #include "inet/transportlayer/contract/udp/UDPControlInfo_m.h"
 
@@ -34,10 +33,6 @@ void UDPEchoApp::initialize(int stage)
         // init statistics
         numEchoed = 0;
         WATCH(numEchoed);
-    }
-    else if (stage == INITSTAGE_LAST) {
-        if (hasGUI())
-            updateDisplay();
     }
 }
 
@@ -61,16 +56,13 @@ void UDPEchoApp::handleMessageWhenUp(cMessage *msg)
 
         // send back
         socket.sendTo(pk, srcAddress, srcPort);
-
-        if (hasGUI())
-            updateDisplay();
     }
     else {
         throw cRuntimeError("Message received with unexpected message kind = %d", msg->getKind());
     }
 }
 
-void UDPEchoApp::updateDisplay()
+void UDPEchoApp::refreshDisplay() const
 {
     char buf[40];
     sprintf(buf, "echoed: %d pks", numEchoed);
@@ -84,7 +76,7 @@ void UDPEchoApp::finish()
 
 bool UDPEchoApp::handleNodeStart(IDoneCallback *doneCallback)
 {
-    socket.setOutputGate(gate("udpOut"));
+    socket.setOutputGate(gate("socketOut"));
     int localPort = par("localPort");
     socket.bind(localPort);
     MulticastGroupList mgl = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this)->collectMulticastGroups();

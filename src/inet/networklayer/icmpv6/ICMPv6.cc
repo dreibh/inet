@@ -16,13 +16,13 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/common/INETDefs.h"
 
 #include "inet/networklayer/icmpv6/ICMPv6.h"
 #include "inet/networklayer/ipv6/IPv6InterfaceData.h"
 
 #include "inet/networklayer/icmpv6/ICMPv6Message_m.h"
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/networklayer/contract/ipv6/IPv6ControlInfo.h"
 #include "inet/networklayer/ipv6/IPv6Datagram.h"
 
@@ -47,10 +47,8 @@ void ICMPv6::initialize(int stage)
         isOperational = (!nodeStatus) || nodeStatus->getState() == NodeStatus::UP;
         if (!isOperational)
             throw cRuntimeError("This module doesn't support starting in node DOWN state");
-    }
-    if (stage == INITSTAGE_NETWORK_LAYER_2) {
-        IPSocket socket(gate("ipv6Out"));
-        socket.registerProtocol(IP_PROT_IPv6_ICMP);
+        registerProtocol(Protocol::icmpv6, gate("ipv6Out"));
+        registerProtocol(Protocol::icmpv6, gate("transportOut"));
     }
 }
 
@@ -64,17 +62,28 @@ void ICMPv6::handleMessage(cMessage *msg)
         processICMPv6Message(check_and_cast<ICMPv6Message *>(msg));
         return;
     }
-
-    // request from application
-    if (msg->getArrivalGate()->isName("pingIn")) {
-        sendEchoRequest(check_and_cast<PingPayload *>(msg));
-        return;
-    }
+    else
+        throw cRuntimeError("Message %s(%s) arrived in unknown '%s' gate", msg->getName(), msg->getClassName(), msg->getArrivalGate()->getName());
 }
 
 void ICMPv6::processICMPv6Message(ICMPv6Message *icmpv6msg)
 {
-    ASSERT(dynamic_cast<ICMPv6Message *>(icmpv6msg));
+    int type = icmpv6msg->getType();
+    if (type < 128) {
+        // ICMP errors are delivered to the appropriate higher layer protocols
+        EV_INFO << "ICMPv6 packet: passing it to higher layer\n";
+        IPv6Datagram *bogusPacket = check_and_cast<IPv6Datagram *>(icmpv6msg->getEncapsulatedPacket());
+        int transportProtocol = bogusPacket->getTransportProtocol();
+        if (transportProtocol == IP_PROT_IPv6_ICMP) {
+            // ICMP error answer to an ICMP packet:
+            errorOut(icmpv6msg);
+        }
+        else {
+            check_and_cast<IPv6ControlInfo *>(icmpv6msg->getControlInfo())->setTransportProtocol(transportProtocol);
+            send(icmpv6msg, "transportOut");
+        }
+    }
+    else {
     if (dynamic_cast<ICMPv6DestUnreachableMsg *>(icmpv6msg)) {
         EV_INFO << "ICMPv6 Destination Unreachable Message Received." << endl;
         errorOut(icmpv6msg);
@@ -100,7 +109,8 @@ void ICMPv6::processICMPv6Message(ICMPv6Message *icmpv6msg)
         processEchoReply((ICMPv6EchoReplyMsg *)icmpv6msg);
     }
     else
-        throw cRuntimeError("Unknown message type received.\n");
+        throw cRuntimeError("Unknown message type received: (%s)%s.\n", icmpv6msg->getClassName(),icmpv6msg->getName());
+    }
 }
 
 /*
@@ -156,33 +166,7 @@ void ICMPv6::processEchoRequest(ICMPv6EchoRequestMsg *request)
 
 void ICMPv6::processEchoReply(ICMPv6EchoReplyMsg *reply)
 {
-    IPv6ControlInfo *ctrl = check_and_cast<IPv6ControlInfo *>(reply->removeControlInfo());
-    PingPayload *payload = check_and_cast<PingPayload *>(reply->decapsulate());
-    payload->setControlInfo(ctrl);
     delete reply;
-    long originatorId = payload->getOriginatorId();
-    auto i = pingMap.find(originatorId);
-    if (i != pingMap.end())
-        send(payload, "pingOut", i->second);
-    else {
-        EV_WARN << "Received ECHO REPLY has an unknown originator ID: " << originatorId << ", packet dropped." << endl;
-        delete payload;
-    }
-}
-
-void ICMPv6::sendEchoRequest(PingPayload *msg)
-{
-    cGate *arrivalGate = msg->getArrivalGate();
-    int i = arrivalGate->getIndex();
-    pingMap[msg->getOriginatorId()] = i;
-
-    IPv6ControlInfo *ctrl = check_and_cast<IPv6ControlInfo *>(msg->removeControlInfo());
-    ctrl->setProtocol(IP_PROT_IPv6_ICMP);
-    ICMPv6EchoRequestMsg *request = new ICMPv6EchoRequestMsg(msg->getName());
-    request->setType(ICMPv6_ECHO_REQUEST);
-    request->encapsulate(msg);
-    request->setControlInfo(ctrl);
-    sendToIP(request);
 }
 
 void ICMPv6::sendErrorMessage(IPv6Datagram *origDatagram, ICMPv6Type type, int code)
@@ -326,7 +310,6 @@ bool ICMPv6::validateDatagramPromptingError(IPv6Datagram *origDatagram)
 
 void ICMPv6::errorOut(ICMPv6Message *icmpv6msg)
 {
-    send(icmpv6msg, "errorOut");
 }
 
 bool ICMPv6::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback)

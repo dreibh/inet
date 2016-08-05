@@ -17,12 +17,11 @@
 // Authors: Veronika Rybova, Vladimir Vesely (ivesely@fit.vutbr.cz),
 //          Tamas Borbely (tomi@omnetpp.org)
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/networklayer/common/IPProtocolId_m.h"
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/networklayer/contract/ipv4/IPv4ControlInfo.h"
 #include "inet/networklayer/ipv4/ICMPMessage_m.h"
 #include "inet/common/ModuleAccess.h"
-#include "inet/networklayer/contract/NetworkProtocolCommand_m.h"
 #include "inet/routing/pim/PIMSplitter.h"
 
 namespace inet {
@@ -45,10 +44,8 @@ void PIMSplitter::initialize(int stage)
         pimSMIn = gate("pimSMIn");
         pimSMOut = gate("pimSMOut");
     }
-    else if (stage == INITSTAGE_TRANSPORT_LAYER) {
-        IPSocket ipSocket(ipOut);
-        ipSocket.registerProtocol(IP_PROT_PIM);
-    }
+    else if (stage == INITSTAGE_ROUTING_PROTOCOLS)
+        registerProtocol(Protocol::pim, gate("ipOut"));
 }
 
 void PIMSplitter::handleMessage(cMessage *msg)
@@ -56,27 +53,20 @@ void PIMSplitter::handleMessage(cMessage *msg)
     cGate *arrivalGate = msg->getArrivalGate();
 
     if (arrivalGate == ipIn) {
-        PIMPacket *pimPacket = dynamic_cast<PIMPacket *>(msg);
-        if (pimPacket) {
-            processPIMPacket(pimPacket);
-        }
-        else if (dynamic_cast<ICMPMessage *>(msg)) {
-            EV_WARN << "Received ICMP error, ignoring.\n";
+        if (dynamic_cast<ICMPMessage *>(msg)) {
+            EV_WARN << "Received ICMP error " << msg->getName() << "(" << msg->getClassName() << "), ignored\n";
             delete msg;
+        }
+        else if (PIMPacket *pimPacket = dynamic_cast<PIMPacket *>(msg)) {
+            processPIMPacket(pimPacket);
         }
         else
             throw cRuntimeError("PIMSplitter: received unknown packet '%s (%s)' from the network layer.", msg->getName(), msg->getClassName());
     }
     else if (arrivalGate == pimSMIn || arrivalGate == pimDMIn) {
-        if (dynamic_cast<RegisterTransportProtocolCommand *>(msg)) {
-            // Drop protocol registrations, splitter register PIM protocol itself
-            delete msg;
-        }
-        else {
-            // Send other packets to the network layer
-            EV_INFO << "Received packet from PIM module, sending it to the network." << endl;
-            send(msg, ipOut);
-        }
+        // Send other packets to the network layer
+        EV_INFO << "Received packet from PIM module, sending it to the network." << endl;
+        send(msg, ipOut);
     }
     else
         throw cRuntimeError("PIMSplitter: received packet on the unknown gate: %s.", arrivalGate ? arrivalGate->getBaseName() : "nullptr");

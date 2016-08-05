@@ -18,6 +18,7 @@
 
 package inet.networklayer.ipv4;
 
+import inet.common.MessageDispatcher;
 import inet.networklayer.contract.IARP;
 import inet.networklayer.configurator.ipv4.IPv4NodeConfigurator;
 import inet.networklayer.contract.INetworkLayer;
@@ -32,89 +33,95 @@ module IPv4NetworkLayer like INetworkLayer
 {
     parameters:
         bool proxyARP = default(true);
+        bool forwarding = default(false);
+        bool multicastForwarding = default(false);
         string igmpType = default("IGMPv2");
         string arpType = default("ARP");
         string interfaceTableModule;
-        string routingTableModule;
+        *.forwarding = forwarding;
+        *.multicastForwarding = multicastForwarding;
         *.interfaceTableModule = default(absPath(interfaceTableModule));
-        *.routingTableModule = default(absPath(routingTableModule));
+        *.routingTableModule = default(absPath(".routingTable"));
         *.arpModule = default(absPath(".arp"));
         *.icmpModule = default(absPath(".icmp"));
         arp.respondToProxyARP = proxyARP;
         @display("i=block/fork");
+
     gates:
-        input ifIn[] @labels(INetworkDatagram);
-        output ifOut[] @labels(INetworkDatagram);
-        input transportIn[] @labels(IPv4ControlInfo/down);
-        output transportOut[] @labels(IPv4ControlInfo/up);
-        input pingIn[] @labels(PingPayload/down);
-        output pingOut[] @labels(PingPayload/up);
+        input ifIn @labels(INetworkDatagram);
+        output ifOut @labels(INetworkDatagram);
+        input transportIn @labels(IPv4ControlInfo/down);
+        output transportOut @labels(IPv4ControlInfo/up);
         input igmpIn;
         output igmpOut;
 
     submodules:
         configurator: IPv4NodeConfigurator {
-            @display("p=39,158");
+            parameters:
+                @display("p=100,100;is=s");
+        }
+        routingTable: IPv4RoutingTable {
+            parameters:
+                @display("p=100,200;is=s");
+        }
+        up: MessageDispatcher {
+            parameters:
+                @display("p=450,100;b=480,5");
+        }
+        igmp: <igmpType> like IIGMP {
+            parameters:
+                @display("p=300,200");
+        }
+        icmp: ICMP {
+            parameters:
+                @display("p=600,200");
+        }
+        mp: MessageDispatcher {
+            parameters:
+                @display("p=450,300;b=480,5");
         }
         ip: IPv4 {
             parameters:
                 useProxyARP = true; // as routes with unspecified next-hop addr are quite common
-                @display("p=85,95;q=queue");
-            gates:
-                queueIn[sizeof(ifIn)];
-                queueOut[sizeof(ifOut)];
+                @display("p=450,400;q=queue");
         }
         arp: <arpType> like IARP {
             parameters:
-                @display("p=165,120;q=pendingQueue;is=s");
+                @display("p=300,400;q=pendingQueue");
         }
-        icmp: ICMP {
+        lp: MessageDispatcher {
             parameters:
-                @display("p=165,70");
-        }
-        igmp: <igmpType> like IIGMP {
-            parameters:
-                @display("p=39,33");
-        }
-        errorHandling: ErrorHandling {
-            parameters:
-                @display("p=239,70");
+                @display("p=450,500;b=480,5");
         }
 
     connections allowunconnected:
-        for i=0..sizeof(transportIn)-1 {
-            transportIn[i] --> { @display("m=n"); } --> ip.transportIn++;
-        }
-        for i=0..sizeof(transportOut)-1 {
-            ip.transportOut++ --> { @display("m=n"); } --> transportOut[i];
-        }
+        transportIn --> { @display("m=n"); } --> up.upperLayerIn++;
+        transportOut <-- { @display("m=n"); } <-- up.upperLayerOut++;
 
-        ip.transportOut++ --> icmp.localIn;
-        ip.transportIn++ <-- icmp.sendOut;
+        up.lowerLayerOut++ --> igmp.routerIn;
+        up.lowerLayerIn++ <-- igmp.routerOut;
 
-        ip.transportOut++ --> igmp.ipIn;
-        ip.transportIn++ <-- igmp.ipOut;
+        up.lowerLayerOut++ --> mp.upperLayerIn++;
+        up.lowerLayerIn++ <-- mp.upperLayerOut++;
 
-        for i=0..sizeof(pingOut)-1 {
-            icmp.pingOut++ --> { @display("m=n"); } --> pingOut[i];
-        }
-        for i=0..sizeof(pingIn)-1 {
-            icmp.pingIn++ <-- { @display("m=n"); } <-- pingIn[i];
-        }
+        up.lowerLayerOut++ --> icmp.transportIn;
+        up.lowerLayerIn++ <-- icmp.transportOut;
 
-        icmp.errorOut --> errorHandling.in;
+        igmp.ipOut --> mp.upperLayerIn++;
+        igmp.ipIn <-- mp.upperLayerOut++;
 
-        ip.arpOut --> arp.netwIn;
-        ip.arpIn <-- arp.netwOut;
+        icmp.ipOut --> mp.upperLayerIn++;
+        icmp.ipIn <-- mp.upperLayerOut++;
 
-        igmp.routerOut --> igmpOut;
-        igmp.routerIn <-- igmpIn;
+        mp.lowerLayerOut++ --> ip.transportIn;
+        mp.lowerLayerIn++ <-- ip.transportOut;
 
-        for i=0..sizeof(ifIn)-1 {
-            ip.queueIn[i] <-- { @display("m=s"); } <-- ifIn[i];
-        }
-        for i=0..sizeof(ifOut)-1 {
-            ip.queueOut[i] --> { @display("m=s"); } --> ifOut[i];
-        }
+        arp.ifOut --> lp.upperLayerIn++;
+        arp.ifIn <-- lp.upperLayerOut++;
+
+        ip.queueOut --> lp.upperLayerIn++;
+        ip.queueIn <-- lp.upperLayerOut++;
+
+        lp.lowerLayerOut++ --> { @display("m=s"); } --> ifOut;
+        lp.lowerLayerIn++ <-- { @display("m=s"); } <-- ifIn;
 }
-

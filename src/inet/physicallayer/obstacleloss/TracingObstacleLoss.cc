@@ -105,7 +105,8 @@ double TracingObstacleLoss::computeObjectLoss(const IPhysicalObject *object, Hz 
     const LineSegment lineSegment(rotation.rotateVectorCounterClockwise(transmissionPosition - position), rotation.rotateVectorCounterClockwise(receptionPosition - position));
     Coord intersection1, intersection2, normal1, normal2;
     intersectionComputationCount++;
-    if (shape->computeIntersection(lineSegment, intersection1, intersection2, normal1, normal2))
+    bool hasIntersections = shape->computeIntersection(lineSegment, intersection1, intersection2, normal1, normal2);
+    if (hasIntersections && (intersection1 != intersection2))
     {
         intersectionCount++;
         double intersectionDistance = intersection2.distance(intersection1);
@@ -120,9 +121,7 @@ double TracingObstacleLoss::computeObjectLoss(const IPhysicalObject *object, Hz 
                 intersectionLine->setLineColor(cFigure::RED);
                 intersectionLine->setLineWidth(1);
                 intersectionTrail->addFigure(intersectionLine);
-    #if OMNETPP_CANVAS_VERSION >= 0x20140908
-                intersectionLine->setScaleLineWidth(false);
-    #endif
+                intersectionLine->setZoomLineWidth(false);
             }
             if (leaveFaceNormalVectorTrail) {
                 normal1 = normal1 / normal1.length() * intersectionDistance / 10;
@@ -141,10 +140,8 @@ double TracingObstacleLoss::computeObjectLoss(const IPhysicalObject *object, Hz 
                 normal2Line->setTags("obstacle_intersection face_normal_vector recent_history");
                 normal2Line->setLineWidth(1);
                 intersectionTrail->addFigure(normal2Line);
-    #if OMNETPP_CANVAS_VERSION >= 0x20140908
-                normal1Line->setScaleLineWidth(false);
-                normal2Line->setScaleLineWidth(false);
-    #endif
+                normal1Line->setZoomLineWidth(false);
+                normal2Line->setZoomLineWidth(false);
             }
         }
         const IMaterial *material = object->getMaterial();

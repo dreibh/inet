@@ -17,9 +17,9 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/routing/gpsr/GPSR.h"
 #include "inet/networklayer/common/IPProtocolId_m.h"
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/common/INETUtils.h"
 #include "inet/common/lifecycle/NodeOperations.h"
 #include "inet/networklayer/contract/IInterfaceTable.h"
@@ -79,6 +79,7 @@ void GPSR::initialize(int stage)
         host = getContainingNode(this);
         nodeStatus = dynamic_cast<NodeStatus *>(host->getSubmodule("status"));
         interfaceTable = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this);
+        outputInterface = par("outputInterface");
         mobility = check_and_cast<IMobility *>(host->getSubmodule("mobility"));
         routingTable = getModuleFromPar<IRoutingTable>(par("routingTableModule"), this);
         networkProtocol = getModuleFromPar<INetfilter>(par("networkProtocolModule"), this);
@@ -90,9 +91,7 @@ void GPSR::initialize(int stage)
         positionByteLength = par("positionByteLength");
     }
     else if (stage == INITSTAGE_ROUTING_PROTOCOLS) {
-        IPSocket socket(gate("ipOut"));
-        socket.registerProtocol(IP_PROT_MANET);
-
+        registerProtocol(Protocol::manet, gate("ipOut"));
         globalPositionTable.clear();
         host->subscribe(NF_LINK_BREAK, this);
         addressType = getSelfAddress().getAddressType();
@@ -340,7 +339,7 @@ double GPSR::getVectorAngle(Coord vector)
 {
     double angle = atan2(-vector.y, vector.x);
     if (angle < 0)
-        angle += 2 * PI;
+        angle += 2 * M_PI;
     return angle;
 }
 
@@ -415,13 +414,13 @@ std::vector<L3Address> GPSR::getPlanarNeighbors()
         Coord neighborPosition = neighborPositionTable.getPosition(neighborAddress);
         if (planarizationMode == GPSR_RNG_PLANARIZATION) {
             double neighborDistance = (neighborPosition - selfPosition).length();
-            for (auto jt = neighborAddresses.begin(); jt != neighborAddresses.end(); jt++) {
-                const L3Address& witnessAddress = *jt;
+            for (auto & neighborAddresse : neighborAddresses) {
+                const L3Address& witnessAddress = neighborAddresse;
                 Coord witnessPosition = neighborPositionTable.getPosition(witnessAddress);
                 double witnessDistance = (witnessPosition - selfPosition).length();
                 ;
                 double neighborWitnessDistance = (witnessPosition - neighborPosition).length();
-                if (*it == *jt)
+                if (*it == neighborAddresse)
                     continue;
                 else if (neighborDistance > std::max(witnessDistance, neighborWitnessDistance))
                     goto eliminate;
@@ -430,12 +429,12 @@ std::vector<L3Address> GPSR::getPlanarNeighbors()
         else if (planarizationMode == GPSR_GG_PLANARIZATION) {
             Coord middlePosition = (selfPosition + neighborPosition) / 2;
             double neighborDistance = (neighborPosition - middlePosition).length();
-            for (auto jt = neighborAddresses.begin(); jt != neighborAddresses.end(); jt++) {
-                const L3Address& witnessAddress = *jt;
+            for (auto & neighborAddresse : neighborAddresses) {
+                const L3Address& witnessAddress = neighborAddresse;
                 Coord witnessPosition = neighborPositionTable.getPosition(witnessAddress);
                 double witnessDistance = (witnessPosition - middlePosition).length();
                 ;
-                if (*it == *jt)
+                if (*it == neighborAddresse)
                     continue;
                 else if (witnessDistance < neighborDistance)
                     goto eliminate;
@@ -453,14 +452,13 @@ L3Address GPSR::getNextPlanarNeighborCounterClockwise(const L3Address& startNeig
 {
     EV_DEBUG << "Finding next planar neighbor (counter clockwise): startAddress = " << startNeighborAddress << ", startAngle = " << startNeighborAngle << endl;
     L3Address bestNeighborAddress = startNeighborAddress;
-    double bestNeighborAngleDifference = 2 * PI;
+    double bestNeighborAngleDifference = 2 * M_PI;
     std::vector<L3Address> neighborAddresses = getPlanarNeighbors();
-    for (auto it = neighborAddresses.begin(); it != neighborAddresses.end(); it++) {
-        const L3Address& neighborAddress = *it;
+    for (auto & neighborAddress : neighborAddresses) {
         double neighborAngle = getNeighborAngle(neighborAddress);
         double neighborAngleDifference = neighborAngle - startNeighborAngle;
         if (neighborAngleDifference < 0)
-            neighborAngleDifference += 2 * PI;
+            neighborAngleDifference += 2 * M_PI;
         EV_DEBUG << "Trying next planar neighbor (counter clockwise): address = " << neighborAddress << ", angle = " << neighborAngle << endl;
         if (neighborAngleDifference != 0 && neighborAngleDifference < bestNeighborAngleDifference) {
             bestNeighborAngleDifference = neighborAngleDifference;
@@ -546,7 +544,7 @@ L3Address GPSR::findPerimeterRoutingNextHop(INetworkDatagram *datagram, const L3
             EV_DEBUG << "Intersecting towards next hop: nextNeighbor = " << nextNeighborAddress << ", firstSender = " << firstSenderAddress << ", firstReceiver = " << firstReceiverAddress << ", destination = " << destination << endl;
             Coord nextNeighborPosition = getNeighborPosition(nextNeighborAddress);
             Coord intersection = intersectSections(perimeterRoutingStartPosition, destinationPosition, selfPosition, nextNeighborPosition);
-            hasIntersection = !isNaN(intersection.x);
+            hasIntersection = !std::isnan(intersection.x);
             if (hasIntersection) {
                 EV_DEBUG << "Edge to next hop intersects: intersection = " << intersection << ", nextNeighbor = " << nextNeighborAddress << ", firstSender = " << firstSenderAddress << ", firstReceiver = " << firstReceiverAddress << ", destination = " << destination << endl;
                 gpsrOption->setCurrentFaceFirstSenderAddress(selfAddress);
@@ -583,8 +581,8 @@ INetfilter::IHook::Result GPSR::routeDatagram(INetworkDatagram *datagram, const 
         EV_INFO << "Next hop found: source = " << source << ", destination = " << destination << ", nextHop: " << nextHop << endl;
         GPSROption *gpsrOption = getGpsrOptionFromNetworkDatagram(datagram);
         gpsrOption->setSenderAddress(getSelfAddress());
-        // KLUDGE: find output interface
-        outputInterfaceEntry = interfaceTable->getInterface(1);
+        outputInterfaceEntry = interfaceTable->getInterfaceByName(outputInterface);
+        ASSERT(outputInterfaceEntry);
         return ACCEPT;
     }
 }
@@ -747,7 +745,7 @@ bool GPSR::handleOperationStage(LifecycleOperation *operation, int stage, IDoneC
 // notification
 //
 
-void GPSR::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj)
+void GPSR::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
 {
     Enter_Method("receiveChangeNotification");
     if (signalID == NF_LINK_BREAK) {

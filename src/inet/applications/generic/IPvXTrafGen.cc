@@ -18,10 +18,11 @@
 
 #include "inet/applications/generic/IPvXTrafGen.h"
 
+#include "inet/common/IProtocolRegistrationListener.h"
 #include "inet/common/ModuleAccess.h"
+#include "inet/common/ProtocolGroup.h"
 #include "inet/common/lifecycle/NodeOperations.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
-#include "inet/networklayer/common/IPSocket.h"
 #include "inet/networklayer/contract/IL3AddressType.h"
 #include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
 
@@ -64,12 +65,10 @@ void IPvXTrafGen::initialize(int stage)
         WATCH(numReceived);
     }
     else if (stage == INITSTAGE_APPLICATION_LAYER) {
-        IPSocket ipSocket(gate("ipOut"));
-        ipSocket.registerProtocol(protocol);
-
         timer = new cMessage("sendTimer");
         nodeStatus = dynamic_cast<NodeStatus *>(findContainingNode(this)->getSubmodule("status"));
         isOperational = (!nodeStatus) || nodeStatus->getState() == NodeStatus::UP;
+        registerProtocol(*ProtocolGroup::ipprotocol.getProtocol(protocol), gate("ipOut"));
 
         if (isNodeUp())
             startApp();
@@ -109,12 +108,13 @@ void IPvXTrafGen::handleMessage(cMessage *msg)
     }
     else
         processPacket(PK(msg));
+}
 
-    if (hasGUI()) {
-        char buf[40];
-        sprintf(buf, "rcvd: %d pks\nsent: %d pks", numReceived, numSent);
-        getDisplayString().setTagArg("t", 0, buf);
-    }
+void IPvXTrafGen::refreshDisplay() const
+{
+    char buf[40];
+    sprintf(buf, "rcvd: %d pks\nsent: %d pks", numReceived, numSent);
+    getDisplayString().setTagArg("t", 0, buf);
 }
 
 bool IPvXTrafGen::handleOperationStage(LifecycleOperation *operation, int stage, IDoneCallback *doneCallback)

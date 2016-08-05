@@ -22,6 +22,7 @@
 #include "inet/common/INETDefs.h"
 
 #include "inet/networklayer/common/L3Address.h"
+#include "inet/networklayer/contract/L3Socket.h"
 #include "inet/common/lifecycle/ILifecycle.h"
 #include "inet/common/lifecycle/LifecycleOperation.h"
 #include "inet/common/lifecycle/NodeStatus.h"
@@ -58,6 +59,7 @@ class INET_API PingApp : public cSimpleModule, public ILifecycle
     bool continuous = false;
 
     // state
+    L3Socket *l3Socket = nullptr;
     int pid = 0;    // to determine which hosts are associated with the responses
     cMessage *timer = nullptr;    // to schedule the next Ping request
     NodeStatus *nodeStatus = nullptr;    // lifecycle
@@ -70,7 +72,7 @@ class INET_API PingApp : public cSimpleModule, public ILifecycle
     cStdDev rttStat;
     static simsignal_t rttSignal;
     static simsignal_t numLostSignal;
-    static simsignal_t outOfOrderArrivalsSignal;
+    static simsignal_t numOutOfOrderArrivalsSignal;
     static simsignal_t pingTxSeqSignal;
     static simsignal_t pingRxSeqSignal;
     long sentCount = 0;    // number of sent Ping requests
@@ -83,6 +85,7 @@ class INET_API PingApp : public cSimpleModule, public ILifecycle
     virtual int numInitStages() const override { return NUM_INIT_STAGES; }
     virtual void handleMessage(cMessage *msg) override;
     virtual void finish() override;
+    virtual void refreshDisplay() const override;
 
     virtual void parseDestAddressesPar();
     virtual void startSendingPingRequests();
@@ -92,7 +95,7 @@ class INET_API PingApp : public cSimpleModule, public ILifecycle
     virtual bool isNodeUp();
     virtual bool isEnabled();
     virtual std::vector<L3Address> getAllAddresses();
-    virtual void sendPing();
+    virtual void sendPingRequest();
     virtual void processPingResponse(PingPayload *msg);
     virtual void countPingResponse(int bytes, long seqNo, simtime_t rtt);
 
@@ -101,6 +104,7 @@ class INET_API PingApp : public cSimpleModule, public ILifecycle
   public:
     PingApp();
     virtual ~PingApp();
+    int getPid() const { return pid; }
 };
 
 } // namespace inet
