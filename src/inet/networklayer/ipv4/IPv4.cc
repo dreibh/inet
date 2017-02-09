@@ -36,6 +36,7 @@
 #include "inet/common/lifecycle/NodeStatus.h"
 #include "inet/networklayer/contract/IInterfaceTable.h"
 #include "inet/common/ModuleAccess.h"
+#include "inet/common/LayeredProtocolBase.h"
 
 namespace inet {
 
@@ -168,8 +169,8 @@ void IPv4::endService(cPacket *packet)
     else {    // from network
         EV_INFO << "Received " << packet << " from network.\n";
         const InterfaceEntry *fromIE = getSourceInterfaceFrom(packet);
-        if (dynamic_cast<IPv4Datagram *>(packet))
-            handleIncomingDatagram((IPv4Datagram *)packet, fromIE);
+        if (auto dgram = dynamic_cast<IPv4Datagram *>(packet))
+            handleIncomingDatagram(dgram, fromIE);
         else
             throw cRuntimeError(packet, "Unexpected packet type: %s", packet->getClassName());
     }
@@ -185,6 +186,7 @@ void IPv4::handleIncomingDatagram(IPv4Datagram *datagram, const InterfaceEntry *
 {
     ASSERT(datagram);
     ASSERT(fromIE);
+    emit(LayeredProtocolBase::packetReceivedFromLowerSignal, datagram);
 
     //
     // "Prerouting"
@@ -201,6 +203,9 @@ void IPv4::handleIncomingDatagram(IPv4Datagram *datagram, const InterfaceEntry *
             return;
         }
     }
+
+    // hop counter decrement
+    datagram->setTimeToLive(datagram->getTimeToLive() - 1);
 
     EV_DETAIL << "Received datagram `" << datagram->getName() << "' with dest=" << datagram->getDestAddress() << "\n";
 
@@ -273,6 +278,7 @@ void IPv4::preroutingFinish(IPv4Datagram *datagram, const InterfaceEntry *fromIE
 void IPv4::handlePacketFromHL(cPacket *packet)
 {
     EV_INFO << "Received " << packet << " from upper layer.\n";
+    emit(LayeredProtocolBase::packetReceivedFromUpperSignal, packet);
 
     // if no interface exists, do not send datagram
     if (ift->getNumInterfaces() == 0) {
@@ -583,9 +589,11 @@ void IPv4::reassembleAndDeliverFinish(IPv4Datagram *datagram, const InterfaceEnt
         controlInfoCopy->setSocketId(it->second->socketId);
         cPacket *packetCopy = packet->dup();
         packetCopy->setControlInfo(controlInfoCopy);
+        emit(LayeredProtocolBase::packetSentToUpperSignal, packetCopy);
         send(packetCopy, "transportOut");
     }
     if (mapping.findOutputGateForProtocol(protocol) >= 0) {
+        emit(LayeredProtocolBase::packetSentToUpperSignal, packet);
         send(packet, "transportOut");
         numLocalDeliver++;
     }
@@ -635,12 +643,8 @@ void IPv4::fragmentAndSend(IPv4Datagram *datagram, const InterfaceEntry *ie, IPv
     if (datagram->getSrcAddress().isUnspecified())
         datagram->setSrcAddress(ie->ipv4Data()->getIPAddress());
 
-    // hop counter decrement; but not if it will be locally delivered
-    if (!ie->isLoopback())
-        datagram->setTimeToLive(datagram->getTimeToLive() - 1);
-
     // hop counter check
-    if (datagram->getTimeToLive() < 0) {
+    if (datagram->getTimeToLive() <= 0) {
         // drop datagram, destruction responsibility in ICMP
         EV_WARN << "datagram TTL reached zero, sending ICMP_TIME_EXCEEDED\n";
         sendIcmpError(datagram, -1    /*TODO*/, ICMP_TIME_EXCEEDED, 0);
@@ -1042,12 +1046,12 @@ void IPv4::stop()
 void IPv4::flush()
 {
     delete cancelService();
-    EV_DEBUG << "IPv4::flush(): packets in queue: " << queue.info() << endl;
+    EV_DEBUG << "IPv4::flush(): packets in queue: " << queue.STR_COMPAT() << endl;
     queue.clear();
 
     EV_DEBUG << "IPv4::flush(): pending packets:\n";
     for (auto & elem : pendingPackets) {
-        EV_DEBUG << "IPv4::flush():    " << elem.first << ": " << elem.second.info() << endl;
+        EV_DEBUG << "IPv4::flush():    " << elem.first << ": " << elem.second.STR_COMPAT() << endl;
         elem.second.clear();
     }
     pendingPackets.clear();
@@ -1121,7 +1125,7 @@ INetfilter::IHook::Result IPv4::datagramLocalOutHook(INetworkDatagram *datagram,
     return INetfilter::IHook::ACCEPT;
 }
 
-void IPv4::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
+void IPv4::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details)
 {
     Enter_Method_Silent();
 

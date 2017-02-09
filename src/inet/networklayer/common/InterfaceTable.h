@@ -85,7 +85,7 @@ class INET_API InterfaceTable : public cSimpleModule, public IInterfaceTable, pr
     virtual void refreshDisplay() const override;
 
     // displays the interface IPv4/IPv6 address on the outgoing link that corresponds to the interface
-    virtual void updateLinkDisplayString(InterfaceEntry *entry);
+    virtual void updateLinkDisplayString(InterfaceEntry *entry) const;
 
     // discover and store which nwlayer/host gates connect to this interface
     virtual void discoverConnectingGates(InterfaceEntry *entry);
@@ -117,7 +117,7 @@ class INET_API InterfaceTable : public cSimpleModule, public IInterfaceTable, pr
      * Called by the signal handler whenever a change of a category
      * occurs to which this client has subscribed.
      */
-    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG) override;
+    virtual void receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details) override;
 
     /**
      * Returns the host or router this interface table lives in.

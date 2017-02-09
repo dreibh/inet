@@ -82,6 +82,15 @@ void InterfaceTable::refreshDisplay() const
     char buf[80];
     sprintf(buf, "%d interfaces", getNumInterfaces());
     getDisplayString().setTagArg("t", 0, buf);
+
+    if (par("displayAddresses").boolValue()) {
+        for (auto & elem : idToInterface) {
+            InterfaceEntry *ie = elem;
+            if (ie)
+                updateLinkDisplayString(ie);
+        }
+    }
+
 }
 
 void InterfaceTable::handleMessage(cMessage *msg)
@@ -89,7 +98,7 @@ void InterfaceTable::handleMessage(cMessage *msg)
     throw cRuntimeError("This module doesn't process messages");
 }
 
-void InterfaceTable::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj DETAILS_ARG)
+void InterfaceTable::receiveSignal(cComponent *source, simsignal_t signalID, cObject *obj, cObject *details)
 {
     // nothing needed here at the moment
     Enter_Method_Silent();
@@ -359,14 +368,10 @@ void InterfaceTable::invalidateTmpInterfaceList()
 void InterfaceTable::interfaceChanged(simsignal_t signalID, const InterfaceEntryChangeDetails *details)
 {
     Enter_Method_Silent();
-
     emit(signalID, const_cast<InterfaceEntryChangeDetails *>(details));
-
-    if (hasGUI() && par("displayAddresses").boolValue())
-        updateLinkDisplayString(details->getInterfaceEntry());
 }
 
-void InterfaceTable::updateLinkDisplayString(InterfaceEntry *entry)
+void InterfaceTable::updateLinkDisplayString(InterfaceEntry *entry) const
 {
     int outputGateId = entry->getNodeOutputGateId();
     if (outputGateId != -1) {

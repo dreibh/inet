@@ -567,7 +567,7 @@ void BMacLayer::sendDataPacket()
     sendDown(pkt);
 }
 
-void BMacLayer::receiveSignal(cComponent *source, simsignal_t signalID, long value DETAILS_ARG)
+void BMacLayer::receiveSignal(cComponent *source, simsignal_t signalID, long value, cObject *details)
 {
     Enter_Method_Silent();
     if (signalID == IRadio::radioModeChangedSignal) {
@@ -647,7 +647,7 @@ void BMacLayer::refreshDisplay() const
 {
     if (!animation)
         return;
-    cDisplayString& dispStr = findContainingNode(const_cast<BMacLayer *>(this))->getDisplayString();
+    cDisplayString& dispStr = findContainingNode(this)->getDisplayString();
 
     switch (macState) {
         case INIT:
