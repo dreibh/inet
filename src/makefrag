@@ -1,4 +1,12 @@
 #
+# on windows we have to link with the winsock library as it is no longer added 
+# to the oomnetpp system libraries by default
+#
+ifeq ($(PLATFORM),win32.x86_64)
+  LIBS += -lwsock32
+endif
+
+#
 # TCP implementaion using the Network Simulation Cradle (TCP_NSC feature)
 #
 
@@ -7,7 +15,7 @@ ifeq ($(WITH_TCP_NSC), enabled)
   NSC_VERSION= $(shell ls -d ../3rdparty/nsc* 2>/dev/null | sed 's/^.*-//')
   ifneq ($(NSC_VERSION),)
     CFLAGS += -I../3rdparty/nsc-$(NSC_VERSION)/sim -DHAVE_NSC
-    LIBS += -Wl,-rpath,`abspath ../3rdparty/nsc-$(NSC_VERSION)`
+    LIBS += -Wl,-rpath,$(abspath ../3rdparty/nsc-$(NSC_VERSION))
   endif
 endif
 
@@ -46,8 +54,8 @@ endif
 #
 WITH_VISUALIZERS := $(shell (cd .. && ./inet_featuretool -q isenabled visualization && echo enabled) )
 ifeq ($(WITH_VISUALIZERS), enabled)
-  ifeq ($(WITH_OSG), yes)
-      LIBS += -lOpenThreads -losg -losgText -losgDB -losgEarth -losgEarthUtil
+  ifeq ($(WITH_OSGEARTH), yes)
+      OMNETPP_LIBS += -lOpenThreads -losg -losgText -losgDB -losgEarth -losgEarthUtil
   endif
 endif
 
@@ -60,9 +68,9 @@ CFLAGS += -Wno-overloaded-virtual
 #########################################################################
 # precompiled header support for GCC and CLANG
 
-ifeq ($(TOOLCHAIN_NAME),gcc)
+ifeq ($(CC),gcc)
 PRECOMPILED_EXT=gch
-else ifeq ($(TOOLCHAIN_NAME),clang)
+else ifeq ($(CC),clang)
 PRECOMPILED_EXT=pch
 else
 PRECOMPILED_EXT=
@@ -82,8 +90,8 @@ pch : $(PRECOMPILED_HEADER_PCH)
 
 $(PRECOMPILED_HEADER_PCH): $(PRECOMPILED_HEADER)
 ifneq ("$(PRECOMPILED_EXT)","")
-	@echo Creating precompiled header for $(TOOLCHAIN_NAME)...
-	$(Q)$(CXX) -x c++-header $(CXXFLAGS) $(COPTS) -o $@ $<
+	@echo Creating precompiled header for $(CC)...
+	$(Q)$(CXX) -x c++-header $(CXXFLAGS) $(filter-out -MMD -include $(PRECOMPILED_HEADER),$(COPTS)) -MD -o $@ $<
 endif
 
 clean: clean-pch clean-defines
@@ -109,12 +117,17 @@ ifeq ($(WITH_OSG),yes)
 	@echo "#define WITH_OSG" >>$(DEFINES_FILE)
 	@echo "#endif" >>$(DEFINES_FILE)
 endif
+ifeq ($(WITH_OSGEARTH),yes)
+	@echo "#ifndef WITH_OSGEARTH" >>$(DEFINES_FILE)
+	@echo "#define WITH_OSGEARTH" >>$(DEFINES_FILE)
+	@echo "#endif" >>$(DEFINES_FILE)
+endif
 
 # dump out the actual compiler and linker command line for easier debugging
 ifneq ($(MAKECMDGOALS),clean)
 $(info *** COMPILING with:)
 $(info $(CXX) -c $(CXXFLAGS) $(COPTS))
 $(info *** LINKING with:)
-$(info $(SHLIB_LD) $(WHOLE_ARCHIVE_ON) $(LIBS) $(WHOLE_ARCHIVE_OFF) $(OMNETPP_LIBS) $(LDFLAGS))
+$(info $(SHLIB_LD) -o $O/$(TARGET) $(AS_NEEDED_OFF) $(WHOLE_ARCHIVE_ON) $(LIBS) $(WHOLE_ARCHIVE_OFF) $(OMNETPP_LIBS) $(LDFLAGS))
 $(info Compiling...)
 endif

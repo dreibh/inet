@@ -106,7 +106,6 @@ void HttpServer::handleMessage(cMessage *msg)
             sctpSocket->processMessage(msg);
         }
     }
-    updateDisplay();
 }
 
 void HttpServer::socketEstablished(int connId, void *yourPtr)
