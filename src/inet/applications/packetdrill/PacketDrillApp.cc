@@ -15,6 +15,8 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "PacketDrillApp.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -22,7 +24,6 @@
 #include "inet/common/lifecycle/NodeStatus.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "PacketDrillUtils.h"
-#include "PacketDrillApp.h"
 #include "PacketDrillInfo_m.h"
 #include "inet/transportlayer/udp/UDPPacket_m.h"
 #include "inet/networklayer/ipv4/IPv4Datagram_m.h"
@@ -40,15 +41,45 @@ using namespace tcp;
 
 PacketDrillApp::PacketDrillApp()
 {
+    script = nullptr;
+    config = nullptr;
     localPort = 1000;
     remotePort = 2000;
     protocol = 0;
-    idInbound = 0;
-    idOutbound = 0;
+    tcpConnId = -1;
+    sctpAssocId = -1;
+    pd = nullptr;
+    msgArrived = false;
+    recvFromSet = false;
+    listenSet = false;
+    acceptSet = false;
+    establishedPending = false;
+    abortSent = false;
+    socketOptionsArrived = false;
+    receivedPackets = nullptr;
+    outboundPackets = nullptr;
+    expectedMessageSize = 0;
     relSequenceIn = 0;
     relSequenceOut = 0;
     peerTS = 0;
     peerWindow = 0;
+    peerInStreams = 0;
+    peerOutStreams = 0;
+    peerCookie = nullptr;
+    peerCookieLength = 0;
+    initPeerTsn = 0;
+    initLocalTsn = 0;
+    localDiffTsn = 0;
+    peerCumTsn = 0;
+    localCumTsn = 0;
+    eventCounter = 0;
+    numEvents = 0;
+    idInbound = 0;
+    idOutbound = 0;
+    localVTag = 0;
+    peerVTag = 0;
+    eventTimer = nullptr;
+
     localAddress = L3Address("127.0.0.1");
     remoteAddress = L3Address("127.0.0.1");
 }
@@ -558,7 +589,7 @@ void PacketDrillApp::closeAllSockets()
     datagram->setVersion(4);
     datagram->setHeaderLength(20);
     datagram->setTransportProtocol(IPPROTO_SCTP);
-    datagram->setTimeToLive(31);
+    datagram->setTimeToLive(32);
     datagram->setMoreFragments(0);
     datagram->setDontFragment(0);
     datagram->setFragmentOffset(0);
@@ -935,9 +966,9 @@ int PacketDrillApp::syscallSetsockopt(struct syscall_spec *syscall, cQueue *args
                 sctpSocket.setEnableHeartbeats(false);
             else if (expr_params->spp_flags->getNum() & SPP_HB_ENABLE)
                 sctpSocket.setEnableHeartbeats(true);
-            if (expr_params->spp_hbinterval > 0)
+            if (expr_params->spp_hbinterval->getNum() > 0)
                 sctpSocket.setHbInterval(expr_params->spp_hbinterval->getNum());
-            if (expr_params->spp_pathmaxrxt > 0)
+            if (expr_params->spp_pathmaxrxt->getNum() > 0)
                 sctpSocket.setPathMaxRetrans(expr_params->spp_pathmaxrxt->getNum());
             break;
         }

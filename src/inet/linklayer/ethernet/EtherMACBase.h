@@ -136,7 +136,6 @@ class INET_API EtherMACBase : public MACBase
     bool promiscuous = false;    // if true, passes up all received frames
     bool duplexMode = false;    // true if operating in full-duplex mode
     bool frameBursting = false;    // frame bursting on/off (Gigabit Ethernet)
-    bool connectionColoring = false;    // colors the connection when transmitting
 
     // gate pointers, etc.
     MacQueue txQueue;    // the output queue
@@ -177,8 +176,7 @@ class INET_API EtherMACBase : public MACBase
     static simsignal_t rxPkFromHLSignal;
     static simsignal_t dropPkNotForUsSignal;
     static simsignal_t dropPkBitErrorSignal;
-    static simsignal_t dropPkIfaceDownSignal;
-    static simsignal_t dropPkFromHLIfaceDownSignal;
+
 
     static simsignal_t packetSentToLowerSignal;
     static simsignal_t packetReceivedFromLowerSignal;
@@ -190,6 +188,8 @@ class INET_API EtherMACBase : public MACBase
 
   public:
     static const double SPEED_OF_LIGHT_IN_CABLE;
+    static simsignal_t dropPkIfaceDownSignal;
+    static simsignal_t dropPkFromHLIfaceDownSignal;
 
   public:
     EtherMACBase();
@@ -242,7 +242,6 @@ class INET_API EtherMACBase : public MACBase
 
     // display
     virtual void refreshDisplay() const override;
-    virtual void updateConnectionColor(int txState) const;
 
     // model change related functions
     virtual void receiveSignal(cComponent *src, simsignal_t signalId, cObject *obj, cObject *details) override;

@@ -54,6 +54,8 @@ extern INET_API simsignal_t    // admin
     NF_LINK_PROMISCUOUS,    // used for manet promiscuous mode, the packets that have this node how destination are no promiscuous send
     NF_LINK_FULL_PROMISCUOUS,    // Used for manet promiscuous mode, all packets are promiscuous
 
+    NF_MODESET_CHANGED,
+
 // - layer 3 (network)
     NF_INTERFACE_CREATED,
     NF_INTERFACE_DELETED,
@@ -111,10 +113,13 @@ extern INET_API simsignal_t    // admin
 // - layer 7 - OverSim
     NF_OVERLAY_TRANSPORTADDRESS_CHANGED,    // OverSim
     NF_OVERLAY_NODE_GRACEFUL_LEAVE,    // OverSim
-    NF_OVERLAY_NODE_LEAVE;    // OverSim
+    NF_OVERLAY_NODE_LEAVE,    // OverSim
 
 // - layer 7 (application)
 //...
+
+// general
+    NF_PACKET_DROP;
 
 /**
  * Utility function

@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -24,6 +24,11 @@ namespace inet {
 namespace visualizer {
 
 Define_Module(DataLinkOsgVisualizer);
+
+bool DataLinkOsgVisualizer::isLinkStart(cModule *module) const
+{
+    return dynamic_cast<MACProtocolBase *>(module) != nullptr || dynamic_cast<MACBase *>(module) != nullptr;
+}
 
 bool DataLinkOsgVisualizer::isLinkEnd(cModule *module) const
 {

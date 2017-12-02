@@ -17,12 +17,12 @@
 // @author Zoltan Bojthe
 //
 
-#include "inet/common/ResultFilters.h"
-
+#include "inet/applications/base/ApplicationPacket_m.h"
 #include "inet/common/geometry/common/Coord.h"
+#include "inet/common/ResultFilters.h"
 #include "inet/mobility/contract/IMobility.h"
 #include "inet/networklayer/contract/INetworkProtocolControlInfo.h"
-#include "inet/applications/base/ApplicationPacket_m.h"
+#include "inet/physicallayer/base/packetlevel/FlatReceptionBase.h"
 
 namespace inet {
 
@@ -44,6 +44,16 @@ void MessageTSAgeFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cO
 {
     if (auto msg = dynamic_cast<cMessage *>(object))
         fire(this, t, t - msg->getTimestamp(), details);
+}
+
+Register_ResultFilter("receptionMinSignalPower", ReceptionMinSignalPowerFilter);
+
+void ReceptionMinSignalPowerFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObject *object, cObject *details)
+{
+    if (auto reception = dynamic_cast<inet::physicallayer::FlatReceptionBase *>(object)) {
+        W minReceptionPower = reception->computeMinPower(reception->getStartTime(), reception->getEndTime());
+        fire(this, t, minReceptionPower.get(), details);
+    }
 }
 
 Register_ResultFilter("appPkSeqNo", ApplicationPacketSequenceNumberFilter);
@@ -110,15 +120,54 @@ void ThroughputFilter::receiveSignal(cResultFilter *prev, simtime_t_cref t, cObj
 {
     if (auto packet = dynamic_cast<cPacket *>(object)) {
         const simtime_t now = simTime();
-        if (now - lastSignal >= 0.1) {
+        packets++;
+        if (packets >= packetLimit) {
+            bytes += packet->getByteLength();
             double throughput = 8 * bytes / (now - lastSignal).dbl();
+            fire(this, now, throughput, details);
             lastSignal = now;
             bytes = 0;
-            fire(this, now, throughput, details);
+            packets = 0;
         }
-        bytes += packet->getByteLength();
+        else if (now - lastSignal >= interval) {
+            double throughput = 8 * bytes / interval.dbl();
+            fire(this, lastSignal + interval, throughput, details);
+            lastSignal = lastSignal + interval;
+            bytes = 0;
+            packets = 0;
+            if (emitIntermediateZeros) {
+                while (now - lastSignal >= interval) {
+                    fire(this, lastSignal + interval, 0.0, details);
+                    lastSignal = lastSignal + interval;
+                }
+            }
+            else {
+                if (now - lastSignal >= interval) { // no packets arrived for a long period
+                    // zero should have been signaled at the beginning of this packet (approximation)
+                    fire(this, now - interval, 0.0, details);
+                    lastSignal = now - interval;
+                }
+            }
+            bytes += packet->getByteLength();
+        }
+        else
+            bytes += packet->getByteLength();
     }
 }
+
+Register_ResultFilter("elapsedTime", ElapsedTimeFilter);
+
+ElapsedTimeFilter::ElapsedTimeFilter()
+{
+    startTime = time(nullptr);
+}
+
+double ElapsedTimeFilter::getElapsedTime()
+{
+    long t = time(nullptr);
+    return t - startTime;
+}
+
 
 } // namespace filters
 

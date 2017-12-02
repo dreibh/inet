@@ -1,12 +1,7 @@
-//
-// This program is property of its copyright holder. All rights reserved.
-//
-
 package inet.examples.visualization.instruments;
 
 import inet.common.misc.SignalSource;
 import inet.common.figures.DelegateSignalConfigurator;
-
 
 network InstrumentsExample
 {
@@ -45,9 +40,6 @@ network InstrumentsExample
     submodules:
         signalSource: SignalSource {
             @display("p=50,350;is=s");
-        }
-        figureHelper: DelegateSignalConfigurator {
-            @display("p=180,350");
         }
 }
 

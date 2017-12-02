@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -29,16 +29,15 @@ void SceneCanvasVisualizer::initialize(int stage)
     SceneVisualizerBase::initialize(stage);
     if (!hasGUI()) return;
     if (stage == INITSTAGE_LOCAL) {
+        zIndex = par("zIndex");
         cCanvas *canvas = visualizerTargetModule->getCanvas();
         canvasProjection.setRotation(Rotation(computeViewAngle(par("viewAngle"))));
-        canvasProjection.setTranslation(computeViewTranslation(par("viewTranslation")));
+        canvasProjection.setScale(parse2D(par("viewScale")));
+        canvasProjection.setTranslation(parse2D(par("viewTranslation")));
         CanvasProjection::setCanvasProjection(canvas, &canvasProjection);
         axisLayer = new cGroupFigure("axisLayer");
-#if OMNETPP_VERSION < 0x0501
-        canvas->addFigureBelow(axisLayer, canvas->getSubmodulesLayer());
-#else
+        axisLayer->setZIndex(zIndex);
         axisLayer->insertBelow(canvas->getSubmodulesLayer());
-#endif
         double axisLength = par("axisLength");
         if (!std::isnan(axisLength))
             initializeAxis(axisLength);
@@ -53,9 +52,13 @@ void SceneCanvasVisualizer::initializeAxis(double axisLength)
     cLineFigure *xAxis = new cLineFigure("xAxis");
     cLineFigure *yAxis = new cLineFigure("yAxis");
     cLineFigure *zAxis = new cLineFigure("zAxis");
-    xAxis->setTags("axis");
-    yAxis->setTags("axis");
-    zAxis->setTags("axis");
+    auto axisTags = std::string("axis ") + tags;
+    xAxis->setTags(axisTags.c_str());
+    yAxis->setTags(axisTags.c_str());
+    zAxis->setTags(axisTags.c_str());
+    xAxis->setTooltip("This arrow represents the X axis of the playground");
+    yAxis->setTooltip("This arrow represents the Y axis of the playground");
+    zAxis->setTooltip("This arrow represents the Z axis of the playground");
     xAxis->setLineWidth(1);
     yAxis->setLineWidth(1);
     zAxis->setLineWidth(1);
@@ -77,9 +80,10 @@ void SceneCanvasVisualizer::initializeAxis(double axisLength)
     cLabelFigure *xLabel = new cLabelFigure("xAxisLabel");
     cLabelFigure *yLabel = new cLabelFigure("yAxisLabel");
     cLabelFigure *zLabel = new cLabelFigure("zAxisLabel");
-    xLabel->setTags("axis label");
-    yLabel->setTags("axis label");
-    zLabel->setTags("axis label");
+    auto axisLabelTags = std::string("axis label ") + tags;
+    xLabel->setTags(axisLabelTags.c_str());
+    yLabel->setTags(axisLabelTags.c_str());
+    zLabel->setTags(axisLabelTags.c_str());
     xLabel->setText("X");
     yLabel->setText("Y");
     zLabel->setText("Z");
@@ -97,8 +101,12 @@ void SceneCanvasVisualizer::handleParameterChange(const char* name)
         canvasProjection.setRotation(Rotation(computeViewAngle(par("viewAngle"))));
         // TODO: update all visualizers
     }
+    else if (name && !strcmp(name, "viewScale")) {
+        canvasProjection.setScale(parse2D(par("viewScale")));
+        // TODO: update all visualizers
+    }
     else if (name && !strcmp(name, "viewTranslation")) {
-        canvasProjection.setTranslation(computeViewTranslation(par("viewTranslation")));
+        canvasProjection.setTranslation(parse2D(par("viewTranslation")));
         // TODO: update all visualizers
     }
 }
@@ -151,16 +159,11 @@ EulerAngles SceneCanvasVisualizer::computeViewAngle(const char* viewAngle)
     return EulerAngles(x, y, z);
 }
 
-cFigure::Point SceneCanvasVisualizer::computeViewTranslation(const char* viewTranslation)
+cFigure::Point SceneCanvasVisualizer::parse2D(const char* text)
 {
     double x, y;
-    if (sscanf(viewTranslation, "%lf %lf", &x, &y) == 2)
-    {
-        x = math::deg2rad(x);
-        y = math::deg2rad(y);
-    }
-    else
-        throw cRuntimeError("The viewTranslation parameter must be a pair of doubles");
+    if (sscanf(text, "%lf %lf", &x, &y) != 2)
+        throw cRuntimeError("The parameter must be a pair of doubles: %s", text);
     return cFigure::Point(x, y);
 }
 

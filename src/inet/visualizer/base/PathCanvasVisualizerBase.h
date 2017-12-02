@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -18,6 +18,7 @@
 #ifndef __INET_PATHCANVASVISUALIZERBASE_H
 #define __INET_PATHCANVASVISUALIZERBASE_H
 
+#include "inet/common/figures/LabeledPolylineFigure.h"
 #include "inet/common/geometry/common/CanvasProjection.h"
 #include "inet/visualizer/base/PathVisualizerBase.h"
 
@@ -28,27 +29,29 @@ namespace visualizer {
 class INET_API PathCanvasVisualizerBase : public PathVisualizerBase
 {
   protected:
-    class INET_API CanvasPath : public Path {
+    class INET_API PathCanvasVisualization : public PathVisualization {
       public:
-        cPolylineFigure *figure = nullptr;
+        LabeledPolylineFigure *figure = nullptr;
 
       public:
-        CanvasPath(const std::vector<int>& path, cPolylineFigure *figure);
-        virtual ~CanvasPath();
+        PathCanvasVisualization(const std::vector<int>& path, LabeledPolylineFigure *figure);
+        virtual ~PathCanvasVisualization();
     };
 
   protected:
+    double zIndex = NaN;
     const CanvasProjection *canvasProjection = nullptr;
+    cGroupFigure *pathGroup = nullptr;
 
   protected:
     virtual void initialize(int stage) override;
+    virtual void refreshDisplay() const override;
 
-    virtual void addPath(std::pair<int, int> sourceAndDestination, const Path *path) override;
-    virtual void removePath(std::pair<int, int> sourceAndDestination, const Path *path) override;
-
-    virtual const Path *createPath(const std::vector<int>& path) const override;
-    virtual void setAlpha(const Path *path, double alpha) const override;
-    virtual void setPosition(cModule *node, const Coord& position) const override;
+    virtual const PathVisualization *createPathVisualization(const std::vector<int>& path, cPacket *packet) const override;
+    virtual void addPathVisualization(const PathVisualization *pathVisualization) override;
+    virtual void removePathVisualization(const PathVisualization *pathVisualization) override;
+    virtual void setAlpha(const PathVisualization *pathVisualization, double alpha) const override;
+    virtual void refreshPathVisualization(const PathVisualization *pathVisualization, cPacket *packet) override;
 };
 
 } // namespace visualizer

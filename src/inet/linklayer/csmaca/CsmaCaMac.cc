@@ -96,6 +96,7 @@ void CsmaCaMac::initialize(int stage)
         mediumStateChange = new cMessage("MediumStateChange");
 
         // set up internal queue
+        transmissionQueue.setMaxPacketLength(maxQueueSize);
         transmissionQueue.setName("transmissionQueue");
         if (par("prioritizeByUP"))
             transmissionQueue.setup(&compareFramesByPriority);
@@ -194,6 +195,7 @@ void CsmaCaMac::handleUpperPacket(cPacket *msg)
 {
     if (maxQueueSize != -1 && (int)transmissionQueue.getLength() == maxQueueSize) {
         EV << "message " << msg << " received from higher layer but MAC queue is full, dropping message\n";
+        emit(LayeredProtocolBase::packetFromUpperDroppedSignal, msg);
         delete msg;
         return;
     }
@@ -345,11 +347,12 @@ void CsmaCaMac::handleWithFsm(cMessage *msg)
             FSMA_Event_Transition(Receive-Bit-Error,
                                   isLowerMessage(msg) && frame->hasBitError(),
                                   IDLE,
+                // TODO: reason? emit(LayeredProtocolBase::packetFromLowerDroppedSignal, frame);
                 delete frame;
                 numCollision++;
                 resetStateVariables();
             );
-            FSMA_Event_Transition(Receive-Unknown-Ack,
+            FSMA_Event_Transition(Receive-Unexpected-Ack,
                                   isLowerMessage(msg) && isAck(frame),
                                   IDLE,
                 delete frame;
@@ -399,6 +402,7 @@ void CsmaCaMac::handleWithFsm(cMessage *msg)
         else if (!transmissionQueue.isEmpty())
             handleWithFsm(transmissionQueue.front());
     }
+    getDisplayString().setTagArg("t", 0, fsm.getStateName());
 }
 
 void CsmaCaMac::receiveSignal(cComponent *source, simsignal_t signalID, long value, cObject *details)
@@ -535,7 +539,7 @@ void CsmaCaMac::cancelBackoffTimer()
  */
 void CsmaCaMac::sendDataFrame(CsmaCaMacDataFrame *frameToSend)
 {
-    EV << "sending Data frame\n";
+    EV << "sending Data frame " << frameToSend->getName() << endl;
     radio->setRadioMode(IRadio::RADIO_MODE_TRANSMITTER);
     sendDown(frameToSend->dup());
 }

@@ -16,12 +16,14 @@
 // Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 
+#include "PacketDrill.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <cinttypes>
 
-#include "PacketDrill.h"
 #include "PacketDrillUtils.h"
 #include "inet/transportlayer/udp/UDPPacket_m.h"
 #include "inet/transportlayer/tcp_common/TCPSegment_m.h"
@@ -63,7 +65,7 @@ IPv4Datagram* PacketDrill::makeIPPacket(int protocol, enum direction_t direction
     } else
         throw cRuntimeError("Unknown direction type %d", direction);
     datagram->setTransportProtocol(protocol);
-    datagram->setTimeToLive(31);
+    datagram->setTimeToLive(32);
     datagram->setMoreFragments(0);
     datagram->setDontFragment(0);
     datagram->setFragmentOffset(0);
@@ -1518,7 +1520,7 @@ int PacketDrill::evaluate(PacketDrillExpression *in, PacketDrillExpression *out,
             free (rs);
             return STATUS_ERR;
         }
-        printf("srs_number_streams = %" INT64_PRINTF_FORMAT "d\n", rs->srs_number_streams->getNum());
+        printf("srs_number_streams = %" PRId64 "\n", rs->srs_number_streams->getNum());
         if (rs->srs_number_streams->getNum() > 0) {
             rs->srs_stream_list = new PacketDrillExpression(in->getResetStreams()->srs_stream_list->getType());
             if (evaluate(in->getResetStreams()->srs_stream_list, rs->srs_stream_list, error)) {
@@ -1545,7 +1547,7 @@ int PacketDrill::evaluate(PacketDrillExpression *in, PacketDrillExpression *out,
         struct sctp_add_streams_expr *as = (struct sctp_add_streams_expr *) malloc(sizeof(struct sctp_add_streams_expr));
         as->sas_assoc_id = new PacketDrillExpression(in->getAddStreams()->sas_assoc_id->getType());
         if (evaluate(in->getAddStreams()->sas_assoc_id, as->sas_assoc_id, error)) {
-        printf("add streams assoc id=%" INT64_PRINTF_FORMAT "d\n", as->sas_assoc_id->getNum());
+        printf("add streams assoc id=%" PRId64 "\n", as->sas_assoc_id->getNum());
             delete (as->sas_assoc_id);
             free (as);
             return STATUS_ERR;

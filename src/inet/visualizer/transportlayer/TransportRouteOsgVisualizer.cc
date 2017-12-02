@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -38,6 +38,21 @@ namespace inet {
 namespace visualizer {
 
 Define_Module(TransportRouteOsgVisualizer);
+
+bool TransportRouteOsgVisualizer::isPathStart(cModule *module) const
+{
+#ifdef WITH_UDP
+    if (dynamic_cast<UDP *>(module) != nullptr)
+        return true;
+#endif
+
+#ifdef WITH_TCP_INET
+    if (dynamic_cast<tcp::TCP *>(module) != nullptr)
+        return true;
+#endif
+
+    return false;
+}
 
 bool TransportRouteOsgVisualizer::isPathEnd(cModule *module) const
 {

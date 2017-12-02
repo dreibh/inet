@@ -19,7 +19,11 @@
 #define __INET_INETDEFS_H
 
 // precompiled headers must be included first
-#include "inet/common/precompiled.h"
+#ifdef NDEBUG
+#include "inet/common/precompiled_release.h"
+#else
+#include "inet/common/precompiled_debug.h"
+#endif
 
 // important WITH_* macros defined by OMNET
 #include "inet/opp_defines.h"
@@ -35,12 +39,12 @@
 
 using namespace omnetpp;
 
-#if OMNETPP_VERSION < 0x0500 || OMNETPP_BUILDNUM < 1006
-#  error At least OMNeT++/OMNEST version 5.0 required
-#endif // if OMNETPP_VERSION < 0x0500
+#if OMNETPP_VERSION < 0x0501 || OMNETPP_BUILDNUM < 1010
+#  error At least OMNeT++/OMNEST version 5.1 required
+#endif // if OMNETPP_VERSION < 0x0501
 
-#define INET_VERSION  0x0304
-#define INET_PATCH_LEVEL 0x00
+#define INET_VERSION  0x0306
+#define INET_PATCH_LEVEL 0x02
 
 #if defined(INET_EXPORT)
 #  define INET_API    OPP_DLLEXPORT

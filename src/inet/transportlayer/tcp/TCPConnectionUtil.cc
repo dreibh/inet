@@ -156,6 +156,7 @@ void TCPConnection::printConnBrief() const
 
 void TCPConnection::printSegmentBrief(TCPSegment *tcpseg)
 {
+    EV_STATICCONTEXT;
     EV_INFO << "." << tcpseg->getSrcPort() << " > ";
     EV_INFO << "." << tcpseg->getDestPort() << ": ";
 
@@ -212,7 +213,7 @@ TCPConnection *TCPConnection::cloneListeningConnection()
 
     // create SACK retransmit queue
     conn->rexmitQueue = new TCPSACKRexmitQueue();
-    conn->rexmitQueue->setConnection(this);
+    conn->rexmitQueue->setConnection(conn);
 
     const char *tcpAlgorithmClass = tcpAlgorithm->getClassName();
     conn->tcpAlgorithm = check_and_cast<TCPAlgorithm *>(inet::utils::createOne(tcpAlgorithmClass));
@@ -265,6 +266,7 @@ void TCPConnection::sendToIP(TCPSegment *tcpseg)
 
 void TCPConnection::sendToIP(TCPSegment *tcpseg, L3Address src, L3Address dest)
 {
+    EV_STATICCONTEXT;
     EV_INFO << "Sending: ";
     printSegmentBrief(tcpseg);
 

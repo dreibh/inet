@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -25,9 +25,23 @@ namespace visualizer {
 
 Define_Module(DataLinkCanvasVisualizer);
 
+bool DataLinkCanvasVisualizer::isLinkStart(cModule *module) const
+{
+    return dynamic_cast<MACProtocolBase *>(module) != nullptr || dynamic_cast<MACBase *>(module) != nullptr;
+}
+
 bool DataLinkCanvasVisualizer::isLinkEnd(cModule *module) const
 {
     return dynamic_cast<MACProtocolBase *>(module) != nullptr || dynamic_cast<MACBase *>(module) != nullptr;
+}
+
+const LinkVisualizerBase::LinkVisualization *DataLinkCanvasVisualizer::createLinkVisualization(cModule *source, cModule *destination, cPacket *packet) const
+{
+    auto linkVisualization = static_cast<const LinkCanvasVisualization *>(LinkCanvasVisualizerBase::createLinkVisualization(source, destination, packet));
+    linkVisualization->figure->setTags((std::string("data_link ") + tags).c_str());
+    linkVisualization->figure->setTooltip("This arrow represents a data link between two network nodes");
+    linkVisualization->shiftPriority = 2;
+    return linkVisualization;
 }
 
 } // namespace visualizer

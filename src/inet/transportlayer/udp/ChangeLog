@@ -1,5 +1,39 @@
 ====== inet-3.x ======
 
+2017-10-02  ------ inet-3.6.2 released ------
+
+2017-07-06  ------ inet-3.6.1 released ------
+
+2017-06-09  ------ inet-3.6.0 released ------
+
+2017-05-31  Zoltan Bojthe
+
+	CID 179353, 179354: Using uninitialized variables (localAddr, remoteAddr,
+	localPort, remotePort)
+
+2017-05-24  Levente Mészáros
+
+	Added standard layered protocol signals to allow generic visualizers to
+	work with UDP.
+
+2017-02-20  ------ inet-3.5.0 released ------
+
+2016-06-23  Zoltan Bojthe
+
+	udp icmp: set the ICMP message name
+
+2016-06-28  Zoltan Bojthe
+
+	udp - icmp: fixed "icmp error answer to a fragmented udp packet" problems
+
+2016-09-22  Zoltan Bojthe
+
+	omnetpp5: add/use refreshDisplay()
+
+2016-08-03  Zoltan Bojthe
+
+	MSG: @fieldNameSuffix("_var") removed when @omitGetVerb(true) not used
+
 2016-06-15  ------ inet-3.4.0 released ------
 
 2016-06-01  ------ inet-3.3.0 released ------
@@ -34,7 +68,6 @@
 2015-03-30  Levente Meszaros
 
 	Fixed double delete after merging master.
-
 
 2015-03-18  Levente Meszaros
 

@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -27,6 +27,7 @@ namespace visualizer {
 class INET_API TransportRouteOsgVisualizer : public PathOsgVisualizerBase
 {
   protected:
+    virtual bool isPathStart(cModule *module) const override;
     virtual bool isPathEnd(cModule *module) const override;
     virtual bool isPathElement(cModule *module) const override;
 };

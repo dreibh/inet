@@ -28,6 +28,8 @@ namespace inet {
 
 namespace physicallayer {
 
+Register_Abstract_Class(Ieee80211ModeSet);
+
 const DelayedInitializer<std::vector<Ieee80211ModeSet>> Ieee80211ModeSet::modeSets([]() { return new std::vector<Ieee80211ModeSet> {
     Ieee80211ModeSet("a", {
         { true, &Ieee80211OFDMCompliantModes::ofdmMode6MbpsCS20MHz },
@@ -45,7 +47,8 @@ const DelayedInitializer<std::vector<Ieee80211ModeSet>> Ieee80211ModeSet::modeSe
         { true, &Ieee80211HrDsssCompliantModes::hrDsssMode5_5MbpsCckLongPreamble },
         { true, &Ieee80211HrDsssCompliantModes::hrDsssMode11MbpsCckLongPreamble },
     }),
-    Ieee80211ModeSet("g", {
+    // TODO: slotTime, cwMin, cwMax must be identical in all modes
+    Ieee80211ModeSet("g(mixed)", {
         { true, &Ieee80211DsssCompliantModes::dsssMode1Mbps },
         { true, &Ieee80211DsssCompliantModes::dsssMode2Mbps },
         { true, &Ieee80211HrDsssCompliantModes::hrDsssMode5_5MbpsCckLongPreamble },
@@ -59,6 +62,16 @@ const DelayedInitializer<std::vector<Ieee80211ModeSet>> Ieee80211ModeSet::modeSe
         { false, &Ieee80211ErpOfdmCompliantModes::erpOfdmMode48Mbps },
         { false, &Ieee80211ErpOfdmCompliantModes::erpOfdmMode54Mbps }, // TODO: ERP-CCK, ERP-PBCC, DSSS-OFDM
     }),
+    Ieee80211ModeSet("g(erp)", {
+        { true, &Ieee80211ErpOfdmCompliantModes::erpOnlyOfdmMode6Mbps },
+        { false, &Ieee80211ErpOfdmCompliantModes::erpOnlyOfdmMode9Mbps },
+        { true, &Ieee80211ErpOfdmCompliantModes::erpOnlyOfdmMode12Mbps },
+        { false, &Ieee80211ErpOfdmCompliantModes::erpOnlyOfdmMode18Mbps },
+        { true, &Ieee80211ErpOfdmCompliantModes::erpOnlyOfdmMode24Mbps },
+        { false, &Ieee80211ErpOfdmCompliantModes::erpOnlyOfdmMode36Mbps },
+        { false, &Ieee80211ErpOfdmCompliantModes::erpOnlyOfdmMode48Mbps },
+        { false, &Ieee80211ErpOfdmCompliantModes::erpOnlyOfdmMode54Mbps },
+    }),
     Ieee80211ModeSet("p", {
         { true, &Ieee80211OFDMCompliantModes::ofdmMode3MbpsCS10MHz },
         { false, &Ieee80211OFDMCompliantModes::ofdmMode4_5MbpsCS10MHz },
@@ -69,7 +82,7 @@ const DelayedInitializer<std::vector<Ieee80211ModeSet>> Ieee80211ModeSet::modeSe
         { false, &Ieee80211OFDMCompliantModes::ofdmMode24MbpsCS10MHz },
         { false, &Ieee80211OFDMCompliantModes::ofdmMode27Mbps },
         }),
-    Ieee80211ModeSet("n", { // This table is not complete; it only contains 2.4GHz homogeneous spatial streams, all mandatory and optional modes
+    Ieee80211ModeSet("n(mixed-2.4Ghz)", { // This table is not complete; it only contains 2.4GHz homogeneous spatial streams, all mandatory and optional modes
         { true, Ieee80211HTCompliantModes::getCompliantMode(&Ieee80211HTMCSTable::htMcs0BW20MHz, Ieee80211HTMode::BAND_2_4GHZ, Ieee80211HTPreambleMode::HT_PREAMBLE_MIXED, Ieee80211HTModeBase::HT_GUARD_INTERVAL_LONG) },
         { true, Ieee80211HTCompliantModes::getCompliantMode(&Ieee80211HTMCSTable::htMcs1BW20MHz, Ieee80211HTMode::BAND_2_4GHZ, Ieee80211HTPreambleMode::HT_PREAMBLE_MIXED, Ieee80211HTModeBase::HT_GUARD_INTERVAL_LONG) },
         { true, Ieee80211HTCompliantModes::getCompliantMode(&Ieee80211HTMCSTable::htMcs2BW20MHz, Ieee80211HTMode::BAND_2_4GHZ, Ieee80211HTPreambleMode::HT_PREAMBLE_MIXED, Ieee80211HTModeBase::HT_GUARD_INTERVAL_LONG) },
@@ -142,6 +155,16 @@ Ieee80211ModeSet::Ieee80211ModeSet(const char *name, const std::vector<Entry> en
 {
     std::vector<Entry> *nonConstEntries = const_cast<std::vector<Entry> *>(&this->entries);
     std::stable_sort(nonConstEntries->begin(), nonConstEntries->end(), EntryNetBitrateComparator());
+    auto referenceMode = entries[0].mode;
+    for (auto entry : entries) {
+        auto mode = entry.mode;
+        if (mode->getSifsTime() != referenceMode->getSifsTime() ||
+            mode->getSlotTime() != referenceMode->getSlotTime() ||
+            mode->getPhyRxStartDelay() != referenceMode->getPhyRxStartDelay())
+        {
+            // FIXME: throw cRuntimeError("Sifs, slot and phyRxStartDelay time must be identical within a ModeSet");
+        }
+    }
 }
 
 int Ieee80211ModeSet::findModeIndex(const IIeee80211Mode *mode) const
@@ -242,7 +265,7 @@ const IIeee80211Mode *Ieee80211ModeSet::getSlowerMandatoryMode(const IIeee80211M
 const IIeee80211Mode *Ieee80211ModeSet::getFasterMandatoryMode(const IIeee80211Mode *mode) const
 {
     int index = findModeIndex(mode);
-    if (index > 0)
+    if (index >= 0)
         for (int i = index+1; i < (int)entries.size(); i++)
             if (entries[i].isMandatory)
                 return entries[i].mode;
@@ -262,8 +285,14 @@ const Ieee80211ModeSet *Ieee80211ModeSet::findModeSet(const char *mode)
 const Ieee80211ModeSet *Ieee80211ModeSet::getModeSet(const char *mode)
 {
     const Ieee80211ModeSet *modeSet = findModeSet(mode);
-    if (modeSet == nullptr)
-        throw cRuntimeError("Unknown 802.11 operational mode: '%s'", mode);
+    if (modeSet == nullptr) {
+        std::string validModeSets;
+        for (int index = 0; index < (int)(&modeSets)->size(); index++) {
+            const Ieee80211ModeSet *modeSet = &(&modeSets)->at(index);
+            validModeSets += std::string("'") + modeSet->getName() + "' ";
+        }
+        throw cRuntimeError("Unknown 802.11 operational mode: '%s', valid modes are: %s", mode, validModeSets.c_str());
+    }
     else
         return modeSet;
 }

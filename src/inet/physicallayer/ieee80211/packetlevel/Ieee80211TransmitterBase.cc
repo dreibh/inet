@@ -40,7 +40,7 @@ void Ieee80211TransmitterBase::initialize(int stage)
     if (stage == INITSTAGE_LOCAL) {
         const char *opMode = par("opMode");
         setModeSet(*opMode ? Ieee80211ModeSet::getModeSet(opMode) : nullptr);
-        setMode(modeSet != nullptr ? modeSet->getMode(bitrate) : nullptr);
+        setMode(modeSet != nullptr ? (bitrate != bps(-1) ? modeSet->getMode(bitrate) : nullptr) : nullptr);
         const char *bandName = par("bandName");
         setBand(*bandName != '\0' ? Ieee80211CompliantBands::getBand(bandName) : nullptr);
         int channelNumber = par("channelNumber");
@@ -62,25 +62,33 @@ std::ostream& Ieee80211TransmitterBase::printToStream(std::ostream& stream, int 
 
 const IIeee80211Mode *Ieee80211TransmitterBase::computeTransmissionMode(const TransmissionRequest *transmissionRequest) const
 {
+    const IIeee80211Mode *transmissionMode;
     const Ieee80211TransmissionRequest *ieee80211TransmissionRequest = dynamic_cast<const Ieee80211TransmissionRequest *>(transmissionRequest);
     if (ieee80211TransmissionRequest != nullptr && ieee80211TransmissionRequest->getMode() != nullptr) {
         if (modeSet != nullptr && !modeSet->containsMode(ieee80211TransmissionRequest->getMode()))
             throw cRuntimeError("Unsupported mode requested");
-        return ieee80211TransmissionRequest->getMode();
+        transmissionMode = ieee80211TransmissionRequest->getMode();
     }
     else if (modeSet != nullptr && transmissionRequest != nullptr && !std::isnan(transmissionRequest->getBitrate().get()))
-        return modeSet->getMode(transmissionRequest->getBitrate());
+        transmissionMode = modeSet->getMode(transmissionRequest->getBitrate());
     else
-        return mode;
+        transmissionMode = mode;
+    if (transmissionMode == nullptr)
+        throw cRuntimeError("Transmission mode is undefined");
+    return transmissionMode;
 }
 
 const Ieee80211Channel *Ieee80211TransmitterBase::computeTransmissionChannel(const TransmissionRequest *transmissionRequest) const
 {
+    const Ieee80211Channel *transmissionChannel;
     const Ieee80211TransmissionRequest *ieee80211TransmissionRequest = dynamic_cast<const Ieee80211TransmissionRequest *>(transmissionRequest);
     if (ieee80211TransmissionRequest != nullptr && ieee80211TransmissionRequest->getChannel() != nullptr)
-        return ieee80211TransmissionRequest->getChannel();
+        transmissionChannel = ieee80211TransmissionRequest->getChannel();
     else
-        return channel;
+        transmissionChannel = channel;
+    if (transmissionChannel == nullptr)
+        throw cRuntimeError("Transmission channel is undefined");
+    return transmissionChannel;
 }
 
 W Ieee80211TransmitterBase::computeTransmissionPower(const TransmissionRequest *transmissionRequest) const

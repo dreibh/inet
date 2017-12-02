@@ -40,7 +40,7 @@
                        inet.transportlayer.tcp_lwip
                       "
         extraSourceFolders = ""
-        compileFlags = "-DWITH_TCP_LWIP -Iinet/transportlayer/tcp_lwip/lwip/include -Iinet/transportlayer/tcp_lwip/lwip/include/ipv4 -Iinet/transportlayer/tcp_lwip/lwip/include/ipv6"
+        compileFlags = "-DWITH_TCP_LWIP"
         linkerFlags = ""
         />
     <feature
@@ -807,16 +807,17 @@
         labels = ""
         nedPackages = "
                        inet.visualizer.base
+                       inet.visualizer.common
                        inet.visualizer.environment
                        inet.visualizer.integrated
                        inet.visualizer.linklayer
                        inet.visualizer.mobility
                        inet.visualizer.networklayer
-                       inet.visualizer.networknode
                        inet.visualizer.physicallayer
+                       inet.visualizer.power
                        inet.visualizer.scene
-                       inet.visualizer.statistic
                        inet.visualizer.transportlayer
+                       inet.visualizer.util
                       "
         extraSourceFolders = ""
         compileFlags = "-DWITH_VISUALIZERS"
@@ -1115,7 +1116,7 @@
         description = "A step-by-step tutorial starting from the basics, and introducing new features and concepts related to wireless communication networks."
         initiallyEnabled = "true"
         requires = "physicalenvironment apskradio idealwireless Ieee80211 IPv4 UDP AODV"
-        labels = ""
+        labels = "tutorial wireless"
         nedPackages = "inet.tutorials.wireless"
         extraSourceFolders = ""
         compileFlags = ""
@@ -1127,8 +1128,44 @@
         description = "A step-by-step tutorial starting from the basics, and introducing new features and concepts related to visualizing state and behavior of communication networks."
         initiallyEnabled = "true"
         requires = "visualization physicalenvironment Ieee80211 IPv4 AODV"
-        labels = ""
+        labels = "tutorial visualization"
         nedPackages = "inet.tutorials.visualization"
+        extraSourceFolders = ""
+        compileFlags = ""
+        linkerFlags = ""
+        />
+    <feature
+        id="configuratortutorial"
+        name="Configurator tutorial"
+        description = "A step-by-step tutorial starting from the basics, and introducing new features and concepts related to automatic IP address and routing table configuartion."
+        initiallyEnabled = "true"
+        requires = "Ieee80211 IPv4 AODV Ethernet visualization"
+        labels = "tutorial configuration"
+        nedPackages = "inet.tutorials.configurator"
+        extraSourceFolders = ""
+        compileFlags = ""
+        linkerFlags = ""
+        />
+    <feature
+        id="visualizershowcases"
+        name="Visualization showcaes"
+        description = "Simple showcases demonstrationg features and concepts related to visualizing state and behavior of communication networks."
+        initiallyEnabled = "true"
+        requires = "visualization physicalenvironment Ethernet Ieee80211 IPv4 AODV"
+        labels = "showcase visualization"
+        nedPackages = "inet.showcases.visualizer"
+        extraSourceFolders = ""
+        compileFlags = ""
+        linkerFlags = ""
+        />
+    <feature
+        id="wirelessshowcases"
+        name="Wireless showcaes"
+        description = "Simple showcases demonstrationg wireless features."
+        initiallyEnabled = "true"
+        requires = "visualization physicalenvironment apskradio Ieee80211 IPv4 AODV"
+        labels = "showcase visualization"
+        nedPackages = "inet.showcases.wireless"
         extraSourceFolders = ""
         compileFlags = ""
         linkerFlags = ""

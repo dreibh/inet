@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -20,7 +20,7 @@
 #include "inet/common/OSGUtils.h"
 #include "inet/environment/contract/IPhysicalEnvironment.h"
 #include "inet/mobility/contract/IMobility.h"
-#include "inet/visualizer/networknode/NetworkNodeOsgVisualizer.h"
+#include "inet/visualizer/scene/NetworkNodeOsgVisualizer.h"
 #include "inet/visualizer/scene/SceneOsgEarthVisualizer.h"
 
 #ifdef WITH_OSG
@@ -96,7 +96,11 @@ void SceneOsgEarthVisualizer::initializeViewpoint()
     auto euclideanCenter = boundingSphere.center();
     auto geographicSrsEye = coordinateSystem->computeGeographicCoordinate(Coord(euclideanCenter.x(), euclideanCenter.y(), euclideanCenter.z()));
     auto osgCanvas = visualizerTargetModule->getOsgCanvas();
+#if OMNETPP_BUILDNUM >= 1012
+    osgCanvas->setEarthViewpoint(cOsgCanvas::EarthViewpoint(geographicSrsEye.longitude, geographicSrsEye.latitude, geographicSrsEye.altitude, -45, -45, cameraDistanceFactor * radius));
+#else
     osgCanvas->setEarthViewpoint(osgEarth::Viewpoint("home", geographicSrsEye.longitude, geographicSrsEye.latitude, geographicSrsEye.altitude, -45, -45, cameraDistanceFactor * radius));
+#endif
 }
 
 #endif // ifdef WITH_OSG

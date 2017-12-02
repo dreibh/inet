@@ -27,18 +27,25 @@ import sys
 import threading
 import time
 import unittest
+from distutils import spawn
 from StringIO import StringIO
 
 
 inetRoot = os.path.abspath("../..")
 sep = ";" if sys.platform == 'win32' else ':'
-nedPath = inetRoot + "/src" + sep + inetRoot + "/examples" + sep + inetRoot + "/tests/networks"
+nedPath = inetRoot + "/src" + sep + inetRoot + "/examples" + sep + inetRoot + "/showcases" + sep + inetRoot + "/tutorials" + sep + inetRoot + "/tests/networks"
 inetLib = inetRoot + "/src/INET"
-opp_run = "opp_run"
-cpuTimeLimit = "300s"
+cpuTimeLimit = "30000s"
 logFile = "test.out"
 extraOppRunArgs = ""
 exitCode = 0
+
+if spawn.find_executable("opp_run_dbg"):
+	executable = "opp_run_dbg"
+elif spawn.find_executable("opp_run"):
+	executable = "opp_run"
+elif spawn.find_executable("opp_run_release"):
+	executable = "opp_run_release"
 
 class FingerprintTestCaseGenerator():
     fileToSimulationsMap = {}
@@ -215,7 +222,7 @@ class SimulationResult:
 
 
 class SimulationTestCase(unittest.TestCase):
-    def runSimulation(self, title, command, workingdir):
+    def runSimulation(self, title, command, workingdir, resultdir):
         global logFile
         ensure_dir(workingdir + "/results")
 
@@ -226,6 +233,16 @@ class SimulationTestCase(unittest.TestCase):
 
         elapsedTime = time.time() - t0
         FILE = open(logFile, "a")
+        FILE.write("------------------------------------------------------\n"
+                 + "Running: " + title + "\n\n"
+                 + "$ cd " + workingdir + "\n"
+                 + "$ " + command + "\n\n"
+                 + out.strip() + "\n\n"
+                 + "Exit code: " + str(exitcode) + "\n"
+                 + "Elapsed time:  " + str(round(elapsedTime,2)) + "s\n\n")
+        FILE.close()
+
+        FILE = open(resultdir + "/test.out", "w")
         FILE.write("------------------------------------------------------\n"
                  + "Running: " + title + "\n\n"
                  + "$ cd " + workingdir + "\n"
@@ -286,11 +303,11 @@ class FingerprintTestCase(SimulationTestCase):
 
     def runTest(self):
         # CPU time limit is a safety guard: fingerprint checks shouldn't take forever
-        global inetRoot, opp_run, nedPath, cpuTimeLimit, extraOppRunArgs
+        global inetRoot, executable, nedPath, cpuTimeLimit, extraOppRunArgs
 
         # run the simulation
         workingdir = _iif(self.wd.startswith('/'), inetRoot + "/" + self.wd, self.wd)
-        wdname = '' + self.wd
+        wdname = '' + self.wd + ' ' + self.args
         wdname = re.sub('/', '_', wdname);
         wdname = re.sub('[\W]+', '_', wdname);
         resultdir = os.path.abspath(".") + "/results/" + self.csvFile + "/" + wdname;
@@ -299,7 +316,7 @@ class FingerprintTestCase(SimulationTestCase):
                 os.makedirs(resultdir)
             except OSError:
                 pass
-        command = opp_run + " -n " + nedPath + " -l " + inetLib + " -u Cmdenv " + self.args + \
+        command = executable + " -n " + nedPath + " -l " + inetLib + " -u Cmdenv " + self.args + \
             _iif(self.simtimelimit != "", " --sim-time-limit=" + self.simtimelimit, "") + \
             " \"--fingerprint=" + self.fingerprint + "\" --cpu-time-limit=" + cpuTimeLimit + \
             " --vector-recording=false --scalar-recording=true" + \
@@ -309,7 +326,7 @@ class FingerprintTestCase(SimulationTestCase):
         anyFingerprintBad = False;
         computedFingerprints = set()
         for rep in range(self.repeat):
-            result = self.runSimulation(self.title, command, workingdir)
+            result = self.runSimulation(self.title, command, workingdir, resultdir)
 
             # process the result
             # note: fingerprint mismatch is technically NOT an error in 4.2 or before! (exitcode==0)
@@ -566,13 +583,17 @@ def ensure_dir(f):
         os.makedirs(f)
 
 if __name__ == "__main__":
+    defaultNumThreads = multiprocessing.cpu_count();
+    if defaultNumThreads >= 6:
+        defaultNumThreads = defaultNumThreads - 1
     parser = argparse.ArgumentParser(description='Run the fingerprint tests specified in the input files.')
     parser.add_argument('testspecfiles', nargs='*', metavar='testspecfile', help='CSV files that contain the tests to run (default: *.csv). Expected CSV file columns: workingdir, args, simtimelimit, fingerprint')
     parser.add_argument('-m', '--match', action='append', metavar='regex', help='Line filter: a line (more precisely, workingdir+SPACE+args) must match any of the regular expressions in order for that test case to be run')
     parser.add_argument('-x', '--exclude', action='append', metavar='regex', help='Negative line filter: a line (more precisely, workingdir+SPACE+args) must NOT match any of the regular expressions in order for that test case to be run')
-    parser.add_argument('-t', '--threads', type=int, default=multiprocessing.cpu_count(), help='number of parallel threads (default: number of CPUs, currently '+str(multiprocessing.cpu_count())+')')
+    parser.add_argument('-t', '--threads', type=int, default=defaultNumThreads, help='number of parallel threads (default: number of CPUs, currently '+str(defaultNumThreads)+')')
     parser.add_argument('-r', '--repeat', type=int, default=1, help='number of repeating each test (default: 1)')
     parser.add_argument('-a', '--oppargs', action='append', metavar='oppargs', nargs='*', help='extra opp_run arguments without leading "--", you can terminate list with " -- " ')
+    parser.add_argument('-e', '--executable', help='Determines which binary to execute (e.g. opp_run_dbg, opp_run_release)')
     args = parser.parse_args()
 
     if os.path.isfile(logFile):
@@ -586,6 +607,9 @@ if __name__ == "__main__":
         for oppArgList in args.oppargs:
             for oppArg in oppArgList:
                 extraOppRunArgs += " --" + oppArg
+
+    if args.executable:
+        executable = args.executable
 
     generator = FingerprintTestCaseGenerator()
     testcases = generator.generateFromCSV(args.testspecfiles, args.match, args.exclude, args.repeat)

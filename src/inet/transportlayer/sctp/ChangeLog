@@ -1,5 +1,34 @@
 ====== inet-3.x ======
 
+2017-10-02  ------ inet-3.6.2 released ------
+
+2017-07-06  ------ inet-3.6.1 released ------
+
+2017-06-09  ------ inet-3.6.0 released ------
+
+2017-06-01  Zoltan Bojthe
+
+	CID 77786 Out-of-bounds read
+
+2017-06-01  Zoltan Bojthe
+
+	CID 179285 Logical vs. bitwise operator, code indentation
+
+2017-02-20  ------ inet-3.5.0 released ------
+
+2016-11-24  Irene Ruengeler
+
+	Packetdrill: Add StreamReconfig support for SCTP
+
+2016-09-22  Zoltan Bojthe
+
+	omnetpp5: add/use refreshDisplay()
+
+2016-07-20  Zoltan Bojthe
+
+	omnetpp5: replace deprecated cQueue functions: operator(), length(),
+	empty()
+
 2016-06-15  ------ inet-3.4.0 released ------
 
 2016-06-01  ------ inet-3.3.0 released ------
