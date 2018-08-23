@@ -15,11 +15,12 @@
 
 package inet.node.wireless;
 
+import inet.common.MessageDispatcher;
 import inet.common.lifecycle.NodeStatus;
-import inet.linklayer.contract.IMACAddressTable;
-import inet.linklayer.contract.IMACRelayUnit;
-import inet.linklayer.contract.IWiredNic;
-import inet.linklayer.contract.IWirelessNic;
+import inet.linklayer.contract.IEthernetInterface;
+import inet.linklayer.contract.IMacAddressTable;
+import inet.linklayer.contract.IMacRelayUnit;
+import inet.linklayer.contract.IWirelessInterface;
 import inet.mobility.contract.IMobility;
 import inet.networklayer.common.InterfaceTable;
 
@@ -32,9 +33,9 @@ import inet.networklayer.common.InterfaceTable;
 // By default, the access point is stationary (~StationaryMobility),
 // but that can also be configured by a parameter.
 //
-// The wlan[*].mgmtType can be configured for different management types
-// currently it can be: ~Ieee80211MgmtAPSimplified and ~Ieee80211MgmtAP.
-// By default it is ~Ieee80211MgmtAP. The Simplified version does not
+// The wlan[*].mgmt.typename can be configured for different management types
+// currently it can be: ~Ieee80211MgmtApSimplified and ~Ieee80211MgmtAp.
+// By default it is ~Ieee80211MgmtAp. The Simplified version does not
 // support channel scanning, authentication and association .
 // In this case, nodes must explicitly specify the hardware address
 // of the wlan card they want to be associated with.
@@ -45,13 +46,13 @@ module AccessPoint
         @networkNode();
         @labels(node,ethernet-node,wireless-node);
         @display("i=device/accesspoint");
-        string mobilityType = default("StationaryMobility"); // how the node moves around. see: inet.mobility
-        string relayUnitType = default(firstAvailable("Ieee8021dRelay","MACRelayUnit")); // type of the IMACRelayUnit (MACRelayUnit, Ieee8021dRelay, etc)
-        string macTableType = default("MACAddressTable"); // type of the ~IMACAddressTable
         int numWlanInterfaces = default(1);               // the number of radios in the access point
         bool hasStatus = default(false);
-        wlan[*].mgmtType = default("Ieee80211MgmtAP");
-        eth[*].encapType = "EtherEncapDummy";
+        wlan[*].mgmt.typename = default("Ieee80211MgmtAp");
+        wlan[*].llc.typename = default("Ieee80211Portal");
+        wlan[*].agent.typename = default("");
+        wlan[*].radio.antenna.mobilityModule = default("^.^.^.mobility");
+        eth[*].encap.typename = "EtherEncapDummy";
         *.interfaceTableModule = default(absPath(".interfaceTable"));
     gates:
         input radioIn[numWlanInterfaces] @directIn;
@@ -66,40 +67,46 @@ module AccessPoint
             parameters:
                 @display("p=100,200;is=s");
         }
-        mobility: <mobilityType> like IMobility {
-            parameters:
-                @display("p=100,300;is=s");
-        }
-        macTable: <macTableType> like IMACAddressTable {
+        mobility: <default("StationaryMobility")> like IMobility {
             parameters:
                 @display("p=100,400;is=s");
         }
-        relayUnit: <relayUnitType> like IMACRelayUnit if sizeof(ethg)+numWlanInterfaces>1 && relayUnitType != "" {
+        macTable: <default("MacAddressTable")> like IMacAddressTable {
             parameters:
-                @display("p=400,200");
+                @display("p=100,300;is=s");
         }
-        wlan[numWlanInterfaces]: <default("Ieee80211Nic")> like IWirelessNic {
+        relayUnit: <default(firstAvailable("Ieee8021dRelay","MacRelayUnit"))> like IMacRelayUnit if sizeof(ethg)+numWlanInterfaces > 1 && typename != "" {
             parameters:
-                @display("p=300,400,row;q=queue");
+                @display("p=400,100");
         }
-        eth[sizeof(ethg)]: <default("EthernetInterface")> like IWiredNic {
+        nl: MessageDispatcher if sizeof(ethg)+numWlanInterfaces > 1 && exists(relayUnit) {
+            parameters:
+                @display("p=800,200;b=1200,5,,,,1");
+        }
+        wlan[numWlanInterfaces]: <default("Ieee80211Interface")> like IWirelessInterface {
+            parameters:
+                @display("p=250,300,row,150;q=queue");
+        }
+        eth[sizeof(ethg)]: <default("EthernetInterface")> like IEthernetInterface {
             parameters:
                 mac.promiscuous = true;
-                @display("p=500,400,row;q=txQueue");
+                @display("p=850,300,row;q=txQueue");
         }
     connections allowunconnected:
+        nl.out++--> relayUnit.ifIn if sizeof(ethg)+numWlanInterfaces > 1 && exists(relayUnit);
+        nl.in++ <-- relayUnit.ifOut if sizeof(ethg)+numWlanInterfaces > 1 && exists(relayUnit);
         // connections to network outside
         // wireless interfaces MUST be connected first (i.e. ports 0..numWlanInterfaces-1)
         // because broadcasts must be handled differently for wireless IFs by the relayUnit
         for i=0..numWlanInterfaces-1 {
-            radioIn[i] --> wlan[i].radioIn;
-            wlan[i].upperLayerOut --> relayUnit.ifIn++ if sizeof(ethg)+numWlanInterfaces>1;
-            wlan[i].upperLayerIn <-- relayUnit.ifOut++ if sizeof(ethg)+numWlanInterfaces>1;
+            radioIn[i] --> { @display("m=s"); } --> wlan[i].radioIn;
+            wlan[i].upperLayerOut --> nl.in++ if sizeof(ethg)+numWlanInterfaces > 1 && exists(relayUnit);
+            wlan[i].upperLayerIn <-- nl.out++ if sizeof(ethg)+numWlanInterfaces > 1 && exists(relayUnit);
         }
         // ethernet must be connected only AFTER wireless ports
         for i=0..sizeof(ethg)-1 {
-            eth[i].phys <--> ethg[i];
-            eth[i].upperLayerIn <-- relayUnit.ifOut++ if sizeof(ethg)+numWlanInterfaces>1;
-            eth[i].upperLayerOut --> relayUnit.ifIn++ if sizeof(ethg)+numWlanInterfaces>1;
+            eth[i].phys <--> { @display("m=s"); } <--> ethg[i];
+            eth[i].upperLayerIn <-- nl.out++ if sizeof(ethg)+numWlanInterfaces>1;
+            eth[i].upperLayerOut --> nl.in++ if sizeof(ethg)+numWlanInterfaces>1;
         }
 }

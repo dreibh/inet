@@ -18,17 +18,16 @@
 package inet.visualizer.contract;
 
 //
-// This module interface allows configuring different IIntegratedVisualizer
+// This module interface allows configuring different ~IIntegratedVisualizer
 // submodules from INI files. Integrated visualizers are compound modules, they
 // don't display anything on their own. Instead they combine multiple
 // visualizers, most often simple modules, to provide a convenient way to add
-// complex visualization to a simulation. 
+// complex visualizations to a simulation.
 //
-// @see ~IntegratedCanvasVisualizer, ~IntegratedOsgVisualizer, and
-// ~IntegratedVisualizerBase
+// @see ~IntegratedCanvasVisualizer, ~IntegratedOsgVisualizer, ~IntegratedVisualizer
 //
 moduleinterface IIntegratedVisualizer
 {
     parameters:
-        @display("i=block/app_s");
+        @display("i=block/app");
 }

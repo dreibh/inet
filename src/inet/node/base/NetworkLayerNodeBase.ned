@@ -19,79 +19,75 @@ package inet.node.base;
 
 import inet.common.MessageDispatcher;
 import inet.networklayer.contract.INetworkLayer;
-import inet.networklayer.generic.GenericNetworkLayer;
-import inet.networklayer.ipv4.IPv4NetworkLayer;
-import inet.networklayer.ipv6.IPv6NetworkLayer;
 
 module NetworkLayerNodeBase extends LinkLayerNodeBase
 {
     parameters:
         bool hasIpv4 = default(true);
         bool hasIpv6 = default(false);
-        bool hasGn = default(false);    //FIXME redundant/unused? !!! see also networkLayerType, 
-        string networkLayerType = default("");
+        bool hasGn = default(false); 
         bool forwarding = default(false);
         bool multicastForwarding = default(false);
         *.forwarding = forwarding;
         *.multicastForwarding = multicastForwarding;
-        @figure[networkLayer](type=rectangle; pos=250,400; size=680,200; fillColor=#00ff00; cornerRadius=12; fillOpacity=0.1);
-        @figure[networkLayer.title](type=text; pos=800,410; text="network layer");
+        @figure[networkLayer](type=rectangle; pos=250,306; size=1000,130; fillColor=#00ff00; lineColor=#808080; cornerRadius=5; fillOpacity=0.1);
+        @figure[networkLayer.title](type=text; pos=1245,311; anchor=ne; text="network layer");
 
     submodules:
-        ipv4: IPv4NetworkLayer if hasIpv4 {
+        ipv4: <default("Ipv4NetworkLayer")> like INetworkLayer if hasIpv4 {
             parameters:
-                @display("p=400,500;q=queue");
+                @display("p=375,376;q=queue");
         }
-        ipv6: IPv6NetworkLayer if hasIpv6 {
+        ipv6: <default("Ipv6NetworkLayer")> like INetworkLayer if hasIpv6 {
             parameters:
-                @display("p=500,500;q=queue");
+                @display("p=525,376;q=queue");
         }
-        generic: <networkLayerType> like INetworkLayer if networkLayerType != "" {
+        generic: <default("")> like INetworkLayer if hasGn {
             parameters:
-                @display("p=600,500;q=queue");
+                @display("p=675,376;q=queue");
         }
         nl: MessageDispatcher {
             parameters:
-                @display("p=550,600;b=580,5,,,,1");
+                @display("p=750,446;b=1000,5,,,,1");
         }
 
     connections allowunconnected:
-        ipv4.ifIn <-- nl.upperLayerOut++ if hasIpv4;
-        ipv4.ifOut --> nl.upperLayerIn++ if hasIpv4;
+        ipv4.ifIn <-- nl.out++ if hasIpv4;
+        ipv4.ifOut --> nl.in++ if hasIpv4;
 
-        ipv6.ifIn <-- nl.upperLayerOut++ if hasIpv6;
-        ipv6.ifOut --> nl.upperLayerIn++ if hasIpv6;
+        ipv6.ifIn <-- nl.out++ if hasIpv6;
+        ipv6.ifOut --> nl.in++ if hasIpv6;
 
-        generic.ifIn <-- nl.upperLayerOut++ if networkLayerType != "";
-        generic.ifOut --> nl.upperLayerIn++ if networkLayerType != "";
+        generic.ifIn <-- nl.out++ if exists(generic);
+        generic.ifOut --> nl.in++ if exists(generic);
 
         for i=0..numLoInterfaces-1 {
-            nl.lowerLayerOut++ --> lo[i].upperLayerIn;
-            lo[i].upperLayerOut --> nl.lowerLayerIn++;
+            nl.out++ --> lo[i].upperLayerIn;
+            lo[i].upperLayerOut --> nl.in++;
         }
 
         for i=0..sizeof(radioIn)-1 {
-            wlan[i].upperLayerOut --> nl.lowerLayerIn++;
-            wlan[i].upperLayerIn <-- nl.lowerLayerOut++;
+            wlan[i].upperLayerOut --> nl.in++;
+            wlan[i].upperLayerIn <-- nl.out++;
         }
 
         for i=0..sizeof(ethg)-1 {
-            eth[i].upperLayerOut --> nl.lowerLayerIn++;
-            eth[i].upperLayerIn <-- nl.lowerLayerOut++;
+            eth[i].upperLayerOut --> nl.in++;
+            eth[i].upperLayerIn <-- nl.out++;
         }
 
         for i=0..sizeof(pppg)-1 {
-            ppp[i].upperLayerOut --> nl.lowerLayerIn++;
-            ppp[i].upperLayerIn <-- nl.lowerLayerOut++;
+            ppp[i].upperLayerOut --> nl.in++;
+            ppp[i].upperLayerIn <-- nl.out++;
         }
 
         for i=0..numExtInterfaces-1 {
-            ext[i].upperLayerOut --> nl.lowerLayerIn++;
-            ext[i].upperLayerIn <-- nl.lowerLayerOut++;
+            ext[i].upperLayerOut --> nl.in++;
+            ext[i].upperLayerIn <-- nl.out++;
         }
 
         for i=0..numTunInterfaces-1 {
-            tun[i].upperLayerOut --> nl.lowerLayerIn++;
-            tun[i].upperLayerIn <-- nl.lowerLayerOut++;
+            tun[i].upperLayerOut --> nl.in++;
+            tun[i].upperLayerIn <-- nl.out++;
         }
 }

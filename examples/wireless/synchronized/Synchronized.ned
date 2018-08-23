@@ -18,35 +18,35 @@
 
 package inet.examples.wireless.synchronized;
 
-import inet.networklayer.configurator.ipv4.IPv4NetworkConfigurator;
+import inet.networklayer.configurator.ipv4.Ipv4NetworkConfigurator;
 import inet.node.inet.AdhocHost;
 import inet.physicallayer.ieee80211.packetlevel.Ieee80211ScalarRadioMedium;
-import inet.visualizer.integrated.IntegratedCanvasVisualizer;
+import inet.visualizer.contract.IIntegratedVisualizer;
 
 network Synchronized
 {
     parameters:
         int nodeCount;
         **.bitrate = 11Mbps;
-        **.arpType = "GlobalARP";
-        @display("bgl=3");
+        **.arp.typename = "GlobalArp";
+        @display("bgb=650,450;bgl=3");
     submodules:
-        visualizer: IntegratedCanvasVisualizer {
+        visualizer: <default("IntegratedCanvasVisualizer")> like IIntegratedVisualizer if hasVisualizer() {
             parameters:
-                @display("p=100,50");
+                @display("p=100,300;is=s");
         }
-        configurator: IPv4NetworkConfigurator {
+        configurator: Ipv4NetworkConfigurator {
             parameters:
-                @display("p=100,150");
+                @display("p=100,100;is=s");
         }
         radioMedium: Ieee80211ScalarRadioMedium {
             parameters:
-                @display("p=100,250");
+                @display("p=100,200;is=s");
         }
         node[nodeCount]: AdhocHost {
             parameters:
                 numApps = 1;
-                app[0].typename = "UDPBasicApp";
+                app[0].typename = "UdpBasicApp";
                 app[0].destAddresses = "224.0.0.1";
                 app[0].localPort = 1;
                 app[0].destPort = 1;

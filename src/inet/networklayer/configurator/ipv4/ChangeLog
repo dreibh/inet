@@ -1,4 +1,82 @@
+====== inet-4.x ======
+
+2018-06-27  ------ inet-4.0.0 released ------
+
+2018-05-07  Mani Amoozadeh
+
+	Added addDirectRoutes parameter to Ipv4NetworkConfigurator.
+
+2018-04-13  ------ inet-3.99.3 released ------
+
+2018-02-19  Zoltan Bojthe
+
+	Renamed functions to use camel case.
+
+2017-11-24  Gyorgy Szaszko
+
+	Added kludge to IPv4NetworkConfigurator to fix route metric for the case
+	when datarate is 0.
+
+2017-12-22  ------ inet-3.99.2 released ------
+
+2017-12-20  Zoltan Bojthe
+
+	Renaming:
+	    FlatNetworkConfigurator -> Ipv4FlatNetworkConfigurator
+	    IIPv4RoutingTable -> IIpv4RoutingTable
+	    IPv4 -> Ipv4
+	    IPv4Address -> Ipv4Address
+	    IPv4InterfaceData -> Ipv4InterfaceData
+	    IPv4MulticastRoute -> Ipv4MulticastRoute
+	    IPv4NetworkConfigurator -> Ipv4NetworkConfigurator
+	    IPv4NodeConfigurator -> Ipv4NodeConfigurator
+	    IPv4Route -> Ipv4Route
+	    IPv4RoutingTable -> Ipv4RoutingTable
+
+2017-12-15  Zoltan Bojthe
+
+	Renamed deprecated info() to str().
+
+2017-12-15  Zoltan Bojthe
+
+	Remove unnecessary cPar::stringValue(), cPar::boolValue() calls.
+
+2017-11-16  ------ inet-3.99.1 released ------
+
+2016-06-29  Zoltan Bojthe
+
+	Added parameter routingTableModule.
+
+2016-06-16  Levente Mészáros
+
+	Removed icon size specification from module definitions.
+	We should use is=s instead in the submodule display strings when appropriate.
+
 ====== inet-3.x ======
+
+2018-03-21  ------ inet-3.6.4 released ------
+
+2017-12-22  ------ inet-3.6.3 released ------
+
+2017-10-02  ------ inet-3.6.2 released ------
+
+2017-07-06  ------ inet-3.6.1 released ------
+
+2017-06-09  ------ inet-3.6.0 released ------
+
+2017-05-24  Levente Mészáros
+
+	Fixed adding default routes for interfaces where it's disabled.
+
+2017-01-13  Levente Mészáros
+
+	Split configureNode into configureInterface and configureRoutingTable.
+
+2017-02-20  ------ inet-3.5.0 released ------
+
+2017-01-15  xiabin
+
+	typo: s/wirless/wireless
 
 2016-06-15  ------ inet-3.4.0 released ------
 

@@ -44,14 +44,11 @@ class INET_API PassiveQueueBase : public cSimpleModule, public IPassiveQueue
     int numQueueReceived;
     int numQueueDropped;
 
-    /** Signal with packet when received it */
-    static simsignal_t rcvdPkSignal;
+  public:
     /** Signal with packet when enqueued it */
-    static simsignal_t enqueuePkSignal;
+    static simsignal_t packetEnqueuedSignal;
     /** Signal with packet when sent out it */
-    static simsignal_t dequeuePkSignal;
-    /** Signal with packet when dropped it */
-    static simsignal_t dropPkByQueueSignal;
+    static simsignal_t packetDequeuedSignal;
     /** Signal with value of delaying time when sent out a packet. */
     static simsignal_t queueingTimeSignal;
 

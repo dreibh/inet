@@ -9,23 +9,13 @@ import string
 import subprocess
 
 # configuration
-since = '2014-03-19'
+since = '2018-06-26'  # empty means "since last entry in the ChangeLog file"
+fromtag = '' # alternative for 'since': from the given tag or branch
+
 entriesToIgnore = [
-"""2014-03-12  Rudolf Hornig
+"""2017-03-03  Rudolf Hornig
 
-    updated changelogs for v2.3
-
-""",
-"""2014-03-14  Rudolf Hornig
-
-    Revert "updated changelogs for v2.3"
-
-    This reverts commit 1bf7ee83a4677760c23c55cb7ce2b004a2bde193.
-
-""",
-"""2014-02-05  Zoltan Bojthe
-
-    backport: reduce differences in code
+        doc: changelogs updated and tagged
 
 """,
 ]
@@ -33,6 +23,7 @@ addMarker = True
 
 isWindows = ('OS' in os.environ) and os.environ['OS']=='Windows_NT'
 isMSYS = isWindows and ('OSTYPE' in os.environ) and os.environ['OSTYPE']=='msys'
+changedFiles = []
 
 def formatChangeLog(txt):
     txt = re.sub('(?m)^    (    )?', "\t", txt) # spaces-to-tab
@@ -44,22 +35,26 @@ def formatChangeLog(txt):
     return txt
 
 def updateChangeLogIn(dir):
-    global since, addMarker, isWindows, isMSYS
+    global since, addMarker, isWindows, isMSYS, changedFiles
 
     # read existing ChangeLog file
-    f = open(os.path.join(dir,'ChangeLog'), 'r')
+    changelogFile = os.path.join(dir,'ChangeLog')
+    f = open(changelogFile, 'r')
     oldLog = f.read()
     f.close()
 
     # if "since" is not set, find most recent entry in the log
-    if since=="":
+    if since=="" and fromtag=="":
         since = '2000-01-01'
         m = re.search('^\d\d\d\d-\d\d-\d\d', oldLog)
         if m:
             since = m.group(0)
 
     # get appropriately formatted git log since that date
-    gitLogCommand = ['git', 'log', '--date=short', '--pretty=format:%ad  %an%n%n%w(81,8,8)%s%n%n%b', '--since='+since, dir]
+    gitLogCommand = ['git', 'log', '--date=short', '--pretty=format:%ad  %an%n%n%w(81,8,8)%s%n%n%b']
+    if since!="": gitLogCommand +=  ['--since='+since]
+    if fromtag!="": gitLogCommand += [fromtag+"..HEAD"]
+    gitLogCommand += [dir]
     newLog = subprocess.check_output(gitLogCommand, shell=(isWindows and not isMSYS))
     newLog = formatChangeLog(newLog)
 
@@ -80,14 +75,16 @@ def updateChangeLogIn(dir):
     updatedLog = formatChangeLog(updatedLog)
 
     # write to disk
-    f = open(os.path.join(dir,'ChangeLog'), 'w')
+    f = open(changelogFile, 'w')
     f.write(updatedLog)
     f.close()
+    changedFiles.append(changelogFile)
 
 # find those directories that contain ChangeLogs, and update them
 for root, dirs, files in os.walk('.'):
     if 'ChangeLog' in files:
         print root, "contains ChangeLog, updating..."
         updateChangeLogIn(root)
+print "\nUpdated ChangeLog files:\n", " ".join(changedFiles)
 
 

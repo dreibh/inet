@@ -17,65 +17,70 @@
 
 package inet.node.base;
 
-import inet.common.packet.PcapRecorder;
-import inet.linklayer.contract.IExternalNic;
-import inet.linklayer.contract.ITunNic;
-import inet.linklayer.contract.IWiredNic;
-import inet.linklayer.contract.IWirelessNic;
-import inet.linklayer.loopback.LoopbackInterface;
+import inet.common.packet.recorder.PcapRecorder;
+import inet.linklayer.contract.IEthernetInterface;
+import inet.linklayer.contract.IExternalInterface;
+import inet.linklayer.contract.ILoopbackInterface;
+import inet.linklayer.contract.IPppInterface;
+import inet.linklayer.contract.ITunnelInterface;
+import inet.linklayer.contract.IWirelessInterface;
 import inet.networklayer.common.InterfaceTable;
+
 
 module LinkLayerNodeBase extends NodeBase
 {
     parameters:
-        bool hasPcapRecorder = default(false);
+        int numPcapRecorders = default(0);
         int numLoInterfaces = default(1);
         int numWlanInterfaces = default(0);
+        int numEthInterfaces = default(0);  // minimum number of ethernet interfaces
         int numExtInterfaces = default(0);
+        int numPppInterfaces = default(0);  // minimum number of PPP interfaces
         int numTunInterfaces = default(0);
-        mobilityType = default(numWlanInterfaces > 0 ? "StationaryMobility" : "");
+        mobility.typename = default(numWlanInterfaces > 0 ? "StationaryMobility" : "");
         *.interfaceTableModule = default(absPath(".interfaceTable"));
-        @figure[linkLayer](type=rectangle; pos=250,600; size=680,200; fillColor=#0000ff; cornerRadius=12; fillOpacity=0.1);
-        @figure[linkLayer.title](type=text; pos=800,610; text="link layer");
+        wlan[*].radio.antenna.mobilityModule = default("^.^.^.mobility");
+        @figure[linkLayer](type=rectangle; pos=250,456; size=1000,210; fillColor=#0000ff; lineColor=#808080; cornerRadius=5; fillOpacity=0.1);
+        @figure[linkLayer.title](type=text; pos=1245,461; anchor=ne; text="link layer");
 
     gates:
         input radioIn[numWlanInterfaces] @directIn;
-        inout pppg[] @labels(PPPFrame-conn);
-        inout ethg[] @labels(EtherFrame-conn);
+        inout pppg[numPppInterfaces] @labels(PppFrame-conn) @allowUnconnected;
+        inout ethg[numEthInterfaces] @labels(EtherFrame-conn) @allowUnconnected;
 
     submodules:
+        pcapRecorder[numPcapRecorders]: PcapRecorder {
+            parameters:
+                @display("p=125,560;is=s");
+        }
         interfaceTable: InterfaceTable {
             parameters:
-                @display("p=100,500;is=s");
+                @display("p=125,240;is=s");
         }
-        pcapRecorder: PcapRecorder if hasPcapRecorder {
+        lo[numLoInterfaces]: <default("LoopbackInterface")> like ILoopbackInterface {
             parameters:
-                @display("p=100,600;is=s");
-        }
-        lo[numLoInterfaces]: LoopbackInterface {
-            parameters:
-                @display("p=300,700,row,50;");
+                @display("p=750,526,row,150");
         }
         // TODO: move wlan interfaces after eth interfaces, but it changes IP address assignment and breaks examples/inet/configurator/complex.ini
-        wlan[numWlanInterfaces]: <default("Ieee80211Nic")> like IWirelessNic {
+        wlan[numWlanInterfaces]: <default("Ieee80211Interface")> like IWirelessInterface {
             parameters:
-                @display("p=600,700,row,50;q=queue");
+                @display("p=375,616,row,150;q=queue");
         }
-        ppp[sizeof(pppg)]: <default("PPPInterface")> like IWiredNic {
+        ppp[sizeof(pppg)]: <default("PppInterface")> like IPppInterface {
             parameters:
-                @display("p=400,700,row,50;q=txQueue");
+                @display("p=300,526,row,150;q=txQueue");
         }
-        eth[sizeof(ethg)]: <default("EthernetInterface")> like IWiredNic {
+        eth[sizeof(ethg)]: <default("EthernetInterface")> like IEthernetInterface {
             parameters:
-                @display("p=500,700,row,50;q=txQueue");
+                @display("p=900,526,row,150;q=txQueue");
         }
-        ext[numExtInterfaces]: <default("ExtInterface")> like IExternalNic {
+        ext[numExtInterfaces]: <default("ExtInterface")> like IExternalInterface {
             parameters:
-                @display("p=700,700,row,50;q=txQueue");
+                @display("p=1125,616,row,150;q=txQueue");
         }
-        tun[numTunInterfaces]: <default("TunInterface")> like ITunNic {
+        tun[numTunInterfaces]: <default("TunInterface")> like ITunnelInterface {
             parameters:
-                @display("p=800,700,row,50;q=txQueue");
+                @display("p=975,616,row,150;q=txQueue");
         }
 
     connections allowunconnected:

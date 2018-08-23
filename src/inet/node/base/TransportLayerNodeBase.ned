@@ -18,9 +18,9 @@
 package inet.node.base;
 
 import inet.common.MessageDispatcher;
-import inet.transportlayer.contract.ISCTP;
-import inet.transportlayer.contract.ITCP;
-import inet.transportlayer.contract.IUDP;
+import inet.transportlayer.contract.ISctp;
+import inet.transportlayer.contract.ITcp;
+import inet.transportlayer.contract.IUdp;
 
 module TransportLayerNodeBase extends NetworkLayerNodeBase
 {
@@ -28,49 +28,45 @@ module TransportLayerNodeBase extends NetworkLayerNodeBase
         bool hasUdp = default(true);
         bool hasTcp = default(true);
         bool hasSctp = default(false);
-        string tcpType = default(firstAvailableOrEmpty("TCP", "TCP_lwIP", "TCP_NSC"));  // tcp implementation (e.g. ~TCP, ~TCP_lwIP, ~TCP_NSC) or ~TCPSpoof
-        string udpType = default(firstAvailableOrEmpty("UDP"));
-        string sctpType = default(firstAvailableOrEmpty("SCTP"));
-        @figure[transportLayer](type=rectangle; pos=250,200; size=680,200; fillColor=#ff0000; cornerRadius=12; fillOpacity=0.1);
-        @figure[transportLayer.title](type=text; pos=800,210; text="transport layer");
-
+        @figure[transportLayer](type=rectangle; pos=250,156; size=1000,130; fillColor=#ff0000; lineColor=#808080; cornerRadius=5; fillOpacity=0.1);
+        @figure[transportLayer.title](type=text; pos=1245,161; anchor=ne; text="transport layer");
     submodules:
-        udp: <udpType> like IUDP if hasUdp {
+        udp: <default(firstAvailableOrEmpty("Udp"))> like IUdp if hasUdp {
             parameters:
-                @display("p=400,300");
+                @display("p=375,226");
         }
-        tcp: <tcpType> like ITCP if hasTcp {
+        tcp: <default(firstAvailableOrEmpty("Tcp", "TcpLwip", "TcpNsc"))> like ITcp if hasTcp {
             parameters:
-                @display("p=500,300");
+                @display("p=525,226");
         }
-        sctp: <sctpType> like ISCTP if hasSctp {
+        sctp: <default(firstAvailableOrEmpty("Sctp"))> like ISctp if hasSctp {
             parameters:
-                @display("p=600,300");
+                @display("p=675,226");
         }
         tn: MessageDispatcher {
             parameters:
-                @display("p=550,400;b=580,5,,,,1");
+                @display("p=750,296;b=1000,5,,,,1");
         }
 
     connections allowunconnected:
-        udp.ipOut --> tn.upperLayerIn++ if hasUdp;
-        udp.ipIn <-- tn.upperLayerOut++ if hasUdp;
+        udp.ipOut --> tn.in++ if hasUdp;
+        udp.ipIn <-- tn.out++ if hasUdp;
 
-        tcp.ipOut --> tn.upperLayerIn++ if hasTcp;
-        tcp.ipIn <-- tn.upperLayerOut++ if hasTcp;
+        tcp.ipOut --> tn.in++ if hasTcp;
+        tcp.ipIn <-- tn.out++ if hasTcp;
 
-        sctp.ipOut --> tn.upperLayerIn++ if hasSctp;
-        tn.upperLayerOut++ --> sctp.ipIn if hasSctp;
+        sctp.ipOut --> tn.in++ if hasSctp;
+        tn.out++ --> sctp.ipIn if hasSctp;
 
-        tn.lowerLayerOut++ --> ipv4.transportIn if hasIpv4;
-        tn.lowerLayerIn++ <-- ipv4.transportOut if hasIpv4;
+        tn.out++ --> ipv4.transportIn if hasIpv4;
+        tn.in++ <-- ipv4.transportOut if hasIpv4;
 
-        tn.lowerLayerOut++ --> ipv6.transportIn if hasIpv6;
-        tn.lowerLayerIn++ <-- ipv6.transportOut if hasIpv6;
+        tn.out++ --> ipv6.transportIn if hasIpv6;
+        tn.in++ <-- ipv6.transportOut if hasIpv6;
 
-        tn.lowerLayerOut++ --> generic.transportIn if hasGn;
-        tn.lowerLayerIn++ <-- generic.transportOut if hasGn;
+        tn.out++ --> generic.transportIn if hasGn;
+        tn.in++ <-- generic.transportOut if hasGn;
 
-        tn.lowerLayerOut++ --> nl.upperLayerIn++;
-        tn.lowerLayerIn++ <-- nl.upperLayerOut++;
+        tn.out++ --> nl.in++;
+        tn.in++ <-- nl.out++;
 }

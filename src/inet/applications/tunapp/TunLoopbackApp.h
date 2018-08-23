@@ -30,9 +30,6 @@ class INET_API TunLoopbackApp : public cSimpleModule
         unsigned int packetsSent;
         unsigned int packetsReceived;
 
-        static simsignal_t sentPkSignal;
-        static simsignal_t rcvdPkSignal;
-
         TunSocket tunSocket;
 
     public:
@@ -41,6 +38,7 @@ class INET_API TunLoopbackApp : public cSimpleModule
 
     protected:
         void initialize(int stage) override;
+        virtual int numInitStages() const override { return NUM_INIT_STAGES; }
         void handleMessage(cMessage *msg) override;
         void finish() override;
 };

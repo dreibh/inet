@@ -18,10 +18,9 @@
 package inet.networklayer.wiseroute;
 
 import inet.common.MessageDispatcher;
-import inet.networklayer.arp.generic.GenericARP;
+import inet.networklayer.arp.ipv4.GlobalArp;
 import inet.networklayer.common.EchoProtocol;
 import inet.networklayer.contract.INetworkLayer;
-
 
 //
 // This module provides a simple network layer.
@@ -34,15 +33,15 @@ module WiseRouteNetworkLayer like INetworkLayer
         @display("i=block/fork");
 
     gates:
-        input ifIn @labels(INetworkDatagram);
-        output ifOut @labels(INetworkDatagram);
+        input ifIn @labels(INetworkHeader);
+        output ifOut @labels(INetworkHeader);
         input transportIn @labels(ITransportPacket/down);
         output transportOut @labels(ITransportPacket/up);
 
     submodules:
-        arp: GenericARP {
+        arp: GlobalArp {
             parameters:
-	            @display("p=100,300");
+                @display("p=100,300");
         }
         np: WiseRoute {
             parameters:
@@ -55,18 +54,18 @@ module WiseRouteNetworkLayer like INetworkLayer
         }
         dp: MessageDispatcher {
             parameters:
-                @display("p=250,200;b=380,5");
+                @display("p=250,200;b=400,5");
         }
 
     connections allowunconnected:
-        dp.upperLayerOut++ --> { @display("m=n"); } --> transportOut;
-        dp.upperLayerIn++ <-- { @display("m=n"); } <-- transportIn;
+        dp.out++ --> { @display("m=n"); } --> transportOut;
+        dp.in++ <-- { @display("m=n"); } <-- transportIn;
 
-        np.transportOut --> dp.lowerLayerIn++;
-        np.transportIn <-- dp.lowerLayerOut++;
+        np.transportOut --> dp.in++;
+        np.transportIn <-- dp.out++;
 
-        dp.upperLayerOut++ --> echo.ipIn;
-        dp.upperLayerIn++ <-- echo.ipOut;
+        dp.out++ --> echo.ipIn;
+        dp.in++ <-- echo.ipOut;
 
         ifIn --> { @display("m=s"); } --> np.queueIn;
         np.queueOut --> { @display("m=s"); } --> ifOut;

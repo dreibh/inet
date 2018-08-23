@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -22,22 +22,19 @@ import inet.visualizer.contract.IPhysicalLinkVisualizer;
 //
 // This module integrates canvas and osg data link visualizers into a single module.
 //
-// @see ~PhysicalLinkCanvasVisualizer, ~PhysicalLinkOsgVisualizer,
-// ~PhysicalLinkVisualizerBase, and ~IPhysicalLinkVisualizer
+// @see ~PhysicalLinkCanvasVisualizer, ~PhysicalLinkOsgVisualizer, ~LinkVisualizerBase, ~IPhysicalLinkVisualizer
 //
 module PhysicalLinkVisualizer like IPhysicalLinkVisualizer
 {
     parameters:
-        @display("i=block/app_s");
-        string canvasVisualizerType = default("PhysicalLinkCanvasVisualizer");
-        string osgVisualizerType = default("PhysicalLinkOsgVisualizer");
+        @display("i=block/app");
     submodules:
-        canvasVisualizer: <canvasVisualizerType> like IPhysicalLinkVisualizer if canvasVisualizerType != "" {
+        canvasVisualizer: <default("PhysicalLinkCanvasVisualizer")> like IPhysicalLinkVisualizer if typename != "" {
             parameters:
-                @display("p=100,50");
+                @display("p=100,100");
         }
-        osgVisualizer: <osgVisualizerType> like IPhysicalLinkVisualizer if osgVisualizerType != "" {
+        osgVisualizer: <default("PhysicalLinkOsgVisualizer")> like IPhysicalLinkVisualizer if typename != "" {
             parameters:
-                @display("p=100,150");
+                @display("p=100,200");
         }
 }

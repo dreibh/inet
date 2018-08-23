@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -21,11 +21,12 @@
 #include "inet/common/figures/HeatMapFigure.h"
 #include "inet/common/figures/TrailFigure.h"
 #include "inet/common/geometry/common/CanvasProjection.h"
-#include "inet/physicallayer/contract/packetlevel/IRadioFrame.h"
 #include "inet/physicallayer/contract/packetlevel/IReceptionDecision.h"
+#include "inet/physicallayer/contract/packetlevel/ISignal.h"
 #include "inet/physicallayer/contract/packetlevel/ITransmission.h"
 #include "inet/visualizer/base/MediumVisualizerBase.h"
-#include "inet/visualizer/networknode/NetworkNodeCanvasVisualizer.h"
+#include "inet/visualizer/scene/NetworkNodeCanvasVisualizer.h"
+#include "inet/visualizer/util/AnimationSpeedInterpolator.h"
 
 namespace inet {
 
@@ -36,33 +37,48 @@ class INET_API MediumCanvasVisualizer : public MediumVisualizerBase
   protected:
     /** @name Parameters */
     //@{
+    double zIndex = NaN;
     const CanvasProjection *canvasProjection = nullptr;
     SignalShape signalShape = SIGNAL_SHAPE_RING;
-    cImageFigure *transmissionImage = nullptr;
-    cImageFigure *receptionImage = nullptr;
+    double signalOpacity = NaN;
+    int signalRingCount = -1;
+    double signalRingSize = NaN;
+    double signalFadingDistance = NaN;
+    double signalFadingFactor = NaN;
+    int signalWaveCount = -1;
+    double signalWaveLength = NaN;
+    double signalWaveWidth = NaN;
+    double signalWaveFadingAnimationSpeedFactor = NaN;
     bool displayCommunicationHeat = false;
     int communicationHeatMapSize = 100;
     //@}
 
     /** @name Internal state */
     //@{
+    enum SignalInProgress {
+        SIP_NONE,
+        SIP_PROPAGATION,
+        SIP_TRANSMISSION,
+    };
+    SignalInProgress lastSignalInProgress = SIP_NONE;
+    AnimationSpeedInterpolator animationSpeedInterpolator;
     NetworkNodeCanvasVisualizer *networkNodeVisualizer = nullptr;
     /**
      * The list of ongoing transmissions.
      */
-    std::vector<const ITransmission *> transmissions;
+    std::vector<const physicallayer::ITransmission *> transmissions;
     /**
-     * The list of ongoing transmission figures.
+     * The list of transmission figures.
      */
-    std::map<const ITransmission *, cFigure *> transmissionFigures;
-    //@}
-
-    /** @name Timer */
-    //@{
+    std::map<const physicallayer::IRadio *, cFigure *> signalDepartureFigures;
     /**
-     * The timer message that is used to update the canvas when propagating signals exist.
+     * The list of reception figures.
      */
-    cMessage *signalPropagationUpdateTimer = nullptr;
+    std::map<const physicallayer::IRadio *, cFigure *> signalArrivalFigures;
+    /**
+     * The propagating signal figures.
+     */
+    std::map<const physicallayer::ITransmission *, cFigure *> signalFigures;
     //@}
 
     /** @name Figures */
@@ -70,11 +86,7 @@ class INET_API MediumCanvasVisualizer : public MediumVisualizerBase
     /**
      * The layer figure that contains the figures representing the ongoing communications.
      */
-    cGroupFigure *communicationLayer = nullptr;
-    /**
-     * The layer figure that contains figures representing the recent radio frame sends.
-     */
-    cGroupFigure *radioFrameLayer = nullptr;
+    cGroupFigure *signalLayer = nullptr;
     /**
      * The heat map figure that shows the recent successful communications.
      */
@@ -83,28 +95,34 @@ class INET_API MediumCanvasVisualizer : public MediumVisualizerBase
 
   protected:
     virtual void initialize(int stage) override;
-    virtual void handleMessage(cMessage *message) override;
     virtual void refreshDisplay() const override;
+    virtual void setAnimationSpeed();
 
-    virtual cFigure *getCachedFigure(const ITransmission *transmission) const;
-    virtual void setCachedFigure(const ITransmission *transmission, cFigure *figure);
-    virtual void removeCachedFigure(const ITransmission *transmission);
+    virtual cFigure *getSignalDepartureFigure(const physicallayer::IRadio *radio) const;
+    virtual void setSignalDepartureFigure(const physicallayer::IRadio *radio, cFigure *figure);
+    virtual cFigure *removeSignalDepartureFigure(const physicallayer::IRadio *radio);
 
-    virtual void scheduleSignalPropagationUpdateTimer();
+    virtual cFigure *getSignalArrivalFigure(const physicallayer::IRadio *radio) const;
+    virtual void setSignalArrivalFigure(const physicallayer::IRadio *radio, cFigure *figure);
+    virtual cFigure *removeSignalArrivalFigure(const physicallayer::IRadio *radio);
 
-  public:
-    virtual ~MediumCanvasVisualizer();
+    virtual cFigure *getSignalFigure(const physicallayer::ITransmission *transmission) const;
+    virtual void setSignalFigure(const physicallayer::ITransmission *transmission, cFigure *figure);
+    virtual cFigure *removeSignalFigure(const physicallayer::ITransmission *transmission);
 
-    virtual void radioAdded(const IRadio *radio) override;
-    virtual void radioRemoved(const IRadio *radio) override;
+    virtual cGroupFigure *createSignalFigure(const physicallayer::ITransmission *transmission) const;
+    virtual void refreshSignalFigure(const physicallayer::ITransmission *transmission) const;
 
-    virtual void transmissionAdded(const ITransmission *transmission) override;
-    virtual void transmissionRemoved(const ITransmission *transmission) override;
+    virtual void handleRadioAdded(const physicallayer::IRadio *radio) override;
+    virtual void handleRadioRemoved(const physicallayer::IRadio *radio) override;
 
-    virtual void transmissionStarted(const ITransmission *transmission) override;
-    virtual void transmissionEnded(const ITransmission *transmission) override;
-    virtual void receptionStarted(const IReception *reception) override;
-    virtual void receptionEnded(const IReception *reception) override;
+    virtual void handleSignalAdded(const physicallayer::ITransmission *transmission) override;
+    virtual void handleSignalRemoved(const physicallayer::ITransmission *transmission) override;
+
+    virtual void handleSignalDepartureStarted(const physicallayer::ITransmission *transmission) override;
+    virtual void handleSignalDepartureEnded(const physicallayer::ITransmission *transmission) override;
+    virtual void handleSignalArrivalStarted(const physicallayer::IReception *reception) override;
+    virtual void handleSignalArrivalEnded(const physicallayer::IReception *reception) override;
 };
 
 } // namespace visualizer

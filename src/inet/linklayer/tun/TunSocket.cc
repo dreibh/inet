@@ -15,8 +15,11 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "inet/linklayer/tun/TunSocket.h"
+#include "inet/common/packet/Message.h"
+#include "inet/applications/common/SocketTag_m.h"
+#include "inet/linklayer/common/InterfaceTag_m.h"
 #include "inet/linklayer/tun/TunControlInfo_m.h"
+#include "inet/linklayer/tun/TunSocket.h"
 
 namespace inet {
 
@@ -25,44 +28,63 @@ TunSocket::TunSocket()
     socketId = getEnvir()->getUniqueNumber();
 }
 
-void TunSocket::sendToTun(cMessage *msg)
+void TunSocket::setCallback(ICallback *callback)
 {
-    if (!outputGate)
-        throw cRuntimeError("TunSocket: setOutputGate() must be invoked before socket can be used");
-    check_and_cast<cSimpleModule *>(outputGate->getOwnerModule())->send(msg, outputGate);
+    this->callback = callback;
+}
+
+bool TunSocket::belongsToSocket(cMessage *msg) const
+{
+    auto& tags = getTags(msg);
+    int msgSocketId = tags.getTag<SocketInd>()->getSocketId();
+    return socketId == msgSocketId;
+}
+
+void TunSocket::processMessage(cMessage *msg)
+{
+    ASSERT(belongsToSocket(msg));
+
+    if (callback)
+        callback->socketDataArrived(this, check_and_cast<Packet*>(msg));
+    else
+        delete msg;
 }
 
 void TunSocket::open(int interfaceId)
 {
     this->interfaceId = interfaceId;
-    cMessage *message = new cMessage("OPEN");
+    auto request = new Request("OPEN", TUN_C_OPEN);
     TunOpenCommand *command = new TunOpenCommand();
-    command->setSocketId(socketId);
-    command->setInterfaceId(interfaceId);
-    message->setControlInfo(command);
-    sendToTun(message);
+    request->setControlInfo(command);
+    sendToTun(request);
 }
 
-void TunSocket::send(cPacket *packet)
+void TunSocket::send(Packet *packet)
 {
     if (interfaceId == -1)
         throw cRuntimeError("Socket is closed");
-    TunSendCommand *command = new TunSendCommand();
-    command->setSocketId(socketId);
-    command->setInterfaceId(interfaceId);
-    packet->setControlInfo(command);
+//    TunSendCommand *command = new TunSendCommand();
+//    packet->setControlInfo(command);
     sendToTun(packet);
 }
 
 void TunSocket::close()
 {
-    this->interfaceId = -1;
-    cMessage *message = new cMessage("CLOSE");
+    auto request = new Request("CLOSE", TUN_C_CLOSE);
     TunCloseCommand *command = new TunCloseCommand();
-    command->setSocketId(socketId);
-    command->setInterfaceId(interfaceId);
-    message->setControlInfo(command);
-    sendToTun(message);
+    request->setControlInfo(command);
+    sendToTun(request);
+    this->interfaceId = -1;
+}
+
+void TunSocket::sendToTun(cMessage *msg)
+{
+    if (!outputGate)
+        throw cRuntimeError("TunSocket: setOutputGate() must be invoked before socket can be used");
+    auto& tags = getTags(msg);
+    tags.addTagIfAbsent<SocketReq>()->setSocketId(socketId);
+    tags.addTagIfAbsent<InterfaceReq>()->setInterfaceId(interfaceId);
+    check_and_cast<cSimpleModule *>(outputGate->getOwnerModule())->send(msg, outputGate);
 }
 
 } // namespace inet

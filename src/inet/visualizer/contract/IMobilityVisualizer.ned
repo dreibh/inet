@@ -18,15 +18,15 @@
 package inet.visualizer.contract;
 
 //
-// This module interface allows configuring different IMobilityVisualizer
-// submodules from INI files. Such a visualizer updates the position of visual
-// representations according to the corresponding mobility model.
+// This module interface allows configuring different ~IMobilityVisualizer
+// submodules from INI files. Such a visualizer updates the position (among
+// others) of visual representations according to the corresponding mobility
+// model.
 //
-// @see ~MobilityCanvasVisualizer, ~MobilityOsgVisualizer, and
-// ~MobilityVisualizerBase
+// @see ~MobilityCanvasVisualizer, ~MobilityOsgVisualizer, ~MobilityVisualizer, ~MobilityVisualizerBase
 //
 moduleinterface IMobilityVisualizer
 {
     parameters:
-        @display("i=block/app_s");
+        @display("i=block/app");
 }

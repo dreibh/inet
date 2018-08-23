@@ -21,22 +21,22 @@ package inet.node.internetcloud;
 
 
 import inet.common.MessageDispatcher;
-import inet.common.packet.PcapRecorder;
-import inet.linklayer.contract.IWiredNic;
-import inet.networklayer.arp.ipv4.ARP;
+import inet.common.packet.recorder.PcapRecorder;
+import inet.linklayer.contract.IWiredInterface;
+import inet.networklayer.arp.ipv4.Arp;
 import inet.networklayer.common.InterfaceTable;
-import inet.networklayer.configurator.ipv4.IPv4NodeConfigurator;
+import inet.networklayer.configurator.ipv4.Ipv4NodeConfigurator;
 import inet.networklayer.internetcloud.ICloudDelayer;
-import inet.networklayer.ipv4.ICMP;
-import inet.networklayer.ipv4.IPv4;
-import inet.networklayer.ipv4.IPv4RoutingTable;
+import inet.networklayer.ipv4.Icmp;
+import inet.networklayer.ipv4.Ipv4;
+import inet.networklayer.ipv4.Ipv4RoutingTable;
 import inet.node.base.NetworkLayerNodeBase;
 
 
 //
 // This module is an IPv4 router that can delay or drop packets (while retaining their order)
 // based on which interface card the packet arrived on and on which interface
-// it is leaving the cloud. The delayer module is replacable.
+// it is leaving the cloud. The delayer module is replaceable.
 //
 // By default the delayer module is ~MatrixCloudDelayer which lets you configure
 // the delay, drop and datarate parameters in an XML file. Packet flows, as defined
@@ -54,22 +54,23 @@ module InternetCloud extends NetworkLayerNodeBase
         numTunInterfaces = 0;
         forwarding = true;
         @display("i=misc/cloud");
+        @figure[submodules];
         *.interfaceTableModule = default(absPath(".interfaceTable"));
     submodules:
         ipv4Delayer: <default("MatrixCloudDelayer")> like ICloudDelayer if hasIpv4 {
             parameters:
                 networkProtocolModule = "^.ipv4.ip";
-                @display("p=400,408");
+                @display("p=825,376");
         }
         ipv6Delayer: <default("MatrixCloudDelayer")> like ICloudDelayer if hasIpv6 {
             parameters:
                 networkProtocolModule = "^.ipv6.ipv6";
-                @display("p=500,408");
+                @display("p=975,376");
         }
         gnDelayer: <default("MatrixCloudDelayer")> like ICloudDelayer if hasGn {
             parameters:
-                networkProtocolModule = "^.generic.gnp";
-                @display("p=600,408");
+                networkProtocolModule = "^.generic.nextHop";
+                @display("p=1125,376");
         }
     connections allowunconnected:
 }

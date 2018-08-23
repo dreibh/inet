@@ -1,6 +1,6 @@
 %description:
 Tests Ethernet communication via switch.
-All hosts use EtherMAC implementation with external queue.
+All hosts use EtherMac implementation with external queue.
 Simulation has pairs of hosts that communicate with each other via only one switch.
 Both hosts in pair have same ethernet configurations.
 Both hosts in pair are source and sink, too.
@@ -133,7 +133,7 @@ options(width=160)
 library("omnetpp", warn.conflicts=FALSE)
 
 #TEST parameters
-scafile <- 'results/General-0.sca'
+scafile <- 'results/General-#0.sca'
 linecount <- 12
 idlelimit <- 2.0
 usedlimit <- 98.0

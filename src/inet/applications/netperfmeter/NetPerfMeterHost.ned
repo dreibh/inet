@@ -29,9 +29,9 @@ package inet.applications.netperfmeter;
 
 import inet.applications.contract.INetPerfMeterApp;
 import inet.node.base.TransportLayerNodeBase;
-import inet.transportlayer.contract.ISCTP;
-import inet.transportlayer.contract.ITCP;
-import inet.transportlayer.contract.IUDP;
+import inet.transportlayer.contract.ISctp;
+import inet.transportlayer.contract.ITcp;
+import inet.transportlayer.contract.IUdp;
 
 //
 // NetPerfMeter application host.
@@ -39,6 +39,7 @@ import inet.transportlayer.contract.IUDP;
 module NetPerfMeterHost extends TransportLayerNodeBase
 {
     parameters:
+        @figure[submodules];
         @display("i=device/pc2");
         int numNetPerfMeterApps = default(0);   // T.D. 17.11.09
 
@@ -49,7 +50,7 @@ module NetPerfMeterHost extends TransportLayerNodeBase
     submodules:
         netPerfMeterApp[numNetPerfMeterApps]: <default("NetPerfMeter")> like INetPerfMeterApp {  // T.D. 17.11.09
             parameters:
-                @display("p=262,36");
+                @display("p=375,76,row,150");
         }
 
     connections allowunconnected:

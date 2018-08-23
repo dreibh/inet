@@ -18,15 +18,14 @@
 package inet.visualizer.contract;
 
 //
-// This module interface allows configuring different IStatisticVisualizer
+// This module interface allows configuring different ~IStatisticVisualizer
 // submodules from INI files. Such a visualizer displays a statistic for
 // multiple network nodes.
 //
-// @see ~StatisticCanvasVisualizer, ~StatisticOsgVisualizer, and
-// ~StatisticVisualizerBase
+// @see ~StatisticCanvasVisualizer, ~StatisticOsgVisualizer, ~StatisticVisualizer, ~StatisticVisualizerBase
 //
 moduleinterface IStatisticVisualizer
 {
     parameters:
-        @display("i=block/app_s");
+        @display("i=block/app");
 }

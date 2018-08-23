@@ -22,8 +22,7 @@
 #include "inet/common/INETDefs.h"
 #include "inet/common/INETMath.h"
 
-// for the moment commented out as omnet cannot instatiate it from a namespace
-//namespace inet {
+namespace inet {
 
 class INET_API ProgressMeterFigure : public cGroupFigure, public inet::IIndicatorFigure
 {
@@ -36,6 +35,7 @@ class INET_API ProgressMeterFigure : public cGroupFigure, public inet::IIndicato
     double min = 0;
     double max = 100;
     double value = NaN;
+    int labelOffset = 10;
     std::string textFormat = "%g";
 
   protected:
@@ -76,6 +76,9 @@ class INET_API ProgressMeterFigure : public cGroupFigure, public inet::IIndicato
     const char *getLabel() const;
     void setLabel(const char *text);
 
+    int getLabelOffset() const;
+    void setLabelOffset(int);
+
     const Font& getLabelFont() const;
     void setLabelFont(const Font& font);
 
@@ -90,9 +93,10 @@ class INET_API ProgressMeterFigure : public cGroupFigure, public inet::IIndicato
 
     double getMaxValue() const;
     void setMaxValue(double value);
+
 };
 
-// } // namespace inet
+} // namespace inet
 
 #endif
 

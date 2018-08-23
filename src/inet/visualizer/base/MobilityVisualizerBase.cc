@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -22,10 +22,15 @@ namespace inet {
 
 namespace visualizer {
 
+MobilityVisualizerBase::MobilityVisualization::MobilityVisualization(IMobility *mobility) :
+    mobility(mobility)
+{
+}
+
 MobilityVisualizerBase::~MobilityVisualizerBase()
 {
-    if (!hasGUI()) return;
-    subscriptionModule->unsubscribe(IMobility::mobilityStateChangedSignal, this);
+    if (displayMobility)
+        unsubscribe();
 }
 
 void MobilityVisualizerBase::initialize(int stage)
@@ -33,10 +38,64 @@ void MobilityVisualizerBase::initialize(int stage)
     VisualizerBase::initialize(stage);
     if (!hasGUI()) return;
     if (stage == INITSTAGE_LOCAL) {
-        subscriptionModule = *par("subscriptionModule").stringValue() == '\0' ? getSystemModule() : getModuleFromPar<cModule>(par("subscriptionModule"), this);
-        subscriptionModule->subscribe(IMobility::mobilityStateChangedSignal, this);
-        displayMovementTrail = par("displayMovementTrail");
+        displayMobility = par("displayMobility");
+        animationSpeed = par("animationSpeed");
+        moduleFilter.setPattern(par("moduleFilter"));
+        // position
+        displayPositions = par("displayPositions");
+        positionCircleRadius = par("positionCircleRadius");
+        positionCircleLineWidth = par("positionCircleLineWidth");
+        positionCircleLineColorSet.parseColors(par("positionCircleLineColor"));
+        positionCircleFillColorSet.parseColors(par("positionCircleFillColor"));
+        // orientation
+        displayOrientations = par("displayOrientations");
+        orientationPieRadius = par("orientationPieRadius");
+        orientationPieSize = par("orientationPieSize");
+        orientationPieOpacity = par("orientationPieOpacity");
+        orientationLineColor = cFigure::parseColor(par("orientationLineColor"));
+        orientationLineStyle = cFigure::parseLineStyle(par("orientationLineStyle"));
+        orientationLineWidth = par("orientationLineWidth");
+        orientationFillColor = cFigure::parseColor(par("orientationFillColor"));
+        // velocity
+        displayVelocities = par("displayVelocities");
+        velocityArrowScale = par("velocityArrowScale");
+        velocityLineColor = cFigure::parseColor(par("velocityLineColor"));
+        velocityLineStyle = cFigure::parseLineStyle(par("velocityLineStyle"));
+        velocityLineWidth = par("velocityLineWidth");
+        // movement trail
+        displayMovementTrails = par("displayMovementTrails");
+        movementTrailLineColorSet.parseColors(par("movementTrailLineColor"));
+        movementTrailLineStyle = cFigure::parseLineStyle(par("movementTrailLineStyle"));
+        movementTrailLineWidth = par("movementTrailLineWidth");
         trailLength = par("trailLength");
+        if (displayMobility)
+            subscribe();
+    }
+}
+
+void MobilityVisualizerBase::handleParameterChange(const char *name)
+{
+    if (name != nullptr) {
+        if (!strcmp(name, "moduleFilter"))
+            moduleFilter.setPattern(par("moduleFilter"));
+        // TODO:
+    }
+}
+
+void MobilityVisualizerBase::subscribe()
+{
+    auto subscriptionModule = getModuleFromPar<cModule>(par("subscriptionModule"), this);
+    subscriptionModule->subscribe(IMobility::mobilityStateChangedSignal, this);
+    subscriptionModule->subscribe(PRE_MODEL_CHANGE, this);
+}
+
+void MobilityVisualizerBase::unsubscribe()
+{
+    // NOTE: lookup the module again because it may have been deleted first
+    auto subscriptionModule = getModuleFromPar<cModule>(par("subscriptionModule"), this, false);
+    if (subscriptionModule != nullptr) {
+        subscriptionModule->unsubscribe(IMobility::mobilityStateChangedSignal, this);
+        subscriptionModule->unsubscribe(PRE_MODEL_CHANGE, this);
     }
 }
 

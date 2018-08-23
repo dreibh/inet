@@ -15,60 +15,96 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
+#include "inet/applications/common/SocketTag_m.h"
+#include "inet/common/packet/Message.h"
+#include "inet/common/packet/Packet.h"
+#include "inet/common/ProtocolTag_m.h"
+#include "inet/networklayer/common/L3AddressTag_m.h"
 #include "inet/networklayer/contract/L3Socket.h"
 #include "inet/networklayer/contract/L3SocketCommand_m.h"
 
 namespace inet {
 
-L3Socket::L3Socket(int controlInfoProtocolId, cGate *outputGate) :
-    controlInfoProtocolId(controlInfoProtocolId),
+L3Socket::L3Socket(const Protocol *l3Protocol, cGate *outputGate) :
+    l3Protocol(l3Protocol),
     socketId(getEnvir()->getUniqueNumber()),
     outputGate(outputGate)
 {
 }
 
-void L3Socket::setControlInfoProtocolId(int _controlInfoProtocolId)
+void L3Socket::setCallback(INetworkSocket::ICallback *callback)
+{
+    this->callback = callback;
+}
+
+bool L3Socket::belongsToSocket(cMessage *msg) const
+{
+    auto& tags = getTags(msg);
+    int msgSocketId = tags.getTag<SocketInd>()->getSocketId();
+    return socketId == msgSocketId;
+}
+
+void L3Socket::processMessage(cMessage *msg)
+{
+    ASSERT(belongsToSocket(msg));
+
+    if (callback)
+        callback->socketDataArrived(this, check_and_cast<Packet*>(msg));
+    else
+        delete msg;
+}
+
+void L3Socket::bind(const Protocol *protocol, L3Address localAddress)
 {
     ASSERT(!bound);
-    controlInfoProtocolId = _controlInfoProtocolId;
+    ASSERT(l3Protocol != nullptr);
+    L3SocketBindCommand *command = new L3SocketBindCommand();
+    command->setProtocol(protocol);
+    auto request = new Request("bind", L3_C_BIND);
+    request->setControlInfo(command);
+    sendToOutput(request);
+    bound = true;
+}
+
+void L3Socket::connect(L3Address remoteAddress)
+{
+    auto *command = new L3SocketConnectCommand();
+    command->setRemoteAddress(remoteAddress);
+    auto request = new Request("connect", L3_C_CONNECT);
+    request->setControlInfo(command);
+    sendToOutput(request);
+}
+
+void L3Socket::send(Packet *packet)
+{
+    sendToOutput(packet);
+}
+
+void L3Socket::sendTo(Packet *packet, L3Address destAddress)
+{
+    auto addressReq = packet->addTagIfAbsent<L3AddressReq>();
+    addressReq->setDestAddress(destAddress);
+    send(packet);
+}
+
+void L3Socket::close()
+{
+    ASSERT(bound);
+    ASSERT(l3Protocol != nullptr);
+    L3SocketCloseCommand *command = new L3SocketCloseCommand();
+    auto request = new Request("close", L3_C_CLOSE);
+    request->setControlInfo(command);
+    sendToOutput(request);
 }
 
 void L3Socket::sendToOutput(cMessage *message)
 {
     if (!outputGate)
         throw cRuntimeError("L3Socket: setOutputGate() must be invoked before the socket can be used");
+    auto& tags = getTags(message);
+    tags.addTagIfAbsent<DispatchProtocolReq>()->setProtocol(l3Protocol);
+    tags.addTagIfAbsent<SocketReq>()->setSocketId(socketId);
     check_and_cast<cSimpleModule *>(outputGate->getOwnerModule())->send(message, outputGate);
-}
-
-void L3Socket::bind(int protocolId)
-{
-    ASSERT(!bound);
-    ASSERT(controlInfoProtocolId != -1);
-    L3SocketBindCommand *command = new L3SocketBindCommand();
-    command->setControlInfoProtocolId(controlInfoProtocolId);
-    command->setSocketId(socketId);
-    command->setProtocolId(protocolId);
-    cMessage *bind = new cMessage("bind");
-    bind->setControlInfo(command);
-    sendToOutput(bind);
-    bound = true;
-}
-
-void L3Socket::send(cPacket *msg)
-{
-    sendToOutput(msg);
-}
-
-void L3Socket::close()
-{
-    ASSERT(bound);
-    ASSERT(controlInfoProtocolId != -1);
-    L3SocketCloseCommand *command = new L3SocketCloseCommand();
-    command->setControlInfoProtocolId(controlInfoProtocolId);
-    command->setSocketId(socketId);
-    cMessage *close = new cMessage("close");
-    close->setControlInfo(command);
-    sendToOutput(close);
 }
 
 } // namespace inet

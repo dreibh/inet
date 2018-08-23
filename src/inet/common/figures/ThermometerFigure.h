@@ -22,8 +22,7 @@
 #include "inet/common/INETMath.h"
 #include "IIndicatorFigure.h"
 
-// for the moment commented out as omnet cannot instatiate it from a namespace
-//namespace inet {
+namespace inet {
 
 class INET_API ThermometerFigure : public cGroupFigure, public inet::IIndicatorFigure
 {
@@ -40,6 +39,7 @@ class INET_API ThermometerFigure : public cGroupFigure, public inet::IIndicatorF
     double value = NaN;
     int numTicks = 0;
     double shifting = 0;
+    int labelOffset = 10;
 
   protected:
     virtual void parse(cProperty *property) override;
@@ -70,6 +70,9 @@ class INET_API ThermometerFigure : public cGroupFigure, public inet::IIndicatorF
     const char *getLabel() const;
     void setLabel(const char *text);
 
+    int getLabelOffset() const;
+    void setLabelOffset(int offset);
+
     const Font& getLabelFont() const;
     void setLabelFont(const Font& font);
 
@@ -84,9 +87,10 @@ class INET_API ThermometerFigure : public cGroupFigure, public inet::IIndicatorF
 
     double getTickSize() const;
     void setTickSize(double value);
+
 };
 
-// } // namespace inet
+} // namespace inet
 
 #endif // ifndef __INET_ThermoMeterFigure_H
 

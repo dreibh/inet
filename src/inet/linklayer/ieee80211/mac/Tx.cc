@@ -1,10 +1,10 @@
 //
-// Copyright (C) 2015 Andras Varga
+// Copyright (C) 2016 OpenSim Ltd.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,17 +12,18 @@
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with this program.  If not, see http://www.gnu.org/licenses/.
-//
-// Author: Andras Varga
+// along with this program; if not, see http://www.gnu.org/licenses/.
 //
 
-#include "Tx.h"
-#include "IUpperMac.h"
-#include "IMacRadioInterface.h"
-#include "IRx.h"
-#include "IStatistics.h"
-#include "Ieee80211Frame_m.h"
+#include "inet/common/INETUtils.h"
+#include "inet/common/ModuleAccess.h"
+#include "inet/common/checksum/EthernetCRC.h"
+#include "inet/linklayer/common/MacAddressTag_m.h"
+#include "inet/linklayer/ieee80211/mac/contract/IRx.h"
+#include "inet/linklayer/ieee80211/mac/contract/IStatistics.h"
+#include "inet/linklayer/ieee80211/mac/Ieee80211Frame_m.h"
+#include "inet/linklayer/ieee80211/mac/Ieee80211Mac.h"
+#include "inet/linklayer/ieee80211/mac/Tx.h"
 
 namespace inet {
 namespace ieee80211 {
@@ -32,35 +33,62 @@ Define_Module(Tx);
 Tx::~Tx()
 {
     cancelAndDelete(endIfsTimer);
-    if (frame && !transmitting)
+    if (frame)
         delete frame;
 }
 
-void Tx::initialize()
+void Tx::initialize(int stage)
 {
-    mac = dynamic_cast<IMacRadioInterface *>(getModuleByPath(par("macModule")));
-    upperMac = dynamic_cast<IUpperMac *>(getModuleByPath(par("upperMacModule")));
-    rx = dynamic_cast<IRx *>(getModuleByPath(par("rxModule")));
-    statistics = check_and_cast<IStatistics*>(getModuleByPath(par("statisticsModule")));
-    endIfsTimer = new cMessage("endIFS");
-
-    WATCH(transmitting);
+    if (stage == INITSTAGE_LOCAL) {
+        mac = check_and_cast<Ieee80211Mac *>(getContainingNicModule(this)->getSubmodule("mac"));
+        endIfsTimer = new cMessage("endIFS");
+        rx = dynamic_cast<IRx *>(getModuleByPath(par("rxModule")));
+        // statistics = check_and_cast<IStatistics*>(getModuleByPath(par("statisticsModule")));
+        WATCH(transmitting);
+    }
+    else if (stage == INITSTAGE_LINK_LAYER) {
+        refreshDisplay();
+    }
 }
 
-void Tx::transmitFrame(Ieee80211Frame *frame, ITxCallback *txCallback)
+void Tx::transmitFrame(Packet *packet, const Ptr<const Ieee80211MacHeader>& header, ITx::ICallback *txCallback)
 {
-    transmitFrame(frame, SIMTIME_ZERO, txCallback); //TODO make dedicated version, without the timer
+    transmitFrame(packet, header, SIMTIME_ZERO, txCallback);
 }
 
-void Tx::transmitFrame(Ieee80211Frame *frame, simtime_t ifs, ITxCallback *txCallback)
+void Tx::transmitFrame(Packet *packet, const Ptr<const Ieee80211MacHeader>& header, simtime_t ifs, ITx::ICallback *txCallback)
 {
-    Enter_Method("transmitFrame(\"%s\")", frame->getName());
-    take(frame);
-    this->frame = frame;
+    ASSERT(this->txCallback == nullptr);
     this->txCallback = txCallback;
-
+    Enter_Method("transmitFrame(\"%s\")", packet->getName());
+    take(packet);
+    auto macAddressInd = packet->addTagIfAbsent<MacAddressInd>();
+    const auto& updatedHeader = packet->removeAtFront<Ieee80211MacHeader>();
+    if (auto oneAddressHeader = dynamicPtrCast<Ieee80211OneAddressHeader>(updatedHeader)) {
+        macAddressInd->setDestAddress(oneAddressHeader->getReceiverAddress());
+    }
+    if (auto twoAddressHeader = dynamicPtrCast<Ieee80211TwoAddressHeader>(updatedHeader)) {
+        twoAddressHeader->setTransmitterAddress(mac->getAddress());
+        macAddressInd->setSrcAddress(twoAddressHeader->getTransmitterAddress());
+    }
+    packet->insertAtFront(updatedHeader);
+    const auto& updatedTrailer = packet->removeAtBack<Ieee80211MacTrailer>();
+    updatedTrailer->setFcsMode(mac->getFcsMode());
+    if (mac->getFcsMode() == FCS_COMPUTED) {
+        const auto& fcsBytes = packet->peekAllAsBytes();
+        auto bufferLength = B(fcsBytes->getChunkLength()).get();
+        auto buffer = new uint8_t[bufferLength];
+        fcsBytes->copyToBuffer(buffer, bufferLength);
+        auto fcs = ethernetCRC(buffer, bufferLength);
+        updatedTrailer->setFcs(fcs);
+        delete [] buffer;
+    }
+    packet->insertAtBack(updatedTrailer);
+    this->frame = packet->dup();
     ASSERT(!endIfsTimer->isScheduled() && !transmitting);    // we are idle
     scheduleAt(simTime() + ifs, endIfsTimer);
+    if (hasGUI())
+        refreshDisplay();
 }
 
 void Tx::radioTransmissionFinished()
@@ -68,10 +96,18 @@ void Tx::radioTransmissionFinished()
     Enter_Method_Silent();
     if (transmitting) {
         EV_DETAIL << "Tx: radioTransmissionFinished()\n";
-        upperMac->transmissionComplete(txCallback);
         transmitting = false;
+        ASSERT(txCallback != nullptr);
+        const auto& header = frame->peekAtFront<Ieee80211MacHeader>();
+        auto duration = header->getDuration();
+        auto tmpFrame = frame;
+        auto tmpTxCallback = txCallback;
         frame = nullptr;
-        rx->frameTransmitted(durationField);
+        txCallback = nullptr;
+        tmpTxCallback->transmissionComplete(tmpFrame, tmpFrame->peekAtFront<Ieee80211MacHeader>());
+        rx->frameTransmitted(duration);
+        if (hasGUI())
+            refreshDisplay();
     }
 }
 
@@ -80,8 +116,9 @@ void Tx::handleMessage(cMessage *msg)
     if (msg == endIfsTimer) {
         EV_DETAIL << "Tx: endIfsTimer expired\n";
         transmitting = true;
-        durationField = frame->getDuration();
-        mac->sendFrame(frame);
+        mac->sendDownFrame(frame->dup());
+        if (hasGUI())
+            refreshDisplay();
     }
     else
         ASSERT(false);

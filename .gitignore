@@ -9,8 +9,9 @@ src/Makefile.vc
 .nedexclusions
 src/inet/features.h
 src/inet/opp_defines.h
-precompiled.h.*
+precompiled_*.h.*
 /3rdparty
+**/MoBAN_Pattern*.txt
 
 # output and result files
 .settings/
@@ -37,6 +38,15 @@ precompiled.h.*
 *.sca
 *.vec
 *.vci
+*.aux
+*.bbl
+*.blg
+*.idx
+*.toc
+*.pdf
+*.ilg
+*.ind
+*.synctex.gz
 .buildlog*
 
 # ignore binary files
@@ -52,6 +62,7 @@ out/
 *.pdb
 *.idb
 *.manifest
+.qtenv.ini
 .qtenvrc
 .tkenvrc
 .tkenvlog

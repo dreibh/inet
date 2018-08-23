@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -22,22 +22,19 @@ import inet.visualizer.contract.IMediumVisualizer;
 //
 // This module integrates canvas and osg medium visualizers into a single module.
 //
-// @see ~MediumCanvasVisualizer, ~MediumOsgVisualizer, ~MediumVisualizerBase,
-// and ~IMediumVisualizer
+// @see ~MediumCanvasVisualizer, ~MediumOsgVisualizer, ~MediumVisualizerBase, ~IMediumVisualizer
 //
 module MediumVisualizer like IMediumVisualizer
 {
     parameters:
-        @display("i=block/app_s");
-        string canvasVisualizerType = default("MediumCanvasVisualizer");
-        string osgVisualizerType = default("MediumOsgVisualizer");
+        @display("i=block/app");
     submodules:
-        canvasVisualizer: <canvasVisualizerType> like IMediumVisualizer if canvasVisualizerType != "" {
+        canvasVisualizer: <default("MediumCanvasVisualizer")> like IMediumVisualizer if typename != "" {
             parameters:
-                @display("p=100,50");
+                @display("p=100,100");
         }
-        osgVisualizer: <osgVisualizerType> like IMediumVisualizer if osgVisualizerType != "" {
+        osgVisualizer: <default("MediumOsgVisualizer")> like IMediumVisualizer if typename != "" {
             parameters:
-                @display("p=100,150");
+                @display("p=100,200");
         }
 }

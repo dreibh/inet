@@ -19,8 +19,7 @@
 #include "ThermometerFigure.h"
 #include "inet/common/INETUtils.h"
 
-//TODO namespace inet { -- for the moment commented out, as OMNeT++ 5.0 cannot instantiate a figure from a namespace
-using namespace inet;
+namespace inet {
 
 Register_Figure("thermometer", ThermometerFigure);
 
@@ -45,6 +44,7 @@ static const char *PKEY_POS = "pos";
 static const char *PKEY_SIZE = "size";
 static const char *PKEY_ANCHOR = "anchor";
 static const char *PKEY_BOUNDS = "bounds";
+static const char *PKEY_LABEL_OFFSET = "labelOffset";
 
 ThermometerFigure::ThermometerFigure(const char *name) : cGroupFigure(name)
 {
@@ -54,7 +54,7 @@ ThermometerFigure::ThermometerFigure(const char *name) : cGroupFigure(name)
 ThermometerFigure::~ThermometerFigure()
 {
     // delete figures which is not in canvas
-    for (int i = numTicks; i < tickFigures.size(); ++i) {
+    for (size_t i = numTicks; i < tickFigures.size(); ++i) {
         delete tickFigures[i];
         delete numberFigures[i];
     }
@@ -89,6 +89,18 @@ const char *ThermometerFigure::getLabel() const
 void ThermometerFigure::setLabel(const char *text)
 {
     labelFigure->setText(text);
+}
+
+int ThermometerFigure::getLabelOffset() const
+{
+    return labelOffset;
+}
+void ThermometerFigure::setLabelOffset(int offset)
+{
+    if(labelOffset != offset)   {
+    labelOffset = offset;
+    labelFigure->setPosition(Point(getBounds().getCenter().x, getBounds().y + getBounds().height + labelOffset));
+    }
 }
 
 const cFigure::Font& ThermometerFigure::getLabelFont() const
@@ -156,16 +168,22 @@ void ThermometerFigure::setTickSize(double value)
 void ThermometerFigure::parse(cProperty *property)
 {
     cGroupFigure::parse(property);
-    setBounds(parseBounds(property));
+
+
+    setBounds(parseBounds(property, getBounds()));
+
 
     // Set default
     redrawTicks();
+
 
     const char *s;
     if ((s = property->getValue(PKEY_MERCURY_COLOR)) != nullptr)
         setMercuryColor(parseColor(s));
     if ((s = property->getValue(PKEY_LABEL)) != nullptr)
         setLabel(s);
+    if ((s = property->getValue(PKEY_LABEL_OFFSET)) != nullptr)
+            setLabelOffset(atoi(s));
     if ((s = property->getValue(PKEY_LABEL_FONT)) != nullptr)
         setLabelFont(parseFont(s));
     if ((s = property->getValue(PKEY_LABEL_COLOR)) != nullptr)
@@ -188,7 +206,7 @@ const char **ThermometerFigure::getAllowedPropertyKeys() const
         const char *localKeys[] = {
             PKEY_MERCURY_COLOR, PKEY_LABEL, PKEY_LABEL_FONT,
             PKEY_LABEL_COLOR, PKEY_MIN_VALUE, PKEY_MAX_VALUE, PKEY_TICK_SIZE,
-            PKEY_INITIAL_VALUE, PKEY_POS, PKEY_SIZE, PKEY_ANCHOR, PKEY_BOUNDS, nullptr
+            PKEY_INITIAL_VALUE, PKEY_POS, PKEY_SIZE, PKEY_ANCHOR, PKEY_BOUNDS, PKEY_LABEL_OFFSET, nullptr
         };
         concatArrays(keys, cGroupFigure::getAllowedPropertyKeys(), localKeys);
     }
@@ -327,8 +345,8 @@ void ThermometerFigure::redrawTicks()
     numTicks = std::max(0.0, std::abs(max - min - shifting) / tickSize + 1);
 
     // Allocate ticks and numbers if needed
-    if (numTicks > tickFigures.size()) {
-        while (numTicks > tickFigures.size()) {
+    if ((size_t)numTicks > tickFigures.size()) {
+        while ((size_t)numTicks > tickFigures.size()) {
             cLineFigure *tick = new cLineFigure();
             cTextFigure *number = new cTextFigure();
 
@@ -372,7 +390,7 @@ void ThermometerFigure::layout()
         setNumberGeometry(numberFigures[i], i);
     }
 
-    labelFigure->setPosition(Point(getBounds().getCenter().x, getBounds().y + getBounds().height));
+    labelFigure->setPosition(Point(getBounds().getCenter().x, getBounds().y + getBounds().height + labelOffset));
 }
 
 void ThermometerFigure::refresh()
@@ -380,5 +398,5 @@ void ThermometerFigure::refresh()
     setMercuryAndContainerGeometry();
 }
 
-// } // namespace inet
+} // namespace inet
 

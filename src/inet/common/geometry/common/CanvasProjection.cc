@@ -24,14 +24,28 @@ std::map<const cCanvas *, const CanvasProjection *> CanvasProjection::canvasProj
 
 CanvasProjection::CanvasProjection(Rotation rotation, cFigure::Point translation) :
     rotation(rotation),
+    scale(cFigure::Point(1, 1)),
     translation(translation)
 {
 }
 
 cFigure::Point CanvasProjection::computeCanvasPoint(const Coord& point) const
 {
-    Coord rotatedPoint = rotation.rotateVectorClockwise(point);
-    return cFigure::Point(rotatedPoint.x + translation.x, rotatedPoint.y + translation.y);
+    double depth;
+    return computeCanvasPoint(point, depth);
+}
+
+cFigure::Point CanvasProjection::computeCanvasPoint(const Coord& point, double& depth) const
+{
+    Coord rotatedPoint = rotation.rotateVector(point);
+    depth = rotatedPoint.z;
+    return cFigure::Point(rotatedPoint.x * scale.x + translation.x, rotatedPoint.y * scale.y + translation.y);
+}
+
+Coord CanvasProjection::computeCanvasPointInverse(const cFigure::Point& point, double depth) const
+{
+    Coord p((point.x - translation.x) / scale.x, (point.y - translation.y) / scale.y, depth);
+    return rotation.rotateVectorInverse(p);
 }
 
 const CanvasProjection *CanvasProjection::getCanvasProjection(const cCanvas *canvas)

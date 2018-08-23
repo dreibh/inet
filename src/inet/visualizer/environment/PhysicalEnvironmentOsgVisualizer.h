@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -24,8 +24,6 @@
 namespace inet {
 
 namespace visualizer {
-
-using namespace inet::physicalenvironment;
 
 class INET_API PhysicalEnvironmentOsgVisualizer : public PhysicalEnvironmentVisualizerBase
 {

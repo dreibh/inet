@@ -18,7 +18,7 @@
 
 package inet.examples.inet.routerperf;
 
-import inet.applications.generic.IIPvXTrafficGenerator;
+import inet.applications.generic.IIpvxTrafficGenerator;
 import inet.node.base.TransportLayerNodeBase;
 
 //
@@ -32,16 +32,15 @@ module BurstHost extends TransportLayerNodeBase
         @display("i=device/pc3");
         hasUdp = false;
         hasTcp = false;
-        string trafGenType;
         *.routingTableModule = default("^.ipv4.routingTable");
     submodules:
-        trafGen: <trafGenType> like IIPvXTrafficGenerator {
+        trafGen: <> like IIpvxTrafficGenerator {
             parameters:
                 @display("p=329,81");
         }
     connections allowunconnected:
         // transport connections
-        trafGen.ipOut --> tn.upperLayerIn++;
-        trafGen.ipIn <-- tn.upperLayerOut++;
+        trafGen.ipOut --> tn.in++;
+        trafGen.ipIn <-- tn.out++;
 }
 

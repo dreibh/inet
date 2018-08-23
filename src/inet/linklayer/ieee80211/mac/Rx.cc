@@ -1,10 +1,10 @@
 //
-// Copyright (C) 2015 Andras Varga
+// Copyright (C) 2016 OpenSim Ltd.
 //
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+// This program is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,19 +12,21 @@
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with this program.  If not, see http://www.gnu.org/licenses/.
-//
-// Author: Andras Varga
+// along with this program; if not, see http://www.gnu.org/licenses/.
 //
 
-#include "Rx.h"
-#include "IContention.h"
-#include "ITx.h"
-#include "IUpperMac.h"
-#include "IStatistics.h"
+#include "inet/common/ModuleAccess.h"
+#include "inet/common/checksum/EthernetCRC.h"
+#include "inet/linklayer/ieee80211/mac/contract/IContention.h"
+#include "inet/linklayer/ieee80211/mac/contract/IStatistics.h"
+#include "inet/linklayer/ieee80211/mac/contract/ITx.h"
+#include "inet/linklayer/ieee80211/mac/Ieee80211Mac.h"
+#include "inet/linklayer/ieee80211/mac/Rx.h"
 
 namespace inet {
 namespace ieee80211 {
+
+using namespace inet::physicallayer;
 
 Define_Module(Rx);
 
@@ -34,22 +36,23 @@ Rx::Rx()
 
 Rx::~Rx()
 {
-    delete cancelEvent(endNavTimer);
-    delete [] contention;
+    cancelAndDelete(endNavTimer);
 }
 
-void Rx::initialize()
+void Rx::initialize(int stage)
 {
-    upperMac = check_and_cast<IUpperMac *>(getModuleByPath(par("upperMacModule")));
-    collectContentionModules(getModuleByPath(par("firstContentionModule")), contention);
-    statistics = check_and_cast<IStatistics *>(getModuleByPath(par("statisticsModule")));
-    endNavTimer = new cMessage("NAV");
-    recomputeMediumFree();
-
-    WATCH(address);
-    WATCH(receptionState);
-    WATCH(transmissionState);
-    WATCH(mediumFree);
+    if (stage == INITSTAGE_LOCAL) {
+        endNavTimer = new cMessage("NAV");
+        WATCH(address);
+        WATCH(receptionState);
+        WATCH(transmissionState);
+        WATCH(mediumFree);
+    }
+    else if (stage == INITSTAGE_LINK_LAYER) {
+        // statistics = check_and_cast<IStatistics *>(getModuleByPath(par("statisticsModule")));
+        address = check_and_cast<Ieee80211Mac*>(getContainingNicModule(this)->getSubmodule("mac"))->getAddress();
+        recomputeMediumFree();
+    }
 }
 
 void Rx::handleMessage(cMessage *msg)
@@ -62,26 +65,30 @@ void Rx::handleMessage(cMessage *msg)
         throw cRuntimeError("Unexpected self message");
 }
 
-void Rx::lowerFrameReceived(Ieee80211Frame *frame)
+bool Rx::lowerFrameReceived(Packet *packet)
 {
-    Enter_Method("lowerFrameReceived(\"%s\")", frame->getName());
-    take(frame);
+    Enter_Method("lowerFrameReceived(\"%s\")", packet->getName());
+    take(packet);
 
-    bool isFrameOk = isFcsOk(frame);
+    bool isFrameOk = isFcsOk(packet);
     if (isFrameOk) {
-        EV_INFO << "Received frame from PHY: " << frame << endl;
-        if (frame->getReceiverAddress() != address)
-            setOrExtendNav(frame->getDuration());
-        statistics->frameReceived(frame);
-        upperMac->lowerFrameReceived(frame);
+        EV_INFO << "Received frame from PHY: " << packet << endl;
+        const auto& header = packet->peekAtFront<Ieee80211MacHeader>();
+        if (header->getReceiverAddress() != address)
+            setOrExtendNav(header->getDuration());
+//        statistics->frameReceived(frame);
+        return true;
     }
     else {
         EV_INFO << "Received an erroneous frame from PHY, dropping it." << std::endl;
-        delete frame;
-        for (int i = 0; contention[i]; i++)
-            contention[i]->corruptedFrameReceived();
-        upperMac->corruptedFrameReceived();
-        statistics->erroneousFrameReceived();
+        PacketDropDetails details;
+        details.setReason(INCORRECTLY_RECEIVED);
+        emit(packetDroppedSignal, packet, &details);
+        delete packet;
+        for (auto contention : contentions)
+            contention->corruptedFrameReceived();
+//        statistics->erroneousFrameReceived();
+        return false;
     }
 }
 
@@ -99,9 +106,30 @@ bool Rx::isReceptionInProgress() const
            (receivedPart == IRadioSignal::SIGNAL_PART_WHOLE || receivedPart == IRadioSignal::SIGNAL_PART_DATA);
 }
 
-bool Rx::isFcsOk(Ieee80211Frame *frame) const
+bool Rx::isFcsOk(Packet *packet) const
 {
-    return !frame->hasBitError();
+    if (packet->hasBitError() || !packet->peekData()->isCorrect())
+        return false;
+    else {
+        const auto& trailer = packet->peekAtBack<Ieee80211MacTrailer>(B(4));
+        switch (trailer->getFcsMode()) {
+            case FCS_DECLARED_INCORRECT:
+                return false;
+            case FCS_DECLARED_CORRECT:
+                return true;
+            case FCS_COMPUTED: {
+                const auto& fcsBytes = packet->peekDataAt<BytesChunk>(B(0), packet->getDataLength() - trailer->getChunkLength());
+                auto bufferLength = B(fcsBytes->getChunkLength()).get();
+                auto buffer = new uint8_t[bufferLength];
+                fcsBytes->copyToBuffer(buffer, bufferLength);
+                auto computedFcs = ethernetCRC(buffer, bufferLength);
+                delete [] buffer;
+                return computedFcs == trailer->getFcs();
+            }
+            default:
+                throw cRuntimeError("Unknown FCS mode");
+        }
+    }
 }
 
 void Rx::recomputeMediumFree()
@@ -110,8 +138,8 @@ void Rx::recomputeMediumFree()
     // note: the duration of mode switching (rx-to-tx or tx-to-rx) should also count as busy
     mediumFree = receptionState == IRadio::RECEPTION_STATE_IDLE && transmissionState == IRadio::TRANSMISSION_STATE_UNDEFINED && !endNavTimer->isScheduled();
     if (mediumFree != oldMediumFree) {
-        for (int i = 0; contention[i]; i++)
-            contention[i]->mediumStateChanged(mediumFree);
+        for (auto contention : contentions)
+            contention->mediumStateChanged(mediumFree);
     }
 }
 
@@ -186,6 +214,11 @@ void Rx::refreshDisplay() const
     }
 }
 
+void Rx::registerContention(IContention* contention)
+{
+    contention->mediumStateChanged(mediumFree);
+    contentions.push_back(contention);
+}
+
 } // namespace ieee80211
 } // namespace inet
-

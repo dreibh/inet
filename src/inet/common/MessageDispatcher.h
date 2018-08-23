@@ -20,48 +20,60 @@
 
 #include "inet/common/IInterfaceRegistrationListener.h"
 #include "inet/common/IProtocolRegistrationListener.h"
+#include "inet/common/packet/Message.h"
+#include "inet/common/packet/Packet.h"
 
 namespace inet {
 
 /**
- * This module connects multiple protocols to multiple other protocols.
- *
- * Configuring the dispatch mechanism:
- *  - protocols must register by calling registerProtocol
- *  - interfaces must register by calling registerInterface
- *  - sockets must register by sending socket commands
- *  - packets must have a proper control info attached that specifies the
- *    destination protocol, interface or socket
+ * This class implements the corresponding module. See module documentation for more details.
  */
 class INET_API MessageDispatcher : public cSimpleModule, public IProtocolRegistrationListener, public IInterfaceRegistrationListener
 {
-    protected:
-        std::map<int, int> socketIdToUpperLayerGateIndex;
-        std::map<int, int> interfaceIdToLowerLayerGateIndex;
-        std::map<int, int> protocolIdToUpperLayerGateIndex;
-        std::map<int, int> protocolIdToLowerLayerGateIndex;
+  public:
+    class Key
+    {
+      protected:
+        int protocolId;
+        int servicePrimitive;
 
-    protected:
-        virtual void initialize() override;
-        virtual void arrived(cMessage *message, cGate *inGate, simtime_t t) override;
-        virtual cGate *handleUpperLayerPacket(cMessage *message, cGate *inGate);
-        virtual cGate *handleLowerLayerPacket(cMessage *message, cGate *inGate);
-        virtual cGate *handleUpperLayerCommand(cMessage *message, cGate *inGate);
-        virtual cGate *handleLowerLayerCommand(cMessage *message, cGate *inGate);
+      public:
+        Key(int protocolId, ServicePrimitive servicePrimitive) : protocolId(protocolId), servicePrimitive(servicePrimitive) {}
 
-        virtual int computeSocketId(cMessage *message);
-        virtual int computeInterfaceId(cMessage *message);
-        virtual int computeUpperLayerProtocolId(cMessage *message);
-        virtual int computeLowerLayerProtocolId(cMessage *message);
+        bool operator<(const MessageDispatcher::Key& other) const {
+            if (protocolId < other.protocolId)
+                return true;
+            else if (protocolId > other.protocolId)
+                return false;
+            else
+                return servicePrimitive < other.servicePrimitive;
+        }
+        friend std::ostream& operator<<(std::ostream& out, const MessageDispatcher::Key& foo);
+    };
 
-        virtual const char *findProtocolName(int protocolId);
+  protected:
+    std::map<int, int> socketIdToGateIndex;
+    std::map<int, int> interfaceIdToGateIndex;
+    std::map<Key, int> serviceToGateIndex;
+    std::map<Key, int> protocolToGateIndex;
+    std::map<std::pair<int, int>, int> xxx;
 
-    public:
-        MessageDispatcher();
+  protected:
+    virtual void initialize() override;
+    virtual void arrived(cMessage *message, cGate *inGate, simtime_t t) override;
+    virtual cGate *handlePacket(Packet *packet, cGate *inGate);
+    virtual cGate *handleMessage(Message *request, cGate *inGate);
 
-        virtual void handleRegisterProtocol(const Protocol& protocol, cGate *gate) override;
-        virtual void handleRegisterInterface(const InterfaceEntry &interface, cGate *gate) override;
+  public:
+    virtual void handleRegisterInterface(const InterfaceEntry &interface, cGate *out, cGate *in) override;
+    virtual void handleRegisterService(const Protocol& protocol, cGate *out, ServicePrimitive servicePrimitive) override;
+    virtual void handleRegisterProtocol(const Protocol& protocol, cGate *in, ServicePrimitive servicePrimitive) override;
 };
+
+std::ostream& operator<<(std::ostream& out, const MessageDispatcher::Key& foo) {
+    out << "[" << foo.protocolId << ", " << omnetpp::cEnum::get("inet::ServicePrimitive")->getStringFor(foo.servicePrimitive) << "]";
+    return out;
+}
 
 } // namespace inet
 

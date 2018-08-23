@@ -24,34 +24,34 @@ module ApplicationLayerNodeBase extends TransportLayerNodeBase
 {
     parameters:
         int numApps = default(0);
-        @figure[applicationLayer](type=rectangle; pos=250,0; size=680,200; fillColor=#ffff00; cornerRadius=12; fillOpacity=0.1);
-        @figure[applicationLayer.title](type=text; pos=800,10; text="application layer");
+        @figure[applicationLayer](type=rectangle; pos=250,6; size=1000,130; lineColor=#808080; cornerRadius=5; fillColor=#ffff00; fillOpacity=0.1);
+        @figure[applicationLayer.title](type=text; pos=1245,11; anchor=ne; text="application layer");
 
     submodules:
         app[numApps]: <> like IApp {
             parameters:
-                @display("p=300,100,row,100");
+                @display("p=375,76,row,150");
         }
         at: MessageDispatcher {
             parameters:
-                @display("p=550,200;b=580,5,,,,1");
+                @display("p=750,146;b=1000,5,,,,1");
         }
 
     connections allowunconnected:
         for i=0..numApps-1 {
-            app[i].socketOut --> at.upperLayerIn++;
-            app[i].socketIn <-- at.upperLayerOut++;
+            app[i].socketOut --> at.in++;
+            app[i].socketIn <-- at.out++;
         }
 
-        at.lowerLayerOut++ --> udp.appIn if hasUdp;
-        at.lowerLayerIn++ <-- udp.appOut if hasUdp;
+        at.out++ --> udp.appIn if hasUdp;
+        at.in++ <-- udp.appOut if hasUdp;
 
-        at.lowerLayerOut++ --> tcp.appIn if hasTcp;
-        at.lowerLayerIn++ <-- tcp.appOut if hasTcp;
+        at.out++ --> tcp.appIn if hasTcp;
+        at.in++ <-- tcp.appOut if hasTcp;
 
-        at.lowerLayerOut++ --> sctp.appIn if hasSctp;
-        at.lowerLayerIn++ <-- sctp.appOut if hasSctp;
+        at.out++ --> sctp.appIn if hasSctp;
+        at.in++ <-- sctp.appOut if hasSctp;
 
-        at.lowerLayerOut++ --> tn.upperLayerIn++;
-        at.lowerLayerIn++ <-- tn.upperLayerOut++;
+        at.out++ --> tn.in++;
+        at.in++ <-- tn.out++;
 }

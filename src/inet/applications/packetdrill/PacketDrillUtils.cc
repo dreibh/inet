@@ -29,7 +29,8 @@
 
 #include "PacketDrillUtils.h"
 
-using namespace inet;
+namespace inet {
+using namespace sctp;
 
 /* A table of platform-specific string->int mappings. */
 struct int_symbol platform_symbols_table[] = {
@@ -90,8 +91,11 @@ struct int_symbol *platform_symbols(void)
 PacketDrillConfig::PacketDrillConfig()
 {
     ip_version = IP_VERSION_4;
+    socketDomain = AF_INET;
+    wireProtocol = AF_INET;
     tolerance_usecs = 75000;
     mtu = TUN_DRIVER_DEFAULT_MTU;
+    scriptPath = nullptr;
 }
 
 PacketDrillConfig::~PacketDrillConfig()
@@ -105,6 +109,7 @@ void PacketDrillConfig::parseScriptOptions(cQueue *options)
 PacketDrillPacket::PacketDrillPacket()
 {
    inetPacket = nullptr;
+   direction = DIRECTION_INVALID;
 }
 
 PacketDrillPacket::~PacketDrillPacket()
@@ -116,6 +121,7 @@ PacketDrillPacket::~PacketDrillPacket()
 PacketDrillExpression::PacketDrillExpression(enum expression_t type_)
 {
     type = type_;
+    format = nullptr;
     if (type == EXPR_SCTP_SNDRCVINFO)
         value.sctp_sndrcvinfo = (struct sctp_sndrcvinfo_expr *)malloc(sizeof(struct sctp_sndrcvinfo_expr));
 }
@@ -123,9 +129,9 @@ PacketDrillExpression::PacketDrillExpression(enum expression_t type_)
 PacketDrillExpression::~PacketDrillExpression()
 {
     if (type == EXPR_LIST) {
-        for (cQueue::Iterator iter(*value.list); !iter.end(); iter++)
-            value.list->remove((*iter));
-        delete value.list;
+        for (cQueue::Iterator iter(*list); !iter.end(); iter++)
+            list->remove((*iter));
+        delete list;
     }
 }
 
@@ -135,7 +141,7 @@ PacketDrillExpression::~PacketDrillExpression()
  */
 int PacketDrillExpression::unescapeCstringExpression(const char *input_string, char **error)
 {
-    int bytes = strlen(input_string);
+    int bytes = strlen(input_string) + 1;
     type = EXPR_STRING;
     value.string = (char *)malloc(bytes);
     const char *c_in = input_string;
@@ -249,6 +255,9 @@ int PacketDrillExpression::symbolToInt(const char *input_symbol, int64 *output_i
 
 PacketDrillEvent::PacketDrillEvent(enum event_t type_)
 {
+    lineNumber = -1;
+    eventNumber = -1;
+    timeType = ANY_TIME;
     type = type_;
     eventTimeEnd = NO_TIME_RANGE;
     eventOffset = NO_TIME_RANGE;
@@ -265,19 +274,20 @@ PacketDrillScript::PacketDrillScript(const char *scriptFile)
 {
     eventList = new cQueue("scriptEventList");
     optionList = new cQueue("scriptOptionList");
-    buffer = NULL;
-    assert(scriptFile != NULL);
+    buffer = nullptr;
+    assert(scriptFile != nullptr);
     scriptPath = scriptFile;
+    length = 0;
 }
 
 PacketDrillScript::~PacketDrillScript()
 {
     //FIXME check memory leak
     for (cQueue::Iterator iter(*eventList); !iter.end(); iter++)
-        eventList->remove((PacketDrillEvent *) (*iter));
+        eventList->remove(*iter);
     delete eventList;
     for (cQueue::Iterator iter(*optionList); !iter.end(); iter++)
-        optionList->remove((PacketDrillEvent *) (*iter));
+        optionList->remove(*iter);
     delete optionList;
 }
 
@@ -320,8 +330,8 @@ void PacketDrillScript::readScript()
             length = 0;
         }
 
-    if (close(fd))
-        EV_INFO << "File destriptor was closed\n";
+        if (close(fd))
+            EV_INFO << "File destriptor was closed\n";
     }
     EV_INFO << "Script " << scriptPath << " was read with " << length << " length\n";
 }
@@ -329,7 +339,7 @@ void PacketDrillScript::readScript()
 int PacketDrillScript::parseScriptAndSetConfig(PacketDrillConfig *config, const char *script_buffer)
 {
     int res = 0;
-    struct invocation invocation = {
+    Invocation invocation = {
         .config = config,
         .script = this,
     };
@@ -347,6 +357,11 @@ int PacketDrillScript::parseScriptAndSetConfig(PacketDrillConfig *config, const 
 
 PacketDrillStruct::PacketDrillStruct()
 {
+    value1 = 0;
+    value2 = 0;
+    value3 = 0;
+    value4 = 0;
+    streamNumbers = nullptr;
 }
 
 PacketDrillStruct::PacketDrillStruct(int64 v1, int64 v2)
@@ -379,10 +394,15 @@ PacketDrillTcpOption::PacketDrillTcpOption(uint16 kind_, uint16 length_)
 {
     kind = kind_;
     length = length_;
+    mss = 0;
+    timeStamp.val = 0;
+    timeStamp.ecr = 0;
+    blockList = nullptr;
+    windowScale = 0;
     blockCount = 0;
 }
 
-PacketDrillSctpChunk::PacketDrillSctpChunk(uint8 type_, SCTPChunk *sctpChunk)
+PacketDrillSctpChunk::PacketDrillSctpChunk(uint8 type_, SctpChunk *sctpChunk)
 {
     type = type_;
     chunk = sctpChunk->dup();
@@ -415,11 +435,14 @@ PacketDrillSctpParameter::~PacketDrillSctpParameter()
 
 PacketDrillSctpParameter::PacketDrillSctpParameter(uint16 type_, int16 len, void* content_)
 {
+    parameterValue = 0;
     uint32 flgs = 0;
     type = type_;
     if (len == -1)
         flgs |= FLAG_CHUNK_LENGTH_NOCHECK;
     parameterLength = len;
+    parameterList = nullptr;
+    content = nullptr;
 
     if (!content_) {
         flgs |= FLAG_CHUNK_VALUE_NOCHECK;
@@ -435,11 +458,15 @@ PacketDrillSctpParameter::PacketDrillSctpParameter(uint16 type_, int16 len, void
                 parameterList = (cQueue *)(content_);
                 break;
             }
-        default:
-           content = content_;
+            default:
+                content = content_;
+                break;
         }
     }
 
-
     flags = flgs;
 }
+
+}    // namespace inet
+
+

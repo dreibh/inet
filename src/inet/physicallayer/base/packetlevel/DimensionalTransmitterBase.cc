@@ -25,7 +25,7 @@ namespace inet {
 namespace physicallayer {
 
 DimensionalTransmitterBase::DimensionalTransmitterBase() :
-    interpolationMode((Mapping::InterpolationMethod)-1)
+    interpolationMode(static_cast<Mapping::InterpolationMethod>(-1))
 {
 }
 
@@ -33,7 +33,7 @@ void DimensionalTransmitterBase::initialize(int stage)
 {
     if (stage == INITSTAGE_LOCAL)
     {
-        cModule *module = dynamic_cast<cModule *>(this);
+        cModule *module = check_and_cast<cModule *>(this);
         // TODO: factor parsing?
         // dimensions
         const char *dimensionsString = module->par("dimensions");

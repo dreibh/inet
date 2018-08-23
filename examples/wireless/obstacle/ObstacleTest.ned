@@ -19,10 +19,10 @@
 package inet.examples.wireless.obstacle;
 
 import inet.environment.common.PhysicalEnvironment;
-import inet.networklayer.configurator.ipv4.IPv4NetworkConfigurator;
+import inet.networklayer.configurator.ipv4.Ipv4NetworkConfigurator;
 import inet.node.inet.AdhocHost;
 import inet.physicallayer.ieee80211.packetlevel.Ieee80211ScalarRadioMedium;
-import inet.visualizer.integrated.IntegratedVisualizer;
+import inet.visualizer.contract.IIntegratedVisualizer;
 
 network ObstacleTest
 {
@@ -30,24 +30,24 @@ network ObstacleTest
         int numHosts;
         @display("bgb=0,0");
     submodules:
-        visualizer: IntegratedVisualizer {
+        visualizer: <default("IntegratedVisualizer")> like IIntegratedVisualizer if hasVisualizer() {
             parameters:
-                @display("p=100,50");
+                @display("p=100,400;is=s");
         }
         physicalEnvironment: PhysicalEnvironment {
             parameters:
-                @display("p=100,150");
+                @display("p=100,200;is=s");
         }
-        configurator: IPv4NetworkConfigurator {
+        configurator: Ipv4NetworkConfigurator {
             parameters:
-                @display("p=100,250");
+                @display("p=100,100;is=s");
         }
         radioMedium: Ieee80211ScalarRadioMedium {
             parameters:
-                @display("p=100,350");
+                @display("p=100,300;is=s");
         }
         host[numHosts]: AdhocHost {
             parameters:
-                @display("r=,,#707070;p=250,50");
+                @display("r=,,#707070;p=250,250");
         }
 }

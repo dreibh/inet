@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -27,6 +27,8 @@ namespace inet {
 
 namespace visualizer {
 
+using namespace inet::physicalenvironment;
+
 Define_Module(PhysicalEnvironmentCanvasVisualizer);
 
 void PhysicalEnvironmentCanvasVisualizer::initialize(int stage)
@@ -34,17 +36,19 @@ void PhysicalEnvironmentCanvasVisualizer::initialize(int stage)
     PhysicalEnvironmentVisualizerBase::initialize(stage);
     if (!hasGUI()) return;
     if (stage == INITSTAGE_LOCAL) {
-        objectsLayer = new cGroupFigure("objectsLayer");
+        zIndex = par("zIndex");
         cCanvas *canvas = visualizerTargetModule->getCanvas();
-        canvas->addFigureBelow(objectsLayer, canvas->getSubmodulesLayer());
         canvasProjection = CanvasProjection::getCanvasProjection(visualizerTargetModule->getCanvas());
+        objectsLayer = new cGroupFigure("objectsLayer");
+        objectsLayer->setZIndex(zIndex);
+        objectsLayer->insertBelow(canvas->getSubmodulesLayer());
     }
 }
 
 void PhysicalEnvironmentCanvasVisualizer::refreshDisplay() const
 {
     // only update after initialize
-    if (physicalEnvironment != nullptr && getSimulation()->getEventNumber() == 0) {
+    if (physicalEnvironment != nullptr && getSimulation()->getEventNumber() == 0 && displayObjects) {
         while (objectsLayer->getNumFigures())
             delete objectsLayer->removeFigure(0);
         // KLUDGE: sorting objects with their rotated position's z coordinate to draw them in a "better" order
@@ -69,6 +73,8 @@ void PhysicalEnvironmentCanvasVisualizer::refreshDisplay() const
             if (sphere) {
                 double radius = sphere->getRadius();
                 cOvalFigure *figure = new cOvalFigure("sphere");
+                figure->setTooltip("This oval represents a physical object");
+                figure->setAssociatedObject(const_cast<cObject *>(check_and_cast<const cObject *>(object)));
                 figure->setFilled(true);
                 cFigure::Point center = canvasProjection->computeCanvasPoint(position);
                 figure->setBounds(cFigure::Rectangle(center.x - radius, center.y - radius, radius * 2, radius * 2));
@@ -78,10 +84,10 @@ void PhysicalEnvironmentCanvasVisualizer::refreshDisplay() const
                 figure->setLineOpacity(object->getOpacity());
                 figure->setFillOpacity(object->getOpacity());
                 figure->setZoomLineWidth(false);
-                std::string tags("physical_object ");
+                std::string objectTags("physical_object ");
                 if (object->getTags())
-                    tags += object->getTags();
-                figure->setTags(tags.c_str());
+                    objectTags += object->getTags();
+                figure->setTags((objectTags + " " + tags).c_str());
                 objectsLayer->addFigure(figure);
             }
             // prism
@@ -103,7 +109,7 @@ void PhysicalEnvironmentCanvasVisualizer::refreshDisplay() const
             if (name) {
                 cLabelFigure *nameFigure = new cLabelFigure("objectName");
                 nameFigure->setPosition(canvasProjection->computeCanvasPoint(position));
-                nameFigure->setTags("physical_object object_name label");
+                nameFigure->setTags((std::string("physical_object object_name label ") + tags).c_str());
                 nameFigure->setText(name);
                 objectsLayer->addFigure(nameFigure);
             }
@@ -120,10 +126,12 @@ void PhysicalEnvironmentCanvasVisualizer::computeFacePoints(const IPhysicalObjec
         const std::vector<Coord>& facePoints = *it;
         for (const auto & facePoint : facePoints)
         {
-            cFigure::Point canvPoint = canvasProjection->computeCanvasPoint(rotation.rotateVectorClockwise(facePoint) + position);
+            cFigure::Point canvPoint = canvasProjection->computeCanvasPoint(rotation.rotateVector(facePoint) + position);
             canvasPoints.push_back(canvPoint);
         }
         cPolygonFigure *figure = new cPolygonFigure("objectFace");
+        figure->setTooltip("This polygon represents a physical object");
+        figure->setAssociatedObject(const_cast<cObject *>(check_and_cast<const cObject *>(object)));
         figure->setFilled(true);
         figure->setPoints(canvasPoints);
         figure->setLineWidth(object->getLineWidth());
@@ -132,10 +140,10 @@ void PhysicalEnvironmentCanvasVisualizer::computeFacePoints(const IPhysicalObjec
         figure->setLineOpacity(object->getOpacity());
         figure->setFillOpacity(object->getOpacity());
         figure->setZoomLineWidth(false);
-        std::string tags("physical_object ");
+        std::string objectTags("physical_object ");
         if (object->getTags())
-            tags += object->getTags();
-        figure->setTags(tags.c_str());
+            objectTags += object->getTags();
+        figure->setTags((objectTags + " " + tags).c_str());
         objectsLayer->addFigure(figure);
     }
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -18,6 +18,7 @@
 #ifndef __INET_LINKOSGVISUALIZERBASE_H
 #define __INET_LINKOSGVISUALIZERBASE_H
 
+#include "inet/common/OsgUtils.h"
 #include "inet/visualizer/base/LinkVisualizerBase.h"
 
 namespace inet {
@@ -29,31 +30,31 @@ class INET_API LinkOsgVisualizerBase : public LinkVisualizerBase
 #ifdef WITH_OSG
 
   protected:
-    class INET_API OsgLink : public Link {
+    class INET_API LinkOsgVisualization : public LinkVisualization {
       public:
-        osg::Node *node = nullptr;
+        inet::osg::LineNode *node = nullptr;
 
       public:
-        OsgLink(osg::Node *node, int sourceModuleId, int destinationModuleId);
-        virtual ~OsgLink();
+        LinkOsgVisualization(inet::osg::LineNode *node, int sourceModuleId, int destinationModuleId);
+        virtual ~LinkOsgVisualization();
     };
 
   protected:
-    virtual void addLink(std::pair<int, int> sourceAndDestination, const Link *link) override;
-    virtual void removeLink(const Link *link) override;
+    virtual void initialize(int stage) override;
+    virtual void refreshDisplay() const override;
 
-    virtual const Link *createLink(cModule *source, cModule *destination) const override;
-    virtual void setAlpha(const Link *link, double alpha) const override;
-    virtual void setPosition(cModule *node, const Coord& position) const override;
+    virtual const LinkVisualization *createLinkVisualization(cModule *source, cModule *destination, cPacket *packet) const override;
+    virtual void addLinkVisualization(std::pair<int, int> sourceAndDestination, const LinkVisualization *linkVisualization) override;
+    virtual void removeLinkVisualization(const LinkVisualization *linkVisualization) override;
+    virtual void setAlpha(const LinkVisualization *linkVisualization, double alpha) const override;
 
 #else // ifdef WITH_OSG
 
   protected:
     virtual void initialize(int stage) override {}
 
-    virtual const Link *createLink(cModule *source, cModule *destination) const override { return nullptr; }
-    virtual void setAlpha(const Link *link, double alpha) const override {}
-    virtual void setPosition(cModule *node, const Coord& position) const override {}
+    virtual const LinkVisualization *createLinkVisualization(cModule *source, cModule *destination, cPacket *packet) const override { return nullptr; }
+    virtual void setAlpha(const LinkVisualization *linkVisualization, double alpha) const override {}
 
 #endif // ifdef WITH_OSG
 };

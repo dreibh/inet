@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -18,7 +18,7 @@
 #include "inet/visualizer/transportlayer/TransportRouteOsgVisualizer.h"
 
 #ifdef WITH_ETHERNET
-#include "inet/linklayer/ethernet/switch/MACRelayUnit.h"
+#include "inet/linklayer/ethernet/switch/MacRelayUnit.h"
 #endif
 
 #ifdef WITH_IEEE8021D
@@ -26,11 +26,11 @@
 #endif
 
 #ifdef WITH_TCP_INET
-#include "inet/transportlayer/tcp/TCP.h"
+#include "inet/transportlayer/tcp/Tcp.h"
 #endif
 
 #ifdef WITH_UDP
-#include "inet/transportlayer/udp/UDP.h"
+#include "inet/transportlayer/udp/Udp.h"
 #endif
 
 namespace inet {
@@ -39,15 +39,30 @@ namespace visualizer {
 
 Define_Module(TransportRouteOsgVisualizer);
 
-bool TransportRouteOsgVisualizer::isPathEnd(cModule *module) const
+bool TransportRouteOsgVisualizer::isPathStart(cModule *module) const
 {
 #ifdef WITH_UDP
-    if (dynamic_cast<UDP *>(module) != nullptr)
+    if (dynamic_cast<Udp *>(module) != nullptr)
         return true;
 #endif
 
 #ifdef WITH_TCP_INET
-    if (dynamic_cast<tcp::TCP *>(module) != nullptr)
+    if (dynamic_cast<tcp::Tcp *>(module) != nullptr)
+        return true;
+#endif
+
+    return false;
+}
+
+bool TransportRouteOsgVisualizer::isPathEnd(cModule *module) const
+{
+#ifdef WITH_UDP
+    if (dynamic_cast<Udp *>(module) != nullptr)
+        return true;
+#endif
+
+#ifdef WITH_TCP_INET
+    if (dynamic_cast<tcp::Tcp *>(module) != nullptr)
         return true;
 #endif
 
@@ -57,7 +72,7 @@ bool TransportRouteOsgVisualizer::isPathEnd(cModule *module) const
 bool TransportRouteOsgVisualizer::isPathElement(cModule *module) const
 {
 #ifdef WITH_ETHERNET
-    if (dynamic_cast<MACRelayUnit *>(module) != nullptr)
+    if (dynamic_cast<MacRelayUnit *>(module) != nullptr)
         return true;
 #endif
 

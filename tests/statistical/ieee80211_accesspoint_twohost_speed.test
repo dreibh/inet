@@ -1,31 +1,33 @@
 %description:
 Testing TCP communication speed
     TCP
-    TCP_NSC
+    TcpNsc
 %#--------------------------------------------------------------------------------------------------------------
 %testprog: opp_run
 %#--------------------------------------------------------------------------------------------------------------
 %file: test.ned
 
-import inet.applications.ethernet.EtherAppCli;
+import inet.applications.ethernet.EtherAppClient;
 import inet.common.queue.Sink;
-import inet.linklayer.ieee80211.Ieee80211Nic;
+import inet.linklayer.ieee80211.Ieee80211Interface;
 import inet.mobility.single.CircleMobility;
 import inet.mobility.static.StationaryMobility;
 import inet.node.wireless.AccessPoint;
 import inet.physicallayer.ieee80211.packetlevel.Ieee80211ScalarRadioMedium;
 
 
-module Ieee80211NicSTASimplified extends Ieee80211Nic
+module Ieee80211NicSTASimplified extends Ieee80211Interface
 {
     parameters:
-        mgmtType = "Ieee80211MgmtSTASimplified";
+        mgmt.typename = "Ieee80211MgmtStaSimplified";
+        agent.typename = "";
 }
 
 module WirelessAPSimplified extends AccessPoint
 {
     parameters:
-        wlan[*].mgmtType = "Ieee80211MgmtAPSimplified";
+        wlan[*].mgmt.typename = "Ieee80211MgmtApSimplified";
+        wlan[*].agent.typename = "";
 }
 
 module ThroughputClient
@@ -34,14 +36,14 @@ module ThroughputClient
         int idx;
         int maxCli;
         int maxSrv;
-        @node();
+        @networkNode();
         @display("i=device/wifilaptop");
         **.interfaceTableModule = "";
     gates:
         input radioIn @directIn;
 
     submodules:
-        cli: EtherAppCli {
+        cli: EtherAppClient {
             parameters:
                 registerSAP = false;
                 destAddress = "20:00:00:00:00:0"+string(idx % maxSrv);
@@ -66,7 +68,7 @@ module ThroughputServer
     parameters:
         int idx;
         int maxSrv;
-        @node();
+        @networkNode();
         @display("i=device/wifilaptop");
         **.interfaceTableModule = "";
     gates:
@@ -154,8 +156,8 @@ sim-time-limit = 50s
 **.mobility.updateInterval = 100ms
 
 # channel physical parameters
-*.radioMedium.mediumLimitCache.carrierFrequency = 2.4GHz
-*.radioMedium.mediumLimitCache.maxTransmissionPower = 20mW
+####*.radioMedium.mediumLimitCache.carrierFrequency = 2.4GHz
+####*.radioMedium.mediumLimitCache.maxTransmissionPower = 20mW
 
 # access point
 **.ap.wlan*.mac.address = "10:00:00:00:00:00"
@@ -163,7 +165,10 @@ sim-time-limit = 50s
 **.mgmt.frameCapacity = 100
 
 # nic settings
-**.wlan*.bitrate = 11Mbps
+**.wlan*.*.dataBitrate = 11Mbps
+**.wlan*.*.mgmtBitrate = 11Mbps
+**.wlan*.*.multicastBitrate = 11Mbps
+**.wlan*.*.controlBitrate = 11Mbps
 **.mac.address = "auto"
 **.mac.maxQueueSize = 14
 **.mac.rtsThresholdBytes = 3000B
@@ -171,11 +176,11 @@ sim-time-limit = 50s
 **.wlan*.mac.cwMinData = 31
 **.wlan*.mac.cwMinBroadcast = 31
 
-**.radio.transmitterPower = 20.0mW
-**.radio.thermalNoise = -110dBm
-**.radio.sensitivity = -85dBm
-**.radio.pathLossAlpha = 2
-**.radio.snirThreshold = 4dB
+####**.radio.transmitterPower = 20.0mW
+####**.radio.thermalNoise = -110dBm
+####**.radio.sensitivity = -85dBm
+####**.radio.pathLossAlpha = 2
+####**.radio.snirThreshold = 4dB
 
 # cli
 **.cli.reqLength = 1250B
@@ -198,7 +203,7 @@ options(width=160)
 library("omnetpp", warn.conflicts=FALSE)
 
 #TEST parameters
-scafile <- 'results/General-0.sca'
+scafile <- 'results/General-#0.sca'
 linecount <- 1 # count of client-server pairs
 rcvdBytes <-  11000000/8 # bytes
 expectedRate <- 29.0 # %
@@ -214,8 +219,8 @@ cat("\nOMNETPP TEST RESULT:\n")
 
 sink <- dataset$scalars[grep("\\.srvHost\\[\\d\\]\\.sink", dataset$scalars$module),]
 #print(sink)
-secs <- (sink$value[sink$name == "rcvdPk:count"] / sink$value[sink$name == "packetPerSec"])
-sinkRcvd <- sink[sink$name == "rcvdPk:sum(packetBytes)",]
+secs <- (sink$value[sink$name == "packetReceived:count"] / sink$value[sink$name == "packetPerSec"])
+sinkRcvd <- sink[sink$name == "packetReceived:sum(packetBytes)",]
 
 #print(sinkRcvd)
 cnt <- length(sinkRcvd$value)

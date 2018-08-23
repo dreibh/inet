@@ -22,8 +22,7 @@
 #include "inet/common/INETDefs.h"
 #include "inet/common/INETMath.h"
 
-// for the moment commented out as omnet cannot instatiate it from a namespace
-//namespace inet {
+namespace inet {
 
 class INET_API LinearGaugeFigure : public cGroupFigure, public inet::IIndicatorFigure
 {
@@ -39,6 +38,7 @@ class INET_API LinearGaugeFigure : public cGroupFigure, public inet::IIndicatorF
     double value = NaN;
     int numTicks = 0;
     double shifting = 0;
+    int labelOffset = 10;
 
   protected:
     virtual void parse(cProperty *property) override;
@@ -71,6 +71,9 @@ class INET_API LinearGaugeFigure : public cGroupFigure, public inet::IIndicatorF
     const char *getLabel() const;
     void setLabel(const char *text);
 
+    int getLabelOffset() const;
+    void setLabelOffset(int offset);
+
     const Font& getLabelFont() const;
     void setLabelFont(const Font& font);
 
@@ -90,7 +93,7 @@ class INET_API LinearGaugeFigure : public cGroupFigure, public inet::IIndicatorF
     void setCornerRadius(double radius);
 };
 
-// } // namespace inet
+} // namespace inet
 
 #endif // ifndef __INET_LinearGaugeFigure_H
 

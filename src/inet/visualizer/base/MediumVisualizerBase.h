@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -18,16 +18,19 @@
 #ifndef __INET_MEDIUMVISUALIZERBASE_H
 #define __INET_MEDIUMVISUALIZERBASE_H
 
+#include "inet/common/packet/PacketFilter.h"
 #include "inet/physicallayer/contract/packetlevel/IRadioMedium.h"
 #include "inet/visualizer/base/VisualizerBase.h"
+#include "inet/visualizer/util/ColorSet.h"
+#include "inet/visualizer/util/InterfaceFilter.h"
+#include "inet/visualizer/util/NetworkNodeFilter.h"
+#include "inet/visualizer/util/Placement.h"
 
 namespace inet {
 
 namespace visualizer {
 
-using namespace inet::physicallayer;
-
-class INET_API MediumVisualizerBase : public VisualizerBase, public IRadioMedium::IMediumListener
+class INET_API MediumVisualizerBase : public VisualizerBase, public cListener
 {
   protected:
     enum SignalShape
@@ -40,27 +43,64 @@ class INET_API MediumVisualizerBase : public VisualizerBase, public IRadioMedium
   protected:
     /** @name Parameters */
     //@{
-    IRadioMedium *radioMedium = nullptr;
+    physicallayer::IRadioMedium *radioMedium = nullptr;
+    NetworkNodeFilter networkNodeFilter;
+    InterfaceFilter interfaceFilter;
+    PacketFilter packetFilter;
     bool displaySignals = false;
-    simtime_t signalPropagationUpdateInterval = NaN;
-
-    bool displayTransmissions = false;
-    bool displayReceptions = false;
-
-    bool displayRadioFrames = false;
-    cFigure::Color radioFrameLineColor;
-
-    bool displayCommunicationRanges = false;
-    cFigure::Color communicationRangeColor;
-
+    ColorSet signalColorSet;
+    double signalPropagationAnimationSpeed = NaN;
+    double signalPropagationAnimationTime = NaN;
+    double signalPropagationAdditionalTime = NaN;
+    double signalTransmissionAnimationSpeed = NaN;
+    double signalTransmissionAnimationTime = NaN;
+    double signalAnimationSpeedChangeTime = NaN;
+    bool displaySignalDepartures = false;
+    bool displaySignalArrivals = false;
+    Placement signalDeparturePlacementHint;
+    Placement signalArrivalPlacementHint;
+    double signalDeparturePlacementPriority;
+    double signalArrivalPlacementPriority;
     bool displayInterferenceRanges = false;
-    cFigure::Color interferenceRangeColor;
+    cFigure::Color interferenceRangeLineColor;
+    cFigure::LineStyle interferenceRangeLineStyle;
+    double interferenceRangeLineWidth = NaN;
+    bool displayCommunicationRanges = false;
+    cFigure::Color communicationRangeLineColor;
+    cFigure::LineStyle communicationRangeLineStyle;
+    double communicationRangeLineWidth = NaN;
+    //@}
+
+    /** @name State */
+    //@{
+    double defaultSignalPropagationAnimationSpeed = NaN;
+    double defaultSignalTransmissionAnimationSpeed = NaN;
     //@}
 
   protected:
     virtual void initialize(int stage) override;
+    virtual void handleParameterChange(const char *name) override;
 
-    virtual simtime_t getNextSignalPropagationUpdateTime(const ITransmission *transmission);
+    virtual bool isSignalPropagationInProgress(const physicallayer::ITransmission *transmission) const;
+    virtual bool isSignalTransmissionInProgress(const physicallayer::ITransmission *transmission) const;
+
+    virtual bool matchesTransmission(const physicallayer::ITransmission *transmission) const;
+
+    virtual void handleRadioAdded(const physicallayer::IRadio *radio) = 0;
+    virtual void handleRadioRemoved(const physicallayer::IRadio *radio) = 0;
+
+    virtual void handleSignalAdded(const physicallayer::ITransmission *transmission) = 0;
+    virtual void handleSignalRemoved(const physicallayer::ITransmission *transmission) = 0;
+
+    virtual void handleSignalDepartureStarted(const physicallayer::ITransmission *transmission) = 0;
+    virtual void handleSignalDepartureEnded(const physicallayer::ITransmission *transmission) = 0;
+    virtual void handleSignalArrivalStarted(const physicallayer::IReception *reception) = 0;
+    virtual void handleSignalArrivalEnded(const physicallayer::IReception *reception) = 0;
+
+  public:
+    virtual ~MediumVisualizerBase();
+
+    virtual void receiveSignal(cComponent *source, simsignal_t signal, cObject *object, cObject *details) override;
 };
 
 } // namespace visualizer

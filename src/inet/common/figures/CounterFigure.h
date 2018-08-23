@@ -23,7 +23,7 @@
 #include "inet/common/INETMath.h"
 
 // for the moment commented out as omnet cannot instatiate it from a namespace
-//namespace inet {
+namespace inet {
 
 class INET_API CounterFigure : public cGroupFigure, public inet::IIndicatorFigure
 {
@@ -40,6 +40,7 @@ class INET_API CounterFigure : public cGroupFigure, public inet::IIndicatorFigur
     cTextFigure *labelFigure;
 
     double value = NaN;
+    int labelOffset = 10;
     Anchor anchor = ANCHOR_NW;
 
   protected:
@@ -79,6 +80,9 @@ class INET_API CounterFigure : public cGroupFigure, public inet::IIndicatorFigur
     const char *getLabel() const;
     void setLabel(const char *text);
 
+    int getLabelOffset() const;
+    void setLabelOffset(int offset);
+
     const Font& getLabelFont() const;
     void setLabelFont(const Font& font);
 
@@ -96,9 +100,10 @@ class INET_API CounterFigure : public cGroupFigure, public inet::IIndicatorFigur
 
     Anchor getAnchor() const;
     void setAnchor(Anchor anchor);
+
 };
 
-// } // namespace inet
+} // namespace inet
 
 #endif
 

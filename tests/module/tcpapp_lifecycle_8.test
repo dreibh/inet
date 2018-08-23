@@ -34,7 +34,7 @@ snapshot-file = "${resultdir}/${configname}-${runnumber}.sna"
 
 # tcp apps
 **.client.numApps = 1
-**.client.app[0].typename = "TCPBasicClientApp"
+**.client.app[0].typename = "TcpBasicClientApp"
 **.client.app[0].startTime = 0s
 **.client.app[0].localPort = -1
 **.client.app[0].connectAddress = "server"
@@ -45,7 +45,7 @@ snapshot-file = "${resultdir}/${configname}-${runnumber}.sna"
 **.client.app[0].thinkTime = 100ms
 
 **.server.numApps = 1
-**.server.app[0].typename = "TCPEchoApp"
+**.server.app[0].typename = "TcpEchoApp"
 **.server.app[0].localPort = 1000
 
 **.app[0].dataTransferMode = "bytecount"
@@ -54,16 +54,14 @@ snapshot-file = "${resultdir}/${configname}-${runnumber}.sna"
 
 import inet.node.ethernet.Eth10M;
 import inet.node.inet.StandardHost;
-import inet.networklayer.configurator.ipv4.IPv4NetworkConfigurator;
-import inet.common.lifecycle.LifecycleController;
+import inet.networklayer.configurator.ipv4.Ipv4NetworkConfigurator;
 import inet.common.scenario.ScenarioManager;
 
 network Test
 {
     submodules:
         scenarioManager: ScenarioManager;
-        lifecycleController: LifecycleController;
-        configurator: IPv4NetworkConfigurator;
+        configurator: Ipv4NetworkConfigurator;
         client: StandardHost;
         server: StandardHost;
     connections:
@@ -71,13 +69,13 @@ network Test
 }
 
 %file: scenario.xml
- 
+
 <scenario>
     <at t="1">
-        <tell module="lifecycleController" target="server" operation="NodeShutdownOperation"/>
+        <shutdown module="server"/>
     </at>
     <at t="2">
-        <tell module="lifecycleController" target="client" operation="NodeShutdownOperation"/>
+        <shutdown module="client"/>
     </at>
 </scenario>
 

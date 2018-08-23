@@ -1,6 +1,6 @@
 %description:
 Testing Ethernet communication between two hosts.
-All hosts use EtherMACFullDuplex implementation.
+All hosts use EtherMacFullDuplex implementation.
 Both hosts in pair have same ethernet configurations.
 Both hosts in pair are source and sink, too.
 
@@ -25,7 +25,7 @@ module EtherHostFullDuplexQ extends EtherHost
 {
     parameters:
         queueType = "DropTailQueue";
-        macType = "EtherMACFullDuplex";
+        macType = "EtherMacFullDuplex";
 }
 
 network SpeedTest
@@ -126,7 +126,7 @@ options(width=160)
 library("omnetpp", warn.conflicts=FALSE)
 
 #TEST parameters
-scafile <- 'results/General-0.sca'
+scafile <- 'results/General-#0.sca'
 linecount <- 6
 idlelimit <- 2.0
 usedlimit <- 98.0

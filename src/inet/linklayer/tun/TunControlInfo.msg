@@ -16,29 +16,25 @@
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
 
-
-cplusplus {{
-#include "inet/common/ISocketControlInfo.h"
-#include "inet/common/IInterfaceControlInfo.h"
-}}
+import inet.common.INETDefs;
 
 namespace inet;
 
-class TunControlInfo
+enum TunCommandCode
 {
-    @implements(IInterfaceControlInfo, ISocketControlInfo);
-    int socketId = -1;
-    int interfaceId = -1;
+    TUN_C_OPEN  = 1;
+    TUN_C_CLOSE = 2;
+}
+
+class TunControlInfo extends cObject
+{
 }
 
 class TunOpenCommand extends TunControlInfo
 {
 }
 
-class TunSendCommand extends TunControlInfo
-{
-}
-
 class TunCloseCommand extends TunControlInfo
 {
 }
+

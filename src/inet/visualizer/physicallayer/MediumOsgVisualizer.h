@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -18,26 +18,30 @@
 #ifndef __INET_MEDIUMOSGVISUALIZER_H
 #define __INET_MEDIUMOSGVISUALIZER_H
 
-#include "inet/physicallayer/contract/packetlevel/IRadioFrame.h"
+#include "inet/physicallayer/contract/packetlevel/ISignal.h"
 #include "inet/physicallayer/contract/packetlevel/IReceptionDecision.h"
 #include "inet/physicallayer/contract/packetlevel/ITransmission.h"
 #include "inet/visualizer/base/MediumVisualizerBase.h"
-#include "inet/visualizer/networknode/NetworkNodeOsgVisualizer.h"
+#include "inet/visualizer/scene/NetworkNodeOsgVisualizer.h"
 
 namespace inet {
 
 namespace visualizer {
 
-class INET_API MediumOsgVisualizer : public MediumVisualizerBase, public cListener
+class INET_API MediumOsgVisualizer : public MediumVisualizerBase
 {
 #ifdef WITH_OSG
 
   protected:
     /** @name Parameters */
     //@{
-    double opacityHalfLife = NaN;
     SignalShape signalShape = SIGNAL_SHAPE_RING;
     const char *signalPlane = nullptr;
+    double signalFadingDistance = NaN;
+    double signalFadingFactor = NaN;
+    double signalWaveLength = NaN;
+    double signalWaveAmplitude = NaN;
+    double signalWaveFadingAnimationSpeedFactor = NaN;
     osg::Image *transmissionImage = nullptr;
     osg::Image *receptionImage = nullptr;
     //@}
@@ -48,73 +52,63 @@ class INET_API MediumOsgVisualizer : public MediumVisualizerBase, public cListen
     /**
      * The list of ongoing transmissions.
      */
-    std::vector<const ITransmission *> transmissions;
+    std::vector<const physicallayer::ITransmission *> transmissions;
     /**
      * The list of radio osg nodes.
      */
-    std::map<const IRadio *, osg::Node *> radioOsgNodes;
+    std::map<const physicallayer::IRadio *, osg::Node *> radioOsgNodes;
     /**
-     * The list of ongoing transmission osg nodes.
+     * The propagating signal osg nodes.
      */
-    std::map<const ITransmission *, osg::Node *> transmissionOsgNodes;
-    //@}
-
-    /** @name Timer */
-    //@{
-    /**
-     * The message that is used to update the scene when ongoing communications exist.
-     */
-    cMessage *signalPropagationUpdateTimer = nullptr;
+    std::map<const physicallayer::ITransmission *, osg::Node *> signalOsgNodes;
     //@}
 
   protected:
     virtual void initialize(int stage) override;
-    virtual void handleMessage(cMessage *message) override;
     virtual void refreshDisplay() const override;
-    virtual void refreshSphereTransmissionNode(const ITransmission *transmission, osg::Node *node) const;
-    virtual void refreshRingTransmissionNode(const ITransmission *transmission, osg::Node *node) const;
 
-    virtual osg::Node *getCachedOsgNode(const IRadio *radio) const;
-    virtual void setCachedOsgNode(const IRadio *radio, osg::Node *node);
-    virtual osg::Node *removeCachedOsgNode(const IRadio *radio);
+    virtual void setAnimationSpeed() const;
 
-    virtual osg::Node *getCachedOsgNode(const ITransmission *transmission) const;
-    virtual void setCachedOsgNode(const ITransmission *transmission, osg::Node *node);
-    virtual osg::Node *removeCachedOsgNode(const ITransmission *transmission);
+    virtual osg::Node *getRadioOsgNode(const physicallayer::IRadio *radio) const;
+    virtual void setRadioOsgNode(const physicallayer::IRadio *radio, osg::Node *node);
+    virtual osg::Node *removeRadioOsgNode(const physicallayer::IRadio *radio);
 
-    virtual osg::Node *createTransmissionNode(const ITransmission *transmission) const;
-    virtual osg::Node *createSphereTransmissionNode(const ITransmission *transmission) const;
-    virtual osg::Node *createRingTransmissionNode(const ITransmission *transmission) const;
+    virtual osg::Node *getSignalOsgNode(const physicallayer::ITransmission *transmission) const;
+    virtual void setSignalOsgNode(const physicallayer::ITransmission *transmission, osg::Node *node);
+    virtual osg::Node *removeSignalOsgNode(const physicallayer::ITransmission *transmission);
 
-    virtual void scheduleSignalPropagationUpdateTimer();
+    virtual osg::Node *createSignalNode(const physicallayer::ITransmission *transmission) const;
+    virtual osg::Node *createSphereSignalNode(const physicallayer::ITransmission *transmission) const;
+    virtual osg::Node *createRingSignalNode(const physicallayer::ITransmission *transmission) const;
+    virtual void refreshSphereTransmissionNode(const physicallayer::ITransmission *transmission, osg::Node *node) const;
+    virtual void refreshRingTransmissionNode(const physicallayer::ITransmission *transmission, osg::Node *node) const;
 
-  public:
-    virtual ~MediumOsgVisualizer();
+    virtual void handleRadioAdded(const physicallayer::IRadio *radio) override;
+    virtual void handleRadioRemoved(const physicallayer::IRadio *radio) override;
 
-    virtual void radioAdded(const IRadio *radio) override;
-    virtual void radioRemoved(const IRadio *radio) override;
+    virtual void handleSignalAdded(const physicallayer::ITransmission *transmission) override;
+    virtual void handleSignalRemoved(const physicallayer::ITransmission *transmission) override;
 
-    virtual void transmissionAdded(const ITransmission *transmission) override;
-    virtual void transmissionRemoved(const ITransmission *transmission) override;
-
-    virtual void transmissionStarted(const ITransmission *transmission) override;
-    virtual void transmissionEnded(const ITransmission *transmission) override;
-    virtual void receptionStarted(const IReception *reception) override;
-    virtual void receptionEnded(const IReception *reception) override;
+    virtual void handleSignalDepartureStarted(const physicallayer::ITransmission *transmission) override;
+    virtual void handleSignalDepartureEnded(const physicallayer::ITransmission *transmission) override;
+    virtual void handleSignalArrivalStarted(const physicallayer::IReception *reception) override;
+    virtual void handleSignalArrivalEnded(const physicallayer::IReception *reception) override;
 
 #else // ifdef WITH_OSG
 
-  public:
-    virtual void radioAdded(const IRadio *radio) override {}
-    virtual void radioRemoved(const IRadio *radio) override {}
+  protected:
+    virtual void initialize(int stage) override {}
 
-    virtual void transmissionAdded(const ITransmission *transmission) override {}
-    virtual void transmissionRemoved(const ITransmission *transmission) override {}
+    virtual void handleRadioAdded(const physicallayer::IRadio *radio) override {}
+    virtual void handleRadioRemoved(const physicallayer::IRadio *radio) override {}
 
-    virtual void transmissionStarted(const ITransmission *transmission) override {}
-    virtual void transmissionEnded(const ITransmission *transmission) override {}
-    virtual void receptionStarted(const IReception *reception) override {}
-    virtual void receptionEnded(const IReception *reception) override {}
+    virtual void handleSignalAdded(const physicallayer::ITransmission *transmission) override {}
+    virtual void handleSignalRemoved(const physicallayer::ITransmission *transmission) override {}
+
+    virtual void handleSignalDepartureStarted(const physicallayer::ITransmission *transmission) override {}
+    virtual void handleSignalDepartureEnded(const physicallayer::ITransmission *transmission) override {}
+    virtual void handleSignalArrivalStarted(const physicallayer::IReception *reception) override {}
+    virtual void handleSignalArrivalEnded(const physicallayer::IReception *reception) override {}
 
 #endif // ifdef WITH_OSG
 };

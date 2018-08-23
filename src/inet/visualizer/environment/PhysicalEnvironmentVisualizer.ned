@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2016 OpenSim Ltd.
+// Copyright (C) OpenSim Ltd.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
@@ -22,21 +22,18 @@ import inet.visualizer.contract.IPhysicalEnvironmentVisualizer;
 //
 // This module integrates canvas and osg physical environment visualizers into a single module.
 //
-// @see ~PhysicalEnvironmentCanvasVisualizer, ~PhysicalEnvironmentOsgVisualizer,
-// ~PhysicalEnvironmentVisualizerBase, and ~IPhysicalEnvironmentVisualizer
+// @see ~PhysicalEnvironmentCanvasVisualizer, ~PhysicalEnvironmentOsgVisualizer, ~PhysicalEnvironmentVisualizerBase, ~IPhysicalEnvironmentVisualizer
 //
 module PhysicalEnvironmentVisualizer like IPhysicalEnvironmentVisualizer
 {
     parameters:
-        @display("i=block/app_s");
-        string canvasVisualizerType = default("PhysicalEnvironmentCanvasVisualizer");
-        string osgVisualizerType = default("PhysicalEnvironmentOsgVisualizer");
+        @display("i=block/app");
     submodules:
-        canvasVisualizer: <canvasVisualizerType> like IPhysicalEnvironmentVisualizer if canvasVisualizerType != "" {
+        canvasVisualizer: <default("PhysicalEnvironmentCanvasVisualizer")> like IPhysicalEnvironmentVisualizer if typename != "" {
             parameters:
                 @display("p=100,50");
         }
-        osgVisualizer: <osgVisualizerType> like IPhysicalEnvironmentVisualizer if osgVisualizerType != "" {
+        osgVisualizer: <default("PhysicalEnvironmentOsgVisualizer")> like IPhysicalEnvironmentVisualizer if typename != "" {
             parameters:
                 @display("p=100,150");
         }

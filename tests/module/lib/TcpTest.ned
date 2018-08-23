@@ -1,21 +1,20 @@
 // package module_.lib;
 
-import inet.transportlayer.contract.ITCP;
+import inet.transportlayer.contract.ITcp;
 
 
 network TcpTestNet1
 {
     parameters:
         bool testing;
-        string tcpType = default(firstAvailable("TCP", "TCP_lwIP", "TCP_NSC"));  // tcp implementation (e.g. ~TCP, ~TCP_lwIP, ~TCP_NSC) or ~TCPSpoof
     submodules:
         cli_app: TcpTestClient {
             @display("p=95,95");
         }
-        cli_tcp: <tcpType> like ITCP {
+        cli_tcp: <default(firstAvailable("Tcp", "TcpLwip", "TcpNsc"))> like ITcp {
             @display("p=95,178");
         }
-        srv_tcp: <tcpType> like ITCP {
+        srv_tcp: <default(firstAvailable("Tcp", "TcpLwip", "TcpNsc"))> like ITcp {
             @display("p=302,178");
         }
         srv_app: TcpTestClient {
@@ -41,15 +40,14 @@ network TcpTestNet2
 {
     parameters:
         bool testing;
-        string tcpType = default(firstAvailable("TCP", "TCP_lwIP", "TCP_NSC"));  // tcp implementation (e.g. ~TCP, ~TCP_lwIP, ~TCP_NSC) or ~TCPSpoof
     submodules:
         cli_app: TcpTestClient {
             @display("p=95,95");
         }
-        cli_tcp: <tcpType> like ITCP {
+        cli_tcp: <default(firstAvailable("Tcp", "TcpLwip", "TcpNsc"))> like ITcp {
             @display("p=95,178");
         }
-        srv_tcp: <tcpType> like ITCP {
+        srv_tcp: <default(firstAvailable("Tcp", "TcpLwip", "TcpNsc"))> like ITcp {
             @display("p=302,178");
         }
         srv_app: TcpTestClient {

@@ -50,6 +50,7 @@ static const char *PKEY_POS = "pos";
 static const char *PKEY_SIZE = "size";
 static const char *PKEY_ANCHOR = "anchor";
 static const char *PKEY_BOUNDS = "bounds";
+static const char *PKEY_LABEL_OFFSET = "labelOffset";
 
 LinearGaugeFigure::LinearGaugeFigure(const char *name) : cGroupFigure(name)
 {
@@ -59,7 +60,7 @@ LinearGaugeFigure::LinearGaugeFigure(const char *name) : cGroupFigure(name)
 LinearGaugeFigure::~LinearGaugeFigure()
 {
     // delete figures which is not in canvas
-    for (int i = numTicks; i < tickFigures.size(); ++i) {
+    for (uint32 i = numTicks; i < tickFigures.size(); ++i) {
         delete tickFigures[i];
         delete numberFigures[i];
     }
@@ -104,6 +105,19 @@ const char *LinearGaugeFigure::getLabel() const
 void LinearGaugeFigure::setLabel(const char *text)
 {
     labelFigure->setText(text);
+}
+
+int LinearGaugeFigure::getLabelOffset() const
+{
+    return labelOffset;
+}
+
+void LinearGaugeFigure::setLabelOffset(int offset)
+{
+    if(labelOffset != offset) {
+        labelOffset = offset;
+        labelFigure->setPosition(Point(getBounds().getCenter().x, getBounds().y + getBounds().height + labelOffset));
+    }
 }
 
 const cFigure::Font& LinearGaugeFigure::getLabelFont() const
@@ -181,18 +195,22 @@ void LinearGaugeFigure::setCornerRadius(double radius)
 void LinearGaugeFigure::parse(cProperty *property)
 {
     cGroupFigure::parse(property);
-    setBounds(parseBounds(property));
+
+    const char *s;
+
+    setBounds(parseBounds(property, getBounds()));
 
     // Set default
     redrawTicks();
 
-    const char *s;
     if ((s = property->getValue(PKEY_BACKGROUND_COLOR)) != nullptr)
         setBackgroundColor(parseColor(s));
     if ((s = property->getValue(PKEY_NEEDLE_COLOR)) != nullptr)
         setNeedleColor(parseColor(s));
     if ((s = property->getValue(PKEY_LABEL)) != nullptr)
         setLabel(s);
+    if ((s = property->getValue(PKEY_LABEL_OFFSET)) != nullptr)
+            setLabelOffset(atoi(s));
     if ((s = property->getValue(PKEY_LABEL_FONT)) != nullptr)
         setLabelFont(parseFont(s));
     if ((s = property->getValue(PKEY_LABEL_COLOR)) != nullptr)
@@ -218,7 +236,7 @@ const char **LinearGaugeFigure::getAllowedPropertyKeys() const
             PKEY_BACKGROUND_COLOR, PKEY_NEEDLE_COLOR, PKEY_LABEL, PKEY_LABEL_FONT,
             PKEY_LABEL_COLOR, PKEY_MIN_VALUE, PKEY_MAX_VALUE, PKEY_TICK_SIZE,
             PKEY_CORNER_RADIUS, PKEY_INITIAL_VALUE, PKEY_POS, PKEY_SIZE, PKEY_ANCHOR,
-            PKEY_BOUNDS, nullptr
+            PKEY_BOUNDS, PKEY_LABEL_OFFSET, nullptr
         };
         concatArrays(keys, cGroupFigure::getAllowedPropertyKeys(), localKeys);
     }
@@ -315,8 +333,8 @@ void LinearGaugeFigure::redrawTicks()
     numTicks = std::max(0.0, std::abs(max - min - shifting) / tickSize + 1);
 
     // Allocate ticks and numbers if needed
-    if (numTicks > tickFigures.size())
-        while (numTicks > tickFigures.size()) {
+    if ((size_t)numTicks > tickFigures.size())
+        while ((size_t)numTicks > tickFigures.size()) {
             cLineFigure *tick = new cLineFigure();
             cTextFigure *number = new cTextFigure();
 
@@ -332,8 +350,8 @@ void LinearGaugeFigure::redrawTicks()
         removeFigure(numberFigures[i]);
     }
     for (int i = prevNumTicks; i < numTicks; ++i) {
-        addFigureBelow(tickFigures[i], needle);
-        addFigureBelow(numberFigures[i], needle);
+        tickFigures[i]->insertBelow(needle);
+        numberFigures[i]->insertBelow(needle);
     }
 
     for (int i = 0; i < numTicks; ++i) {
@@ -365,7 +383,7 @@ void LinearGaugeFigure::layout()
     }
 
     setNeedleGeometry();
-    labelFigure->setPosition(Point(getBounds().getCenter().x, getBounds().y + getBounds().height));
+    labelFigure->setPosition(Point(getBounds().getCenter().x, getBounds().y + getBounds().height + labelOffset));
 }
 
 void LinearGaugeFigure::refresh()

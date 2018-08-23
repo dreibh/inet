@@ -124,7 +124,7 @@ sim-time-limit = 2s+60s+12s
 ## tcp apps
 
 # NIC configuration
-**.ppp[*].queueType = "DropTailQueue" # in routers
+**.ppp[*].queue.typename = "DropTailQueue" # in routers
 #**.ppp[*].queue.frameCapacity = 10
 **.ppp[*].queue.frameCapacity = 100  # good:(13,15,16,18,19,21-25, 7) bad:(17,20)
 
@@ -139,7 +139,7 @@ options(width=160)
 library("omnetpp", warn.conflicts=FALSE)
 
 #TEST parameters
-scafile <- 'results/General-0.sca'
+scafile <- 'results/General-#0.sca'
 cliPerSrv <- 3
 srvCount <- 3 * 3
 cliCount <- srvCount * cliPerSrv
