@@ -41,6 +41,8 @@ module NetPerfMeterHost extends TransportLayerNodeBase
     parameters:
         @display("i=device/pc2");
         int numNetPerfMeterApps = default(0);   // T.D. 17.11.09
+
+        hasSctp = true;
         forwarding = default(false);  // disable routing by default
         *.routingTableModule = default("^.ipv4.routingTable");
 
